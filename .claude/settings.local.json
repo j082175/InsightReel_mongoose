@@ -12,7 +12,8 @@
       "Bash(timeout 10s npm run dev)",
       "Bash(npm run dev:*)",
       "Bash(taskkill:*)",
-      "Bash(cmd /c:*)"
+      "Bash(cmd /c:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

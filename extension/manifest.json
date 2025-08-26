@@ -28,7 +28,7 @@
         "https://www.instagram.com/*",
         "https://www.tiktok.com/*"
       ],
-      "js": ["content/content-script.js"],
+      "js": ["content/content-script-bundled.js"],
       "css": ["content/styles.css"],
       "run_at": "document_idle"
     }
