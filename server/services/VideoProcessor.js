@@ -26,6 +26,11 @@ class VideoProcessor {
     try {
       console.log(`다운로드 시작: ${videoUrl}`);
       
+      // blob URL 체크
+      if (videoUrl.startsWith('blob:')) {
+        throw new Error('Blob URL은 클라이언트에서 처리해야 합니다. 서버에서는 접근할 수 없습니다.');
+      }
+      
       // 파일명 생성
       const timestamp = Date.now();
       const filename = `${platform}_${timestamp}.mp4`;
@@ -59,6 +64,12 @@ class VideoProcessor {
 
     } catch (error) {
       console.error('비디오 다운로드 에러:', error);
+      
+      // blob URL 에러인 경우 더 명확한 메시지
+      if (error.message.includes('Blob URL')) {
+        throw new Error('Blob URL은 클라이언트에서 파일로 전송해주세요. process-video-blob 엔드포인트를 사용하세요.');
+      }
+      
       throw new Error(`비디오 다운로드 실패: ${error.message}`);
     }
   }
@@ -68,7 +79,19 @@ class VideoProcessor {
       const videoName = path.basename(videoPath, path.extname(videoPath));
       const thumbnailPath = path.join(this.thumbnailDir, `${videoName}_thumb.jpg`);
       
-      console.log(`썸네일 생성: ${videoPath} -> ${thumbnailPath}`);
+      // 파일 타입 확인 - 이미지 파일인지 검사
+      const fileType = await this.detectFileType(videoPath);
+      
+      if (fileType === 'image') {
+        console.log(`📷 이미지 파일 감지 - 원본을 썸네일로 복사: ${videoPath}`);
+        
+        // 이미지 파일을 썸네일 경로로 복사
+        fs.copyFileSync(videoPath, thumbnailPath);
+        console.log(`✅ 이미지 썸네일 생성 완료: ${path.basename(thumbnailPath)}`);
+        return thumbnailPath;
+      }
+      
+      console.log(`🎬 비디오 파일에서 썸네일 생성: ${videoPath} -> ${thumbnailPath}`);
       
       return new Promise((resolve, reject) => {
         const ffmpeg = spawn(ffmpegPath, [
@@ -82,7 +105,7 @@ class VideoProcessor {
 
         ffmpeg.on('close', (code) => {
           if (code === 0 && fs.existsSync(thumbnailPath)) {
-            console.log(`✅ 썸네일 생성 완료: ${path.basename(thumbnailPath)}`);
+            console.log(`✅ 비디오 썸네일 생성 완료: ${path.basename(thumbnailPath)}`);
             resolve(thumbnailPath);
           } else {
             reject(new Error(`FFmpeg 실행 실패 (코드: ${code})`));
@@ -169,6 +192,49 @@ class VideoProcessor {
       console.log('✅ 오래된 파일 정리 완료');
     } catch (error) {
       console.error('파일 정리 실패:', error);
+    }
+  }
+
+  // 파일 타입 감지 메서드
+  async detectFileType(filePath) {
+    try {
+      // 파일의 첫 몇 바이트를 읽어서 파일 타입 감지
+      const buffer = Buffer.alloc(12);
+      const fd = fs.openSync(filePath, 'r');
+      fs.readSync(fd, buffer, 0, 12, 0);
+      fs.closeSync(fd);
+
+      // 매직 넘버로 파일 타입 판별
+      const hex = buffer.toString('hex').toLowerCase();
+      
+      // JPEG 파일 (FF D8 FF)
+      if (hex.startsWith('ffd8ff')) {
+        return 'image';
+      }
+      
+      // PNG 파일 (89 50 4E 47)
+      if (hex.startsWith('89504e47')) {
+        return 'image';
+      }
+      
+      // MP4 파일 확인 (더 정확한 감지)
+      if (hex.includes('667479706d703432') || // ftyp mp42
+          hex.includes('667479706d703431') || // ftyp mp41
+          hex.includes('6674797069736f6d')) { // ftyp isom
+        return 'video';
+      }
+      
+      // WebM 파일 (1A 45 DF A3)
+      if (hex.startsWith('1a45dfa3')) {
+        return 'video';
+      }
+      
+      // 기본값은 비디오로 처리
+      return 'video';
+      
+    } catch (error) {
+      console.warn('파일 타입 감지 실패, 비디오로 처리:', error.message);
+      return 'video';
     }
   }
 

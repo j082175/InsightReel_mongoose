@@ -37,6 +37,84 @@ export class InstagramHandler {
   }
 
   /**
+   * 현재 포스트의 메타데이터 추출
+   */
+  extractPostMetadata() {
+    try {
+      const metadata = {
+        author: '',
+        caption: '',
+        likes: '0',
+        hashtags: []
+      };
+
+      // 작성자 추출
+      const authorElements = [
+        'header a[role="link"]', 
+        '[data-testid="user-avatar"] + a',
+        'article header a'
+      ];
+      
+      for (const selector of authorElements) {
+        const authorElement = document.querySelector(selector);
+        if (authorElement) {
+          metadata.author = authorElement.innerText.trim() || authorElement.href.split('/').filter(x => x)[2] || '';
+          break;
+        }
+      }
+
+      // 캡션 추출
+      const captionElements = [
+        '[data-testid="post-content"] span',
+        'article div[data-testid="media-content"] + div span',
+        '.x1lliihq span'
+      ];
+      
+      for (const selector of captionElements) {
+        const captionElement = document.querySelector(selector);
+        if (captionElement) {
+          metadata.caption = captionElement.innerText.trim().substring(0, 200); // 200자 제한
+          break;
+        }
+      }
+
+      // 좋아요 수 추출
+      const likesElements = [
+        '[aria-label*="좋아요"] span',
+        'button[data-testid="like"] + span',
+        '.x1lliihq[role="button"] span'
+      ];
+      
+      for (const selector of likesElements) {
+        const likesElement = document.querySelector(selector);
+        if (likesElement) {
+          const likesText = likesElement.innerText.trim();
+          const likesMatch = likesText.match(/[\d,]+/);
+          if (likesMatch) {
+            metadata.likes = likesMatch[0];
+            break;
+          }
+        }
+      }
+
+      // 해시태그 추출
+      if (metadata.caption) {
+        const hashtagMatches = metadata.caption.match(/#[\w가-힣]+/g);
+        if (hashtagMatches) {
+          metadata.hashtags = hashtagMatches;
+        }
+      }
+
+      Utils.log('info', '메타데이터 추출 완료', metadata);
+      return metadata;
+      
+    } catch (error) {
+      Utils.log('error', '메타데이터 추출 실패', error);
+      return { author: '', caption: '', likes: '0', hashtags: [] };
+    }
+  }
+
+  /**
    * 향상 작업을 건너뛸지 확인
    * @returns {boolean} 건너뛸지 여부
    */

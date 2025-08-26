@@ -76,6 +76,21 @@ class SheetsManager {
     }
   }
 
+  // 첫 번째 시트 이름 조회
+  async getFirstSheetName() {
+    try {
+      const response = await this.sheets.spreadsheets.get({
+        spreadsheetId: this.spreadsheetId
+      });
+      
+      const firstSheet = response.data.sheets[0];
+      return firstSheet.properties.title;
+    } catch (error) {
+      console.warn('시트 이름 조회 실패, 기본값 사용:', error.message);
+      return 'Sheet1'; // 기본값
+    }
+  }
+
   async createSpreadsheet() {
     try {
       const response = await this.sheets.spreadsheets.create({
@@ -137,7 +152,7 @@ class SheetsManager {
 
     await this.sheets.spreadsheets.values.update({
       spreadsheetId: this.spreadsheetId,
-      range: '영상 목록!A1:O1',
+      range: `${await this.getFirstSheetName()}!A1:O1`,
       valueInputOption: 'RAW',
       resource: {
         values: [headers]
@@ -201,10 +216,13 @@ class SheetsManager {
 
       const { platform, postUrl, videoPath, thumbnailPath, metadata, analysis, timestamp } = videoData;
 
+      // 첫 번째 시트 이름 가져오기
+      const sheetName = await this.getFirstSheetName();
+      
       // 다음 행 번호 조회
       const lastRowResponse = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: '영상 목록!A:A'
+        range: `${sheetName}!A:A`
       });
 
       const nextRow = (lastRowResponse.data.values?.length || 1) + 1;
@@ -232,7 +250,7 @@ class SheetsManager {
       // 스프레드시트에 데이터 추가
       await this.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
-        range: `영상 목록!A${nextRow}:O${nextRow}`,
+        range: `${sheetName}!A${nextRow}:O${nextRow}`,
         valueInputOption: 'RAW',
         resource: {
           values: [rowData]
@@ -259,9 +277,10 @@ class SheetsManager {
   async updateStatistics() {
     try {
       // 영상 목록에서 데이터 조회
+      const sheetName = await this.getFirstSheetName();
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: '영상 목록!A2:O'  // 헤더 제외
+        range: `${sheetName}!A2:O`  // 헤더 제외
       });
 
       const data = response.data.values || [];
@@ -334,9 +353,10 @@ class SheetsManager {
 
   async getRecentVideos(limit = 10) {
     try {
+      const sheetName = await this.getFirstSheetName();
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `영상 목록!A2:O${limit + 1}`
+        range: `${sheetName}!A2:O${limit + 1}`
       });
 
       const data = response.data.values || [];

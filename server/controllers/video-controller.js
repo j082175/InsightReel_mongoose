@@ -259,17 +259,23 @@ class VideoController {
       console.log('3️⃣ AI 분석 중...');
       pipeline.analysis = await this.aiAnalyzer.analyzeVideo(pipeline.thumbnailPath, metadata);
       
-      // 4단계: 구글 시트 저장
+      // 4단계: 구글 시트 저장 (선택사항)
       console.log('4️⃣ 구글 시트 저장 중...');
-      await this.sheetsManager.saveVideoData({
-        platform,
-        postUrl,
-        videoPath: pipeline.videoPath,
-        thumbnailPath: pipeline.thumbnailPath,
-        metadata,
-        analysis: pipeline.analysis,
-        timestamp: new Date().toISOString()
-      });
+      try {
+        await this.sheetsManager.saveVideoData({
+          platform,
+          postUrl,
+          videoPath: pipeline.videoPath,
+          thumbnailPath: pipeline.thumbnailPath,
+          metadata,
+          analysis: pipeline.analysis,
+          timestamp: new Date().toISOString()
+        });
+        console.log('✅ 구글 시트 저장 완료');
+      } catch (error) {
+        console.warn('⚠️ 구글 시트 저장 실패 (무시하고 계속):', error.message);
+        // 구글 시트 저장 실패는 전체 처리를 중단시키지 않음
+      }
       
       console.log('✅ 비디오 처리 파이프라인 완료');
       

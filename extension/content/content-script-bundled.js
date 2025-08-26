@@ -240,14 +240,51 @@ class ApiClient {
     try {
       Utils.log('info', 'Downloading blob video', blobUrl);
       
-      const response = await fetch(blobUrl);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // blob URL 유효성 체크
+      if (!blobUrl || !blobUrl.startsWith('blob:')) {
+        throw new Error('유효하지 않은 blob URL');
       }
+      
+      // 타임아웃 설정으로 빠른 실패
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5초 타임아웃
+      
+      try {
+        const response = await fetch(blobUrl, {
+          signal: controller.signal,
+          method: 'GET',
+          cache: 'no-cache'
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-      const blob = await response.blob();
-      Utils.log('success', 'Blob video downloaded', { size: blob.size });
-      return blob;
+        const blob = await response.blob();
+        
+        if (!blob || blob.size === 0) {
+          throw new Error('빈 blob 데이터');
+        }
+        
+        Utils.log('success', 'Blob video downloaded', { 
+          size: blob.size, 
+          type: blob.type || 'unknown' 
+        });
+        return blob;
+        
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Blob 다운로드 타임아웃');
+        } else if (fetchError.message.includes('net::ERR_FILE_NOT_FOUND')) {
+          throw new Error('Blob URL이 만료되었거나 접근할 수 없습니다');
+        }
+        
+        throw fetchError;
+      }
 
     } catch (error) {
       Utils.log('error', 'Blob video download failed', error);
@@ -416,27 +453,67 @@ class VideoSaver {
       Utils.log('info', 'Instagram 저장 버튼 클릭 이벤트 감지');
       
       try {
-        await Utils.delay(CONSTANTS.TIMEOUTS.PROCESSING_DELAY);
-        
         const videoUrl = video.src || video.currentSrc;
         const postUrl = window.location.href;
         const metadata = this.extractInstagramMetadata(post);
         
+        Utils.log('info', '비디오 URL 정보', { videoUrl, type: videoUrl ? videoUrl.substring(0, 20) + '...' : 'null' });
+        
         if (videoUrl && videoUrl.startsWith('blob:')) {
-          const videoBlob = await this.apiClient.downloadBlobVideo(videoUrl);
-          await this.apiClient.processVideoBlob({
-            platform: CONSTANTS.PLATFORMS.INSTAGRAM,
-            videoBlob,
-            postUrl,
-            metadata
-          });
-        } else {
+          Utils.log('info', 'Blob URL 감지 - 즉시 다운로드 시도');
+          
+          try {
+            // blob URL은 즉시 다운로드해야 함 (지연 없음)
+            const videoBlob = await this.apiClient.downloadBlobVideo(videoUrl);
+            Utils.log('success', 'Blob 다운로드 성공', { size: videoBlob.size });
+            
+            await this.apiClient.processVideoBlob({
+              platform: CONSTANTS.PLATFORMS.INSTAGRAM,
+              videoBlob,
+              postUrl,
+              metadata
+            });
+          } catch (blobError) {
+            Utils.log('error', 'Blob 처리 실패, 대안 방법 시도', blobError);
+            
+            // Blob 실패 시 대안: 비디오 요소에서 직접 데이터 추출 시도
+            const alternativeBlob = await this.extractVideoFromElement(video);
+            if (alternativeBlob) {
+              Utils.log('info', '비디오 요소에서 직접 추출 성공');
+              await this.apiClient.processVideoBlob({
+                platform: CONSTANTS.PLATFORMS.INSTAGRAM,
+                videoBlob: alternativeBlob,
+                postUrl,
+                metadata
+              });
+            } else {
+              // 마지막 대안: 서버 연결 체크 후 처리
+              Utils.log('info', '서버 연결 상태 확인 중');
+              const isServerUp = await this.apiClient.checkConnection();
+              
+              if (isServerUp) {
+                Utils.log('info', '서버 측 다운로드로 폴백');
+                await this.apiClient.processVideo({
+                  platform: CONSTANTS.PLATFORMS.INSTAGRAM,
+                  videoUrl,
+                  postUrl,
+                  metadata
+                });
+              } else {
+                throw new Error('로컬 서버에 연결할 수 없습니다. 서버를 실행해주세요.\n\n실행 방법:\n1. 터미널에서 "node server/index.js" 실행\n2. http://localhost:3000 확인');
+              }
+            }
+          }
+        } else if (videoUrl) {
+          Utils.log('info', '일반 URL로 처리');
           await this.apiClient.processVideo({
             platform: CONSTANTS.PLATFORMS.INSTAGRAM,
             videoUrl,
             postUrl,
             metadata
           });
+        } else {
+          throw new Error('비디오 URL을 찾을 수 없습니다');
         }
         
         this.uiManager.showNotification(
@@ -447,8 +524,8 @@ class VideoSaver {
       } catch (error) {
         Utils.log('error', '클릭 처리 중 오류', error);
         this.uiManager.showNotification(
-          `Instagram 저장은 완료되었지만 AI 분석에 실패했습니다: ${error.message}`, 
-          CONSTANTS.NOTIFICATION_TYPES.WARNING
+          `영상 처리에 실패했습니다: ${error.message}`, 
+          CONSTANTS.NOTIFICATION_TYPES.ERROR
         );
       } finally {
         setTimeout(() => {
@@ -456,6 +533,38 @@ class VideoSaver {
         }, 5000);
       }
     };
+  }
+
+  // 비디오 요소에서 직접 블롭 추출 (대안 방법)
+  async extractVideoFromElement(videoElement) {
+    try {
+      Utils.log('info', '비디오 요소에서 직접 데이터 추출 시도');
+      
+      // 방법 1: Canvas를 이용한 프레임 캡처 (완전하지 않지만 대안)
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      canvas.width = videoElement.videoWidth || 640;
+      canvas.height = videoElement.videoHeight || 480;
+      
+      // 현재 프레임을 캔버스에 그리기
+      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+      
+      // 캔버스를 이미지로 변환 (썸네일 대안)
+      return new Promise((resolve) => {
+        canvas.toBlob((blob) => {
+          if (blob) {
+            Utils.log('info', '비디오 프레임 캡처 성공 (썸네일 대안)', { size: blob.size });
+            resolve(blob);
+          } else {
+            resolve(null);
+          }
+        }, 'image/jpeg', 0.8);
+      });
+    } catch (error) {
+      Utils.log('error', '비디오 요소에서 데이터 추출 실패', error);
+      return null;
+    }
   }
 
   extractInstagramMetadata(post) {
