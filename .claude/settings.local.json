@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node:*)",
+      "Bash(npm --version)",
+      "Bash(npm install)",
+      "Bash(ollama:*)",
+      "Bash(where:*)",
+      "Bash(winget:*)",
+      "Bash(powershell:*)",
+      "Bash(curl:*)",
+      "Bash(timeout 10s npm run dev)",
+      "Bash(npm run dev:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
