@@ -4,8 +4,8 @@ const path = require('path');
 
 class AIAnalyzer {
   constructor() {
-    this.ollamaUrl = 'http://localhost:11434';
-    this.modelName = 'llava:latest';
+    this.ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
+    this.modelName = process.env.OLLAMA_MODEL || 'llava:latest';
     
     // 카테고리 정의
     this.categories = {
@@ -40,7 +40,7 @@ class AIAnalyzer {
       return {
         status: 'connected',
         models: models.map(m => m.name),
-        recommendedModel: 'llava:latest'
+        recommendedModel: this.modelName
       };
     } catch (error) {
       if (error.code === 'ECONNREFUSED') {
