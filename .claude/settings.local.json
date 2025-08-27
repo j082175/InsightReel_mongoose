@@ -16,7 +16,9 @@
       "mcp__ide__getDiagnostics",
       "Bash(nvidia-smi:*)",
       "Bash(set CUDA_VISIBLE_DEVICES=0)",
-      "Bash(wmic:*)"
+      "Bash(wmic:*)",
+      "Bash(grep:*)",
+      "Bash(npm start)"
     ],
     "deny": [],
     "ask": []

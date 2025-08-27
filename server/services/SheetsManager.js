@@ -146,13 +146,13 @@ class SheetsManager {
 
   async setupHeaders() {
     const headers = [
-      '번호', '일시', '플랫폼', '작성자', '제목/캡션', '카테고리', 
+      '번호', '일시', '플랫폼', '작성자', '제목/캡션', '대카테고리', '중카테고리',
       '키워드', '분위기', '색감', '좋아요', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
     ];
 
     await this.sheets.spreadsheets.values.update({
       spreadsheetId: this.spreadsheetId,
-      range: `${await this.getFirstSheetName()}!A1:O1`,
+      range: `${await this.getFirstSheetName()}!A1:P1`,
       valueInputOption: 'RAW',
       resource: {
         values: [headers]
@@ -235,7 +235,8 @@ class SheetsManager {
         platform.toUpperCase(),                      // 플랫폼
         metadata.author || '',                       // 작성자
         metadata.caption || '',                      // 제목/캡션
-        analysis.category || '미분류',                // 카테고리
+        analysis.mainCategory || '미분류',            // 대카테고리
+        analysis.middleCategory || '미분류',          // 중카테고리
         analysis.keywords?.join(', ') || '',         // 키워드
         analysis.mood || '',                         // 분위기
         analysis.colorTone || '',                    // 색감
@@ -250,7 +251,7 @@ class SheetsManager {
       // 스프레드시트에 데이터 추가
       await this.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A${nextRow}:O${nextRow}`,
+        range: `${sheetName}!A${nextRow}:P${nextRow}`,
         valueInputOption: 'RAW',
         resource: {
           values: [rowData]
@@ -280,7 +281,7 @@ class SheetsManager {
       const sheetName = await this.getFirstSheetName();
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A2:O`  // 헤더 제외
+        range: `${sheetName}!A2:P`  // 헤더 제외
       });
 
       const data = response.data.values || [];
@@ -356,7 +357,7 @@ class SheetsManager {
       const sheetName = await this.getFirstSheetName();
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A2:O${limit + 1}`
+        range: `${sheetName}!A2:P${limit + 1}`
       });
 
       const data = response.data.values || [];
@@ -366,16 +367,17 @@ class SheetsManager {
         platform: row[2],
         author: row[3],
         caption: row[4],
-        category: row[5],
-        keywords: row[6]?.split(', ') || [],
-        mood: row[7],
-        colorTone: row[8],
-        likes: row[9],
-        hashtags: row[10]?.split(' ') || [],
-        url: row[11],
-        filename: row[12],
-        confidence: row[13],
-        source: row[14]
+        mainCategory: row[5],
+        middleCategory: row[6],
+        keywords: row[7]?.split(', ') || [],
+        mood: row[8],
+        colorTone: row[9],
+        likes: row[10],
+        hashtags: row[11]?.split(' ') || [],
+        url: row[12],
+        filename: row[13],
+        confidence: row[14],
+        source: row[15]
       }));
     } catch (error) {
       throw new Error(`데이터 조회 실패: ${error.message}`);

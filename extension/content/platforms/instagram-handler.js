@@ -351,7 +351,7 @@ export class InstagramHandler {
     
     // blob URL 처리
     if (videoUrl.startsWith('blob:')) {
-      await this.processBlobVideo(videoUrl, postUrl, metadata);
+      await this.processBlobVideo(videoUrl, postUrl, metadata, video);
     } else {
       await this.processRegularVideo(videoUrl, postUrl, metadata);
     }
@@ -363,14 +363,31 @@ export class InstagramHandler {
   }
 
   /**
-   * Blob 비디오 처리
-   * @param {string} videoUrl Blob URL
+   * Blob 비디오 처리 (Video Element 방식)
+   * @param {string} videoUrl Blob URL (참조용)
    * @param {string} postUrl 게시물 URL
    * @param {Object} metadata 메타데이터
+   * @param {HTMLVideoElement} videoElement 비디오 요소
    */
-  async processBlobVideo(videoUrl, postUrl, metadata) {
-    Utils.log('info', 'blob URL 감지 - 클라이언트에서 다운로드 중');
-    const videoBlob = await this.apiClient.downloadBlobVideo(videoUrl);
+  async processBlobVideo(videoUrl, postUrl, metadata, videoElement = null) {
+    Utils.log('info', 'blob URL 감지 - Video Element에서 직접 캡처 시도');
+    
+    let videoBlob;
+    
+    try {
+      // 먼저 blob URL로 다운로드 시도
+      videoBlob = await this.apiClient.downloadBlobVideo(videoUrl);
+    } catch (blobError) {
+      Utils.log('warn', 'Blob URL 다운로드 실패, Video Element 방식으로 대체', blobError);
+      
+      // 실패 시 Video Element에서 프레임 캡처
+      if (videoElement) {
+        videoBlob = await this.apiClient.captureVideoFrame(videoElement);
+        Utils.log('info', 'Video Element에서 프레임 캡처 성공');
+      } else {
+        throw new Error('Video Element를 찾을 수 없어 프레임 캡처 불가');
+      }
+    }
     
     await this.apiClient.processVideoBlob({
       platform: CONSTANTS.PLATFORMS.INSTAGRAM,

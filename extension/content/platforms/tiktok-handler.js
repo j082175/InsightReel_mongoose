@@ -214,7 +214,7 @@ export class TikTokHandler {
       
       // TikTok은 대부분 blob URL 사용
       if (videoUrl.startsWith('blob:')) {
-        await this.processBlobVideo(videoUrl, postUrl, metadata);
+        await this.processBlobVideo(videoUrl, postUrl, metadata, videoElement);
       } else {
         await this.processRegularVideo(videoUrl, postUrl, metadata);
       }
@@ -240,17 +240,40 @@ export class TikTokHandler {
    * @param {string} videoUrl Blob URL
    * @param {string} postUrl 게시물 URL
    * @param {Object} metadata 메타데이터
+   * @param {Element} videoElement 비디오 요소
    */
-  async processBlobVideo(videoUrl, postUrl, metadata) {
+  async processBlobVideo(videoUrl, postUrl, metadata, videoElement) {
     Utils.log('info', 'TikTok blob URL 처리 중');
-    const videoBlob = await this.apiClient.downloadBlobVideo(videoUrl);
     
-    await this.apiClient.processVideoBlob({
-      platform: CONSTANTS.PLATFORMS.TIKTOK,
-      videoBlob,
-      postUrl,
-      metadata
-    });
+    try {
+      const videoBlob = await this.apiClient.downloadBlobVideo(videoUrl);
+      
+      await this.apiClient.processVideoBlob({
+        platform: CONSTANTS.PLATFORMS.TIKTOK,
+        videoBlob,
+        postUrl,
+        metadata
+      });
+    } catch (error) {
+      Utils.log('warn', 'TikTok blob URL 다운로드 실패, Canvas 프레임 캡처로 대체', error);
+      
+      if (!videoElement) {
+        throw new Error('비디오 요소가 없어서 Canvas 프레임 캡처를 할 수 없습니다.');
+      }
+      
+      // Canvas를 사용한 프레임 캡처 대안
+      const frameBlob = await this.apiClient.captureVideoFrame(videoElement);
+      
+      await this.apiClient.processVideoBlob({
+        platform: CONSTANTS.PLATFORMS.TIKTOK,
+        videoBlob: frameBlob,
+        postUrl,
+        metadata: {
+          ...metadata,
+          captureMethod: 'canvas-frame'
+        }
+      });
+    }
   }
 
   /**

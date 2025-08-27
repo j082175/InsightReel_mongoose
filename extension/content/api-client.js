@@ -95,7 +95,85 @@ export class ApiClient {
   }
 
   /**
-   * Blob URL에서 비디오 다운로드
+   * Video element에서 직접 데이터 추출 (Canvas 방식)
+   * @param {HTMLVideoElement} videoElement 비디오 요소
+   * @returns {Promise<Blob>} 캡처된 프레임 블롭
+   */
+  async captureVideoFrame(videoElement) {
+    try {
+      Utils.log('info', 'Video element에서 직접 데이터 추출 시도');
+      
+      if (!videoElement || videoElement.tagName !== 'VIDEO') {
+        throw new Error('유효한 video element가 아닙니다.');
+      }
+
+      // 비디오 재생 대기
+      await this.ensureVideoReady(videoElement);
+
+      // Canvas 생성 및 프레임 캡처
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      canvas.width = videoElement.videoWidth || videoElement.clientWidth || 640;
+      canvas.height = videoElement.videoHeight || videoElement.clientHeight || 360;
+      
+      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+      
+      // Canvas를 Blob으로 변환
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Canvas to Blob 변환 실패'));
+          }
+        }, 'image/jpeg', 0.8);
+      });
+      
+      Utils.log('success', '비디오 프레임 캡처 성공 (썸네일 대안)', { size: blob.size });
+      return blob;
+
+    } catch (error) {
+      Utils.log('error', 'Video frame capture failed', error);
+      throw new Error(`비디오 프레임 캡처 실패: ${error.message}`);
+    }
+  }
+
+  /**
+   * 비디오 준비 상태 확인
+   * @param {HTMLVideoElement} videoElement 비디오 요소
+   */
+  async ensureVideoReady(videoElement) {
+    if (videoElement.readyState >= 2) {
+      return; // 이미 준비됨
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('비디오 로딩 타임아웃'));
+      }, 5000);
+
+      const onReady = () => {
+        clearTimeout(timeout);
+        videoElement.removeEventListener('loadeddata', onReady);
+        videoElement.removeEventListener('error', onError);
+        resolve();
+      };
+
+      const onError = (e) => {
+        clearTimeout(timeout);
+        videoElement.removeEventListener('loadeddata', onReady);
+        videoElement.removeEventListener('error', onError);
+        reject(new Error(`비디오 로딩 실패: ${e.message}`));
+      };
+
+      videoElement.addEventListener('loadeddata', onReady);
+      videoElement.addEventListener('error', onError);
+    });
+  }
+
+  /**
+   * Blob URL에서 비디오 다운로드 (폴백용)
    * @param {string} blobUrl Blob URL
    * @returns {Promise<Blob>} 다운로드된 블롭
    */

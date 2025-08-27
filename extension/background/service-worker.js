@@ -138,7 +138,7 @@ class BackgroundService {
       
       if (response.ok) {
         // 성공 알림
-        this.showNotification(`✅ 영상이 저장되었습니다!\n카테고리: ${result.category}`);
+        this.showNotification(`✅ 영상이 저장되었습니다!\n카테고리: ${result.mainCategory}`);
         
         // 스프레드시트 URL 저장
         if (result.spreadsheetUrl) {

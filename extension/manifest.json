@@ -6,9 +6,12 @@
   
   "permissions": [
     "activeTab",
-    "storage",
+    "storage", 
     "downloads",
-    "identity"
+    "identity",
+    "contextMenus",
+    "notifications",
+    "webRequest"
   ],
   
   "host_permissions": [
