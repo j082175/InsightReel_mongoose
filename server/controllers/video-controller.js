@@ -132,9 +132,12 @@ class VideoController {
    * 비디오 처리 (URL 방식)
    */
   processVideo = ErrorHandler.asyncHandler(async (req, res) => {
-    const { platform, videoUrl, postUrl, metadata } = req.body;
+    const { platform, videoUrl, postUrl, metadata, analysisType = 'quick' } = req.body;
     
     console.log(`🎬 Processing ${platform} video:`, postUrl);
+    console.log(`🔍 Analysis type: ${analysisType}`);
+    console.log(`📋 Request body keys:`, Object.keys(req.body));
+    console.log(`📋 Full request body:`, JSON.stringify(req.body, null, 2));
     
     try {
       const result = await this.executeVideoProcessingPipeline({
@@ -142,6 +145,7 @@ class VideoController {
         videoUrl,
         postUrl,
         metadata,
+        analysisType,
         isBlob: false
       });
 
@@ -191,7 +195,7 @@ class VideoController {
    * 비디오 처리 (Blob 방식)
    */
   processVideoBlob = ErrorHandler.asyncHandler(async (req, res) => {
-    const { platform, postUrl } = req.body;
+    const { platform, postUrl, analysisType = 'quick' } = req.body;
     const metadata = req.body.metadata || {};
     const file = req.file;
 
@@ -205,6 +209,7 @@ class VideoController {
     
     console.log(`🎬 Processing ${platform} blob video:`, postUrl);
     console.log(`📁 File info: ${file.filename} (${file.size} bytes)`);
+    console.log(`🔍 Analysis type: ${analysisType}`);
     
     try {
       const result = await this.executeVideoProcessingPipeline({
@@ -212,6 +217,7 @@ class VideoController {
         videoPath: file.path,
         postUrl,
         metadata,
+        analysisType,
         isBlob: true
       });
 
@@ -232,10 +238,10 @@ class VideoController {
   /**
    * 비디오 처리 파이프라인 실행
    */
-  async executeVideoProcessingPipeline({ platform, videoUrl, videoPath, postUrl, metadata, isBlob }) {
+  async executeVideoProcessingPipeline({ platform, videoUrl, videoPath, postUrl, metadata, analysisType, isBlob }) {
     const pipeline = {
       videoPath: null,
-      thumbnailPath: null,
+      thumbnailPaths: null,
       analysis: null
     };
 
@@ -251,13 +257,25 @@ class VideoController {
         throw new Error('비디오 URL 또는 파일이 필요합니다');
       }
       
-      // 2단계: 썸네일 생성
-      console.log('2️⃣ 썸네일 생성 중...');
-      pipeline.thumbnailPath = await this.videoProcessor.generateThumbnail(pipeline.videoPath);
+      // 2단계: 썸네일/프레임 생성
+      if (analysisType === 'multi-frame' || analysisType === 'full') {
+        console.log('2️⃣ 다중 프레임 추출 중...');
+        pipeline.thumbnailPaths = await this.videoProcessor.generateThumbnail(pipeline.videoPath, analysisType);
+        console.log(`✅ ${pipeline.thumbnailPaths.length}개 프레임 추출 완료`);
+      } else {
+        console.log('2️⃣ 단일 썸네일 생성 중...');
+        const singleThumbnail = await this.videoProcessor.generateThumbnail(pipeline.videoPath, analysisType);
+        // 단일 프레임도 배열로 통일
+        pipeline.thumbnailPaths = Array.isArray(singleThumbnail) ? singleThumbnail : [singleThumbnail];
+      }
       
       // 3단계: AI 분석
-      console.log('3️⃣ AI 분석 중...');
-      pipeline.analysis = await this.aiAnalyzer.analyzeVideo(pipeline.thumbnailPath, metadata);
+      if (pipeline.thumbnailPaths.length > 1) {
+        console.log(`3️⃣ 다중 프레임 AI 분석 중... (${pipeline.thumbnailPaths.length}개 프레임)`);
+      } else {
+        console.log('3️⃣ 단일 프레임 AI 분석 중...');
+      }
+      pipeline.analysis = await this.aiAnalyzer.analyzeVideo(pipeline.thumbnailPaths, metadata);
       
       // 4단계: 구글 시트 저장 (선택사항)
       console.log('4️⃣ 구글 시트 저장 중...');
@@ -266,7 +284,8 @@ class VideoController {
           platform,
           postUrl,
           videoPath: pipeline.videoPath,
-          thumbnailPath: pipeline.thumbnailPath,
+          thumbnailPath: Array.isArray(pipeline.thumbnailPaths) ? pipeline.thumbnailPaths[0] : pipeline.thumbnailPaths,
+          thumbnailPaths: pipeline.thumbnailPaths, // 모든 프레임 경로도 저장
           metadata,
           analysis: pipeline.analysis,
           timestamp: new Date().toISOString()
@@ -281,9 +300,16 @@ class VideoController {
       
       return {
         category: pipeline.analysis.category,
+        mainCategory: pipeline.analysis.mainCategory,
+        middleCategory: pipeline.analysis.middleCategory,
         keywords: pipeline.analysis.keywords,
+        hashtags: pipeline.analysis.hashtags,
+        confidence: pipeline.analysis.confidence,
+        frameCount: pipeline.analysis.frameCount || 1,
+        analysisType: analysisType,
         videoPath: pipeline.videoPath,
-        thumbnailPath: pipeline.thumbnailPath
+        thumbnailPath: Array.isArray(pipeline.thumbnailPaths) ? pipeline.thumbnailPaths[0] : pipeline.thumbnailPaths,
+        thumbnailPaths: pipeline.thumbnailPaths
       };
 
     } catch (error) {
@@ -298,20 +324,27 @@ class VideoController {
    */
   async cleanupFailedPipeline(pipeline) {
     try {
-      // 생성된 임시 파일들 정리
+      const fs = require('fs');
+      
+      // 생성된 임시 비디오 파일 정리
       if (pipeline.videoPath) {
-        const fs = require('fs');
         if (fs.existsSync(pipeline.videoPath)) {
           fs.unlinkSync(pipeline.videoPath);
           console.log('🧹 임시 비디오 파일 정리됨');
         }
       }
       
-      if (pipeline.thumbnailPath) {
-        const fs = require('fs');
-        if (fs.existsSync(pipeline.thumbnailPath)) {
-          fs.unlinkSync(pipeline.thumbnailPath);
-          console.log('🧹 임시 썸네일 파일 정리됨');
+      // 생성된 썸네일/프레임 파일들 정리
+      if (pipeline.thumbnailPaths) {
+        const pathsToClean = Array.isArray(pipeline.thumbnailPaths) 
+          ? pipeline.thumbnailPaths 
+          : [pipeline.thumbnailPaths];
+        
+        for (const thumbnailPath of pathsToClean) {
+          if (thumbnailPath && fs.existsSync(thumbnailPath)) {
+            fs.unlinkSync(thumbnailPath);
+            console.log(`🧹 임시 썸네일 파일 정리됨: ${path.basename(thumbnailPath)}`);
+          }
         }
       }
     } catch (cleanupError) {

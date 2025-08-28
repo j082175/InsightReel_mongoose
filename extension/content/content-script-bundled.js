@@ -173,7 +173,11 @@ class ApiClient {
 
   async processVideo(data) {
     try {
-      Utils.log('info', 'Processing video with URL', { platform: data.platform, url: data.videoUrl });
+      Utils.log('info', 'Processing video with URL', { 
+        platform: data.platform, 
+        url: data.videoUrl,
+        analysisType: data.analysisType || 'quick' 
+      });
       
       const response = await fetch(`${this.serverUrl}/api/process-video`, {
         method: 'POST',
@@ -210,13 +214,15 @@ class ApiClient {
     try {
       Utils.log('info', 'Processing video with blob', { 
         platform: data.platform, 
-        size: data.videoBlob.size 
+        size: data.videoBlob.size,
+        analysisType: data.analysisType || 'quick'
       });
       
       const formData = new FormData();
       formData.append('video', data.videoBlob, `${data.platform}_video_${Date.now()}.mp4`);
       formData.append('platform', data.platform);
       formData.append('postUrl', data.postUrl);
+      formData.append('analysisType', data.analysisType || 'quick');
       formData.append('metadata', JSON.stringify(data.metadata));
       
       const response = await fetch(`${this.serverUrl}/api/process-video-blob`, {
@@ -718,10 +724,11 @@ class VideoSaver {
             platform: CONSTANTS.PLATFORMS.INSTAGRAM,
             videoUrl: cleanVideoUrl,
             postUrl,
+            analysisType: 'multi-frame', // 다중 프레임 분석으로 변경
             metadata: {
               ...metadata,
               analysisId,
-              analysisType: 'full',
+              analysisType: 'multi-frame', // 메타데이터도 multi-frame으로 일관성 맞춤
               isUpdate: true,
               urlSource: 'extracted',
               originalUrl: realVideoUrl !== cleanVideoUrl ? realVideoUrl : undefined
@@ -747,6 +754,7 @@ class VideoSaver {
           platform: CONSTANTS.PLATFORMS.INSTAGRAM,
           videoBlob: multiFrameData,
           postUrl,
+          analysisType: 'multi-frame', // 파라미터로 전달
           metadata: {
             ...metadata,
             analysisId,
@@ -784,6 +792,7 @@ class VideoSaver {
         platform: CONSTANTS.PLATFORMS.INSTAGRAM,
         videoBlob: frameBlob,
         postUrl,
+        analysisType: 'quick', // 파라미터로 전달
         metadata: {
           ...metadata,
           analysisId,

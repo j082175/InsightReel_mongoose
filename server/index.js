@@ -119,21 +119,33 @@ app.get('/api/test-sheets', async (req, res) => {
 // 비디오 처리 메인 엔드포인트
 app.post('/api/process-video', async (req, res) => {
   try {
-    const { platform, videoUrl, postUrl, metadata } = req.body;
+    const { platform, videoUrl, postUrl, metadata, analysisType = 'quick' } = req.body;
     
-    console.log(`Processing ${platform} video:`, postUrl);
+    console.log(`🎬 Processing ${platform} video:`, postUrl);
+    console.log(`🔍 Analysis type: ${analysisType}`);
     
     // 1단계: 비디오 다운로드
-    console.log('1. 비디오 다운로드 중...');
+    console.log('1️⃣ 비디오 다운로드 중...');
     const videoPath = await videoProcessor.downloadVideo(videoUrl, platform);
     
-    // 2단계: 썸네일 생성
-    console.log('2. 썸네일 생성 중...');
-    const thumbnailPath = await videoProcessor.generateThumbnail(videoPath);
+    // 2단계: 썸네일/프레임 생성
+    if (analysisType === 'multi-frame' || analysisType === 'full') {
+      console.log('2️⃣ 다중 프레임 추출 중...');
+      var thumbnailPaths = await videoProcessor.generateThumbnail(videoPath, analysisType);
+      console.log(`✅ ${thumbnailPaths.length}개 프레임 추출 완료`);
+    } else {
+      console.log('2️⃣ 단일 썸네일 생성 중...');
+      var singleThumbnail = await videoProcessor.generateThumbnail(videoPath, analysisType);
+      var thumbnailPaths = Array.isArray(singleThumbnail) ? singleThumbnail : [singleThumbnail];
+    }
     
     // 3단계: AI 분석
-    console.log('3. AI 분석 중...');
-    const analysis = await aiAnalyzer.analyzeVideo(thumbnailPath, metadata);
+    if (thumbnailPaths.length > 1) {
+      console.log(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
+    } else {
+      console.log('3️⃣ 단일 프레임 AI 분석 중...');
+    }
+    const analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, metadata);
     
     // 4단계: 구글 시트 저장
     console.log('4. 구글 시트 저장 중...');
@@ -141,7 +153,8 @@ app.post('/api/process-video', async (req, res) => {
       platform,
       postUrl,
       videoPath,
-      thumbnailPath,
+      thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
+      thumbnailPaths: thumbnailPaths,
       metadata,
       analysis,
       timestamp: new Date().toISOString()
@@ -157,9 +170,16 @@ app.post('/api/process-video', async (req, res) => {
       success: true,
       message: '비디오가 성공적으로 처리되었습니다.',
       category: analysis.category,
+      mainCategory: analysis.mainCategory,
+      middleCategory: analysis.middleCategory,
       keywords: analysis.keywords,
+      hashtags: analysis.hashtags,
+      confidence: analysis.confidence,
+      frameCount: analysis.frameCount || 1,
+      analysisType: analysisType,
       videoPath,
-      thumbnailPath
+      thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
+      thumbnailPaths: thumbnailPaths
     });
     
   } catch (error) {
@@ -206,11 +226,12 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
 // blob 비디오 처리 엔드포인트
 app.post('/api/process-video-blob', upload.single('video'), async (req, res) => {
   try {
-    const { platform, postUrl } = req.body;
+    const { platform, postUrl, analysisType = 'quick' } = req.body;
     const metadata = JSON.parse(req.body.metadata || '{}');
     
-    console.log(`Processing ${platform} blob video from:`, postUrl);
-    console.log('Uploaded file:', req.file ? `${req.file.filename} (${req.file.size} bytes)` : 'None');
+    console.log(`🎬 Processing ${platform} blob video from:`, postUrl);
+    console.log(`📁 Uploaded file: ${req.file ? `${req.file.filename} (${req.file.size} bytes)` : 'None'}`);
+    console.log(`🔍 Analysis type: ${analysisType}`);
     
     if (!req.file) {
       return res.status(400).json({ 
@@ -221,21 +242,33 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     
     const videoPath = req.file.path;
     
-    // 2단계: 썸네일 생성
-    console.log('2. 썸네일 생성 중...');
-    const thumbnailPath = await videoProcessor.generateThumbnail(videoPath);
+    // 2단계: 썸네일/프레임 생성
+    if (analysisType === 'multi-frame' || analysisType === 'full') {
+      console.log('2️⃣ 다중 프레임 추출 중...');
+      var thumbnailPaths = await videoProcessor.generateThumbnail(videoPath, analysisType);
+      console.log(`✅ ${thumbnailPaths.length}개 프레임 추출 완료`);
+    } else {
+      console.log('2️⃣ 단일 썸네일 생성 중...');
+      var singleThumbnail = await videoProcessor.generateThumbnail(videoPath, analysisType);
+      var thumbnailPaths = Array.isArray(singleThumbnail) ? singleThumbnail : [singleThumbnail];
+    }
     
     // 3단계: AI 분석
-    console.log('3. AI 분석 중...');
-    const analysis = await aiAnalyzer.analyzeVideo(thumbnailPath, metadata);
+    if (thumbnailPaths.length > 1) {
+      console.log(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
+    } else {
+      console.log('3️⃣ 단일 프레임 AI 분석 중...');
+    }
+    const analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, metadata);
     
     // 4단계: 구글 시트 저장
-    console.log('4. 구글 시트 저장 중...');
+    console.log('4️⃣ 구글 시트 저장 중...');
     await sheetsManager.saveVideoData({
       platform,
       postUrl,
       videoPath,
-      thumbnailPath,
+      thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
+      thumbnailPaths: thumbnailPaths,
       metadata,
       analysis,
       timestamp: new Date().toISOString()
@@ -251,9 +284,16 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
       success: true,
       message: '비디오가 성공적으로 처리되었습니다.',
       category: analysis.category,
+      mainCategory: analysis.mainCategory,
+      middleCategory: analysis.middleCategory,
       keywords: analysis.keywords,
+      hashtags: analysis.hashtags,
+      confidence: analysis.confidence,
+      frameCount: analysis.frameCount || 1,
+      analysisType: analysisType,
       videoPath,
-      thumbnailPath
+      thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
+      thumbnailPaths: thumbnailPaths
     });
     
   } catch (error) {

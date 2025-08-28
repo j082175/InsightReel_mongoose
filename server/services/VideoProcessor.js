@@ -4,6 +4,15 @@ const path = require('path');
 const { spawn } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
 
+// ffprobe 경로 설정
+let ffprobePath;
+try {
+  ffprobePath = require('ffprobe-static').path;
+} catch (error) {
+  console.warn('ffprobe-static 패키지가 없습니다. ffmpeg으로 대체합니다.');
+  ffprobePath = ffmpegPath;
+}
+
 class VideoProcessor {
   constructor() {
     this.downloadDir = path.join(__dirname, '../../downloads');
@@ -74,64 +83,202 @@ class VideoProcessor {
     }
   }
 
-  async generateThumbnail(videoPath) {
+  async generateThumbnail(videoPath, analysisType = 'quick') {
     try {
       const videoName = path.basename(videoPath, path.extname(videoPath));
-      const thumbnailPath = path.join(this.thumbnailDir, `${videoName}_thumb.jpg`);
       
       // 파일 타입 확인 - 이미지 파일인지 검사
       const fileType = await this.detectFileType(videoPath);
       
       if (fileType === 'image') {
         console.log(`📷 이미지 파일 감지 - 원본을 썸네일로 복사: ${videoPath}`);
-        
-        // 이미지 파일을 썸네일 경로로 복사
+        const thumbnailPath = path.join(this.thumbnailDir, `${videoName}_thumb.jpg`);
         fs.copyFileSync(videoPath, thumbnailPath);
         console.log(`✅ 이미지 썸네일 생성 완료: ${path.basename(thumbnailPath)}`);
-        return thumbnailPath;
+        return [thumbnailPath]; // 배열로 반환하여 일관성 유지
       }
       
-      console.log(`🎬 비디오 파일에서 썸네일 생성: ${videoPath} -> ${thumbnailPath}`);
-      
-      return new Promise((resolve, reject) => {
-        const ffmpeg = spawn(ffmpegPath, [
-          '-i', videoPath,
-          '-ss', '00:00:01.000',    // 1초 지점에서 추출
-          '-vframes', '1',          // 1프레임만
-          '-q:v', '2',             // 고품질
-          '-y',                    // 덮어쓰기 허용
-          thumbnailPath
-        ]);
-
-        ffmpeg.on('close', (code) => {
-          if (code === 0 && fs.existsSync(thumbnailPath)) {
-            console.log(`✅ 비디오 썸네일 생성 완료: ${path.basename(thumbnailPath)}`);
-            resolve(thumbnailPath);
-          } else {
-            reject(new Error(`FFmpeg 실행 실패 (코드: ${code})`));
-          }
-        });
-
-        ffmpeg.on('error', (error) => {
-          console.error('FFmpeg 에러:', error);
-          reject(error);
-        });
-
-        ffmpeg.stderr.on('data', (data) => {
-          console.log(`FFmpeg: ${data}`);
-        });
-      });
+      // 분석 타입에 따라 다른 처리
+      if (analysisType === 'multi-frame' || analysisType === 'full') {
+        return await this.generateMultipleFrames(videoPath);
+      } else {
+        // 기존 단일 썸네일 방식
+        return await this.generateSingleThumbnail(videoPath);
+      }
 
     } catch (error) {
       console.error('썸네일 생성 실패:', error);
-      throw new Error(`썸네일 생성 실패: ${error.message}`);
+      throw error;
     }
+  }
+
+  async generateSingleThumbnail(videoPath) {
+    const videoName = path.basename(videoPath, path.extname(videoPath));
+    const thumbnailPath = path.join(this.thumbnailDir, `${videoName}_thumb.jpg`);
+    
+    console.log(`🎬 단일 썸네일 생성: ${videoPath} -> ${thumbnailPath}`);
+    
+    return new Promise((resolve, reject) => {
+      const ffmpeg = spawn(ffmpegPath, [
+        '-i', videoPath,
+        '-ss', '00:00:01.000',    // 1초 지점에서 추출
+        '-vframes', '1',          // 1프레임만
+        '-q:v', '2',             // 고품질
+        '-y',                    // 덮어쓰기 허용
+        thumbnailPath
+      ]);
+
+      ffmpeg.on('close', (code) => {
+        if (code === 0 && fs.existsSync(thumbnailPath)) {
+          console.log(`✅ 단일 썸네일 생성 완료: ${path.basename(thumbnailPath)}`);
+          resolve([thumbnailPath]); // 배열로 반환
+        } else {
+          reject(new Error(`FFmpeg 실행 실패 (코드: ${code})`));
+        }
+      });
+
+      ffmpeg.on('error', (error) => {
+        console.error('FFmpeg 에러:', error);
+        reject(error);
+      });
+
+      ffmpeg.stderr.on('data', (data) => {
+        console.log(`FFmpeg: ${data}`);
+      });
+    });
+  }
+
+  async generateMultipleFrames(videoPath) {
+    try {
+      console.log(`🎬 다중 프레임 생성 시작: ${videoPath}`);
+      
+      // 먼저 비디오 길이 확인
+      const duration = await this.getVideoDuration(videoPath);
+      console.log(`📏 비디오 길이: ${duration}초`);
+      
+      // 적절한 프레임 수 결정
+      const frameCount = this.calculateOptimalFrameCount(duration);
+      const intervals = this.calculateFrameIntervals(duration, frameCount);
+      
+      console.log(`📸 ${frameCount}개 프레임을 추출합니다: [${intervals.map(t => `${t}초`).join(', ')}]`);
+      
+      const videoName = path.basename(videoPath, path.extname(videoPath));
+      const framePaths = [];
+      
+      // 각 시점별 프레임 추출
+      for (let i = 0; i < intervals.length; i++) {
+        const time = intervals[i];
+        const framePath = path.join(this.thumbnailDir, `${videoName}_frame_${i+1}_${time}s.jpg`);
+        
+        await this.extractFrameAtTime(videoPath, time, framePath);
+        framePaths.push(framePath);
+      }
+      
+      console.log(`✅ 다중 프레임 생성 완료: ${framePaths.length}개`);
+      return framePaths;
+      
+    } catch (error) {
+      console.error('다중 프레임 생성 실패:', error);
+      throw error;
+    }
+  }
+
+  calculateOptimalFrameCount(duration) {
+    if (duration <= 10) return 3;      // 10초 이하: 3프레임
+    if (duration <= 30) return 5;      // 30초 이하: 5프레임  
+    if (duration <= 60) return 7;      // 60초 이하: 7프레임
+    return Math.min(10, Math.ceil(duration / 10)); // 10초당 1프레임, 최대 10개
+  }
+
+  calculateFrameIntervals(duration, frameCount) {
+    if (frameCount === 1) return [Math.min(1, duration / 2)];
+    
+    const intervals = [];
+    const step = duration / (frameCount + 1); // 양끝 여백 고려
+    
+    for (let i = 1; i <= frameCount; i++) {
+      intervals.push(Math.round(step * i * 10) / 10); // 소수점 1자리
+    }
+    
+    return intervals;
+  }
+
+  async extractFrameAtTime(videoPath, timeInSeconds, outputPath) {
+    const timeString = this.secondsToTimeString(timeInSeconds);
+    
+    return new Promise((resolve, reject) => {
+      const ffmpeg = spawn(ffmpegPath, [
+        '-i', videoPath,
+        '-ss', timeString,
+        '-vframes', '1',
+        '-q:v', '2',
+        '-y',
+        outputPath
+      ]);
+
+      ffmpeg.on('close', (code) => {
+        if (code === 0 && fs.existsSync(outputPath)) {
+          console.log(`✅ 프레임 추출 완료: ${timeString} -> ${path.basename(outputPath)}`);
+          resolve(outputPath);
+        } else {
+          reject(new Error(`프레임 추출 실패 (코드: ${code})`));
+        }
+      });
+
+      ffmpeg.on('error', (error) => {
+        reject(error);
+      });
+
+      ffmpeg.stderr.on('data', (data) => {
+        // 다중 프레임에서는 로그 최소화
+      });
+    });
+  }
+
+  async getVideoDuration(videoPath) {
+    return new Promise((resolve, reject) => {
+      const ffprobe = spawn(ffprobePath, [
+        '-v', 'quiet',
+        '-print_format', 'json',
+        '-show_format',
+        videoPath
+      ]);
+
+      let output = '';
+      
+      ffprobe.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+
+      ffprobe.on('close', (code) => {
+        try {
+          if (code === 0) {
+            const info = JSON.parse(output);
+            const duration = parseFloat(info.format.duration);
+            resolve(duration);
+          } else {
+            // ffprobe 실패시 기본값
+            resolve(30); // 30초 기본값
+          }
+        } catch (error) {
+          resolve(30); // 파싱 실패시 기본값
+        }
+      });
+    });
+  }
+
+  secondsToTimeString(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toFixed(3).padStart(6, '0')}`;
   }
 
   async getVideoInfo(videoPath) {
     try {
       return new Promise((resolve, reject) => {
-        const ffprobe = spawn(ffmpegPath.replace('ffmpeg', 'ffprobe'), [
+        const ffprobe = spawn(ffprobePath, [
           '-v', 'quiet',
           '-print_format', 'json',
           '-show_format',

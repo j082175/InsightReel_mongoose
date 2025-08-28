@@ -126,9 +126,9 @@ class AIAnalyzer {
     }
   }
 
-  async analyzeVideo(thumbnailPath, metadata) {
+  async analyzeVideo(thumbnailPaths, metadata) {
     console.log('🔥🔥🔥 analyzeVideo 함수 시작 🔥🔥🔥');
-    console.log('📁 썸네일 경로:', thumbnailPath);
+    console.log('📁 썸네일 경로들:', thumbnailPaths);
     console.log('📋 메타데이터:', JSON.stringify(metadata, null, 2));
     
     // URL 기반 기본 카테고리 추론 (일관성 확보)
@@ -136,28 +136,16 @@ class AIAnalyzer {
     console.log('🎯 URL 기반 카테고리 추론:', urlBasedCategory);
     
     try {
-      console.log(`AI 분석 시작: ${thumbnailPath}`);
-      
-      // 이미지 파일을 base64로 인코딩
-      console.log('1. 이미지 인코딩 중...');
-      const imageBase64 = await this.encodeImageToBase64(thumbnailPath);
-      console.log('1. 이미지 인코딩 완료, 길이:', imageBase64.length);
-      
-      // AI에게 분석 요청 (더 간단한 프롬프트)
-      console.log('2. AI 프롬프트 생성 중...');
-      const analysisPrompt = this.buildSimpleAnalysisPrompt(metadata);
-      console.log('2. AI 프롬프트 생성 완료, 길이:', analysisPrompt.length);
-      
-      console.log('3. AI 호출 시작...');
-      const aiResponse = await this.queryOllama(analysisPrompt, imageBase64);
-      console.log('3. AI 호출 완료');
-      
-      console.log('AI 원본 응답:', aiResponse);
-      
-      // AI + URL 기반 하이브리드 분석
-      const analysis = this.combineAnalysis(aiResponse, urlBasedCategory, metadata);
-      console.log('✅ 하이브리드 분석 완료:', analysis);
-      return analysis;
+      // 다중 프레임 분석인지 단일 프레임 분석인지 확인
+      if (Array.isArray(thumbnailPaths) && thumbnailPaths.length > 1) {
+        console.log(`🎬 다중 프레임 분석 시작: ${thumbnailPaths.length}개 프레임`);
+        return await this.analyzeMultipleFrames(thumbnailPaths, urlBasedCategory, metadata);
+      } else {
+        // 단일 프레임 분석 (기존 로직)
+        const singlePath = Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths;
+        console.log(`📸 단일 프레임 분석 시작: ${singlePath}`);
+        return await this.analyzeSingleFrame(singlePath, urlBasedCategory, metadata);
+      }
       
     } catch (error) {
       console.error('AI 분석 실패:', error);
@@ -165,6 +153,92 @@ class AIAnalyzer {
       // 폴백: URL 기반 분석 사용
       return this.createAnalysisFromUrl(urlBasedCategory, metadata);
     }
+  }
+
+  async analyzeSingleFrame(thumbnailPath, urlBasedCategory, metadata) {
+    console.log(`AI 분석 시작: ${thumbnailPath}`);
+    
+    // 이미지 파일을 base64로 인코딩
+    console.log('1. 이미지 인코딩 중...');
+    const imageBase64 = await this.encodeImageToBase64(thumbnailPath);
+    console.log('1. 이미지 인코딩 완료, 길이:', imageBase64.length);
+    
+    // AI에게 분석 요청 (더 간단한 프롬프트)
+    console.log('2. AI 프롬프트 생성 중...');
+    const analysisPrompt = this.buildSimpleAnalysisPrompt(metadata);
+    console.log('2. AI 프롬프트 생성 완료, 길이:', analysisPrompt.length);
+    
+    console.log('3. AI 호출 시작...');
+    const aiResponse = await this.queryOllama(analysisPrompt, imageBase64);
+    console.log('3. AI 호출 완료');
+    
+    console.log('AI 원본 응답:', aiResponse);
+    
+    // AI + URL 기반 하이브리드 분석
+    const analysis = this.combineAnalysis(aiResponse, urlBasedCategory, metadata);
+    console.log('✅ 단일 프레임 분석 완료:', analysis);
+    return analysis;
+  }
+
+  async analyzeMultipleFrames(thumbnailPaths, urlBasedCategory, metadata) {
+    console.log(`🎬 다중 프레임 분석 시작: ${thumbnailPaths.length}개 프레임`);
+    
+    const frameAnalyses = [];
+    const allKeywords = [];
+    const allContents = [];
+    
+    // 각 프레임을 순차적으로 분석
+    for (let i = 0; i < thumbnailPaths.length; i++) {
+      const framePath = thumbnailPaths[i];
+      const frameNumber = i + 1;
+      
+      try {
+        console.log(`📸 프레임 ${frameNumber}/${thumbnailPaths.length} 분석 중: ${path.basename(framePath)}`);
+        
+        // 이미지 인코딩
+        const imageBase64 = await this.encodeImageToBase64(framePath);
+        
+        // 프레임별 분석 프롬프트 (더 상세한 분석)
+        const framePrompt = this.buildFrameAnalysisPrompt(metadata, frameNumber, thumbnailPaths.length);
+        
+        // AI 호출
+        const aiResponse = await this.queryOllama(framePrompt, imageBase64);
+        
+        // 응답 파싱
+        const frameAnalysis = this.parseFrameResponse(aiResponse, frameNumber);
+        frameAnalyses.push(frameAnalysis);
+        
+        // 키워드와 내용 수집
+        if (frameAnalysis.keywords) {
+          allKeywords.push(...frameAnalysis.keywords);
+        }
+        if (frameAnalysis.content) {
+          allContents.push(`[프레임 ${frameNumber}] ${frameAnalysis.content}`);
+        }
+        
+        console.log(`✅ 프레임 ${frameNumber} 분석 완료:`, frameAnalysis);
+        
+        // 과도한 요청 방지를 위한 딜레이
+        if (i < thumbnailPaths.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+      } catch (error) {
+        console.error(`❌ 프레임 ${frameNumber} 분석 실패:`, error);
+        frameAnalyses.push({
+          frameNumber,
+          content: `프레임 ${frameNumber} 분석 실패`,
+          keywords: [],
+          confidence: 0.1
+        });
+      }
+    }
+    
+    // 모든 프레임 분석 결과를 종합
+    const combinedAnalysis = this.combineMultiFrameAnalyses(frameAnalyses, allKeywords, allContents, urlBasedCategory, metadata);
+    
+    console.log('🎯 다중 프레임 분석 최종 결과:', combinedAnalysis);
+    return combinedAnalysis;
   }
 
   async encodeImageToBase64(imagePath) {
@@ -539,6 +613,182 @@ JSON 형식으로 답변:
   "content": "이미지 내용을 간단히 설명",
   "keywords": ["키워드1", "키워드2", "키워드3"]
 }`;
+  }
+
+  // 다중 프레임 분석용 프롬프트
+  buildFrameAnalysisPrompt(metadata, frameNumber, totalFrames) {
+    return `이 이미지는 동영상의 프레임 ${frameNumber}/${totalFrames}입니다.
+
+다음을 분석해주세요:
+1. 주요 내용: 이 프레임에서 보이는 주요 객체, 행동, 상황을 상세히 설명
+2. 키워드: 이 프레임과 관련된 구체적인 키워드 3-5개 (한글)
+3. 특징: 이 프레임만의 독특한 특징이나 중요한 요소
+
+JSON 형식으로 답변:
+{
+  "content": "프레임의 상세한 내용 설명",
+  "keywords": ["키워드1", "키워드2", "키워드3"],
+  "features": "이 프레임의 특별한 특징",
+  "confidence": 0.9
+}
+
+추가 정보:
+- 캡션: "${metadata.caption || ''}"
+- 작성자: "${metadata.author || ''}"
+- 플랫폼: ${metadata.platform || 'unknown'}`;
+  }
+
+  // 프레임 분석 응답 파싱
+  parseFrameResponse(aiResponse, frameNumber) {
+    try {
+      // JSON 응답 추출
+      let cleanResponse = aiResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+      const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
+      
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          frameNumber,
+          content: parsed.content || `프레임 ${frameNumber} 내용`,
+          keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [],
+          features: parsed.features || '',
+          confidence: parsed.confidence || 0.7
+        };
+      }
+      
+      // JSON 파싱 실패 시 텍스트에서 정보 추출
+      return this.parseFrameTextResponse(aiResponse, frameNumber);
+      
+    } catch (error) {
+      console.error(`프레임 ${frameNumber} 응답 파싱 실패:`, error);
+      return {
+        frameNumber,
+        content: `프레임 ${frameNumber} 분석 오류`,
+        keywords: [],
+        features: '',
+        confidence: 0.3
+      };
+    }
+  }
+
+  // 프레임 텍스트 응답 파싱
+  parseFrameTextResponse(response, frameNumber) {
+    const lines = response.split('\n');
+    let content = `프레임 ${frameNumber} 내용`;
+    let keywords = [];
+    let features = '';
+    
+    lines.forEach(line => {
+      if (line.includes('내용') || line.includes('content')) {
+        const contentMatch = line.match(/[:：]\s*(.+)/);
+        if (contentMatch) {
+          content = contentMatch[1].trim();
+        }
+      }
+      
+      if (line.includes('키워드') || line.includes('keyword')) {
+        const keywordMatches = line.match(/[\uAC00-\uD7AF]+/g);
+        if (keywordMatches) {
+          keywords = keywordMatches.slice(0, 5);
+        }
+      }
+      
+      if (line.includes('특징') || line.includes('features')) {
+        const featureMatch = line.match(/[:：]\s*(.+)/);
+        if (featureMatch) {
+          features = featureMatch[1].trim();
+        }
+      }
+    });
+    
+    return {
+      frameNumber,
+      content,
+      keywords,
+      features,
+      confidence: 0.6
+    };
+  }
+
+  // 다중 프레임 분석 결과 종합
+  combineMultiFrameAnalyses(frameAnalyses, allKeywords, allContents, urlBasedCategory, metadata) {
+    // 키워드 빈도 계산 및 상위 키워드 선택
+    const keywordCounts = {};
+    allKeywords.forEach(keyword => {
+      if (keyword && keyword.length > 1) {
+        keywordCounts[keyword] = (keywordCounts[keyword] || 0) + 1;
+      }
+    });
+    
+    const topKeywords = Object.entries(keywordCounts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 5)
+      .map(([keyword]) => keyword);
+    
+    // 전체 신뢰도 계산
+    const totalConfidence = frameAnalyses.reduce((sum, frame) => sum + (frame.confidence || 0), 0);
+    const avgConfidence = frameAnalyses.length > 0 ? totalConfidence / frameAnalyses.length : 0.5;
+    
+    // 종합 내용 생성
+    const combinedContent = this.generateCombinedContent(frameAnalyses, allContents);
+    
+    // 해시태그 생성
+    const hashtags = this.generateHashtagsFromKeywords(topKeywords);
+    
+    return {
+      content: combinedContent,
+      mainCategory: urlBasedCategory.mainCategory,
+      middleCategory: urlBasedCategory.middleCategory,
+      keywords: topKeywords,
+      hashtags: hashtags,
+      confidence: Math.min(avgConfidence + 0.1, 0.95), // 다중 프레임 보너스
+      source: 'MULTI_FRAME',
+      frameCount: frameAnalyses.length,
+      frameAnalyses: frameAnalyses, // 개별 프레임 분석 결과 보관
+      analysis_metadata: {
+        successful_frames: frameAnalyses.filter(f => f.confidence > 0.5).length,
+        avg_confidence: avgConfidence,
+        top_keywords: topKeywords,
+        analysis_duration: new Date().toISOString()
+      }
+    };
+  }
+
+  // 종합 내용 생성
+  generateCombinedContent(frameAnalyses, allContents) {
+    if (!frameAnalyses || frameAnalyses.length === 0) {
+      return '영상 분석 실패';
+    }
+    
+    // 신뢰도가 높은 프레임들의 내용을 우선적으로 사용
+    const reliableFrames = frameAnalyses
+      .filter(frame => frame.confidence > 0.5)
+      .sort((a, b) => b.confidence - a.confidence);
+    
+    if (reliableFrames.length === 0) {
+      return `${frameAnalyses.length}개 프레임으로 구성된 영상`;
+    }
+    
+    // 주요 내용들을 조합
+    const mainContents = reliableFrames
+      .slice(0, 3) // 상위 3개 프레임만 사용
+      .map(frame => frame.content)
+      .filter(content => content && content.length > 5);
+    
+    if (mainContents.length === 1) {
+      return mainContents[0];
+    } else if (mainContents.length > 1) {
+      // 중복 제거 및 요약
+      const uniqueContents = [...new Set(mainContents)];
+      if (uniqueContents.length === 1) {
+        return uniqueContents[0];
+      }
+      
+      // 여러 내용을 자연스럽게 조합
+      return `${uniqueContents[0]}. 또한 ${uniqueContents.slice(1).join(', ')} 등의 장면들이 포함된 영상입니다.`;
+    }
+    
+    return `${frameAnalyses.length}개의 다양한 장면으로 구성된 영상`;
   }
 
   // AI + URL 기반 하이브리드 분석
