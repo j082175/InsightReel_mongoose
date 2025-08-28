@@ -1,7 +1,7 @@
 // Content Script - 인스타그램과 틱톡에서 실행되는 스크립트
 class VideoSaver {
   constructor() {
-    this.serverUrl = 'http://localhost:3000';
+    this.serverUrl = 'http://localhost:3003';
     this.currentPlatform = this.detectPlatform();
     this.enhancementTimeout = null;
     this.lastEnhancementTime = 0;

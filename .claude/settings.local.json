@@ -23,7 +23,9 @@
       "WebFetch(domain:localhost)",
       "Bash(npm run build:*)",
       "WebSearch",
-      "WebFetch(domain:azure.microsoft.com)"
+      "WebFetch(domain:azure.microsoft.com)",
+      "Bash(npm install:*)",
+      "Bash(tasklist:*)"
     ],
     "deny": [],
     "ask": []

@@ -7,6 +7,24 @@ class AIAnalyzer {
     this.ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
     this.modelName = process.env.OLLAMA_MODEL || 'llava:latest';
     
+    // Gemini 설정
+    this.useGemini = process.env.USE_GEMINI === 'true';
+    this.geminiApiKey = process.env.GOOGLE_API_KEY;
+    
+    if (this.useGemini && !this.geminiApiKey) {
+      console.warn('⚠️ USE_GEMINI=true이지만 GOOGLE_API_KEY가 설정되지 않았습니다. Ollama를 사용합니다.');
+      this.useGemini = false;
+    }
+    
+    if (this.useGemini) {
+      const { GoogleGenerativeAI } = require('@google/generative-ai');
+      this.genAI = new GoogleGenerativeAI(this.geminiApiKey);
+      this.geminiModel = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      console.log('🔮 Gemini API 초기화 완료');
+    } else {
+      console.log('🤖 Ollama 모드로 실행 중');
+    }
+    
     // 2단계 카테고리 정의 (대카테고리 > 중카테고리)
     this.categories = {
       '게임': {
@@ -183,6 +201,12 @@ class AIAnalyzer {
   async analyzeMultipleFrames(thumbnailPaths, urlBasedCategory, metadata) {
     console.log(`🎬 다중 프레임 분석 시작: ${thumbnailPaths.length}개 프레임`);
     
+    // Gemini를 사용하는 경우 한 번에 모든 프레임 분석
+    if (this.useGemini) {
+      return await this.analyzeMultipleFramesWithGemini(thumbnailPaths, urlBasedCategory, metadata);
+    }
+    
+    // Ollama를 사용하는 경우 순차 분석 (기존 방식)
     const frameAnalyses = [];
     const allKeywords = [];
     const allContents = [];
@@ -881,6 +905,215 @@ JSON 형식으로 답변:
       topMiddleCategories: Object.entries(middleCategories)
         .sort(([,a], [,b]) => b - a)
         .slice(0, 5)
+    };
+  }
+
+  // ============ Gemini 관련 메서드들 ============
+
+  async analyzeMultipleFramesWithGemini(thumbnailPaths, urlBasedCategory, metadata) {
+    console.log('🔮 Gemini 다중 프레임 분석 시작:', thumbnailPaths.length + '개');
+    
+    try {
+      // 모든 이미지를 Base64로 인코딩
+      const imageContents = [];
+      for (const imagePath of thumbnailPaths) {
+        const imageBase64 = await this.encodeImageToBase64(imagePath);
+        imageContents.push({
+          inlineData: {
+            data: imageBase64,
+            mimeType: "image/jpeg"
+          }
+        });
+      }
+      
+      // 다중 프레임 분석 프롬프트 생성
+      const prompt = this.buildGeminiMultiFramePrompt(metadata, thumbnailPaths.length);
+      
+      console.log('🔮 Gemini API 호출 시작...');
+      
+      // Gemini API 호출
+      const result = await this.geminiModel.generateContent([
+        prompt,
+        ...imageContents
+      ]);
+      
+      const response = await result.response;
+      const aiResponse = response.text();
+      
+      console.log('🔮 Gemini AI 원본 응답:', aiResponse);
+      
+      // 응답 파싱 및 결과 생성
+      const analysis = this.parseGeminiResponse(aiResponse, urlBasedCategory, metadata);
+      analysis.frameCount = thumbnailPaths.length;
+      analysis.analysisMethod = 'gemini-multi-frame';
+      
+      console.log('✅ Gemini 다중 프레임 분석 완료:', analysis);
+      return analysis;
+      
+    } catch (error) {
+      console.error('❌ Gemini 다중 프레임 분석 실패:', error);
+      
+      // Gemini 실패 시 Ollama로 폴백
+      console.log('🔄 Ollama로 폴백하여 분석 시도...');
+      this.useGemini = false;
+      const result = await this.analyzeMultipleFrames(thumbnailPaths, urlBasedCategory, metadata);
+      this.useGemini = true; // 원상복구
+      return result;
+    }
+  }
+
+  buildGeminiMultiFramePrompt(metadata, frameCount) {
+    const { caption = '', hashtags = [], author = '' } = metadata;
+    
+    return `이 ${frameCount}장의 이미지들은 같은 비디오에서 시간순으로 추출된 프레임들입니다. 
+전체적인 흐름과 내용을 파악하여 다음 정보를 분석해주세요:
+
+1. 전체 비디오 내용: 시간에 따른 변화와 전체적인 스토리를 설명
+2. 카테고리 분류 (2단계):
+   **중요: 반드시 아래 구조에서만 선택하세요**:
+   
+   * 게임 > (플레이·리뷰 | 공략·팁 | 하이라이트·클립 | E스포츠·대회)
+   * 과학·기술 > (디바이스 리뷰 | IT 뉴스·트렌드 | 코딩·개발 강의 | 과학 실험·교육)
+   * 교육 > (외국어 강의 | 학습·시험 정보 | 자격증·취업 강의 | 교육 정보·진로)
+   * How-to & 라이프스타일 > (요리·베이킹 | DIY·수공예 | 생활 꿀팁·가전·정리 | 뷰티·패션 스타일링)
+   * 뉴스·시사 > (시사 브리핑·이슈 분석 | 경제·정치 해설 | 국제 뉴스·외교 | 공식 뉴스 클립)
+   * 사회·공익 > (환경·인권 캠페인 | 자선·봉사·기부 | 지속가능·ESG 콘텐츠)
+   * 스포츠 > (경기 하이라이트 | 분석·전술 해설 | 피트니스·홈트 | 선수 인터뷰·다큐)
+   * 동물 > (반려동물 브이로그 | 훈련·케어·정보 | 야생동물·자연 다큐)
+   * 엔터테인먼트 > (예능·밈·챌린지 | 연예 뉴스·K-culture | 웹드라마·웹예능 | 이벤트·라이브 쇼)
+   * 여행·이벤트 > (여행 Vlog | 정보·꿀팁·루트 | 테마 여행·캠핑·차박 | 축제·콘서트 스케치)
+   * 영화·드라마·애니 > (공식 예고편·클립 | 리뷰·해석 | 제작 비하인드·메이킹 | 팬 애니메이션·단편)
+   * 음악 > (뮤직비디오 | 커버·리믹스 | 라이브·버스킹 | 악기 연주·작곡 강좌)
+   * 라이프·블로그 > (일상 Vlog·Q&A | 경험담·스토리텔링 | 동기부여·마인드셋 | 가족·커플·룸메이트 일상)
+   * 자동차·모빌리티 > (신차 리뷰·시승 | 정비·케어·튜닝 | 모터스포츠 | 드라이브·차박 Vlog)
+   * 코미디 > (스케치·콩트 | 패러디·풍자 | 몰래카메라·리액션 | 스탠드업·개그 톡)
+
+3. 키워드: 비디오 전체와 관련된 키워드 5개 (한글)
+4. 해시태그: 영상에 적합한 해시태그 5개 (#포함)
+
+추가 정보:
+- 캡션: "${caption}"
+- 해시태그: ${hashtags.join(', ')}
+- 작성자: "${author}"
+
+**중요**: 반드시 JSON 형식으로만 답변하세요:
+{
+  "content": "비디오 전체 내용을 시간순으로 설명",
+  "main_category": "15개 대카테고리 중 하나를 정확히 선택",
+  "middle_category": "선택한 대카테고리의 중카테고리 중 하나를 정확히 선택",
+  "keywords": ["관련", "키워드", "다섯개", "선택", "하세요"],
+  "hashtags": ["#관련", "#해시태그", "#다섯개", "#선택", "#하세요"],
+  "confidence": 0.95
+}`;
+  }
+
+  parseGeminiResponse(aiResponse, urlBasedCategory, metadata) {
+    try {
+      // JSON 응답 파싱 시도
+      const cleanResponse = aiResponse.replace(/```json\n?|\n?```/g, '').trim();
+      const aiResult = JSON.parse(cleanResponse);
+      
+      console.log('✅ Gemini JSON 파싱 성공:', aiResult);
+      
+      // 카테고리 검증 및 조합
+      const categoryResult = this.determineFinalCategory(
+        aiResult.main_category || '',
+        aiResult.middle_category || '',
+        urlBasedCategory,
+        metadata
+      );
+      
+      return {
+        category: categoryResult.fullCategory,
+        mainCategory: categoryResult.mainCategory,
+        middleCategory: categoryResult.middleCategory,
+        keywords: Array.isArray(aiResult.keywords) ? aiResult.keywords.slice(0, 5) : this.extractKeywordsFromContent(aiResult.content || ''),
+        hashtags: Array.isArray(aiResult.hashtags) ? aiResult.hashtags.slice(0, 5) : this.generateHashtagsFromMetadata(metadata.hashtags || [], categoryResult),
+        content: aiResult.content || '비디오 분석 결과',
+        confidence: aiResult.confidence || 0.8,
+        source: 'gemini-ai'
+      };
+      
+    } catch (parseError) {
+      console.warn('⚠️ Gemini JSON 파싱 실패, 텍스트 분석으로 전환:', parseError.message);
+      
+      // JSON 파싱 실패 시 텍스트 기반 분석
+      return this.parseTextResponse(aiResponse, urlBasedCategory, metadata);
+    }
+  }
+
+  parseTextResponse(response, urlBasedCategory, metadata) {
+    // 기존 텍스트 파싱 로직과 동일
+    const lines = response.split('\n');
+    let content = '비디오 분석 결과';
+    let mainCategory = '';
+    let middleCategory = '';
+    let keywords = [];
+    let hashtags = [];
+    
+    lines.forEach(line => {
+      if (line.includes('내용') || line.includes('content')) {
+        const contentMatch = line.match(/[:：]\s*(.+)/);
+        if (contentMatch) {
+          content = contentMatch[1].trim();
+        }
+      }
+      
+      if (line.includes('대카테고리') || line.includes('main_category')) {
+        const categoryMatch = line.match(/[:：]\s*(.+)/);
+        if (categoryMatch) {
+          mainCategory = categoryMatch[1].trim();
+        }
+      }
+      
+      if (line.includes('중카테고리') || line.includes('middle_category')) {
+        const categoryMatch = line.match(/[:：]\s*(.+)/);
+        if (categoryMatch) {
+          middleCategory = categoryMatch[1].trim();
+        }
+      }
+    });
+    
+    const categoryResult = this.determineFinalCategory(mainCategory, middleCategory, urlBasedCategory, metadata);
+    
+    return {
+      category: categoryResult.fullCategory,
+      mainCategory: categoryResult.mainCategory,
+      middleCategory: categoryResult.middleCategory,
+      keywords: keywords.length > 0 ? keywords : this.extractKeywordsFromContent(content),
+      hashtags: hashtags.length > 0 ? hashtags : this.generateHashtagsFromMetadata(metadata.hashtags || [], categoryResult),
+      content: content,
+      confidence: 0.7,
+      source: 'gemini-text-parsed'
+    };
+  }
+
+  // 최종 카테고리 결정 함수
+  determineFinalCategory(mainCategory, middleCategory, urlBasedCategory, metadata) {
+    // AI가 제공한 카테고리가 있으면 우선 사용
+    if (mainCategory && middleCategory) {
+      return {
+        fullCategory: `${mainCategory} > ${middleCategory}`,
+        mainCategory: mainCategory,
+        middleCategory: middleCategory
+      };
+    }
+    
+    // URL 기반 카테고리가 있으면 사용
+    if (urlBasedCategory && urlBasedCategory.mainCategory) {
+      return {
+        fullCategory: `${urlBasedCategory.mainCategory} > ${urlBasedCategory.middleCategory}`,
+        mainCategory: urlBasedCategory.mainCategory,
+        middleCategory: urlBasedCategory.middleCategory
+      };
+    }
+    
+    // 메타데이터에서 추론
+    const categoryResult = this.inferCategoriesFromMetadata(metadata);
+    return {
+      fullCategory: `${categoryResult.mainCategory} > ${categoryResult.middleCategory}`,
+      mainCategory: categoryResult.mainCategory,
+      middleCategory: categoryResult.middleCategory
     };
   }
 }

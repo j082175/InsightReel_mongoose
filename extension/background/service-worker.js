@@ -1,7 +1,7 @@
 // Service Worker - 백그라운드 작업 처리
 class BackgroundService {
   constructor() {
-    this.serverUrl = 'http://localhost:3000';
+    this.serverUrl = 'http://localhost:3003';
     this.init();
   }
 
