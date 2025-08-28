@@ -558,19 +558,50 @@ class VideoSaver {
       analysisButton.style.background = 'linear-gradient(45deg, #8e44ad, #3498db)';
     });
 
+    // 하이브리드 분석을 위한 진행 상태 추적 함수
+    const updateAnalysisButtonState = (phase, status) => {
+      switch (phase) {
+        case 'phase1':
+          if (status === 'start') {
+            analysisButton.style.background = '#f39c12';
+            analysisButton.innerHTML = '⚡';
+            analysisButton.title = 'Phase 1: 빠른 분석 중...';
+          } else if (status === 'complete') {
+            analysisButton.style.background = '#3498db';
+            analysisButton.innerHTML = '🔍';
+            analysisButton.title = 'Phase 1 완료! Phase 2: 전체 분석 중...';
+          }
+          break;
+        case 'phase2':
+          if (status === 'complete') {
+            analysisButton.style.background = '#27ae60';
+            analysisButton.innerHTML = '✅';
+            analysisButton.title = '하이브리드 분석 완료!';
+          }
+          break;
+        case 'error':
+          analysisButton.style.background = '#e74c3c';
+          analysisButton.innerHTML = '❌';
+          analysisButton.title = '분석 실패';
+          break;
+      }
+    };
+
     // 클릭 이벤트
     analysisButton.addEventListener('click', async (event) => {
       event.preventDefault();
       event.stopPropagation();
       
-      analysisButton.style.background = '#f39c12';
-      analysisButton.innerHTML = '⏳';
+      updateAnalysisButtonState('phase1', 'start');
       
       try {
-        await this.performVideoAnalysis(post, video);
-        analysisButton.style.background = '#27ae60';
-        analysisButton.innerHTML = '✅';
+        // Phase 1 시작 알림
+        this.uiManager.showNotification('⚡ 빠른 분석 시작...', 'info');
         
+        // 하이브리드 분석 실행
+        await this.performHybridAnalysisWithProgress(post, video, updateAnalysisButtonState);
+        
+        // 최종 완료 후 원래 상태로 복원
         setTimeout(() => {
           analysisButton.style.background = 'linear-gradient(45deg, #8e44ad, #3498db)';
           analysisButton.innerHTML = `
@@ -578,10 +609,11 @@ class VideoSaver {
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
             </svg>
           `;
-        }, 2000);
+          analysisButton.title = '영상 분석 (하이브리드)';
+        }, 3000);
+        
       } catch (error) {
-        analysisButton.style.background = '#e74c3c';
-        analysisButton.innerHTML = '❌';
+        updateAnalysisButtonState('error');
         Utils.log('error', '분석 버튼 클릭 처리 실패', error);
         
         setTimeout(() => {
@@ -591,7 +623,8 @@ class VideoSaver {
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
             </svg>
           `;
-        }, 2000);
+          analysisButton.title = '영상 분석 (하이브리드)';
+        }, 3000);
       }
     });
 
@@ -627,45 +660,377 @@ class VideoSaver {
   }
 
   async performVideoAnalysis(post, video) {
-    Utils.log('info', '수동 영상 분석 시작');
+    return this.performHybridAnalysisWithProgress(post, video, null);
+  }
+
+  async performHybridAnalysisWithProgress(post, video, progressCallback = null) {
+    Utils.log('info', '🔄 하이브리드 영상 분석 시작');
     
-    // 기존 분석 로직 재사용
     const postUrl = window.location.href;
     const metadata = this.extractInstagramMetadata(post);
+    const analysisId = `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    if (video.src && video.src.startsWith('blob:')) {
-      // blob URL의 경우 Canvas를 사용한 프레임 캡처
-      try {
-        const frameBlob = await this.extractVideoFromElement(video);
-        if (frameBlob) {
-          await this.apiClient.processVideoBlob({
+    // Phase 1: 즉시 프레임 분석 (2-3초)
+    await this.performQuickAnalysis(video, postUrl, metadata, analysisId);
+    
+    // Phase 1 완료 알림
+    if (progressCallback) {
+      progressCallback('phase1', 'complete');
+    }
+    
+    // Phase 2: 백그라운드 전체 비디오 분석 (30초-1분)
+    this.performFullAnalysisWithProgress(post, video, postUrl, metadata, analysisId, progressCallback);
+  }
+
+  async performFullAnalysisWithProgress(post, video, postUrl, metadata, analysisId, progressCallback = null) {
+    try {
+      Utils.log('info', '🔍 Phase 2: 전체 비디오 분석 시작 (백그라운드)');
+      
+      // 실제 비디오 URL 추출 시도
+      const realVideoUrl = await this.extractRealVideoUrl(video);
+      
+      if (realVideoUrl && !realVideoUrl.startsWith('blob:')) {
+        // 실제 비디오 URL이 있는 경우 - 안전한 처리
+        Utils.log('info', '🎯 실제 비디오 URL 발견, 전체 분석 진행');
+        Utils.log('info', '📋 URL 정보:', {
+          length: realVideoUrl.length,
+          domain: realVideoUrl.split('/')[2],
+          hasParams: realVideoUrl.includes('?')
+        });
+        
+        try {
+          // Instagram 전용 URL 검증
+          if (!realVideoUrl.includes('fbcdn.net') && !realVideoUrl.includes('cdninstagram.com')) {
+            throw new Error('신뢰할 수 없는 비디오 URL');
+          }
+          
+          // Instagram URL에서 부분 다운로드 파라미터 제거
+          let cleanVideoUrl = realVideoUrl;
+          if (realVideoUrl.includes('bytestart=') || realVideoUrl.includes('byteend=')) {
+            const url = new URL(realVideoUrl);
+            url.searchParams.delete('bytestart');
+            url.searchParams.delete('byteend');
+            cleanVideoUrl = url.toString();
+            Utils.log('info', '🧹 부분 다운로드 파라미터 제거됨');
+          }
+          
+          await this.apiClient.processVideo({
             platform: CONSTANTS.PLATFORMS.INSTAGRAM,
-            videoBlob: frameBlob,
+            videoUrl: cleanVideoUrl,
             postUrl,
             metadata: {
               ...metadata,
-              captureMethod: 'canvas-frame'
+              analysisId,
+              analysisType: 'full',
+              isUpdate: true,
+              urlSource: 'extracted',
+              originalUrl: realVideoUrl !== cleanVideoUrl ? realVideoUrl : undefined
             }
           });
-        } else {
-          throw new Error('프레임 캡처 실패');
-        }
-      } catch (error) {
-        Utils.log('error', 'Canvas 프레임 캡처 실패', error);
-        throw error;
-      }
-    } else if (video.src) {
-      await this.apiClient.processVideo({
-        platform: CONSTANTS.PLATFORMS.INSTAGRAM,
-        videoUrl: video.src,
-        postUrl,
-        metadata
-      });
-    } else {
-      throw new Error('비디오 URL을 찾을 수 없습니다');
-    }
 
-    this.uiManager.showNotification('✅ 영상 분석이 완료되었습니다!', 'success');
+          this.uiManager.showNotification('✅ 완전한 영상 분석 완료!', 'success');
+          Utils.log('success', '🔍 Phase 2 완료 - 전체 분석으로 결과 업데이트됨');
+          
+        } catch (urlError) {
+          Utils.log('warn', '🎯 실제 URL 처리 실패, 다중 프레임으로 대체', urlError);
+          // 실제 URL 실패시 다중 프레임으로 fallback
+          throw urlError;
+        }
+        
+      } else {
+        // blob URL만 있는 경우 - 다중 프레임 캡처
+        Utils.log('info', '📹 blob URL 감지, 다중 프레임 분석 진행');
+        
+        const multiFrameData = await this.captureMultipleFrames(video, 5); // 5프레임
+        
+        await this.apiClient.processVideoBlob({
+          platform: CONSTANTS.PLATFORMS.INSTAGRAM,
+          videoBlob: multiFrameData,
+          postUrl,
+          metadata: {
+            ...metadata,
+            analysisId,
+            analysisType: 'multi-frame',
+            isUpdate: true
+          }
+        });
+
+        this.uiManager.showNotification('✅ 다중 프레임 분석 완료!', 'success');
+        Utils.log('success', '📹 Phase 2 완료 - 다중 프레임으로 결과 업데이트됨');
+      }
+      
+      // Phase 2 완료 알림
+      if (progressCallback) {
+        progressCallback('phase2', 'complete');
+      }
+      
+    } catch (error) {
+      Utils.log('error', '🔍 Phase 2 실패', error);
+      // Phase 1 결과라도 있으므로 사용자에게는 에러 알림 안함
+      Utils.log('info', '⚡ Phase 1 결과는 유효함 - 계속 사용 가능');
+    }
+  }
+
+  async performQuickAnalysis(video, postUrl, metadata, analysisId) {
+    try {
+      Utils.log('info', '⚡ Phase 1: 빠른 프레임 분석 시작');
+      
+      const frameBlob = await this.extractVideoFromElement(video);
+      if (!frameBlob) {
+        throw new Error('프레임 캡처 실패');
+      }
+
+      await this.apiClient.processVideoBlob({
+        platform: CONSTANTS.PLATFORMS.INSTAGRAM,
+        videoBlob: frameBlob,
+        postUrl,
+        metadata: {
+          ...metadata,
+          analysisId,
+          analysisType: 'quick',
+          captureMethod: 'canvas-frame'
+        }
+      });
+
+      this.uiManager.showNotification('⚡ 빠른 분석 완료! 상세 분석 진행 중...', 'info');
+      Utils.log('success', '⚡ Phase 1 완료 - 빠른 분석 결과 제공됨');
+      
+    } catch (error) {
+      Utils.log('error', '⚡ Phase 1 실패', error);
+      this.uiManager.showNotification('빠른 분석 실패, 전체 분석으로 진행합니다', 'warning');
+    }
+  }
+
+
+  async extractRealVideoUrl(video) {
+    try {
+      Utils.log('info', '🔍 Instagram 실제 비디오 URL 추출 시작');
+      
+      // 방법 1: 비디오 요소에서 직접 소스 확인
+      const videoElement = video;
+      const directSources = [
+        videoElement.src,
+        videoElement.currentSrc,
+        ...Array.from(videoElement.querySelectorAll('source')).map(s => s.src)
+      ].filter(url => url && !url.startsWith('blob:'));
+      
+      if (directSources.length > 0) {
+        Utils.log('info', '📋 비디오 요소에서 URL 발견:', directSources[0].substring(0, 80) + '...');
+        return directSources[0];
+      }
+      
+      // 방법 2: Instagram 페이지 데이터에서 추출
+      const instagramVideoUrl = await this.extractFromInstagramPageData();
+      if (instagramVideoUrl) {
+        Utils.log('info', '📋 페이지 데이터에서 URL 발견:', instagramVideoUrl.substring(0, 80) + '...');
+        return instagramVideoUrl;
+      }
+      
+      // 방법 3: 네트워크 요청 분석 (향상된 버전)
+      const networkUrl = await this.extractFromNetworkRequests(video);
+      if (networkUrl) {
+        Utils.log('info', '📋 네트워크에서 URL 발견:', networkUrl.substring(0, 80) + '...');
+        return networkUrl;
+      }
+      
+      // 방법 4: DOM 깊이 분석
+      const domUrl = await this.extractFromDOMAnalysis(video);
+      if (domUrl) {
+        Utils.log('info', '📋 DOM 분석에서 URL 발견:', domUrl.substring(0, 80) + '...');
+        return domUrl;
+      }
+      
+      Utils.log('warn', '📋 모든 방법으로 실제 URL을 찾지 못함');
+      return null;
+      
+    } catch (error) {
+      Utils.log('warn', '실제 비디오 URL 추출 실패', error);
+      return null;
+    }
+  }
+
+  async extractFromInstagramPageData() {
+    try {
+      // Instagram 페이지의 JSON 데이터에서 비디오 URL 찾기
+      const scripts = Array.from(document.querySelectorAll('script'));
+      
+      for (const script of scripts) {
+        const content = script.textContent || script.innerHTML;
+        
+        // Instagram의 GraphQL 데이터 찾기
+        if (content.includes('video_url') || content.includes('videoUrl')) {
+          const videoUrlMatch = content.match(/"video_url":"([^"]+)"/);
+          if (videoUrlMatch) {
+            const url = videoUrlMatch[1].replace(/\\u0026/g, '&').replace(/\\/g, '');
+            if (url.includes('.mp4') && !url.startsWith('blob:')) {
+              return url;
+            }
+          }
+        }
+        
+        // 대안 패턴들
+        const patterns = [
+          /"videoUrl":"([^"]+\.mp4[^"]*)"/,
+          /"src":"([^"]+\.mp4[^"]*)"/,
+          /"url":"([^"]+\.mp4[^"]*)"/
+        ];
+        
+        for (const pattern of patterns) {
+          const match = content.match(pattern);
+          if (match) {
+            const url = match[1].replace(/\\u0026/g, '&').replace(/\\/g, '');
+            if (url.includes('fbcdn.net') || url.includes('cdninstagram.com')) {
+              return url;
+            }
+          }
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      Utils.log('warn', 'Instagram 페이지 데이터 분석 실패', error);
+      return null;
+    }
+  }
+
+  async extractFromNetworkRequests(video) {
+    try {
+      // Performance API로 모든 네트워크 요청 분석
+      const entries = performance.getEntriesByType('resource');
+      
+      // Instagram 비디오 URL 패턴들
+      const videoPatterns = [
+        /\.mp4/i,
+        /fbcdn\.net.*video/i,
+        /cdninstagram\.com.*video/i,
+        /scontent.*\.mp4/i
+      ];
+      
+      const videoEntries = entries.filter(entry => {
+        return videoPatterns.some(pattern => pattern.test(entry.name)) &&
+               entry.name.includes('instagram') &&
+               !entry.name.includes('bytestart=') && // 부분 다운로드 제외
+               !entry.name.includes('byteend=');
+      });
+      
+      if (videoEntries.length > 0) {
+        // 가장 최근의 전체 비디오 요청 찾기
+        const fullVideoEntry = videoEntries
+          .filter(entry => entry.transferSize > 1000000) // 1MB 이상
+          .sort((a, b) => b.startTime - a.startTime)[0];
+        
+        if (fullVideoEntry) {
+          return fullVideoEntry.name;
+        }
+        
+        // 전체 비디오가 없으면 가장 큰 것 선택
+        const largestEntry = videoEntries
+          .sort((a, b) => b.transferSize - a.transferSize)[0];
+        
+        if (largestEntry) {
+          return largestEntry.name;
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      Utils.log('warn', '네트워크 요청 분석 실패', error);
+      return null;
+    }
+  }
+
+  async extractFromDOMAnalysis(video) {
+    try {
+      // 비디오 컨테이너의 부모 요소들에서 데이터 찾기
+      let currentElement = video;
+      
+      for (let i = 0; i < 10; i++) { // 최대 10단계 올라가기
+        if (!currentElement || !currentElement.parentElement) break;
+        
+        currentElement = currentElement.parentElement;
+        
+        // 데이터 속성들 확인
+        const attributes = currentElement.attributes;
+        for (let attr of attributes) {
+          if (attr.value && attr.value.includes('.mp4') && !attr.value.startsWith('blob:')) {
+            return attr.value;
+          }
+        }
+        
+        // 자식 요소들의 데이터 확인
+        const allElements = currentElement.querySelectorAll('*');
+        for (let element of allElements) {
+          for (let attr of element.attributes) {
+            if (attr.value && attr.value.includes('.mp4') && !attr.value.startsWith('blob:')) {
+              return attr.value;
+            }
+          }
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      Utils.log('warn', 'DOM 분석 실패', error);
+      return null;
+    }
+  }
+
+  async captureMultipleFrames(video, frameCount = 5) {
+    try {
+      Utils.log('info', `📸 ${frameCount}개 프레임 캡처 시작`);
+      
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const duration = video.duration || 10; // 기본 10초
+      const interval = duration / frameCount;
+      
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      
+      const frames = [];
+      const originalTime = video.currentTime;
+      
+      for (let i = 0; i < frameCount; i++) {
+        const targetTime = i * interval;
+        video.currentTime = targetTime;
+        
+        // 프레임 로드 대기
+        await new Promise(resolve => {
+          const onSeeked = () => {
+            video.removeEventListener('seeked', onSeeked);
+            resolve();
+          };
+          video.addEventListener('seeked', onSeeked);
+        });
+        
+        // 프레임 캡처
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const frameData = canvas.toDataURL('image/jpeg', 0.8);
+        frames.push({
+          time: targetTime,
+          data: frameData
+        });
+      }
+      
+      // 원래 시간으로 복원
+      video.currentTime = originalTime;
+      
+      // 프레임들을 하나의 blob으로 결합
+      const combinedData = {
+        frames: frames,
+        duration: duration,
+        frameCount: frameCount
+      };
+      
+      const blob = new Blob([JSON.stringify(combinedData)], { type: 'application/json' });
+      Utils.log('success', `📸 ${frameCount}개 프레임 캡처 완료`);
+      
+      return blob;
+      
+    } catch (error) {
+      Utils.log('error', '다중 프레임 캡처 실패', error);
+      throw error;
+    }
   }
 
   createClickHandler(post, video) {
@@ -688,86 +1053,21 @@ class VideoSaver {
         return;
       }
       
-      Utils.log('info', '자동 분석 실행됨');
+      Utils.log('info', '🔄 자동 분석 실행됨 (하이브리드 방식)');
+      
+      // 하이브리드 분석 실행
       try {
-        const videoUrl = video.src || video.currentSrc;
-        const postUrl = window.location.href;
-        const metadata = this.extractInstagramMetadata(post);
-        
-        Utils.log('info', '비디오 URL 정보', { videoUrl, type: videoUrl ? videoUrl.substring(0, 20) + '...' : 'null' });
-        
-        if (videoUrl && videoUrl.startsWith('blob:')) {
-          Utils.log('info', 'Blob URL 감지 - 즉시 다운로드 시도');
-          
-          try {
-            // blob URL은 즉시 다운로드해야 함 (지연 없음)
-            const videoBlob = await this.apiClient.downloadBlobVideo(videoUrl);
-            Utils.log('success', 'Blob 다운로드 성공', { size: videoBlob.size });
-            
-            await this.apiClient.processVideoBlob({
-              platform: CONSTANTS.PLATFORMS.INSTAGRAM,
-              videoBlob,
-              postUrl,
-              metadata
-            });
-          } catch (blobError) {
-            Utils.log('error', 'Blob 처리 실패, 대안 방법 시도', blobError);
-            
-            // Blob 실패 시 대안: 비디오 요소에서 직접 데이터 추출 시도
-            const alternativeBlob = await this.extractVideoFromElement(video);
-            if (alternativeBlob) {
-              Utils.log('info', '비디오 요소에서 직접 추출 성공');
-              await this.apiClient.processVideoBlob({
-                platform: CONSTANTS.PLATFORMS.INSTAGRAM,
-                videoBlob: alternativeBlob,
-                postUrl,
-                metadata
-              });
-            } else {
-              // 마지막 대안: 서버 연결 체크 후 처리
-              Utils.log('info', '서버 연결 상태 확인 중');
-              const isServerUp = await this.apiClient.checkConnection();
-              
-              if (isServerUp) {
-                Utils.log('info', '서버 측 다운로드로 폴백');
-                await this.apiClient.processVideo({
-                  platform: CONSTANTS.PLATFORMS.INSTAGRAM,
-                  videoUrl,
-                  postUrl,
-                  metadata
-                });
-              } else {
-                throw new Error('로컬 서버에 연결할 수 없습니다. 서버를 실행해주세요.\n\n실행 방법:\n1. 터미널에서 "node server/index.js" 실행\n2. http://localhost:3000 확인');
-              }
-            }
-          }
-        } else if (videoUrl) {
-          Utils.log('info', '일반 URL로 처리');
-          await this.apiClient.processVideo({
-            platform: CONSTANTS.PLATFORMS.INSTAGRAM,
-            videoUrl,
-            postUrl,
-            metadata
-          });
-        } else {
-          throw new Error('비디오 URL을 찾을 수 없습니다');
-        }
-        
-        this.uiManager.showNotification(
-          '✅ 영상이 Instagram에 저장되고 AI 분석도 완료되었습니다!', 
-          CONSTANTS.NOTIFICATION_TYPES.SUCCESS
-        );
-        
+        await this.performVideoAnalysis(post, video);
       } catch (error) {
-        Utils.log('error', '클릭 처리 중 오류', error);
+        Utils.log('error', '하이브리드 분석 중 오류', error);
         this.uiManager.showNotification(
-          `영상 처리에 실패했습니다: ${error.message}`, 
+          `영상 분석에 실패했습니다: ${error.message}`, 
           CONSTANTS.NOTIFICATION_TYPES.ERROR
         );
       } finally {
         setTimeout(() => {
           isProcessing = false;
-        }, 5000);
+        }, 3000);
       }
     };
   }

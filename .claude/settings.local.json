@@ -21,7 +21,9 @@
       "Bash(npm start)",
       "Bash(set PORT=3001)",
       "WebFetch(domain:localhost)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "WebSearch",
+      "WebFetch(domain:azure.microsoft.com)"
     ],
     "deny": [],
     "ask": []
