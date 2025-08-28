@@ -1,6 +1,6 @@
 // 상수 정의
 export const CONSTANTS = {
-  SERVER_URL: 'http://localhost:3003',
+  SERVER_URL: 'http://localhost:3000',
   
   PLATFORMS: {
     INSTAGRAM: 'instagram',

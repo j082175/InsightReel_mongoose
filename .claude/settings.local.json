@@ -25,7 +25,8 @@
       "WebSearch",
       "WebFetch(domain:azure.microsoft.com)",
       "Bash(npm install:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(timeout:*)"
     ],
     "deny": [],
     "ask": []

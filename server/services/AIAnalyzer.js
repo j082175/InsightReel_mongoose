@@ -953,12 +953,24 @@ JSON 형식으로 답변:
     } catch (error) {
       console.error('❌ Gemini 다중 프레임 분석 실패:', error);
       
-      // Gemini 실패 시 Ollama로 폴백
-      console.log('🔄 Ollama로 폴백하여 분석 시도...');
-      this.useGemini = false;
-      const result = await this.analyzeMultipleFrames(thumbnailPaths, urlBasedCategory, metadata);
-      this.useGemini = true; // 원상복구
-      return result;
+      // Gemini 전용 모드: 실패해도 Ollama로 폴백하지 않음
+      console.log('⚠️ Gemini 전용 모드로 실행 중 - Ollama 폴백 건너뜀');
+      
+      // 기본 분석 결과 반환
+      const categoryResult = this.determineFinalCategory('', '', urlBasedCategory, metadata);
+      
+      return {
+        category: categoryResult.fullCategory,
+        mainCategory: categoryResult.mainCategory,
+        middleCategory: categoryResult.middleCategory,
+        keywords: this.extractKeywordsFromContent(metadata.caption || ''),
+        hashtags: this.generateHashtagsFromMetadata(metadata.hashtags || [], categoryResult),
+        content: `Gemini 분석 실패: ${error.message}`,
+        confidence: 0.3,
+        source: 'FALLBACK_METADATA',
+        frameCount: thumbnailPaths.length,
+        analysisMethod: 'gemini-fallback'
+      };
     }
   }
 

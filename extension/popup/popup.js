@@ -1,7 +1,7 @@
 // 팝업 스크립트
 class VideoSaverPopup {
   constructor() {
-    this.serverUrl = 'http://localhost:3003';
+    this.serverUrl = 'http://localhost:3000';
     this.init();
   }
 
