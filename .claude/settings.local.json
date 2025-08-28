@@ -20,7 +20,8 @@
       "Bash(grep:*)",
       "Bash(npm start)",
       "Bash(set PORT=3001)",
-      "WebFetch(domain:localhost)"
+      "WebFetch(domain:localhost)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

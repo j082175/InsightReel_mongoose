@@ -6,6 +6,15 @@ export const CONSTANTS = {
     INSTAGRAM: 'instagram',
     TIKTOK: 'tiktok'
   },
+
+  SETTINGS: {
+    AUTO_ANALYSIS: 'autoAnalysis',
+    SHOW_NOTIFICATIONS: 'showNotifications'
+  },
+
+  STORAGE_KEYS: {
+    SETTINGS: 'videosaverSettings'
+  },
   
   SELECTORS: {
     INSTAGRAM: {

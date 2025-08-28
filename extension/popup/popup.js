@@ -117,17 +117,40 @@ class VideoSaverPopup {
   }
 
   loadSettings() {
-    chrome.storage.sync.get([
-      'autoAnalyze', 'autoSave', 'showNotifications'
-    ], (result) => {
-      document.getElementById('autoAnalyze').checked = result.autoAnalyze !== false;
-      document.getElementById('autoSave').checked = result.autoSave !== false;
-      document.getElementById('showNotifications').checked = result.showNotifications !== false;
+    chrome.storage.sync.get(['videosaverSettings'], (result) => {
+      const settings = result.videosaverSettings || {};
+      
+      // 자동 분석 설정 (기본값: false로 변경)
+      document.getElementById('autoAnalyze').checked = settings.autoAnalysis || false;
+      // 기존 설정들 (기본값: true 유지)
+      document.getElementById('autoSave').checked = settings.autoSave !== false;
+      document.getElementById('showNotifications').checked = settings.showNotifications !== false;
     });
   }
 
   saveSetting(key, value) {
-    chrome.storage.sync.set({ [key]: value });
+    // 우리의 설정 시스템과 연동
+    chrome.storage.sync.get(['videosaverSettings'], (result) => {
+      const currentSettings = result.videosaverSettings || {};
+      
+      let settingKey = key;
+      // autoAnalyze를 autoAnalysis로 매핑
+      if (key === 'autoAnalyze') {
+        settingKey = 'autoAnalysis';
+      }
+      
+      const updatedSettings = {
+        ...currentSettings,
+        [settingKey]: value
+      };
+      
+      chrome.storage.sync.set({ 
+        videosaverSettings: updatedSettings 
+      }, () => {
+        console.log(`설정 저장됨: ${settingKey} = ${value}`);
+        this.showNotification(`✅ 설정이 저장되었습니다`);
+      });
+    });
   }
 
   showNotification(message) {

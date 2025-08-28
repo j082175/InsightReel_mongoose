@@ -49,6 +49,15 @@ const CONSTANTS = {
     SCROLL_MIN_INTERVAL: 10000,
     NOTIFICATION_DURATION: 5000,
     BUTTON_RESET_DELAY: 3000
+  },
+
+  SETTINGS: {
+    AUTO_ANALYSIS: 'autoAnalysis',
+    SHOW_NOTIFICATIONS: 'showNotifications'
+  },
+
+  STORAGE_KEYS: {
+    SETTINGS: 'videosaverSettings'
   }
 };
 
@@ -350,11 +359,63 @@ class VideoSaver {
     this.uiManager = new UIManager();
     this.isProcessing = false;
     this.lastEnhancementTime = 0;
+    this.cachedSettings = { [CONSTANTS.SETTINGS.AUTO_ANALYSIS]: false }; // 설정 캐시
     
     this.init();
+    this.setupSettingsListener(); // 설정 변경 리스너 설정
   }
 
-  init() {
+  async getSettings() {
+    try {
+      const result = await chrome.storage.sync.get(CONSTANTS.STORAGE_KEYS.SETTINGS);
+      const settings = result[CONSTANTS.STORAGE_KEYS.SETTINGS] || { 
+        [CONSTANTS.SETTINGS.AUTO_ANALYSIS]: false,
+        [CONSTANTS.SETTINGS.SHOW_NOTIFICATIONS]: true
+      };
+      this.cachedSettings = settings; // 캐시 업데이트
+      return settings;
+    } catch (error) {
+      Utils.log('error', '설정 조회 실패', error);
+      return { 
+        [CONSTANTS.SETTINGS.AUTO_ANALYSIS]: false,
+        [CONSTANTS.SETTINGS.SHOW_NOTIFICATIONS]: true
+      };
+    }
+  }
+
+  setupSettingsListener() {
+    // Chrome storage 변경 이벤트 리스너
+    if (chrome.storage && chrome.storage.onChanged) {
+      chrome.storage.onChanged.addListener((changes, namespace) => {
+        if (namespace === 'sync' && changes[CONSTANTS.STORAGE_KEYS.SETTINGS]) {
+          const newSettings = changes[CONSTANTS.STORAGE_KEYS.SETTINGS].newValue;
+          const oldSettings = changes[CONSTANTS.STORAGE_KEYS.SETTINGS].oldValue;
+          
+          Utils.log('info', '🔄 설정이 실시간으로 변경됨:', {
+            old: oldSettings?.[CONSTANTS.SETTINGS.AUTO_ANALYSIS],
+            new: newSettings?.[CONSTANTS.SETTINGS.AUTO_ANALYSIS]
+          });
+          
+          // 캐시 즉시 업데이트
+          this.cachedSettings = newSettings || { 
+            [CONSTANTS.SETTINGS.AUTO_ANALYSIS]: false,
+            [CONSTANTS.SETTINGS.SHOW_NOTIFICATIONS]: true
+          };
+          
+          // 사용자에게 알림
+          if (newSettings?.[CONSTANTS.SETTINGS.AUTO_ANALYSIS] !== oldSettings?.[CONSTANTS.SETTINGS.AUTO_ANALYSIS]) {
+            const status = newSettings?.[CONSTANTS.SETTINGS.AUTO_ANALYSIS] ? 'ON' : 'OFF';
+            // UIManager를 통해 알림 표시
+            this.uiManager.showNotification(`🔄 자동 분석이 ${status}으로 변경되었습니다`, 'info');
+          }
+        }
+      });
+      
+      Utils.log('info', '✅ 설정 변경 리스너 설정 완료');
+    }
+  }
+
+  async init() {
     Utils.log('info', 'VideoSaver init() 호출됨');
     Utils.log('info', '감지된 플랫폼:', this.platform);
     
@@ -362,6 +423,10 @@ class VideoSaver {
       Utils.log('error', '지원되지 않는 플랫폼입니다:', window.location.hostname);
       return;
     }
+    
+    // 초기 설정 로드
+    await this.getSettings();
+    Utils.log('info', '초기 설정 로드됨:', this.cachedSettings);
     
     Utils.log('success', `영상 저장기가 ${this.platform}에서 실행됩니다.`);
     
@@ -439,8 +504,168 @@ class VideoSaver {
     if (video) {
       const clickHandler = this.createClickHandler(post, video);
       button.addEventListener('click', clickHandler, false);
+      
+      // 분석 버튼 추가 (별도 버튼)
+      this.createAnalysisButton(button, post, video);
+      
       Utils.log('success', `저장 버튼 ${index + 1}에 영상 분석 기능 추가`);
     }
+  }
+
+  createAnalysisButton(originalButton, post, video) {
+    // 이미 분석 버튼이 있는지 확인
+    const existingAnalysisButton = originalButton.parentElement?.querySelector('.video-analysis-button');
+    if (existingAnalysisButton) {
+      return;
+    }
+
+    // 분석 버튼 생성
+    const analysisButton = document.createElement('button');
+    analysisButton.className = 'video-analysis-button';
+    analysisButton.innerHTML = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+      </svg>
+    `;
+    
+    // 스타일링
+    analysisButton.style.cssText = `
+      position: relative;
+      background: linear-gradient(45deg, #8e44ad, #3498db);
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      color: white;
+      cursor: pointer;
+      margin-left: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+      z-index: 9999;
+    `;
+
+    // 호버 효과
+    analysisButton.addEventListener('mouseenter', () => {
+      analysisButton.style.transform = 'scale(1.1)';
+      analysisButton.style.background = 'linear-gradient(45deg, #9b59b6, #2980b9)';
+    });
+
+    analysisButton.addEventListener('mouseleave', () => {
+      analysisButton.style.transform = 'scale(1)';
+      analysisButton.style.background = 'linear-gradient(45deg, #8e44ad, #3498db)';
+    });
+
+    // 클릭 이벤트
+    analysisButton.addEventListener('click', async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      analysisButton.style.background = '#f39c12';
+      analysisButton.innerHTML = '⏳';
+      
+      try {
+        await this.performVideoAnalysis(post, video);
+        analysisButton.style.background = '#27ae60';
+        analysisButton.innerHTML = '✅';
+        
+        setTimeout(() => {
+          analysisButton.style.background = 'linear-gradient(45deg, #8e44ad, #3498db)';
+          analysisButton.innerHTML = `
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+          `;
+        }, 2000);
+      } catch (error) {
+        analysisButton.style.background = '#e74c3c';
+        analysisButton.innerHTML = '❌';
+        Utils.log('error', '분석 버튼 클릭 처리 실패', error);
+        
+        setTimeout(() => {
+          analysisButton.style.background = 'linear-gradient(45deg, #8e44ad, #3498db)';
+          analysisButton.innerHTML = `
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+          `;
+        }, 2000);
+      }
+    });
+
+    // 버튼을 원래 저장 버튼 옆에 배치
+    try {
+      const buttonContainer = originalButton.parentElement;
+      if (buttonContainer) {
+        buttonContainer.style.position = 'relative';
+        buttonContainer.appendChild(analysisButton);
+        Utils.log('info', '분석 버튼이 저장 버튼 옆에 추가됨');
+      } else {
+        // 대안: floating button으로 추가
+        this.createFloatingAnalysisButton(video, analysisButton);
+      }
+    } catch (error) {
+      Utils.log('warn', '분석 버튼 배치 실패, floating 버튼으로 대체', error);
+      this.createFloatingAnalysisButton(video, analysisButton);
+    }
+  }
+
+  createFloatingAnalysisButton(video, analysisButton) {
+    analysisButton.style.position = 'absolute';
+    analysisButton.style.top = '10px';
+    analysisButton.style.right = '10px';
+    analysisButton.style.zIndex = '10000';
+    
+    const videoContainer = video.closest('div') || video.parentElement;
+    if (videoContainer) {
+      videoContainer.style.position = 'relative';
+      videoContainer.appendChild(analysisButton);
+      Utils.log('info', '분석 버튼이 비디오 위에 floating으로 추가됨');
+    }
+  }
+
+  async performVideoAnalysis(post, video) {
+    Utils.log('info', '수동 영상 분석 시작');
+    
+    // 기존 분석 로직 재사용
+    const postUrl = window.location.href;
+    const metadata = this.extractInstagramMetadata(post);
+    
+    if (video.src && video.src.startsWith('blob:')) {
+      // blob URL의 경우 Canvas를 사용한 프레임 캡처
+      try {
+        const frameBlob = await this.extractVideoFromElement(video);
+        if (frameBlob) {
+          await this.apiClient.processVideoBlob({
+            platform: CONSTANTS.PLATFORMS.INSTAGRAM,
+            videoBlob: frameBlob,
+            postUrl,
+            metadata: {
+              ...metadata,
+              captureMethod: 'canvas-frame'
+            }
+          });
+        } else {
+          throw new Error('프레임 캡처 실패');
+        }
+      } catch (error) {
+        Utils.log('error', 'Canvas 프레임 캡처 실패', error);
+        throw error;
+      }
+    } else if (video.src) {
+      await this.apiClient.processVideo({
+        platform: CONSTANTS.PLATFORMS.INSTAGRAM,
+        videoUrl: video.src,
+        postUrl,
+        metadata
+      });
+    } else {
+      throw new Error('비디오 URL을 찾을 수 없습니다');
+    }
+
+    this.uiManager.showNotification('✅ 영상 분석이 완료되었습니다!', 'success');
   }
 
   createClickHandler(post, video) {
@@ -452,6 +677,18 @@ class VideoSaver {
       isProcessing = true;
       Utils.log('info', 'Instagram 저장 버튼 클릭 이벤트 감지');
       
+      // 캐시된 설정 확인 (실시간 반영)
+      const isAutoAnalysisEnabled = this.cachedSettings[CONSTANTS.SETTINGS.AUTO_ANALYSIS] || false;
+      Utils.log('info', `자동 분석 설정 (캐시됨): ${isAutoAnalysisEnabled}`);
+      
+      if (!isAutoAnalysisEnabled) {
+        Utils.log('info', '자동 분석 비활성화됨 - 저장만 완료');
+        this.uiManager.showNotification('✅ 영상이 Instagram에 저장되었습니다!', 'success');
+        isProcessing = false;
+        return;
+      }
+      
+      Utils.log('info', '자동 분석 실행됨');
       try {
         const videoUrl = video.src || video.currentSrc;
         const postUrl = window.location.href;

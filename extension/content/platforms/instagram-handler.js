@@ -1,5 +1,6 @@
 import { CONSTANTS } from '../constants.js';
 import { Utils } from '../utils.js';
+import { SettingsManager } from '../settings-manager.js';
 
 /**
  * Instagram 플랫폼 핸들러
@@ -8,9 +9,11 @@ export class InstagramHandler {
   constructor(apiClient, uiManager) {
     this.apiClient = apiClient;
     this.uiManager = uiManager;
+    this.settingsManager = new SettingsManager();
     this.isProcessing = false;
     this.lastEnhancementTime = 0;
     this.processedButtons = new Set();
+    this.processedVideos = new Set();
   }
 
   /**
@@ -28,6 +31,7 @@ export class InstagramHandler {
     setTimeout(() => {
       try {
         this.processExistingSaveButtons();
+        this.addAnalysisButtons();
       } catch (error) {
         Utils.log('error', '저장 버튼 향상 중 오류', error);
       } finally {
@@ -315,21 +319,35 @@ export class InstagramHandler {
       isProcessing = true;
       Utils.log('info', 'Instagram 저장 버튼 클릭 이벤트 감지');
       
-      try {
-        await Utils.delay(CONSTANTS.TIMEOUTS.PROCESSING_DELAY);
-        await this.processVideoFromSaveAction(post, video);
-      } catch (error) {
-        Utils.log('error', '클릭 처리 중 오류', error);
+      // 자동 분석 설정 확인
+      const isAutoAnalysisEnabled = await this.settingsManager.isAutoAnalysisEnabled();
+      Utils.log('info', `자동 분석 설정: ${isAutoAnalysisEnabled}`);
+      
+      if (isAutoAnalysisEnabled) {
+        Utils.log('info', '자동 분석 실행됨');
+        try {
+          await Utils.delay(CONSTANTS.TIMEOUTS.PROCESSING_DELAY);
+          await this.processVideoFromSaveAction(post, video);
+        } catch (error) {
+          Utils.log('error', '자동 분석 실패', error);
+          this.uiManager.showNotification(
+            `Instagram 저장은 완료되었지만 AI 분석에 실패했습니다: ${error.message}`, 
+            CONSTANTS.NOTIFICATION_TYPES.WARNING
+          );
+        }
+      } else {
+        // 자동 분석이 비활성화된 경우 저장만 완료 알림
+        Utils.log('info', '자동 분석 비활성화됨 - 저장만 완료');
         this.uiManager.showNotification(
-          `Instagram 저장은 완료되었지만 AI 분석에 실패했습니다: ${error.message}`, 
-          CONSTANTS.NOTIFICATION_TYPES.WARNING
+          '✅ 영상이 Instagram에 저장되었습니다!', 
+          CONSTANTS.NOTIFICATION_TYPES.SUCCESS
         );
-      } finally {
-        // 5초 후 처리 플래그 해제
-        setTimeout(() => {
-          isProcessing = false;
-        }, 5000);
       }
+      
+      // 5초 후 처리 플래그 해제
+      setTimeout(() => {
+        isProcessing = false;
+      }, 5000);
     };
   }
 
@@ -577,5 +595,275 @@ export class InstagramHandler {
         CONSTANTS.NOTIFICATION_TYPES.ERROR
       );
     }
+  }
+
+  /**
+   * 분석 전용 버튼 추가
+   */
+  addAnalysisButtons() {
+    Utils.log('info', 'Instagram 분석 버튼 추가 시작');
+    
+    const posts = Utils.safeQuerySelectorAll(document, CONSTANTS.SELECTORS.INSTAGRAM.POSTS);
+    Utils.log('info', `발견된 게시물: ${posts.length}개`);
+    
+    posts.forEach((post, index) => {
+      try {
+        this.addAnalysisButtonToPost(post, index);
+      } catch (error) {
+        Utils.log('error', `게시물 ${index + 1} 분석 버튼 추가 실패`, error);
+      }
+    });
+  }
+
+  /**
+   * 게시물에 분석 버튼 추가
+   * @param {Element} post 게시물 요소
+   * @param {number} index 인덱스
+   */
+  addAnalysisButtonToPost(post, index) {
+    const video = Utils.safeQuerySelector(post, CONSTANTS.SELECTORS.INSTAGRAM.VIDEOS);
+    if (!video) {
+      Utils.log('info', `게시물 ${index + 1}: 비디오 없음, 스킵`);
+      return; // 비디오가 없는 게시물은 스킵
+    }
+
+    // 기존 분석 버튼이 있는지 확인
+    if (post.querySelector('.analysis-button')) {
+      Utils.log('info', `게시물 ${index + 1}: 이미 분석 버튼 존재`);
+      return;
+    }
+
+    // 다양한 방법으로 저장 버튼 찾기
+    let saveButton = null;
+    let buttonContainer = null;
+
+    // 방법 1: 일반적인 저장 버튼 선택자
+    for (const selector of CONSTANTS.SELECTORS.INSTAGRAM.SAVE_BUTTONS) {
+      saveButton = Utils.safeQuerySelector(post, selector);
+      if (saveButton) {
+        Utils.log('info', `게시물 ${index + 1}: 저장 버튼 발견 (선택자: ${selector})`);
+        break;
+      }
+    }
+
+    // 방법 2: 액션 버튼들이 있는 영역 찾기
+    if (!saveButton) {
+      const actionArea = Utils.safeQuerySelector(post, 'section');
+      if (actionArea) {
+        // 좋아요, 댓글, 공유, 저장 버튼들이 있는 영역
+        const buttons = actionArea.querySelectorAll('[role="button"]');
+        if (buttons.length >= 4) {
+          saveButton = buttons[buttons.length - 1]; // 보통 마지막이 저장 버튼
+          Utils.log('info', `게시물 ${index + 1}: 액션 영역에서 저장 버튼 추정`);
+        }
+      }
+    }
+
+    if (!saveButton) {
+      Utils.log('warn', `게시물 ${index + 1}: 저장 버튼을 찾을 수 없음`);
+      // 저장 버튼이 없어도 비디오가 있으면 플로팅 버튼으로 추가
+      this.addFloatingAnalysisButton(post, video, index);
+      return;
+    }
+
+    // 버튼 컨테이너 찾기
+    buttonContainer = saveButton.closest('[role="button"]') || saveButton.parentElement;
+    
+    // 분석 버튼 생성
+    const analysisButton = this.createAnalysisButton();
+    
+    // 클릭 이벤트 추가
+    analysisButton.onclick = async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      await this.handleAnalysisButtonClick(post, video, analysisButton);
+    };
+
+    try {
+      // 저장 버튼과 같은 레벨에 분석 버튼 추가
+      const parentContainer = buttonContainer.parentElement;
+      if (parentContainer) {
+        // 저장 버튼 바로 다음에 삽입
+        if (buttonContainer.nextSibling) {
+          parentContainer.insertBefore(analysisButton, buttonContainer.nextSibling);
+        } else {
+          parentContainer.appendChild(analysisButton);
+        }
+        Utils.log('success', `게시물 ${index + 1}: 분석 버튼 추가 완료`);
+      } else {
+        // 플로팅 버튼으로 폴백
+        this.addFloatingAnalysisButton(post, video, index);
+      }
+    } catch (error) {
+      Utils.log('error', `게시물 ${index + 1}: 분석 버튼 배치 실패`, error);
+      // 플로팅 버튼으로 폴백
+      this.addFloatingAnalysisButton(post, video, index);
+    }
+  }
+
+  /**
+   * 플로팅 분석 버튼 추가 (폴백 방법)
+   * @param {Element} post 게시물 요소
+   * @param {Element} video 비디오 요소
+   * @param {number} index 인덱스
+   */
+  addFloatingAnalysisButton(post, video, index) {
+    const analysisButton = this.createFloatingAnalysisButton();
+    
+    // 클릭 이벤트 추가
+    analysisButton.onclick = async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      await this.handleAnalysisButtonClick(post, video, analysisButton);
+    };
+
+    try {
+      // 비디오 위에 플로팅 버튼 추가
+      const videoContainer = video.parentElement;
+      videoContainer.style.position = 'relative';
+      videoContainer.appendChild(analysisButton);
+      Utils.log('success', `게시물 ${index + 1}: 플로팅 분석 버튼 추가 완료`);
+    } catch (error) {
+      Utils.log('error', `게시물 ${index + 1}: 플로팅 분석 버튼 추가 실패`, error);
+    }
+  }
+
+  /**
+   * 플로팅 분석 버튼 생성
+   * @returns {HTMLButtonElement} 플로팅 분석 버튼
+   */
+  createFloatingAnalysisButton() {
+    const button = document.createElement('button');
+    button.className = 'analysis-button floating-analysis-button';
+    button.style.cssText = `
+      all: unset !important;
+      position: absolute !important;
+      top: 10px !important;
+      right: 10px !important;
+      z-index: 9999 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      width: 36px !important;
+      height: 36px !important;
+      background: linear-gradient(45deg, #667eea 0%, #764ba2 100%) !important;
+      color: white !important;
+      border-radius: 50% !important;
+      cursor: pointer !important;
+      font-size: 14px !important;
+      font-weight: bold !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+      transition: all 0.2s ease !important;
+    `;
+    
+    button.innerHTML = `🔍`;
+    button.title = '영상 AI 분석하기';
+    
+    // 호버 효과
+    button.addEventListener('mouseenter', () => {
+      button.style.transform = 'scale(1.1) !important';
+      button.style.background = 'linear-gradient(45deg, #5a67d8 0%, #6b46c1 100%) !important';
+    });
+    
+    button.addEventListener('mouseleave', () => {
+      button.style.transform = 'scale(1) !important';
+      button.style.background = 'linear-gradient(45deg, #667eea 0%, #764ba2 100%) !important';
+    });
+    
+    return button;
+  }
+
+  /**
+   * 분석 전용 버튼 생성
+   * @returns {HTMLButtonElement} 분석 버튼
+   */
+  createAnalysisButton() {
+    const button = document.createElement('button');
+    button.className = 'analysis-button';
+    button.style.cssText = `
+      all: unset !important;
+      position: relative !important;
+      z-index: 9999 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      width: 24px !important;
+      height: 24px !important;
+      margin-left: 12px !important;
+      background: linear-gradient(45deg, #667eea 0%, #764ba2 100%) !important;
+      color: white !important;
+      border-radius: 6px !important;
+      cursor: pointer !important;
+      font-size: 12px !important;
+      font-weight: bold !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+      transition: all 0.2s ease !important;
+    `;
+    
+    button.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center;">
+        <div style="font-size: 10px;">🔍</div>
+      </div>
+    `;
+    
+    button.title = '영상 AI 분석하기';
+    
+    // 호버 효과
+    button.addEventListener('mouseenter', () => {
+      button.style.transform = 'scale(1.1) !important';
+      button.style.background = 'linear-gradient(45deg, #5a67d8 0%, #6b46c1 100%) !important';
+    });
+    
+    button.addEventListener('mouseleave', () => {
+      button.style.transform = 'scale(1) !important';
+      button.style.background = 'linear-gradient(45deg, #667eea 0%, #764ba2 100%) !important';
+    });
+    
+    return button;
+  }
+
+  /**
+   * 분석 버튼 클릭 처리
+   * @param {Element} post 게시물 요소
+   * @param {Element} video 비디오 요소
+   * @param {Element} button 클릭된 버튼
+   */
+  async handleAnalysisButtonClick(post, video, button) {
+    // 버튼 상태를 로딩으로 변경
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<div style="font-size: 10px;">⏳</div>';
+    button.style.pointerEvents = 'none';
+
+    try {
+      Utils.log('info', '수동 분석 버튼 클릭됨');
+      
+      // 동일한 분석 로직 사용
+      await this.processVideoFromSaveAction(post, video);
+      
+      // 성공 상태로 변경
+      button.innerHTML = '<div style="font-size: 10px;">✅</div>';
+      
+      this.uiManager.showNotification(
+        '✅ 영상 AI 분석이 완료되었습니다!', 
+        CONSTANTS.NOTIFICATION_TYPES.SUCCESS
+      );
+      
+    } catch (error) {
+      Utils.log('error', '수동 분석 실패', error);
+      
+      // 에러 상태로 변경
+      button.innerHTML = '<div style="font-size: 10px;">❌</div>';
+      
+      this.uiManager.showNotification(
+        `영상 분석에 실패했습니다: ${error.message}`, 
+        CONSTANTS.NOTIFICATION_TYPES.ERROR
+      );
+    }
+
+    // 3초 후 원래 상태로 복원
+    setTimeout(() => {
+      button.innerHTML = originalHTML;
+      button.style.pointerEvents = 'auto';
+    }, 3000);
   }
 }
