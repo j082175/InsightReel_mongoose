@@ -676,12 +676,33 @@ class VideoSaver {
     const metadata = this.extractInstagramMetadata(post);
     const analysisId = `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // Phase 1: 즉시 프레임 분석 (2-3초)
-    await this.performQuickAnalysis(video, postUrl, metadata, analysisId);
+    // 서버 설정 확인 - Gemini 사용 여부
+    let useGemini = false;
+    try {
+      const healthResponse = await fetch(`${CONSTANTS.SERVER_URL}/health`);
+      if (healthResponse.ok) {
+        const healthData = await healthResponse.json();
+        useGemini = healthData.useGemini;
+        Utils.log('info', `🔮 서버 설정: Gemini ${useGemini ? '활성화' : '비활성화'}`);
+      }
+    } catch (error) {
+      Utils.log('warn', '서버 설정 확인 실패, 기본 동작 수행', error);
+    }
     
-    // Phase 1 완료 알림
-    if (progressCallback) {
-      progressCallback('phase1', 'complete');
+    if (useGemini) {
+      // Gemini 사용시 바로 Phase 2로 진행
+      Utils.log('info', '🔮 Gemini 모드: 빠른 분석 건너뛰고 바로 전체 분석 시작');
+      if (progressCallback) {
+        progressCallback('phase1', 'skipped');
+      }
+    } else {
+      // Phase 1: 즉시 프레임 분석 (2-3초)
+      await this.performQuickAnalysis(video, postUrl, metadata, analysisId);
+      
+      // Phase 1 완료 알림
+      if (progressCallback) {
+        progressCallback('phase1', 'complete');
+      }
     }
     
     // Phase 2: 백그라운드 전체 비디오 분석 (30초-1분)
@@ -860,36 +881,73 @@ class VideoSaver {
 
   async extractFromInstagramPageData() {
     try {
+      // 현재 페이지 URL에서 Reel ID 추출
+      const currentUrl = window.location.href;
+      const reelIdMatch = currentUrl.match(/\/reels\/([A-Za-z0-9_-]+)/);
+      const currentReelId = reelIdMatch ? reelIdMatch[1] : null;
+      
+      Utils.log('info', `🔍 현재 Reel ID: ${currentReelId}`);
+      
       // Instagram 페이지의 JSON 데이터에서 비디오 URL 찾기
       const scripts = Array.from(document.querySelectorAll('script'));
       
       for (const script of scripts) {
         const content = script.textContent || script.innerHTML;
         
-        // Instagram의 GraphQL 데이터 찾기
-        if (content.includes('video_url') || content.includes('videoUrl')) {
-          const videoUrlMatch = content.match(/"video_url":"([^"]+)"/);
-          if (videoUrlMatch) {
-            const url = videoUrlMatch[1].replace(/\\u0026/g, '&').replace(/\\/g, '');
-            if (url.includes('.mp4') && !url.startsWith('blob:')) {
-              return url;
+        // 현재 Reel ID와 연결된 비디오 URL 찾기
+        if (currentReelId && content.includes(currentReelId)) {
+          // Reel ID 근처에서 video_url 찾기
+          const reelSection = this.extractReelSection(content, currentReelId);
+          if (reelSection) {
+            // 다양한 패턴으로 비디오 URL 찾기
+            const patterns = [
+              /"video_url":"([^"]+)"/,
+              /"videoUrl":"([^"]+)"/,
+              /"src":"([^"]+\.mp4[^"]*)"/,
+              /"url":"([^"]+\.mp4[^"]*)"/,
+              /"playback_url":"([^"]+)"/,
+              /"video_dash_url":"([^"]+)"/
+            ];
+            
+            for (const pattern of patterns) {
+              const videoUrlMatch = reelSection.match(pattern);
+              if (videoUrlMatch) {
+                const url = videoUrlMatch[1].replace(/\\u0026/g, '&').replace(/\\/g, '');
+                if (url.includes('.mp4') && !url.startsWith('blob:') && 
+                    (url.includes('fbcdn.net') || url.includes('cdninstagram.com'))) {
+                  Utils.log('info', `✅ Reel ID ${currentReelId}에 맞는 비디오 URL 발견`);
+                  return url;
+                }
+              }
             }
           }
         }
         
-        // 대안 패턴들
-        const patterns = [
-          /"videoUrl":"([^"]+\.mp4[^"]*)"/,
-          /"src":"([^"]+\.mp4[^"]*)"/,
-          /"url":"([^"]+\.mp4[^"]*)"/
-        ];
-        
-        for (const pattern of patterns) {
-          const match = content.match(pattern);
-          if (match) {
-            const url = match[1].replace(/\\u0026/g, '&').replace(/\\/g, '');
-            if (url.includes('fbcdn.net') || url.includes('cdninstagram.com')) {
-              return url;
+        // 강화된 전체 검색 (fallback)
+        if (content.includes('video_url') || content.includes('videoUrl') || content.includes('.mp4')) {
+          const patterns = [
+            /"video_url":"([^"]+\.mp4[^"]*)"/,
+            /"videoUrl":"([^"]+\.mp4[^"]*)"/,
+            /"playback_url":"([^"]+\.mp4[^"]*)"/,
+            /"src":"([^"]*fbcdn\.net[^"]*\.mp4[^"]*)"/,
+            /"url":"([^"]*fbcdn\.net[^"]*\.mp4[^"]*)"/,
+            /"src":"([^"]*cdninstagram\.com[^"]*\.mp4[^"]*)"/,
+            /https?:\/\/[^"]*fbcdn\.net[^"]*\.mp4[^"]*/g,
+            /https?:\/\/[^"]*cdninstagram\.com[^"]*\.mp4[^"]*/g
+          ];
+          
+          for (const pattern of patterns) {
+            const matches = content.match(pattern);
+            if (matches) {
+              let url = matches[1] || matches[0];
+              url = url.replace(/\\u0026/g, '&').replace(/\\/g, '');
+              
+              if (url.includes('.mp4') && !url.startsWith('blob:') && 
+                  (url.includes('fbcdn.net') || url.includes('cdninstagram.com'))) {
+                Utils.log('warn', '⚠️ Fallback: 전체 페이지에서 비디오 URL 발견');
+                Utils.log('info', `📋 발견된 URL: ${url.substring(0, 80)}...`);
+                return url;
+              }
             }
           }
         }
@@ -898,6 +956,24 @@ class VideoSaver {
       return null;
     } catch (error) {
       Utils.log('warn', 'Instagram 페이지 데이터 분석 실패', error);
+      return null;
+    }
+  }
+
+  extractReelSection(content, reelId) {
+    try {
+      // Reel ID가 포함된 섹션을 찾아서 해당 부분의 JSON 데이터 추출
+      const reelIndex = content.indexOf(reelId);
+      if (reelIndex === -1) return null;
+      
+      // Reel ID 앞뒤 2000자 정도의 컨텍스트 추출
+      const start = Math.max(0, reelIndex - 1000);
+      const end = Math.min(content.length, reelIndex + 1000);
+      const section = content.slice(start, end);
+      
+      return section;
+    } catch (error) {
+      Utils.log('warn', 'Reel 섹션 추출 실패', error);
       return null;
     }
   }
@@ -917,9 +993,10 @@ class VideoSaver {
       
       const videoEntries = entries.filter(entry => {
         return videoPatterns.some(pattern => pattern.test(entry.name)) &&
-               entry.name.includes('instagram') &&
+               (entry.name.includes('fbcdn.net') || entry.name.includes('cdninstagram.com')) &&
                !entry.name.includes('bytestart=') && // 부분 다운로드 제외
-               !entry.name.includes('byteend=');
+               !entry.name.includes('byteend=') &&
+               !entry.name.includes('blob:');
       });
       
       if (videoEntries.length > 0) {

@@ -128,17 +128,27 @@ class VideoProcessor {
         thumbnailPath
       ]);
 
+      let stderrOutput = '';
+      
+      ffmpeg.stderr.on('data', (data) => {
+        stderrOutput += data.toString();
+      });
+
       ffmpeg.on('close', (code) => {
         if (code === 0 && fs.existsSync(thumbnailPath)) {
           console.log(`✅ 단일 썸네일 생성 완료: ${path.basename(thumbnailPath)}`);
           resolve([thumbnailPath]); // 배열로 반환
         } else {
+          console.error(`❌ FFmpeg 썸네일 생성 실패 (코드: ${code})`);
+          console.error(`📄 FFmpeg stderr:`, stderrOutput);
+          console.error(`📁 입력 파일: ${videoPath}`);
+          console.error(`📁 출력 파일: ${thumbnailPath}`);
           reject(new Error(`FFmpeg 실행 실패 (코드: ${code})`));
         }
       });
 
       ffmpeg.on('error', (error) => {
-        console.error('FFmpeg 에러:', error);
+        console.error('❌ FFmpeg 프로세스 에러:', error);
         reject(error);
       });
 
@@ -197,7 +207,10 @@ class VideoProcessor {
     const step = duration / (frameCount + 1); // 양끝 여백 고려
     
     for (let i = 1; i <= frameCount; i++) {
-      intervals.push(Math.round(step * i * 10) / 10); // 소수점 1자리
+      const time = Math.round(step * i * 10) / 10; // 소수점 1자리
+      // 비디오 길이보다 0.5초 짧게 제한하여 안전 여백 확보
+      const safeTime = Math.min(time, duration - 0.5);
+      intervals.push(Math.max(0.5, safeTime)); // 최소 0.5초
     }
     
     return intervals;
@@ -205,6 +218,8 @@ class VideoProcessor {
 
   async extractFrameAtTime(videoPath, timeInSeconds, outputPath) {
     const timeString = this.secondsToTimeString(timeInSeconds);
+    
+    console.log(`🔍 프레임 추출 시도: ${timeInSeconds}초 -> ${timeString}`);
     
     return new Promise((resolve, reject) => {
       const ffmpeg = spawn(ffmpegPath, [
@@ -216,16 +231,28 @@ class VideoProcessor {
         outputPath
       ]);
 
+      let stderrOutput = '';
+      
+      ffmpeg.stderr.on('data', (data) => {
+        stderrOutput += data.toString();
+      });
+
       ffmpeg.on('close', (code) => {
         if (code === 0 && fs.existsSync(outputPath)) {
           console.log(`✅ 프레임 추출 완료: ${timeString} -> ${path.basename(outputPath)}`);
           resolve(outputPath);
         } else {
+          console.error(`❌ FFmpeg 프레임 추출 실패 (코드: ${code})`);
+          console.error(`📄 FFmpeg stderr:`, stderrOutput);
+          console.error(`📁 입력 파일: ${videoPath}`);
+          console.error(`📁 출력 파일: ${outputPath}`);
+          console.error(`⏰ 시간: ${timeString}`);
           reject(new Error(`프레임 추출 실패 (코드: ${code})`));
         }
       });
 
       ffmpeg.on('error', (error) => {
+        console.error(`❌ FFmpeg 프로세스 에러:`, error);
         reject(error);
       });
 
@@ -237,6 +264,8 @@ class VideoProcessor {
 
   async getVideoDuration(videoPath) {
     return new Promise((resolve, reject) => {
+      console.log(`🔍 비디오 길이 확인 시작: ${videoPath}`);
+      
       const ffprobe = spawn(ffprobePath, [
         '-v', 'quiet',
         '-print_format', 'json',
@@ -245,23 +274,83 @@ class VideoProcessor {
       ]);
 
       let output = '';
+      let errorOutput = '';
       
       ffprobe.stdout.on('data', (data) => {
         output += data.toString();
       });
 
+      ffprobe.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+      });
+
       ffprobe.on('close', (code) => {
         try {
-          if (code === 0) {
+          console.log(`📊 ffprobe 종료 코드: ${code}`);
+          if (code === 0 && output.trim()) {
             const info = JSON.parse(output);
             const duration = parseFloat(info.format.duration);
+            console.log(`✅ 비디오 길이 감지 성공: ${duration}초`);
             resolve(duration);
           } else {
-            // ffprobe 실패시 기본값
-            resolve(30); // 30초 기본값
+            console.warn(`⚠️ ffprobe 실패 (코드: ${code}), ffmpeg로 재시도`);
+            console.warn(`📄 ffprobe 오류:`, errorOutput);
+            
+            // ffprobe 실패시 ffmpeg로 재시도
+            this.getVideoDurationWithFFmpeg(videoPath).then(resolve).catch(() => {
+              console.error(`❌ ffmpeg로도 실패, 기본값 30초 사용`);
+              resolve(30);
+            });
           }
         } catch (error) {
-          resolve(30); // 파싱 실패시 기본값
+          console.error(`❌ JSON 파싱 실패:`, error.message);
+          console.error(`📄 Output:`, output);
+          
+          // 파싱 실패시 ffmpeg로 재시도
+          this.getVideoDurationWithFFmpeg(videoPath).then(resolve).catch(() => {
+            console.error(`❌ ffmpeg로도 실패, 기본값 30초 사용`);
+            resolve(30);
+          });
+        }
+      });
+    });
+  }
+
+  async getVideoDurationWithFFmpeg(videoPath) {
+    return new Promise((resolve, reject) => {
+      console.log(`🔄 ffmpeg로 비디오 길이 재시도: ${videoPath}`);
+      
+      const ffmpeg = spawn(ffmpegPath, [
+        '-i', videoPath,
+        '-f', 'null',
+        '-'
+      ]);
+
+      let stderrOutput = '';
+      
+      ffmpeg.stderr.on('data', (data) => {
+        stderrOutput += data.toString();
+      });
+
+      ffmpeg.on('close', (code) => {
+        try {
+          // Duration 패턴 찾기: Duration: 00:00:13.30
+          const durationMatch = stderrOutput.match(/Duration: (\d{2}):(\d{2}):(\d{2}\.\d{2})/);
+          if (durationMatch) {
+            const hours = parseInt(durationMatch[1]);
+            const minutes = parseInt(durationMatch[2]);
+            const seconds = parseFloat(durationMatch[3]);
+            const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+            console.log(`✅ ffmpeg로 비디오 길이 감지 성공: ${totalSeconds}초`);
+            resolve(totalSeconds);
+          } else {
+            console.error(`❌ ffmpeg에서 Duration 찾을 수 없음`);
+            console.error(`📄 stderr:`, stderrOutput);
+            reject(new Error('Duration not found in ffmpeg output'));
+          }
+        } catch (error) {
+          console.error(`❌ ffmpeg 출력 파싱 실패:`, error.message);
+          reject(error);
         }
       });
     });
