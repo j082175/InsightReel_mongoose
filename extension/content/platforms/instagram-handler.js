@@ -427,9 +427,23 @@ export class InstagramHandler {
       const authorElement = Utils.safeQuerySelector(post, CONSTANTS.SELECTORS.INSTAGRAM.AUTHOR);
       const author = authorElement?.textContent || '';
       
-      // 캡션
-      const captionElement = Utils.safeQuerySelector(post, CONSTANTS.SELECTORS.INSTAGRAM.CAPTION);
-      const caption = captionElement?.textContent || '';
+      // 캡션 (여러 선택자 시도)
+      let caption = '';
+      const captionSelectors = CONSTANTS.SELECTORS.INSTAGRAM.CAPTION;
+      Utils.log('info', '캡션 추출 시도', { selectors: captionSelectors });
+      
+      for (const selector of captionSelectors) {
+        const captionElement = Utils.safeQuerySelector(post, selector);
+        if (captionElement && captionElement.textContent.trim()) {
+          caption = captionElement.textContent.trim();
+          Utils.log('info', '캡션 추출 성공', { selector, caption: caption.substring(0, 100) });
+          break;
+        }
+      }
+      
+      if (!caption) {
+        Utils.log('warn', '캡션을 찾을 수 없음');
+      }
       
       // 좋아요 수
       const likesElement = Utils.safeQuerySelector(post, CONSTANTS.SELECTORS.INSTAGRAM.LIKES);
@@ -437,6 +451,7 @@ export class InstagramHandler {
       
       // 해시태그 추출
       const hashtags = Utils.extractHashtags(caption);
+      Utils.log('info', '해시태그 추출 결과', { hashtags, captionLength: caption.length });
       
       return {
         author: author.trim(),

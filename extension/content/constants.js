@@ -17,7 +17,13 @@ export const CONSTANTS = {
       VIDEOS: 'video',
       SAVE_BUTTONS: 'svg[aria-label*="저장"], svg[aria-label*="Save"], svg[aria-label*="save"]',
       AUTHOR: 'a[role="link"]',
-      CAPTION: '[data-testid="post-content"] span',
+      CAPTION: [
+        '[data-testid="post-content"] span',
+        'article h1',
+        'article span[dir="auto"]',
+        '.x1lliihq span',
+        'h1 span'
+      ],
       LIKES: 'button[data-testid="like-count"]'
     },
     TIKTOK: {

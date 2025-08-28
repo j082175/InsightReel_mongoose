@@ -110,7 +110,7 @@ class SheetsManager {
             },
             {
               properties: {
-                title: '카테고리 통계',
+                title: 'Stats',
                 gridProperties: {
                   rowCount: 100,
                   columnCount: 10
@@ -248,6 +248,9 @@ class SheetsManager {
         analysis.source || 'AI'                      // 분석상태
       ];
 
+      // 시트 행 수가 부족하면 확장
+      await this.ensureSheetCapacity(sheetName, nextRow);
+
       // 스프레드시트에 데이터 추가
       await this.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
@@ -332,14 +335,19 @@ class SheetsManager {
           ])
       ];
 
-      await this.sheets.spreadsheets.values.clear({
-        spreadsheetId: this.spreadsheetId,
-        range: '카테고리 통계!A:Z'
-      });
+      try {
+        await this.sheets.spreadsheets.values.clear({
+          spreadsheetId: this.spreadsheetId,
+          range: 'Stats!A:Z'
+        });
+      } catch (error) {
+        console.log('⚠️  Stats 시트가 없거나 접근할 수 없습니다. 통계 업데이트 건너뜀.');
+        return;
+      }
 
       await this.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
-        range: '카테고리 통계!A1',
+        range: 'Stats!A1',
         valueInputOption: 'RAW',
         resource: {
           values: statsData
@@ -389,6 +397,55 @@ class SheetsManager {
       return `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}`;
     }
     return null;
+  }
+
+  // 시트 행 수 확장
+  async ensureSheetCapacity(sheetName, requiredRow) {
+    try {
+      // 스프레드시트 메타데이터 조회
+      const spreadsheet = await this.sheets.spreadsheets.get({
+        spreadsheetId: this.spreadsheetId
+      });
+
+      // 해당 시트 찾기
+      const sheet = spreadsheet.data.sheets.find(s => s.properties.title === sheetName);
+      if (!sheet) {
+        console.log(`⚠️  시트 "${sheetName}"을 찾을 수 없습니다.`);
+        return;
+      }
+
+      const currentRowCount = sheet.properties.gridProperties.rowCount;
+      console.log(`📏 현재 시트 "${sheetName}" 행 수: ${currentRowCount}, 필요한 행: ${requiredRow}`);
+
+      // 행 수가 부족하면 확장 (여유분 100행 추가)
+      if (requiredRow >= currentRowCount) {
+        const newRowCount = requiredRow + 100;
+        
+        await this.sheets.spreadsheets.batchUpdate({
+          spreadsheetId: this.spreadsheetId,
+          resource: {
+            requests: [{
+              updateSheetProperties: {
+                properties: {
+                  sheetId: sheet.properties.sheetId,
+                  gridProperties: {
+                    rowCount: newRowCount,
+                    columnCount: sheet.properties.gridProperties.columnCount
+                  }
+                },
+                fields: 'gridProperties.rowCount'
+              }
+            }]
+          }
+        });
+
+        console.log(`✅ 시트 "${sheetName}" 행 수를 ${currentRowCount}에서 ${newRowCount}로 확장했습니다.`);
+      }
+
+    } catch (error) {
+      console.error('시트 확장 실패:', error);
+      // 확장 실패해도 계속 진행 (기존 로직 유지)
+    }
   }
 }
 

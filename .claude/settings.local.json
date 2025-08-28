@@ -18,7 +18,9 @@
       "Bash(set CUDA_VISIBLE_DEVICES=0)",
       "Bash(wmic:*)",
       "Bash(grep:*)",
-      "Bash(npm start)"
+      "Bash(npm start)",
+      "Bash(set PORT=3001)",
+      "WebFetch(domain:localhost)"
     ],
     "deny": [],
     "ask": []
