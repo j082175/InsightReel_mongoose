@@ -302,13 +302,20 @@ class VideoController {
       // 4단계: 구글 시트 저장 (선택사항)
       console.log('4️⃣ 구글 시트 저장 중...');
       try {
+        // metadata에서 _instagramAuthor를 author로 변환
+        const processedMetadata = { ...metadata };
+        if (metadata._instagramAuthor) {
+          processedMetadata.author = metadata._instagramAuthor;
+          console.log('👤 Instagram 계정 정보 처리:', metadata._instagramAuthor);
+        }
+        
         await this.sheetsManager.saveVideoData({
           platform,
           postUrl,
           videoPath: pipeline.videoPath,
           thumbnailPath: Array.isArray(pipeline.thumbnailPaths) ? pipeline.thumbnailPaths[0] : pipeline.thumbnailPaths,
           thumbnailPaths: pipeline.thumbnailPaths, // 모든 프레임 경로도 저장
-          metadata,
+          metadata: processedMetadata,
           analysis: pipeline.analysis,
           timestamp: new Date().toISOString()
         });

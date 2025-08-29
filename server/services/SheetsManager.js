@@ -146,7 +146,7 @@ class SheetsManager {
 
   async setupHeaders() {
     const headers = [
-      '번호', '일시', '플랫폼', '작성자', '제목/캡션', '대카테고리', '중카테고리',
+      '번호', '일시', '플랫폼', '계정', '설명', '대카테고리', '중카테고리',
       '키워드', '분석내용', '좋아요', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
     ];
 
@@ -200,7 +200,7 @@ class SheetsManager {
 
       const currentHeaders = currentHeaderResponse.data.values?.[0] || [];
       const expectedHeaders = [
-        '번호', '일시', '플랫폼', '작성자', '제목/캡션', '대카테고리', '중카테고리',
+        '번호', '일시', '플랫폼', '계정', '설명', '대카테고리', '중카테고리',
         '키워드', '분석내용', '좋아요', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
       ];
 
@@ -213,6 +213,17 @@ class SheetsManager {
         console.log('기존 헤더:', currentHeaders);
         console.log('새 헤더:', expectedHeaders);
 
+        // 기존 P, Q 컬럼 내용 삭제 (불필요한 컬럼들)
+        try {
+          await this.sheets.spreadsheets.values.clear({
+            spreadsheetId: this.spreadsheetId,
+            range: `${sheetName}!P:Q`
+          });
+          console.log('🗑️ 기존 P, Q 컬럼 내용 삭제 완료');
+        } catch (error) {
+          console.log('⚠️ P, Q 컬럼 삭제 중 오류 (무시):', error.message);
+        }
+
         // 헤더 업데이트
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
@@ -223,7 +234,7 @@ class SheetsManager {
           }
         });
 
-        // 헤더 스타일링도 업데이트
+        // 먼저 전체 첫 번째 행의 스타일 초기화 (A1:Z1)
         await this.sheets.spreadsheets.batchUpdate({
           spreadsheetId: this.spreadsheetId,
           resource: {
@@ -235,7 +246,25 @@ class SheetsManager {
                     startRowIndex: 0,
                     endRowIndex: 1,
                     startColumnIndex: 0,
-                    endColumnIndex: 15
+                    endColumnIndex: 26  // A-Z 전체 초기화
+                  },
+                  cell: {
+                    userEnteredFormat: {
+                      backgroundColor: { red: 1, green: 1, blue: 1 },  // 흰색 배경
+                      textFormat: { bold: false, foregroundColor: { red: 0, green: 0, blue: 0 } }  // 일반 검정 텍스트
+                    }
+                  },
+                  fields: 'userEnteredFormat(backgroundColor,textFormat)'
+                }
+              },
+              {
+                repeatCell: {
+                  range: {
+                    sheetId: 0,
+                    startRowIndex: 0,
+                    endRowIndex: 1,
+                    startColumnIndex: 0,
+                    endColumnIndex: 15  // A1:O1만 헤더 스타일 적용
                   },
                   cell: {
                     userEnteredFormat: {
@@ -310,8 +339,8 @@ class SheetsManager {
         rowNumber,                                    // 번호
         new Date(timestamp).toLocaleString('ko-KR'), // 일시
         platform.toUpperCase(),                      // 플랫폼
-        metadata.author || '',                       // 작성자
-        metadata.caption || '',                      // 제목/캡션
+        metadata.author || '', // 계정 (이미 Instagram URL 형식으로 포맷됨)
+        metadata.description || metadata.caption || '',                    // 설명 (릴스 설명 내용)
         analysis.mainCategory || '미분류',            // 대카테고리
         analysis.middleCategory || '미분류',          // 중카테고리
         analysis.keywords?.join(', ') || '',         // 키워드
@@ -437,8 +466,8 @@ class SheetsManager {
         id: row[0],
         timestamp: row[1],
         platform: row[2],
-        author: row[3],
-        caption: row[4],
+        account: row[3],                        // 계정
+        description: row[4],                    // 설명
         mainCategory: row[5],
         middleCategory: row[6],
         keywords: row[7]?.split(', ') || [],

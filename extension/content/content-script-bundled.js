@@ -338,7 +338,7 @@ window.INSTAGRAM_UI_SYSTEM = {
     console.log('✅ 분석 버튼 추가됨:', container);
   },
   
-  handleAnalysisClick(container, video, button) {
+  async handleAnalysisClick(container, video, button) {
     console.log('🎯 분석 버튼 클릭됨');
     console.log('📹 전달받은 video 요소:', video);
     console.log('📦 전달받은 container 요소:', container);
@@ -358,15 +358,20 @@ window.INSTAGRAM_UI_SYSTEM = {
     button.textContent = '⏳ 분석 중...';
     button.style.pointerEvents = 'none';
     
-    // Instagram downloader 방식으로 미디어 정보 추출
-    const mediaInfo = this.extractMediaInfoFromContainer(container, video);
-    
-    if (mediaInfo && mediaInfo.videoUrl) {
-      console.log('📹 미디어 정보 발견:', mediaInfo);
-      this.processVideoAnalysis(mediaInfo, button);
-    } else {
-      console.error('❌ 미디어 정보를 찾을 수 없습니다');
-      this.resetButton(button, '❌ 실패');
+    try {
+      // Instagram downloader 방식으로 미디어 정보 추출 (async)
+      const mediaInfo = await this.extractMediaInfoFromContainer(container, video);
+      
+      if (mediaInfo && mediaInfo.videoUrl) {
+        console.log('📹 미디어 정보 발견:', mediaInfo);
+        this.processVideoAnalysis(mediaInfo, button);
+      } else {
+        console.error('❌ 미디어 정보를 찾을 수 없습니다');
+        this.resetButton(button, '❌ 실패');
+      }
+    } catch (error) {
+      console.error('❌ 미디어 정보 추출 중 오류:', error);
+      this.resetButton(button, '❌ 오류');
     }
   },
   
@@ -512,8 +517,14 @@ window.INSTAGRAM_UI_SYSTEM = {
     return null;
   },
   
-  extractMediaInfoFromContainer(container, video) {
+  async extractMediaInfoFromContainer(container, video) {
     console.log('🔍 미디어 정보 추출 시작 - 컨테이너별 개별 추출');
+    
+    // 현재 활성 비디오 찾기
+    const currentVideo = this.findCurrentActiveVideo() || video;
+    
+    // 릴스 설명 텍스트 추출 (현재 비디오 기준)
+    const description = await this.extractReelsDescription(currentVideo);
     
     // 1. Instagram downloader 방식: React Props에서 직접 추출
     const shortcode = this.extractShortcodeFromReactProps(container, video);
@@ -527,7 +538,8 @@ window.INSTAGRAM_UI_SYSTEM = {
         return {
           videoUrl: mediaData.video_versions?.[0]?.url || video.src,
           shortcode: shortcode,
-          mediaData: mediaData
+          mediaData: mediaData,
+          description: description  // 릴스 설명 추가
         };
       }
     }
@@ -540,7 +552,8 @@ window.INSTAGRAM_UI_SYSTEM = {
       return {
         videoUrl: mediaData.video_versions?.[0]?.url || video.src,
         shortcode: urlShortcode,
-        mediaData: mediaData
+        mediaData: mediaData,
+        description: description  // 릴스 설명 추가
       };
     }
     
@@ -551,12 +564,896 @@ window.INSTAGRAM_UI_SYSTEM = {
         videoUrl: video.src,
         shortcode: shortcode || urlShortcode || 'unknown_' + Date.now(),
         mediaData: null,
-        isBlob: video.src.includes('blob:')
+        isBlob: video.src.includes('blob:'),
+        description: description  // 릴스 설명 추가
       };
     }
     
     console.warn('⚠️ 미디어 정보 추출 실패');
     return null;
+  },
+  
+  // 릴스 설명 텍스트 추출 함수 (비활성화)
+  async extractReelsDescription(targetVideo) {
+    console.log('📝 설명 추출 비활성화됨 - 빈 문자열 반환');
+    return '';
+    
+    try {
+      // 현재 화면에서 가장 중앙에 있는 비디오 컨테이너만 타겟팅
+      let targetContainer = null;
+      const viewportCenter = window.innerHeight / 2;
+      let bestDistance = Infinity;
+      
+      // 모든 article을 검사해서 화면 중앙에 가장 가까운 것 선택
+      const articles = document.querySelectorAll('article');
+      console.log(`📊 전체 article 수: ${articles.length}`);
+      
+      for (const article of articles) {
+        const rect = article.getBoundingClientRect();
+        const articleCenter = rect.top + rect.height / 2;
+        const distance = Math.abs(articleCenter - viewportCenter);
+        
+        // 화면에 보이는 article이고 중앙에 가장 가까운 것
+        if (rect.top < window.innerHeight && rect.bottom > 0) {
+          console.log(`📏 Article 중심: ${articleCenter}, 거리: ${distance}, 영역: ${rect.top}-${rect.bottom}`);
+          
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            targetContainer = article;
+          }
+        }
+      }
+      
+      // 선택된 컨테이너가 실제로 비디오를 포함하는지 확인
+      if (targetContainer) {
+        const videosInContainer = targetContainer.querySelectorAll('video');
+        console.log(`🎯 선택된 컨테이너의 비디오 수: ${videosInContainer.length}`);
+        
+        if (videosInContainer.length === 0) {
+          console.log('⚠️ 선택된 컨테이너에 비디오 없음, 다른 방법으로 검색');
+          targetContainer = null;
+        } else {
+          console.log('✅ 비디오가 포함된 컨테이너 확인됨:', targetContainer);
+        }
+      }
+      
+      // fallback: targetVideo 기준으로 컨테이너 찾기
+      if (!targetContainer && targetVideo) {
+        targetContainer = targetVideo.closest('article') || 
+                         targetVideo.closest('section') || 
+                         targetVideo.closest('div[role="main"]');
+        console.log('🔄 fallback - 비디오 기준 컨테이너:', targetContainer);
+      }
+      
+      // "더 보기" 버튼 클릭하지 않고 보이는 내용만 추출
+      console.log('📄 "더 보기" 버튼 클릭 건너뛰고 바로 보이는 내용만 추출');
+      
+      // 잠시 대기 (DOM 업데이트 시간)
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      console.log('🌐 현재 URL:', window.location.href);
+      console.log('📊 대상 컨테이너:', targetContainer?.tagName);
+      
+      // 타겟 컨테이너가 없으면 설명 추출 중단
+      if (!targetContainer) {
+        console.log('❌ 현재 영상의 컨테이너를 찾을 수 없어 설명 추출을 중단합니다');
+        return '';
+      }
+      
+      console.log('🔍 검색 범위: 선택된 컨테이너 내에서만');
+      console.log('📦 최종 타겟 컨테이너:', targetContainer);
+      
+      // 1단계: React Props에서 직접 설명 추출 시도
+      const reactDescription = await this.extractDescriptionFromReactProps(targetContainer, targetVideo);
+      if (reactDescription) {
+        console.log('✅ React Props에서 설명 직접 추출 성공!');
+        return reactDescription;
+      }
+      
+      // 2단계: Instagram API 데이터에서 추출 시도  
+      const apiDescription = this.extractDescriptionFromAPIData(targetContainer);
+      if (apiDescription) {
+        console.log('✅ API 데이터에서 설명 추출 성공!');
+        return apiDescription;
+      }
+      
+      // 3단계: DOM 구조 기반 정확한 위치 찾기
+      const domDescription = this.extractDescriptionFromDOMStructure(targetContainer);
+      if (domDescription) {
+        console.log('✅ DOM 구조에서 설명 추출 성공!');
+        return domDescription;
+      }
+      
+      console.log('⚠️ 정확한 방법으로 설명을 찾을 수 없어 추측 방식으로 전환합니다');
+      
+      const descriptionSelectors = [
+        // Instagram 릴스 하단 설명 (우선순위)
+        'div[style*="bottom"] span:not([role="button"])',
+        'div[dir="auto"] span',
+        'span[dir="auto"]',
+        'div:not([role]) span',
+        'span:not([role="button"])',
+        'div span:not([role="button"])'
+      ];
+      
+      // 타겟 컨테이너 내에서만 엄격하게 텍스트 수집
+      const foundTexts = [];
+      
+      for (const selector of descriptionSelectors) {
+        const elements = targetContainer.querySelectorAll(selector);
+        console.log(`🔍 "${selector}" 검색 결과: ${elements.length}개 요소`);
+        
+        elements.forEach((element, index) => {
+          // 이중 체크: 반드시 타겟 컨테이너 내부의 요소여야 함
+          if (!targetContainer.contains(element)) {
+            console.log(`   [${index}] ❌ 컨테이너 밖의 요소 제외`);
+            return;
+          }
+          
+          // 개행 유지를 위해 텍스트 추출 방식 개선
+          let description = '';
+          if (element.innerText) {
+            // innerText는 개행을 공백으로 변환하므로 원본 구조 확인
+            const htmlContent = element.innerHTML;
+            if (htmlContent.includes('<br>') || htmlContent.includes('</div>') || htmlContent.includes('</p>')) {
+              // HTML 구조가 있으면 개행을 보존하여 추출
+              description = this.extractTextWithLineBreaks(element);
+            } else {
+              description = element.innerText;
+            }
+          } else {
+            description = element.textContent;
+          }
+          
+          if (description && description.trim().length > 0) {
+            // 요소의 위치도 확인 (컨테이너 내부인지)
+            const elementRect = element.getBoundingClientRect();
+            const containerRect = targetContainer.getBoundingClientRect();
+            
+            if (elementRect.top >= containerRect.top - 10 && 
+                elementRect.bottom <= containerRect.bottom + 10 &&
+                elementRect.left >= containerRect.left - 10 && 
+                elementRect.right <= containerRect.right + 10) {
+              
+              console.log(`   [${index}] ✅ 유효한 텍스트 (${description.length}자): "${description.substring(0, 150)}..."`);
+              foundTexts.push({
+                text: description.trim(),
+                selector: selector,
+                element: element,
+                length: description.trim().length
+              });
+            } else {
+              console.log(`   [${index}] ❌ 위치상 컨테이너 밖의 텍스트 제외`);
+            }
+          }
+        });
+      }
+      
+      // Meta 태그는 전역에서 검색 (컨테이너와 무관)
+      if (!targetContainer || foundTexts.length === 0) {
+        const metaSelectors = ['meta[property="og:description"]', 'meta[name="description"]'];
+        for (const selector of metaSelectors) {
+          const elements = document.querySelectorAll(selector);
+          elements.forEach(element => {
+            const description = element.getAttribute('content');
+            if (description && description.trim().length > 0) {
+              foundTexts.push({
+                text: description.trim(),
+                selector: selector,
+                element: element,
+                length: description.trim().length
+              });
+            }
+          });
+        }
+      }
+      
+      console.log(`📝 총 ${foundTexts.length}개의 텍스트 발견됨`);
+      
+      // 유효한 설명 필터링 및 선택 (릴스 설명에 특화)
+      const validTexts = [];
+      
+      for (const item of foundTexts) {
+        const text = item.text;
+        
+        // 1차 필터: 기본 유효성
+        if (text.length >= 5 && text.length <= 2200 && 
+            !text.match(/^[\d\s\-\+\(\)]*$/) && // 숫자만은 제외
+            !text.includes('팔로우') && 
+            !text.includes('조회수') &&
+            !text.includes('Follow') &&
+            !text.includes('views') &&
+            text !== '더 보기' &&
+            text !== 'More' &&
+            text !== '댓글' &&
+            text !== 'Comments' &&
+            text !== 'mecha.bytes' && // 계정명 제외
+            !text.match(/^[@#]\w+/) // 해시태그나 멘션으로 시작하는 것 제외
+        ) {
+          // 2차 필터: 릴스 설명 패턴 확인
+          const isLikelyDescription = 
+            text.includes(' ') && // 공백 포함 (문장 형태)
+            (text.includes('!') || text.includes('.') || text.includes('?') || text.length > 20) && // 문장 부호나 충분한 길이
+            !text.match(/^\d{1,3}[KkMm]?$/) && // 숫자 + K/M (좋아요 수) 제외
+            !text.includes('ago') && // "x hours ago" 제외
+            !text.includes('시간') && // "x시간 전" 제외
+            !text.includes('분') && // "x분 전" 제외
+            !text.includes('일') && // "x일 전" 제외
+            text.toLowerCase() !== text.toUpperCase(); // 모두 대문자가 아님
+            
+          if (isLikelyDescription) {
+            validTexts.push(item);
+            console.log(`✅ 유효한 설명 후보: "${text.substring(0, 100)}..." (${text.length}자)`);
+          } else {
+            console.log(`❌ 무효한 텍스트: "${text.substring(0, 50)}..." (릴스 설명 패턴 불일치)`);
+          }
+        } else {
+          console.log(`❌ 무효한 텍스트: "${text.substring(0, 50)}..." (기본 필터링)`);
+        }
+      }
+      
+      // 가장 적절한 설명 선택 (길이 기준 - 보통 10-200자 사이)
+      if (validTexts.length > 0) {
+        // 길이별 정렬 (10-200자 범위를 우선)
+        validTexts.sort((a, b) => {
+          const aInRange = a.length >= 10 && a.length <= 200;
+          const bInRange = b.length >= 10 && b.length <= 200;
+          
+          if (aInRange && !bInRange) return -1;
+          if (!aInRange && bInRange) return 1;
+          if (aInRange && bInRange) return b.length - a.length; // 더 긴 것 우선
+          return a.length - b.length; // 둘 다 범위 밖이면 짧은 것 우선
+        });
+        
+        const selectedText = validTexts[0];
+        console.log('✅ 최종 선택된 릴스 설명!');
+        console.log(`📝 설명 내용: "${selectedText.text}"`);
+        console.log(`🎯 설명 출처: ${selectedText.selector}`);
+        console.log(`📏 설명 길이: ${selectedText.text.length}자`);
+        return selectedText.text;
+      }
+      
+      // 현재 화면에서 직접 검색 (React Props 활용)
+      console.log('🔍 React Props에서 설명 검색 중...');
+      const activeVideo = targetVideo || this.findCurrentActiveVideo();
+      if (activeVideo) {
+        let element = activeVideo;
+        for (let depth = 0; depth < 10 && element; depth++) {
+          const reactProps = this.getReactPropsFromElement(element);
+          if (reactProps && reactProps.children && reactProps.children.props) {
+            const props = reactProps.children.props;
+            
+            // caption, text, title 등에서 설명 찾기
+            const captionFields = ['caption', 'text', 'title', 'description', 'body'];
+            for (const field of captionFields) {
+              if (props[field] && typeof props[field] === 'string' && props[field].length > 3) {
+                console.log(`✅ React Props에서 설명 발견! (${field}):`, props[field]);
+                return props[field].trim();
+              }
+            }
+          }
+          element = element.parentElement;
+        }
+      }
+      
+      // 최후의 방법: 모든 텍스트 노드 검색
+      console.log('🔍 전체 DOM에서 설명 검색 중...');
+      const allTextElements = document.querySelectorAll('span, p, div, h1, h2, h3');
+      for (const element of allTextElements) {
+        const text = (element.innerText || element.textContent || '').trim();
+        if (text.length > 10 && text.length < 500 && 
+            !text.includes('팔로우') && !text.includes('좋아요') && !text.includes('댓글') &&
+            !text.includes('Follow') && !text.includes('Like') && !text.includes('Comment') &&
+            text.includes(' ') && // 최소 한 개의 공백 포함 (문장 형태)
+            !text.match(/^\d+$/) // 숫자만이 아님
+        ) {
+          // 해당 요소가 현재 보이는 영역에 있는지 확인
+          const rect = element.getBoundingClientRect();
+          if (rect.top >= 0 && rect.top <= window.innerHeight) {
+            console.log('✅ DOM에서 설명 발견:', text.substring(0, 100) + '...');
+            return text;
+          }
+        }
+      }
+      
+      console.log('⚠️ 모든 방법으로 릴스 설명을 찾을 수 없음');
+      return '';
+      
+    } catch (error) {
+      console.error('❌ 릴스 설명 추출 중 오류:', error);
+      return '';
+    }
+  },
+  
+  // 1단계: React Props에서 직접 설명 추출
+  async extractDescriptionFromReactProps(container, video) {
+    console.log('🔍 React Props에서 설명 직접 추출 시도...');
+    
+    try {
+      // INSTAGRAM_MEDIA_TRACKER에서 현재 영상의 데이터 찾기
+      if (window.INSTAGRAM_MEDIA_TRACKER) {
+        const mediaData = Object.values(window.INSTAGRAM_MEDIA_TRACKER.mediaData || {});
+        
+        for (const media of mediaData) {
+          if (media && media.caption && media.caption.text) {
+            console.log('✅ Media Tracker에서 caption 발견:', media.caption.text.substring(0, 100));
+            return media.caption.text;
+          }
+        }
+      }
+      
+      // React Props 직접 탐색
+      const videoElement = video || container.querySelector('video');
+      if (videoElement) {
+        let element = videoElement;
+        for (let depth = 0; depth < 15 && element; depth++) {
+          const reactProps = this.getReactPropsFromElement(element);
+          if (reactProps) {
+            // 다양한 caption 필드 검사
+            const captionPaths = [
+              'children.props.caption.text',
+              'children.props.media.caption.text', 
+              'children.props.post.caption.text',
+              'caption.text',
+              'media.caption.text',
+              'post.caption.text'
+            ];
+            
+            for (const path of captionPaths) {
+              const captionText = this.getNestedProperty(reactProps, path);
+              if (captionText && typeof captionText === 'string' && captionText.length > 10) {
+                console.log(`✅ React Props에서 설명 발견 (${path}):`, captionText.substring(0, 100));
+                return captionText;
+              }
+            }
+          }
+          element = element.parentElement;
+        }
+      }
+      
+      console.log('❌ React Props에서 설명 찾기 실패');
+      return null;
+      
+    } catch (error) {
+      console.error('❌ React Props 설명 추출 오류:', error);
+      return null;
+    }
+  },
+  
+  // 2단계: Instagram API 데이터에서 설명 추출
+  extractDescriptionFromAPIData(container) {
+    console.log('🔍 Instagram API 데이터에서 설명 추출 시도...');
+    
+    try {
+      // window.__additionalDataLoaded나 기타 Instagram 전역 데이터 검사
+      if (window.__additionalDataLoaded) {
+        const additionalData = window.__additionalDataLoaded;
+        // Instagram의 GraphQL 응답 데이터 구조에서 설명 찾기
+        // (실제 구조는 Instagram 업데이트에 따라 변경될 수 있음)
+      }
+      
+      console.log('❌ API 데이터에서 설명 찾기 실패');
+      return null;
+      
+    } catch (error) {
+      console.error('❌ API 데이터 설명 추출 오류:', error);
+      return null;
+    }
+  },
+  
+  // 3단계: DOM 구조 기반 정확한 위치 찾기  
+  extractDescriptionFromDOMStructure(container) {
+    console.log('🔍 컨테이너 기준 설명 추출 (현재 영상만)...');
+    
+    try {
+      if (!container) {
+        console.log('❌ 컨테이너가 없어 설명 추출 불가');
+        return null;
+      }
+      
+      const containerRect = container.getBoundingClientRect();
+      console.log('📦 현재 영상 컨테이너 위치:', {
+        top: Math.round(containerRect.top),
+        bottom: Math.round(containerRect.bottom),
+        height: Math.round(containerRect.height)
+      });
+      
+      // 컨테이너 내에서만 검색 (다른 영상 내용 제외)
+      const allElements = container.querySelectorAll('span, div, p');
+      const descriptionCandidates = [];
+      
+      let elementsInContainer = 0;
+      
+      for (const element of allElements) {
+        const rect = element.getBoundingClientRect();
+        
+        // 컨테이너 내부에 있고 현재 화면에 보이는지 확인
+        if (rect.top >= containerRect.top && rect.bottom <= containerRect.bottom &&
+            rect.top >= 0 && rect.top <= window.innerHeight) {
+          
+          elementsInContainer++;
+          let text = (element.innerText || element.textContent || '').trim();
+          
+          // "더 보기" 텍스트 제거
+          text = text.replace(/\.\.\.\s*더\s*보기$/, '').replace(/\.\.\.\s*more$/i, '').trim();
+          
+          // 디버깅: 컨테이너 내 텍스트 로그 (처음 15개만)
+          if (text && elementsInContainer <= 15) {
+            console.log(`📝 컨테이너 요소 ${elementsInContainer}:`, {
+              text: text.substring(0, 80),
+              length: text.length,
+              position: { y: Math.round(rect.top - containerRect.top) }
+            });
+          }
+          
+          // 설명 패턴 체크 (더 강화된 필터링)
+          if (text && text.length >= 15 && text.length <= 500 && 
+              text.includes(' ') && // 문장 형태 (공백 포함)
+              !text.match(/^\d+$/) && // 숫자만이 아님
+              !text.match(/^[a-zA-Z0-9._]+$/) && // 계정명 패턴 아님
+              !text.match(/^\d+[KkMm]?$/) && // 좋아요 수 아님
+              !text.includes('.mp3') && !text.includes('.mp4') && // 파일명 제외
+              !text.includes('daniel.mp3') && !text.includes('Zamaro') && // 특정 오류 텍스트 제외
+              !text.includes('dream wrld') && // 음악 관련 텍스트 제외
+              !text.match(/^[a-zA-Z0-9._]+ · [a-zA-Z0-9._]+$/) && // "artist · song" 패턴 제외
+              !['팔로우', 'Follow', '좋아요', 'Like', '댓글', 'Comment', '공유', 'Share', '저장', 'Save', 'More', '더 보기'].some(word => text.includes(word)) &&
+              !text.includes('팔로잉') && !text.includes('Following') &&
+              !text.includes('관심도') && !text.includes('views') &&
+              text.length > text.split(' ').length * 2) { // 평균 단어 길이가 너무 짧지 않음 (해시태그가 아님을 확인)
+            
+            // 컨테이너 내에서의 상대적 위치 계산
+            const relativePosition = (rect.top - containerRect.top) / containerRect.height;
+            
+            descriptionCandidates.push({
+              text: text,
+              length: text.length,
+              relativePosition: relativePosition,
+              position: { x: rect.left, y: rect.top },
+              element: element
+            });
+          }
+        }
+      }
+      
+      console.log(`🔍 총 ${elementsInContainer}개 요소가 컨테이너에 있음`);
+      console.log('📋 설명 후보들:', descriptionCandidates.map(c => ({ 
+        text: c.text.substring(0, 60) + '...', 
+        length: c.length, 
+        relativePos: Math.round(c.relativePosition * 100) + '%'
+      })));
+      
+      if (descriptionCandidates.length > 0) {
+        // 컨테이너 하단에 있으면서 적절한 길이의 텍스트 선택
+        descriptionCandidates.sort((a, b) => {
+          // 상대적 위치 우선 (컨테이너 하단 70% 이하 우선)
+          const aInBottomArea = a.relativePosition >= 0.7;
+          const bInBottomArea = b.relativePosition >= 0.7;
+          
+          if (aInBottomArea && !bInBottomArea) return -1;
+          if (!aInBottomArea && bInBottomArea) return 1;
+          
+          // 둘 다 하단 영역이면 더 아래쪽 우선
+          if (aInBottomArea && bInBottomArea) {
+            return b.relativePosition - a.relativePosition;
+          }
+          
+          // 길이 기준 (30-200자 범위를 우선)
+          const aGoodLength = a.length >= 30 && a.length <= 200;
+          const bGoodLength = b.length >= 30 && b.length <= 200;
+          
+          if (aGoodLength && !bGoodLength) return -1;
+          if (!aGoodLength && bGoodLength) return 1;
+          
+          return b.length - a.length; // 더 긴 것 우선
+        });
+        
+        const selectedDescription = descriptionCandidates[0];
+        console.log('✅ 컨테이너 기준 설명 발견:', selectedDescription.text.substring(0, 100));
+        console.log(`📏 설명 길이: ${selectedDescription.length}자, 상대위치: ${Math.round(selectedDescription.relativePosition * 100)}%`);
+        
+        return selectedDescription.text;
+      }
+      
+      console.log('❌ 컨테이너에서 설명 찾기 실패');
+      return null;
+      
+    } catch (error) {
+      console.error('❌ 컨테이너 기준 설명 추출 오류:', error);
+      return null;
+    }
+  },
+  
+  // 컨테이너에서 계정명들 찾기 (제외 목적)
+  findAccountNamesInContainer(container) {
+    const accountNames = [];
+    
+    try {
+      // 다양한 계정명 위치 선택자
+      const accountSelectors = [
+        'h2', // 계정명이 h2 태그
+        'a[role="link"]', // 계정 링크
+        'header a', // 헤더 내 링크
+        'div[style*="font-weight"] span' // 굵은 글씨 계정명
+      ];
+      
+      for (const selector of accountSelectors) {
+        const elements = container.querySelectorAll(selector);
+        for (const element of elements) {
+          const text = (element.innerText || element.textContent || '').trim();
+          if (text && text.length > 2 && text.length < 50 && 
+              !text.includes(' ') && // 계정명은 보통 공백 없음
+              !text.includes('팔로우') && 
+              text.match(/^[a-zA-Z0-9._]+$/)) { // 계정명 형식
+            accountNames.push(text);
+          }
+        }
+      }
+      
+      // 중복 제거
+      return [...new Set(accountNames)];
+      
+    } catch (error) {
+      console.error('계정명 찾기 오류:', error);
+      return [];
+    }
+  },
+  
+  // 비디오 요소 근처에서 계정명 찾기
+  findAccountNearVideo(video) {
+    try {
+      const videoRect = video.getBoundingClientRect();
+      const searchRadius = 200; // 비디오 주변 200px 범위
+      
+      console.log('🎯 비디오 근처 계정명 검색 범위:', searchRadius + 'px');
+      
+      // 모든 텍스트 요소 검색
+      const allElements = document.querySelectorAll('span, div, a, h1, h2, h3');
+      const nearbyAccounts = [];
+      
+      for (const element of allElements) {
+        const rect = element.getBoundingClientRect();
+        
+        // 비디오와의 거리 계산
+        const distance = Math.abs(rect.top - videoRect.top) + Math.abs(rect.left - videoRect.left);
+        
+        if (distance > searchRadius) continue; // 너무 멀면 건너뛰기
+        
+        const text = (element.innerText || element.textContent || '').trim();
+        const href = element.href || '';
+        
+        // 링크에서 계정명 추출
+        if (href && href.includes('instagram.com')) {
+          const linkMatch = href.match(/instagram\.com\/([^\/\?#]+)/);
+          if (linkMatch && linkMatch[1] && 
+              linkMatch[1] !== 'p' && linkMatch[1] !== 'reel' && linkMatch[1] !== 'reels' &&
+              linkMatch[1] !== 'stories' && linkMatch[1] !== 'explore') {
+            nearbyAccounts.push({
+              name: linkMatch[1],
+              distance: distance,
+              source: 'link'
+            });
+          }
+        }
+        
+        // 텍스트에서 계정명 추출
+        if (text && text.length > 2 && text.length < 30 && 
+            text.match(/^[a-zA-Z0-9._]+$/) && 
+            !text.includes(' ') &&
+            !text.match(/^\d+$/) &&
+            !['팔로우', 'Follow', '좋아요', 'Like', '댓글', 'Comment'].includes(text)) {
+          
+          nearbyAccounts.push({
+            name: text,
+            distance: distance,
+            source: 'text'
+          });
+        }
+      }
+      
+      // 거리 기준 정렬 (가까운 순)
+      nearbyAccounts.sort((a, b) => a.distance - b.distance);
+      console.log('📍 비디오 근처 계정명 후보들:', nearbyAccounts);
+      
+      if (nearbyAccounts.length > 0) {
+        return nearbyAccounts[0].name; // 가장 가까운 계정명
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('❌ 비디오 근처 계정명 찾기 오류:', error);
+      return null;
+    }
+  },
+  
+  // Instagram 계정 정보 추출 및 URL 형식으로 변환
+  extractAccountInfo(mediaInfo, container, video) {
+    console.log('👤 계정 정보 추출 중...');
+    
+    try {
+      let accountName = null;
+      
+      // 간단한 URL 기반 추출 (가장 안전)
+      const currentUrl = window.location.href;
+      const urlPath = window.location.pathname;
+      console.log('🌐 현재 URL:', currentUrl);
+      
+      // URL에서 계정명 추출
+      const urlPatterns = [
+        /\/([^\/]+)\/p\//, // 포스트 URL
+        /\/([^\/]+)\/reel\//, // 릴스 URL
+        /instagram\.com\/([^\/\?]+)\//, // 일반적인 프로필 URL
+      ];
+      
+      for (const pattern of urlPatterns) {
+        const match = currentUrl.match(pattern) || urlPath.match(pattern);
+        if (match && match[1] && 
+            !['p', 'reel', 'reels', 'stories', 'explore', 'accounts', 'direct', 'tv', 'login', 'help'].includes(match[1])) {
+          accountName = match[1];
+          console.log('✅ URL에서 계정명 발견:', accountName);
+          break;
+        }
+      }
+      
+      // 위치 기반 계정명 추출 (왼쪽 하단 고정 위치)
+      if (!accountName) {
+        console.log('🎯 위치 기반 계정명 검색 (왼쪽 하단)...');
+        
+        // 화면 왼쪽 하단 영역 정의 (더 넓게)
+        const screenHeight = window.innerHeight;
+        const screenWidth = window.innerWidth;
+        
+        // 왼쪽 하단 영역: 왼쪽 50%, 하단 50% 영역 (더 넓게 검색)
+        const leftBottomArea = {
+          left: 0,
+          right: screenWidth * 0.5,
+          top: screenHeight * 0.5,
+          bottom: screenHeight
+        };
+        
+        console.log('📍 왼쪽 하단 검색 영역 (확장):', leftBottomArea);
+        console.log('📏 화면 크기:', { width: screenWidth, height: screenHeight });
+        
+        // 모든 텍스트 요소 검색
+        const allElements = document.querySelectorAll('span, div, a, h1, h2, h3, p');
+        const accountCandidates = [];
+        
+        let elementsInArea = 0;
+        
+        for (const element of allElements) {
+          const rect = element.getBoundingClientRect();
+          
+          // 왼쪽 하단 영역에 있는지 확인
+          if (rect.left >= leftBottomArea.left && 
+              rect.right <= leftBottomArea.right && 
+              rect.top >= leftBottomArea.top && 
+              rect.bottom <= leftBottomArea.bottom) {
+            
+            elementsInArea++;
+            const text = (element.innerText || element.textContent || '').trim();
+            const href = element.href || '';
+            
+            // 디버깅: 영역 내 모든 텍스트 로그
+            if (text || href) {
+              console.log(`📝 영역 내 요소 ${elementsInArea}:`, {
+                text: text.substring(0, 50),
+                href: href.substring(0, 80),
+                position: { x: rect.left, y: rect.top, width: rect.width, height: rect.height }
+              });
+            }
+            
+            // 링크에서 계정명 추출
+            if (href && href.includes('instagram.com')) {
+              const linkMatch = href.match(/instagram\.com\/([^\/\?#]+)/);
+              if (linkMatch && linkMatch[1] && 
+                  !['p', 'reel', 'reels', 'stories', 'explore', 'accounts', 'direct', 'tv'].includes(linkMatch[1])) {
+                accountCandidates.push({
+                  name: linkMatch[1],
+                  source: 'link',
+                  position: { x: rect.left, y: rect.top }
+                });
+              }
+            }
+            
+            // 텍스트에서 계정명 패턴 추출
+            if (text && text.length > 2 && text.length < 30 && 
+                text.match(/^[a-zA-Z0-9._]+$/) && 
+                !text.includes(' ') &&
+                !text.match(/^\d+$/) &&
+                !['팔로우', 'Follow', '좋아요', 'Like', 'reels', 'p', 'stories', 'explore'].includes(text)) {
+              
+              accountCandidates.push({
+                name: text,
+                source: 'text',
+                position: { x: rect.left, y: rect.top }
+              });
+            }
+          }
+        }
+        
+        console.log(`🔍 총 ${elementsInArea}개 요소가 왼쪽 하단 영역에 있음`);
+        
+        console.log('📋 왼쪽 하단에서 발견된 계정명 후보들:', accountCandidates);
+        
+        if (accountCandidates.length > 0) {
+          // 가장 왼쪽 아래에 있는 계정명 선택
+          accountCandidates.sort((a, b) => {
+            // Y 좌표 우선 (더 아래쪽), 그 다음 X 좌표 (더 왼쪽)
+            if (Math.abs(a.position.y - b.position.y) > 20) {
+              return b.position.y - a.position.y; // 더 아래쪽 우선
+            }
+            return a.position.x - b.position.x; // 더 왼쪽 우선
+          });
+          
+          accountName = accountCandidates[0].name;
+          console.log('✅ 위치 기반에서 계정명 발견:', accountName, accountCandidates[0]);
+        }
+      }
+      
+      // Instagram URL 형식으로 변환
+      if (accountName) {
+        const instagramUrl = `https://www.instagram.com/${accountName}/reels/`;
+        console.log('🔗 Instagram URL 생성:', instagramUrl);
+        return instagramUrl;
+      }
+      
+      console.log('⚠️ 계정명을 찾을 수 없음');
+      return null;
+      
+    } catch (error) {
+      console.error('❌ 계정 정보 추출 중 오류:', error);
+      return null;
+    }
+  },
+  
+  // 중첩 객체 속성 안전하게 가져오기
+  getNestedProperty(obj, path) {
+    return path.split('.').reduce((current, key) => {
+      return current && current[key] !== undefined ? current[key] : null;
+    }, obj);
+  },
+  
+  // HTML 구조를 보존하여 개행이 포함된 텍스트 추출
+  extractTextWithLineBreaks(element) {
+    try {
+      console.log('🔤 개행 보존 텍스트 추출 시작');
+      
+      // HTML을 텍스트로 변환하면서 개행 보존
+      let textContent = '';
+      
+      // 클론 생성하여 원본 훼손 방지
+      const clone = element.cloneNode(true);
+      
+      // <br> 태그를 개행으로 변환
+      const brTags = clone.querySelectorAll('br');
+      brTags.forEach(br => {
+        br.replaceWith('\n');
+      });
+      
+      // 블록 요소들(<div>, <p> 등) 뒤에 개행 추가
+      const blockElements = clone.querySelectorAll('div, p, h1, h2, h3, h4, h5, h6');
+      blockElements.forEach(block => {
+        // 마지막 자식이 아니면 개행 추가
+        if (block.nextSibling) {
+          block.insertAdjacentText('afterend', '\n');
+        }
+      });
+      
+      // 최종 텍스트 추출
+      textContent = clone.innerText || clone.textContent || '';
+      
+      // 연속된 개행 정리 (최대 2개까지만)
+      textContent = textContent.replace(/\n{3,}/g, '\n\n');
+      
+      // 앞뒤 공백 제거
+      textContent = textContent.trim();
+      
+      console.log('✅ 개행 보존 텍스트 추출 완료');
+      console.log(`📝 추출된 텍스트 미리보기:\n${textContent.substring(0, 200)}...`);
+      
+      return textContent;
+      
+    } catch (error) {
+      console.error('❌ 개행 보존 텍스트 추출 실패:', error);
+      // fallback: 일반 텍스트 추출
+      return element.innerText || element.textContent || '';
+    }
+  },
+  
+  // 특정 컨테이너 내에서만 "더 보기" 버튼 클릭
+  async expandDescriptionInContainer(container) {
+    console.log('🔍 컨테이너 내 "더 보기" 버튼 검색 중...', container);
+    
+    try {
+      const allClickableElements = container.querySelectorAll('button, span[role="button"], div[role="button"], a');
+      
+      for (const element of allClickableElements) {
+        const text = (element.innerText || element.textContent || '').toLowerCase().trim();
+        const ariaLabel = (element.getAttribute('aria-label') || '').toLowerCase();
+        
+        if (text === '더 보기' || text === 'more' || text.includes('more') ||
+            ariaLabel.includes('더 보기') || ariaLabel.includes('more')) {
+          
+          console.log('✅ 컨테이너 내 "더 보기" 버튼 발견:', element);
+          console.log('📝 버튼 텍스트:', text);
+          
+          // 버튼이 화면에 보이는지 확인
+          const rect = element.getBoundingClientRect();
+          if (rect.top >= 0 && rect.top <= window.innerHeight) {
+            console.log('🎯 컨테이너 내 "더 보기" 버튼 클릭...');
+            element.click();
+            
+            await new Promise(resolve => setTimeout(resolve, 300));
+            console.log('✅ 컨테이너 내 "더 보기" 클릭 완료');
+            return true;
+          }
+        }
+      }
+      
+      console.log('ℹ️ 컨테이너 내 "더 보기" 버튼 없음');
+      return false;
+      
+    } catch (error) {
+      console.error('❌ 컨테이너 내 "더 보기" 클릭 오류:', error);
+      return false;
+    }
+  },
+  
+  // "더 보기" 버튼 클릭하여 전체 설명 노출 (전역)
+  async expandDescriptionIfNeeded() {
+    console.log('🔍 "더 보기" 버튼 검색 중...');
+    
+    try {
+      // CSS selector로 :contains()는 작동하지 않으므로 수동으로 검색
+      const allClickableElements = document.querySelectorAll('button, span[role="button"], div[role="button"], a');
+      
+      for (const element of allClickableElements) {
+        const text = (element.innerText || element.textContent || '').toLowerCase().trim();
+        const ariaLabel = (element.getAttribute('aria-label') || '').toLowerCase();
+        
+        if (text === '더 보기' || text === 'more' || text.includes('more') ||
+            ariaLabel.includes('더 보기') || ariaLabel.includes('more')) {
+          
+          console.log('✅ "더 보기" 버튼 발견:', element);
+          console.log('📝 버튼 텍스트:', text);
+          console.log('🏷️ aria-label:', ariaLabel);
+          
+          // 버튼이 화면에 보이는지 확인
+          const rect = element.getBoundingClientRect();
+          if (rect.top >= 0 && rect.top <= window.innerHeight && 
+              rect.left >= 0 && rect.left <= window.innerWidth) {
+            
+            console.log('🎯 "더 보기" 버튼 클릭 시도...');
+            
+            // 클릭 이벤트 발생
+            element.click();
+            
+            // 또는 더 강력한 클릭 이벤트
+            const clickEvent = new MouseEvent('click', {
+              view: window,
+              bubbles: true,
+              cancelable: true
+            });
+            element.dispatchEvent(clickEvent);
+            
+            console.log('✅ "더 보기" 버튼 클릭 완료');
+            
+            // DOM 업데이트를 위해 잠시 대기
+            await new Promise(resolve => setTimeout(resolve, 300));
+            return true;
+          } else {
+            console.log('⚠️ "더 보기" 버튼이 화면 밖에 위치함');
+          }
+        }
+      }
+      
+      // "더 보기" 버튼이 없는 경우 (이미 전체 텍스트가 표시된 경우)
+      console.log('ℹ️ "더 보기" 버튼을 찾을 수 없음 (이미 전체 내용이 표시되었을 수 있음)');
+      return false;
+      
+    } catch (error) {
+      console.error('❌ "더 보기" 버튼 클릭 중 오류:', error);
+      return false;
+    }
   },
   
   extractShortcodeFromReactProps(container, video) {
@@ -877,7 +1774,8 @@ window.INSTAGRAM_UI_SYSTEM = {
         ...mediaInfo,
         metadata: {
           ...mediaInfo.metadata,
-          currentVideo: correctVideo
+          currentVideo: correctVideo,
+          description: mediaInfo.description  // 릴스 설명 추가
         }
       };
       
@@ -958,6 +1856,20 @@ window.INSTAGRAM_UI_SYSTEM = {
     // VideoSaver가 메타데이터 추출에 필요한 가상 DOM 요소 생성
     const virtualPost = document.createElement('article');
     virtualPost.setAttribute('role', 'presentation');
+    
+    // 릴스 설명 정보를 virtualPost에 추가
+    if (mediaInfo.description) {
+      virtualPost._instagramDescription = mediaInfo.description;
+      console.log('📝 virtualPost에 설명 추가:', mediaInfo.description.substring(0, 100) + '...');
+    }
+    
+    // 계정 정보를 virtualPost에 추가 
+    const currentVideo = mediaInfo.metadata?.currentVideo;
+    const accountInfo = this.extractAccountInfo(mediaInfo, null, currentVideo);
+    if (accountInfo) {
+      virtualPost._instagramAuthor = accountInfo;
+      console.log('👤 virtualPost에 계정 추가:', accountInfo);
+    }
     
     // shortcode 정보를 URL에 포함
     if (mediaInfo.shortcode) {
@@ -1739,6 +2651,18 @@ class VideoSaver {
     if (post && post._instagramCurrentVideo) {
       Utils.log('info', '🎯 Instagram UI System에서 전달된 currentVideo 보존');
       metadata.currentVideo = post._instagramCurrentVideo;
+    }
+    
+    // Instagram UI System에서 전달된 설명 정보 보존
+    if (post && post._instagramDescription) {
+      Utils.log('info', '📝 Instagram UI System에서 전달된 설명 보존:', post._instagramDescription.substring(0, 100) + '...');
+      metadata.description = post._instagramDescription;
+    }
+    
+    // Instagram UI System에서 전달된 계정 정보 보존
+    if (post && post._instagramAuthor) {
+      Utils.log('info', '👤 Instagram UI System에서 전달된 계정 보존:', post._instagramAuthor);
+      metadata.author = post._instagramAuthor;
     }
     
     const analysisId = `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
