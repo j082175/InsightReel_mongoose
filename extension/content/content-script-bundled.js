@@ -1305,6 +1305,166 @@ window.INSTAGRAM_UI_SYSTEM = {
     }
   },
   
+  // 위치 기반 좋아요 수 추출
+  extractLikesCount(container, video) {
+    console.log('❤️ 좋아요 수 추출 중...');
+    
+    try {
+      // 화면 오른쪽 하단 영역 정의 (좋아요 수가 보통 위치하는 곳)
+      const screenHeight = window.innerHeight;
+      const screenWidth = window.innerWidth;
+      
+      // 오른쪽 하단 영역: 오른쪽 30%, 하단 70% 영역
+      const rightBottomArea = {
+        left: screenWidth * 0.7,
+        right: screenWidth,
+        top: screenHeight * 0.3,
+        bottom: screenHeight
+      };
+      
+      console.log('📍 오른쪽 하단 검색 영역:', rightBottomArea);
+      console.log('📏 화면 크기:', { width: screenWidth, height: screenHeight });
+      
+      // 좋아요 수를 찾기 위한 여러 선택자 시도
+      const likeSelectors = [
+        'button[aria-label*="좋아요"] span',
+        'button[aria-label*="like"] span',
+        '[data-testid="like-count"]',
+        'button:has(svg[aria-label*="좋아요"]) + span',
+        'button:has(svg[aria-label*="like"]) + span',
+        'span[title*="좋아요"]',
+        'span[title*="like"]'
+      ];
+      
+      // 선택자 기반으로 먼저 시도
+      for (const selector of likeSelectors) {
+        try {
+          const likesElement = document.querySelector(selector);
+          if (likesElement) {
+            const likesText = likesElement.textContent || likesElement.innerText || '';
+            if (likesText && likesText.match(/[\d,KkMm]/)) {
+              console.log('✅ 선택자로 좋아요 수 발견:', likesText);
+              return this.normalizeLikesCount(likesText);
+            }
+          }
+        } catch (e) {
+          // 선택자가 유효하지 않을 수 있음
+          continue;
+        }
+      }
+      
+      // 위치 기반 검색
+      const allElements = document.querySelectorAll('span, div, button');
+      const likeCandidates = [];
+      
+      let elementsInArea = 0;
+      
+      for (const element of allElements) {
+        const rect = element.getBoundingClientRect();
+        
+        // 오른쪽 하단 영역에 있는지 확인
+        if (rect.left >= rightBottomArea.left && 
+            rect.right <= rightBottomArea.right && 
+            rect.top >= rightBottomArea.top && 
+            rect.bottom <= rightBottomArea.bottom) {
+          
+          elementsInArea++;
+          const text = (element.innerText || element.textContent || '').trim();
+          
+          // 디버깅: 영역 내 모든 텍스트 로그
+          if (text) {
+            console.log(`📝 영역 내 요소 ${elementsInArea}:`, {
+              text: text.substring(0, 50),
+              position: { x: rect.left, y: rect.top, width: rect.width, height: rect.height }
+            });
+          }
+          
+          // 좋아요 수 패턴 확인
+          if (text && this.isLikesCountPattern(text)) {
+            likeCandidates.push({
+              count: text,
+              element: element,
+              position: { x: rect.left, y: rect.top }
+            });
+          }
+        }
+      }
+      
+      console.log(`📊 오른쪽 하단 영역에서 ${elementsInArea}개 요소 검사, ${likeCandidates.length}개 좋아요 후보 발견`);
+      
+      if (likeCandidates.length > 0) {
+        // 가장 적합한 후보 선택 (가장 아래에 있는 것 우선)
+        const bestCandidate = likeCandidates.reduce((best, current) => {
+          return current.position.y > best.position.y ? current : best;
+        });
+        
+        console.log('✅ 위치 기반으로 좋아요 수 발견:', bestCandidate.count);
+        return this.normalizeLikesCount(bestCandidate.count);
+      }
+      
+      // MediaInfo에서 좋아요 수 추출 시도
+      const mediaInfo = INSTAGRAM_MEDIA_TRACKER.getMediaInfoForCurrentVideo();
+      if (mediaInfo && mediaInfo.like_count !== undefined) {
+        console.log('✅ MediaInfo에서 좋아요 수 발견:', mediaInfo.like_count);
+        return mediaInfo.like_count.toString();
+      }
+      
+      console.log('ℹ️ 좋아요 수를 찾을 수 없음, 기본값 0 반환');
+      return '0';
+      
+    } catch (error) {
+      console.error('❌ 좋아요 수 추출 중 오류:', error);
+      return '0';
+    }
+  },
+  
+  // 좋아요 수 패턴 확인
+  isLikesCountPattern(text) {
+    if (!text) return false;
+    
+    // 숫자만 있는 경우 (예: 1234)
+    if (text.match(/^\d{1,}$/)) return true;
+    
+    // 숫자 + K/M 형식 (예: 1.2K, 5M)
+    if (text.match(/^\d+([.,]\d+)?[KkMm]$/)) return true;
+    
+    // 쉼표가 포함된 숫자 (예: 1,234)
+    if (text.match(/^\d{1,3}(,\d{3})*$/)) return true;
+    
+    // 좋아요 텍스트가 포함된 경우는 제외
+    if (text.includes('좋아요') || text.includes('like')) return false;
+    
+    return false;
+  },
+  
+  // 좋아요 수 정규화 (K, M 단위 변환)
+  normalizeLikesCount(text) {
+    if (!text) return '0';
+    
+    text = text.trim();
+    
+    // 이미 숫자만 있는 경우
+    if (text.match(/^\d+$/)) return text;
+    
+    // 쉼표 제거
+    if (text.includes(',')) {
+      return text.replace(/,/g, '');
+    }
+    
+    // K, M 단위 처리는 원본 형태 유지 (서버에서 처리하거나 사용자가 읽기 쉽게)
+    if (text.match(/\d+[.,]\d*[KkMm]/)) {
+      return text;
+    }
+    
+    if (text.match(/\d+[KkMm]/)) {
+      return text;
+    }
+    
+    // 숫자 추출
+    const numbers = text.match(/\d+/);
+    return numbers ? numbers[0] : '0';
+  },
+  
   // 중첩 객체 속성 안전하게 가져오기
   getNestedProperty(obj, path) {
     return path.split('.').reduce((current, key) => {
@@ -1869,6 +2029,13 @@ window.INSTAGRAM_UI_SYSTEM = {
     if (accountInfo) {
       virtualPost._instagramAuthor = accountInfo;
       console.log('👤 virtualPost에 계정 추가:', accountInfo);
+    }
+    
+    // 좋아요 수 추출 및 추가
+    const likesCount = this.extractLikesCount(null, currentVideo);
+    if (likesCount && likesCount !== '0') {
+      virtualPost._instagramLikes = likesCount;
+      console.log('❤️ virtualPost에 좋아요 수 추가:', likesCount);
     }
     
     // shortcode 정보를 URL에 포함
@@ -2665,6 +2832,12 @@ class VideoSaver {
       metadata.author = post._instagramAuthor;
     }
     
+    // Instagram UI System에서 전달된 좋아요 수 정보 보존
+    if (post && post._instagramLikes) {
+      Utils.log('info', '❤️ Instagram UI System에서 전달된 좋아요 수 보존:', post._instagramLikes);
+      metadata.likes = post._instagramLikes;
+    }
+    
     const analysisId = `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     // 서버 설정 확인 - Gemini 사용 여부
@@ -3228,8 +3401,20 @@ class VideoSaver {
       const author = Utils.safeQuerySelector(post, CONSTANTS.SELECTORS.INSTAGRAM.AUTHOR)?.textContent || '';
       const captionElement = Utils.safeQuerySelector(post, CONSTANTS.SELECTORS.INSTAGRAM.CAPTION);
       const caption = captionElement?.textContent || '';
-      const likesElement = Utils.safeQuerySelector(post, CONSTANTS.SELECTORS.INSTAGRAM.LIKES);
-      const likes = likesElement?.textContent || '0';
+      
+      // 좋아요 수 추출 - 위치 기반 방식 사용
+      let likes = '0';
+      
+      // Instagram UI System에서 전달된 좋아요 수 우선 사용
+      if (post._instagramLikes) {
+        likes = post._instagramLikes;
+        console.log('❤️ UI System에서 좋아요 수 발견:', likes);
+      } else {
+        // 위치 기반 좋아요 수 추출 시도
+        likes = Utils.extractLikesCount(post, post._instagramCurrentVideo);
+        console.log('❤️ 위치 기반 좋아요 수 추출 결과:', likes);
+      }
+      
       const hashtags = Utils.extractHashtags(caption);
       
       return {
