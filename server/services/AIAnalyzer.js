@@ -16,6 +16,8 @@ class AIAnalyzer {
       this.useGemini = false;
     }
     
+    console.log(`🔧 AI 설정 - USE_GEMINI: ${process.env.USE_GEMINI}, API_KEY 존재: ${!!this.geminiApiKey}`);
+    
     if (this.useGemini) {
       const { GoogleGenerativeAI } = require('@google/generative-ai');
       this.genAI = new GoogleGenerativeAI(this.geminiApiKey);
@@ -187,10 +189,19 @@ class AIAnalyzer {
     console.log('2. AI 프롬프트 생성 완료, 길이:', analysisPrompt.length);
     
     console.log('3. AI 호출 시작...');
-    const aiResponse = await this.queryOllama(analysisPrompt, imageBase64);
-    console.log('3. AI 호출 완료');
+    console.log(`🔮 사용할 AI: ${this.useGemini ? 'Gemini' : 'Ollama'}`);
     
-    console.log('AI 원본 응답:', aiResponse);
+    let aiResponse;
+    try {
+      aiResponse = this.useGemini 
+        ? await this.queryGemini(analysisPrompt, imageBase64)
+        : await this.queryOllama(analysisPrompt, imageBase64);
+      console.log('3. AI 호출 완료');
+      console.log('AI 원본 응답:', aiResponse);
+    } catch (error) {
+      console.error('❌ AI 호출 실패:', error.message);
+      aiResponse = null;
+    }
     
     // AI + URL 기반 하이브리드 분석
     const analysis = this.combineAnalysis(aiResponse, urlBasedCategory, metadata);
@@ -226,7 +237,9 @@ class AIAnalyzer {
         const framePrompt = this.buildFrameAnalysisPrompt(metadata, frameNumber, thumbnailPaths.length);
         
         // AI 호출
-        const aiResponse = await this.queryOllama(framePrompt, imageBase64);
+        const aiResponse = this.useGemini 
+          ? await this.queryGemini(framePrompt, imageBase64)
+          : await this.queryOllama(framePrompt, imageBase64);
         
         // 응답 파싱
         const frameAnalysis = this.parseFrameResponse(aiResponse, frameNumber);
@@ -361,6 +374,43 @@ class AIAnalyzer {
       }
       if (error.response?.status === 404) {
         throw new Error(`모델 '${this.modelName}'을 찾을 수 없습니다. 'ollama pull llava' 명령으로 설치해주세요.`);
+      }
+      throw error;
+    }
+  }
+
+  async queryGemini(prompt, imageBase64) {
+    try {
+      console.log('AI 요청 시작 - 모델: Gemini');
+      console.log('AI 프롬프트 길이:', prompt.length);
+      
+      // base64 이미지를 Gemini 형식으로 변환
+      const imagePart = {
+        inlineData: {
+          data: imageBase64,
+          mimeType: 'image/jpeg'
+        }
+      };
+      
+      const result = await this.geminiModel.generateContent([
+        prompt,
+        imagePart
+      ]);
+      
+      const response = await result.response;
+      const text = response.text();
+      
+      console.log('AI 응답 상태: 성공');
+      console.log('AI 응답 길이:', text?.length || 0);
+      
+      return text;
+    } catch (error) {
+      console.error('Gemini 호출 에러:', error.message);
+      if (error.message.includes('quota')) {
+        throw new Error('Gemini API 할당량 초과');
+      }
+      if (error.message.includes('API key')) {
+        throw new Error('Gemini API 키 오류');
       }
       throw error;
     }
@@ -627,15 +677,29 @@ class AIAnalyzer {
 
   // 간단한 AI 프롬프트 (일관성 향상)
   buildSimpleAnalysisPrompt(metadata) {
-    return `이 이미지를 보고 간단히 설명해주세요:
+    const platform = metadata.platform || '소셜미디어';
+    return `이 ${platform} 영상의 스크린샷을 분석해주세요. 다음 항목을 자세히 분석해주세요:
 
-1. 주요 내용: 이미지에서 보이는 것을 2-3문장으로 설명
-2. 키워드: 관련 키워드 3-5개 (한글)
+1. **시각적 내용 분석**:
+   - 화면에 보이는 주요 인물, 객체, 배경
+   - 텍스트나 자막이 있다면 그 내용
+   - 색상, 분위기, 스타일
 
-JSON 형식으로 답변:
+2. **콘텐츠 추론**:
+   - 어떤 종류의 콘텐츠인지 (요리, 패션, 일상, 뉴스, 엔터테인먼트 등)
+   - 영상의 주제나 목적 추측
+   - 대상 연령층이나 타겟 오디언스
+
+3. **키워드 추출**:
+   - 콘텐츠와 관련된 한글 키워드 5-8개
+   - 브랜드, 장소, 인물명이 보이면 포함
+
+반드시 JSON 형식으로 답변해주세요:
 {
-  "content": "이미지 내용을 간단히 설명",
-  "keywords": ["키워드1", "키워드2", "키워드3"]
+  "content": "영상 내용에 대한 상세한 분석 (최소 3-4문장)",
+  "keywords": ["키워드1", "키워드2", "키워드3", "키워드4", "키워드5"],
+  "category": "콘텐츠 카테고리",
+  "target_audience": "예상 타겟층"
 }`;
   }
 
@@ -818,20 +882,43 @@ JSON 형식으로 답변:
   // AI + URL 기반 하이브리드 분석
   combineAnalysis(aiResponse, urlBasedCategory, metadata) {
     try {
-      // AI 응답에서 내용과 키워드만 추출
-      let aiData = { content: '영상 내용', keywords: [] };
+      console.log('🔍 AI 응답 분석 시작...');
+      console.log('AI 응답 존재 여부:', !!aiResponse);
+      
+      // AI 응답에서 새로운 구조의 데이터 추출
+      let aiData = { 
+        content: '영상 내용', 
+        keywords: [], 
+        category: '일반',
+        target_audience: '일반' 
+      };
       
       if (aiResponse) {
+        console.log('AI 응답 길이:', aiResponse.length);
         const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+        console.log('JSON 패턴 매칭 결과:', !!jsonMatch);
+        
         if (jsonMatch) {
           try {
             const parsed = JSON.parse(jsonMatch[0]);
+            console.log('파싱된 AI 데이터:', parsed);
+            
             aiData.content = parsed.content || '영상 내용';
             aiData.keywords = Array.isArray(parsed.keywords) ? parsed.keywords : [];
+            aiData.category = parsed.category || '일반';
+            aiData.target_audience = parsed.target_audience || '일반';
+            
+            console.log('✅ AI 데이터 추출 성공:', aiData);
           } catch (e) {
-            console.log('AI JSON 파싱 실패, 기본값 사용');
+            console.log('❌ AI JSON 파싱 실패:', e.message);
+            console.log('파싱 실패한 JSON:', jsonMatch[0]);
           }
+        } else {
+          console.log('❌ JSON 패턴을 찾을 수 없음. AI 원본 응답:');
+          console.log(aiResponse.substring(0, 500));
         }
+      } else {
+        console.log('❌ AI 응답이 null 또는 undefined');
       }
       
       // URL 기반 카테고리 + AI 콘텐츠 결합
@@ -839,14 +926,18 @@ JSON 형식으로 답변:
         content: aiData.content,
         mainCategory: urlBasedCategory.mainCategory,
         middleCategory: urlBasedCategory.middleCategory,
-        keywords: aiData.keywords.slice(0, 5),
+        aiCategory: aiData.category, // AI가 추론한 카테고리
+        targetAudience: aiData.target_audience, // AI가 추론한 타겟층
+        keywords: aiData.keywords.slice(0, 8), // 키워드 수 확장
         hashtags: this.generateHashtagsFromKeywords(aiData.keywords),
         confidence: 0.8, // 하이브리드 분석의 높은 신뢰도
         source: 'HYBRID'
       };
       
     } catch (error) {
-      console.error('하이브리드 분석 실패:', error);
+      console.error('❌ 하이브리드 분석 실패:', error.message);
+      console.error('Stack trace:', error.stack);
+      console.log('🔄 URL_BASED 분석으로 폴백');
       return this.createAnalysisFromUrl(urlBasedCategory, metadata);
     }
   }

@@ -14,6 +14,12 @@ export class InstagramHandler {
     this.lastEnhancementTime = 0;
     this.processedButtons = new Set();
     this.processedVideos = new Set();
+    
+    // 현재 중심 영상 추적
+    this.currentActiveVideo = null;
+    this.videoObserver = null;
+    this.setupVideoTracking();
+    this.registerCleanupHandlers();
   }
 
   /**
@@ -27,6 +33,14 @@ export class InstagramHandler {
     this.isProcessing = true;
     Utils.log('info', 'Instagram 저장 버튼 기능 향상 시작');
     this.lastEnhancementTime = Date.now();
+    
+    // Instagram SPA 네비게이션 시 캐시 초기화
+    this.processedButtons.clear();
+    this.processedVideos.clear();
+    Utils.log('info', '🔄 Instagram SPA 대응: 처리된 요소 캐시 초기화');
+    
+    // 영상 추적 시스템 재시작
+    this.observeExistingVideos();
     
     setTimeout(() => {
       try {
@@ -260,21 +274,504 @@ export class InstagramHandler {
   }
 
   /**
-   * 가시성으로 비디오 찾기 (릴스 등)
-   * @returns {Element|null} 비디오 요소
+   * 현재 활성 비디오 추적 시스템 설정 (개선된 버전)
    */
-  findVideoByVisibility() {
-    const allVideos = Utils.safeQuerySelectorAll(document, CONSTANTS.SELECTORS.INSTAGRAM.VIDEOS);
+  setupVideoTracking() {
+    // 네트워크 요청 감지 설정
+    this.setupNetworkInterception();
     
-    // 현재 뷰포트에 보이는 비디오 찾기
-    for (const video of allVideos) {
-      if (Utils.isElementVisible(video)) {
-        return video;
+    // IntersectionObserver로 화면 중앙 영상 감지
+    this.videoObserver = new IntersectionObserver((entries) => {
+      let mostVisibleVideo = null;
+      let maxVisibility = 0;
+
+      entries.forEach(entry => {
+        if (entry.isIntersecting && entry.target.tagName === 'VIDEO') {
+          const visibilityRatio = entry.intersectionRatio;
+          
+          // 가장 많이 보이는 영상을 현재 활성 영상으로 설정
+          if (visibilityRatio > maxVisibility) {
+            maxVisibility = visibilityRatio;
+            mostVisibleVideo = entry.target;
+          }
+        }
+      });
+
+      if (mostVisibleVideo && this.currentActiveVideo !== mostVisibleVideo) {
+        this.currentActiveVideo = mostVisibleVideo;
+        
+        // Instagram downloader 방식으로 미디어 정보 조회
+        const mediaInfo = this.getMediaInfoForVideo(mostVisibleVideo);
+        
+        Utils.log('info', '활성 영상 변경됨', { 
+          videoSrc: mostVisibleVideo.src?.substring(0, 50) + '...',
+          mediaCode: mediaInfo?.code,
+          realVideoUrl: mediaInfo?.video_url?.substring(0, 50) + '...',
+          visibility: maxVisibility 
+        });
+      }
+    }, {
+      threshold: [0.1, 0.3, 0.5, 0.7, 0.9], // 다양한 가시성 임계값
+      rootMargin: '0px'
+    });
+
+    // 기존 영상들 관찰 시작
+    this.observeExistingVideos();
+    
+    // 새로운 영상이 동적으로 추가될 때를 대비한 MutationObserver
+    this.setupVideoMutationObserver();
+  }
+
+  /**
+   * 네트워크 요청 감지 설정 (Instagram downloader 방식 개선)
+   */
+  setupNetworkInterception() {
+    // 3중 매핑 시스템 (Instagram downloader 방식)
+    this.mediaData = {}; // shortcode -> 완전한 미디어 정보
+    this.mediaIdMap = {}; // media ID -> shortcode
+    this.fbIdMap = {}; // FB ID -> shortcode
+    
+    // XMLHttpRequest 후킹 (Instagram downloader의 핵심 방식)
+    const originalXHROpen = XMLHttpRequest.prototype.open;
+    const originalXHRSend = XMLHttpRequest.prototype.send;
+    
+    XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+      this._url = url;
+      return originalXHROpen.apply(this, arguments);
+    };
+    
+    XMLHttpRequest.prototype.send = function(data) {
+      this.addEventListener('load', () => {
+        if (this.status >= 200 && this.status < 300) {
+          try {
+            // Instagram API 응답 감지 및 처리
+            if (this.responseURL.includes('/graphql/query')) {
+              const responseData = JSON.parse(this.responseText);
+              this.processGraphQLResponse(responseData);
+            } else if (this.responseURL.includes('/api/v1/media/') && this.responseURL.includes('/info/')) {
+              const responseData = JSON.parse(this.responseText);
+              this.processMediaInfoResponse(responseData);
+            } else if (this.responseURL.includes('/api/v1/feed/')) {
+              const responseData = JSON.parse(this.responseText);
+              this.processFeedResponse(responseData);
+            }
+          } catch (error) {
+            // JSON 파싱 실패는 무시
+          }
+        }
+      }.bind(this));
+      
+      return originalXHRSend.apply(this, arguments);
+    }.bind(this);
+
+    // JSON Script 태그에서 초기 데이터 추출
+    this.extractFromPageData();
+  }
+
+  /**
+   * GraphQL 응답 처리
+   */
+  processGraphQLResponse(data) {
+    this.extractMediaFromAnyLevel(data);
+  }
+
+  /**
+   * 미디어 정보 API 응답 처리
+   */
+  processMediaInfoResponse(data) {
+    if (data.items) {
+      data.items.forEach(item => this.storeMediaInfo(item));
+    }
+  }
+
+  /**
+   * 피드 API 응답 처리
+   */
+  processFeedResponse(data) {
+    if (data.items) {
+      data.items.forEach(item => {
+        if (item.media) this.storeMediaInfo(item.media);
+        else this.storeMediaInfo(item);
+      });
+    }
+  }
+
+  /**
+   * 미디어 정보 저장 (Instagram downloader 방식)
+   */
+  storeMediaInfo(mediaItem) {
+    if (!mediaItem?.code || !mediaItem?.like_count) return;
+
+    const shortcode = mediaItem.code;
+    
+    // 이미 저장된 경우 업데이트만
+    if (this.mediaData[shortcode]) {
+      this.updateExistingMedia(this.mediaData[shortcode], mediaItem);
+      return;
+    }
+
+    // 새 미디어 정보 생성
+    const mediaInfo = {
+      code: shortcode,
+      created_at: mediaItem?.caption?.created_at || mediaItem?.taken_at,
+      like_count: mediaItem.like_count,
+      comment_count: mediaItem.comment_count,
+      play_count: mediaItem?.ig_play_count || mediaItem?.play_count || mediaItem?.view_count,
+      username: mediaItem?.caption?.user?.username || mediaItem?.owner?.username || mediaItem?.user?.username,
+      video_url: mediaItem?.video_versions?.[0]?.url,
+      img_origin: mediaItem?.image_versions2?.candidates?.[0]?.url
+    };
+
+    // 캐러셀 미디어 처리
+    if (mediaItem?.carousel_media) {
+      mediaInfo.carousel_media = mediaItem.carousel_media
+        .map(item => [item?.video_versions?.[0]?.url, item?.image_versions2?.candidates?.[0]?.url])
+        .flat()
+        .filter(url => url)
+        .join('\n');
+    }
+
+    this.mediaData[shortcode] = mediaInfo;
+
+    // ID 매핑 생성
+    if (mediaItem.id) this.mediaIdMap[mediaItem.id] = shortcode;
+    if (mediaItem.pk) this.fbIdMap[mediaItem.pk] = shortcode;
+
+    Utils.log('info', '미디어 정보 저장됨', { 
+      shortcode, 
+      videoUrl: mediaInfo.video_url?.substring(0, 50) + '...',
+      hasCarousel: !!mediaInfo.carousel_media 
+    });
+  }
+
+  /**
+   * 기존 미디어 정보 업데이트
+   */
+  updateExistingMedia(existing, newData) {
+    if (!existing.video_url && newData?.video_versions?.[0]?.url) {
+      existing.video_url = newData.video_versions[0].url;
+    }
+    if (!existing.created_at && (newData?.caption?.created_at || newData?.taken_at)) {
+      existing.created_at = newData.caption?.created_at || newData.taken_at;
+    }
+    if (!existing.username && (newData?.caption?.user?.username || newData?.owner?.username)) {
+      existing.username = newData.caption?.user?.username || newData.owner?.username;
+    }
+  }
+
+  /**
+   * 재귀적으로 모든 레벨에서 미디어 추출 (Instagram downloader 방식)
+   */
+  extractMediaFromAnyLevel(obj, depth = 0) {
+    if (depth > 15 || !obj || typeof obj !== 'object') return;
+    
+    // 미디어 객체 직접 감지
+    if (obj.code && obj.like_count) {
+      this.storeMediaInfo(obj);
+    }
+    
+    // 다양한 Instagram API 구조 처리
+    if (obj.data) {
+      // GraphQL 응답의 data 섹션
+      this.processDataSection(obj.data);
+    }
+    
+    // 재귀적으로 모든 속성 탐색
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key) && obj[key] && typeof obj[key] === 'object') {
+        this.extractMediaFromAnyLevel(obj[key], depth + 1);
+      }
+    }
+  }
+
+  /**
+   * GraphQL data 섹션 처리
+   */
+  processDataSection(data) {
+    // 피드 타임라인 처리
+    if (data.xdt_api__v1__feed__timeline__connection?.edges) {
+      data.xdt_api__v1__feed__timeline__connection.edges.forEach(edge => {
+        if (edge.node?.media) {
+          this.storeMediaInfo(edge.node.media);
+        }
+      });
+    }
+
+    // 릴스 피드 처리
+    if (data.xdt_api__v1__clips__home__connection_v2?.edges) {
+      data.xdt_api__v1__clips__home__connection_v2.edges.forEach(edge => {
+        if (edge.node?.media) {
+          this.storeMediaInfo(edge.node.media);
+        } else if (edge.node) {
+          this.storeMediaInfo(edge.node);
+        }
+      });
+    }
+
+    // 단일 포스트 정보
+    if (data.xdt_api__v1__media__shortcode__web_info?.items) {
+      data.xdt_api__v1__media__shortcode__web_info.items.forEach(item => {
+        this.storeMediaInfo(item);
+      });
+    }
+
+    // 사용자 타임라인
+    if (data.xdt_api__v1__feed__user_timeline_graphql_connection?.edges) {
+      data.xdt_api__v1__feed__user_timeline_graphql_connection.edges.forEach(edge => {
+        this.storeMediaInfo(edge.node);
+      });
+    }
+  }
+
+  /**
+   * 페이지 데이터에서 초기 미디어 정보 추출
+   */
+  extractFromPageData() {
+    // Instagram이 페이지에 포함하는 JSON 스크립트 태그 파싱
+    const scriptTags = document.querySelectorAll('script[type="application/json"]');
+    
+    for (const script of scriptTags) {
+      try {
+        const data = JSON.parse(script.textContent);
+        this.extractMediaFromAnyLevel(data);
+      } catch (error) {
+        // JSON 파싱 실패는 무시
+      }
+    }
+  }
+
+  /**
+   * React Props에서 미디어 정보 추출 (Instagram downloader 방식)
+   */
+  getReactPropsFromElement(element) {
+    for (const key in element) {
+      if (key.startsWith('__reactProps$')) {
+        return element[key];
+      }
+    }
+    return null;
+  }
+
+  /**
+   * React Props를 통한 미디어 정보 찾기
+   */
+  findMediaFromReactProps(element, maxDepth = 15) {
+    let current = element;
+    
+    for (let depth = 0; depth <= maxDepth && current; depth++) {
+      const reactProps = this.getReactPropsFromElement(current);
+      
+      if (reactProps?.children?.props) {
+        const props = reactProps.children.props;
+        
+        // 다양한 ID로 미디어 정보 찾기
+        if (props.videoFBID && this.fbIdMap[props.videoFBID]) {
+          return this.mediaData[this.fbIdMap[props.videoFBID]];
+        }
+        if (props.media$key?.id && this.mediaIdMap[props.media$key.id]) {
+          return this.mediaData[this.mediaIdMap[props.media$key.id]];
+        }
+        if (props.post?.id && this.fbIdMap[props.post.id]) {
+          return this.mediaData[this.fbIdMap[props.post.id]];
+        }
+        if (props.post?.code) {
+          return this.mediaData[props.post.code];
+        }
+        if (props.href) {
+          const shortcode = this.extractShortcodeFromUrl(props.href);
+          return this.mediaData[shortcode];
+        }
+      }
+      
+      current = current.parentElement;
+    }
+    
+    return null;
+  }
+
+  /**
+   * URL에서 shortcode 추출
+   */
+  extractShortcodeFromUrl(url) {
+    const match = url.match(/\/p\/([A-Za-z0-9_-]+)/);
+    return match ? match[1] : null;
+  }
+
+  /**
+   * 비디오 요소에서 포스트 ID 추출
+   */
+  extractPostId(videoElement) {
+    // 여러 방법으로 포스트 ID 추출 시도
+    let postId = null;
+    
+    // 방법 1: URL에서 추출
+    const currentUrl = window.location.href;
+    const urlMatch = currentUrl.match(/\/p\/([A-Za-z0-9_-]+)/);
+    if (urlMatch) {
+      postId = urlMatch[1];
+    }
+    
+    // 방법 2: article 요소의 data 속성에서 추출
+    if (!postId) {
+      const article = videoElement.closest('article');
+      if (article) {
+        // 다양한 data 속성 확인
+        const dataKeys = ['data-testid', 'data-id', 'data-shortcode'];
+        for (const key of dataKeys) {
+          const value = article.getAttribute(key);
+          if (value && value.length > 5) {
+            postId = value;
+            break;
+          }
+        }
       }
     }
     
-    // 첫 번째 비디오 반환 (fallback)
-    return allVideos[0] || null;
+    // 방법 3: href 링크에서 추출
+    if (!postId) {
+      const article = videoElement.closest('article');
+      const links = article?.querySelectorAll('a[href*="/p/"]');
+      if (links && links.length > 0) {
+        const href = links[0].href;
+        const hrefMatch = href.match(/\/p\/([A-Za-z0-9_-]+)/);
+        if (hrefMatch) {
+          postId = hrefMatch[1];
+        }
+      }
+    }
+    
+    return postId;
+  }
+
+  /**
+   * 다중 방법으로 미디어 정보 조회 (Instagram downloader 방식)
+   */
+  getMediaInfoForVideo(videoElement) {
+    // 방법 1: React Props에서 찾기
+    const mediaFromProps = this.findMediaFromReactProps(videoElement);
+    if (mediaFromProps) {
+      Utils.log('info', 'React Props에서 미디어 발견', { code: mediaFromProps.code });
+      return mediaFromProps;
+    }
+
+    // 방법 2: URL에서 shortcode 추출해서 찾기
+    const shortcode = this.extractPostId(videoElement);
+    if (shortcode && this.mediaData[shortcode]) {
+      Utils.log('info', 'shortcode로 미디어 발견', { shortcode });
+      return this.mediaData[shortcode];
+    }
+
+    // 방법 3: 현재 페이지 URL에서 찾기
+    const urlShortcode = this.extractShortcodeFromUrl(window.location.href);
+    if (urlShortcode && this.mediaData[urlShortcode]) {
+      Utils.log('info', '페이지 URL에서 미디어 발견', { shortcode: urlShortcode });
+      return this.mediaData[urlShortcode];
+    }
+
+    // 방법 4: 가장 최근에 로드된 미디어 중 비디오가 있는 것 찾기
+    const recentMediaWithVideo = Object.values(this.mediaData)
+      .filter(media => media.video_url)
+      .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))[0];
+    
+    if (recentMediaWithVideo) {
+      Utils.log('info', '최근 비디오 미디어 사용', { code: recentMediaWithVideo.code });
+      return recentMediaWithVideo;
+    }
+
+    return null;
+  }
+
+  /**
+   * 실제 미디어 URL 조회 (우선순위 기반)
+   */
+  getMediaUrlForPost(postId) {
+    const mediaInfo = this.getMediaInfoForVideo({ closest: () => null }); // 임시 객체
+    return mediaInfo?.video_url || null;
+  }
+
+  /**
+   * 기존 영상들에 대한 관찰 시작
+   */
+  observeExistingVideos() {
+    const videos = Utils.safeQuerySelectorAll(document, CONSTANTS.SELECTORS.INSTAGRAM.VIDEOS);
+    videos.forEach(video => {
+      this.videoObserver.observe(video);
+    });
+    Utils.log('info', `${videos.length}개의 기존 영상 관찰 시작`);
+  }
+
+  /**
+   * 새로운 영상 추가 감지를 위한 MutationObserver 설정
+   */
+  setupVideoMutationObserver() {
+    const mutationObserver = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            // 새로 추가된 영상 요소 찾기
+            const newVideos = node.tagName === 'VIDEO' ? [node] : 
+                            node.querySelectorAll ? Array.from(node.querySelectorAll('video')) : [];
+            
+            newVideos.forEach(video => {
+              this.videoObserver.observe(video);
+              Utils.log('info', '새로운 영상 감지 및 관찰 시작', { src: video.src?.substring(0, 50) + '...' });
+            });
+          }
+        });
+      });
+    });
+
+    mutationObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+  }
+
+  /**
+   * 가시성으로 비디오 찾기 (개선된 버전)
+   * @returns {Element|null} 비디오 요소
+   */
+  findVideoByVisibility() {
+    // 현재 추적 중인 활성 영상이 있으면 우선 반환
+    if (this.currentActiveVideo && Utils.isElementVisible(this.currentActiveVideo)) {
+      Utils.log('info', '현재 활성 영상 사용');
+      return this.currentActiveVideo;
+    }
+
+    // 활성 영상이 없거나 보이지 않으면 기존 로직 사용
+    const allVideos = Utils.safeQuerySelectorAll(document, CONSTANTS.SELECTORS.INSTAGRAM.VIDEOS);
+    
+    // 현재 뷰포트에 보이는 비디오 중 가장 많이 보이는 것 찾기
+    let bestVideo = null;
+    let maxVisibility = 0;
+    
+    for (const video of allVideos) {
+      if (Utils.isElementVisible(video)) {
+        const rect = video.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const viewportWidth = window.innerWidth;
+        
+        // 화면 중앙에 얼마나 가까운지 계산
+        const centerX = viewportWidth / 2;
+        const centerY = viewportHeight / 2;
+        const videoCenterX = rect.left + rect.width / 2;
+        const videoCenterY = rect.top + rect.height / 2;
+        
+        const distanceFromCenter = Math.sqrt(
+          Math.pow(centerX - videoCenterX, 2) + Math.pow(centerY - videoCenterY, 2)
+        );
+        
+        // 거리가 가까울수록 높은 점수 (역수 사용)
+        const visibility = 1 / (distanceFromCenter + 1);
+        
+        if (visibility > maxVisibility) {
+          maxVisibility = visibility;
+          bestVideo = video;
+        }
+      }
+    }
+    
+    return bestVideo || allVideos[0] || null;
   }
 
   /**
@@ -352,22 +849,40 @@ export class InstagramHandler {
   }
 
   /**
-   * 저장 액션에서 비디오 처리
+   * 저장 액션에서 비디오 처리 (개선된 버전)
    * @param {Element} post 게시물 요소
    * @param {Element} video 비디오 요소
    */
   async processVideoFromSaveAction(post, video) {
-    const videoUrl = video.src || video.currentSrc;
+    // 1. 기본 정보 수집
+    let videoUrl = video.src || video.currentSrc;
     const postUrl = window.location.href;
     const metadata = this.extractMetadata(post);
     
-    Utils.log('info', '저장된 영상 분석 시작', { videoUrl, postUrl });
+    // 2. Instagram downloader 방식으로 실제 미디어 정보 조회
+    const mediaInfo = this.getMediaInfoForVideo(video);
+    
+    // 3. 실제 미디어 URL이 있으면 우선 사용
+    if (mediaInfo?.video_url && !mediaInfo.video_url.startsWith('blob:')) {
+      Utils.log('info', '실제 미디어 URL 사용', { 
+        code: mediaInfo.code,
+        originalUrl: videoUrl?.substring(0, 50) + '...', 
+        realUrl: mediaInfo.video_url.substring(0, 50) + '...' 
+      });
+      videoUrl = mediaInfo.video_url;
+    }
+    
+    Utils.log('info', '저장된 영상 분석 시작', { 
+      code: mediaInfo?.code,
+      videoUrl: videoUrl?.substring(0, 50) + '...', 
+      postUrl 
+    });
     
     if (!videoUrl) {
       throw new Error('비디오 URL을 찾을 수 없습니다.');
     }
     
-    // blob URL 처리
+    // 4. URL 타입에 따른 처리
     if (videoUrl.startsWith('blob:')) {
       await this.processBlobVideo(videoUrl, postUrl, metadata, video);
     } else {
@@ -865,5 +1380,55 @@ export class InstagramHandler {
       button.innerHTML = originalHTML;
       button.style.pointerEvents = 'auto';
     }, 3000);
+  }
+
+  /**
+   * Observer들과 이벤트 리스너 정리 (메모리 누수 방지)
+   */
+  cleanup() {
+    Utils.log('info', 'Instagram handler 정리 시작');
+    
+    // IntersectionObserver 정리
+    if (this.videoObserver) {
+      this.videoObserver.disconnect();
+      this.videoObserver = null;
+      Utils.log('info', 'VideoObserver 정리 완료');
+    }
+
+    // 현재 활성 영상 참조 해제
+    this.currentActiveVideo = null;
+    
+    // 캐시 정리
+    this.processedButtons.clear();
+    this.processedVideos.clear();
+    
+    Utils.log('info', 'Instagram handler 정리 완료');
+  }
+
+  /**
+   * 페이지 언로드 시 정리 작업 등록
+   */
+  registerCleanupHandlers() {
+    // 페이지 언로드 시 정리
+    window.addEventListener('beforeunload', () => {
+      this.cleanup();
+    });
+
+    // SPA 네비게이션 감지 및 정리
+    let currentUrl = window.location.href;
+    const checkUrlChange = () => {
+      if (window.location.href !== currentUrl) {
+        currentUrl = window.location.href;
+        Utils.log('info', 'SPA 네비게이션 감지 - Observer 재설정');
+        this.cleanup();
+        // 짧은 지연 후 재설정
+        setTimeout(() => {
+          this.setupVideoTracking();
+        }, 500);
+      }
+    };
+
+    // URL 변경 감지 (SPA 대응)
+    setInterval(checkUrlChange, 1000);
   }
 }

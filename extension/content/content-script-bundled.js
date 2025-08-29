@@ -2,6 +2,216 @@
 (function() {
 'use strict';
 
+// Instagram Downloader 방식 - 실제 미디어 URL 추적
+let INSTAGRAM_MEDIA_TRACKER = {
+  mediaData: {},      // shortcode -> 완전한 미디어 정보
+  mediaIdMap: {},     // media ID -> shortcode
+  fbIdMap: {},        // FB ID -> shortcode
+  
+  init() {
+    this.setupNetworkInterception();
+    this.extractFromPageData();
+    console.log('🔥 Instagram Media Tracker 초기화 완료');
+  },
+  
+  setupNetworkInterception() {
+    const self = this;
+    
+    // XMLHttpRequest 후킹 (Instagram downloader 핵심 방식)
+    const originalXHROpen = XMLHttpRequest.prototype.open;
+    const originalXHRSend = XMLHttpRequest.prototype.send;
+    
+    XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+      this._url = url;
+      return originalXHROpen.apply(this, arguments);
+    };
+    
+    XMLHttpRequest.prototype.send = function(data) {
+      this.addEventListener('load', function() {
+        if (this.status >= 200 && this.status < 300) {
+          try {
+            if (this.responseURL.includes('/graphql/query')) {
+              const responseData = JSON.parse(this.responseText);
+              self.processGraphQLResponse(responseData);
+            } else if (this.responseURL.includes('/api/v1/media/') && this.responseURL.includes('/info/')) {
+              const responseData = JSON.parse(this.responseText);
+              self.processMediaInfoResponse(responseData);
+            } else if (this.responseURL.includes('/api/v1/feed/')) {
+              const responseData = JSON.parse(this.responseText);
+              self.processFeedResponse(responseData);
+            }
+          } catch (error) {
+            // JSON 파싱 실패는 무시
+          }
+        }
+      });
+      
+      return originalXHRSend.apply(this, arguments);
+    };
+  },
+  
+  processGraphQLResponse(data) {
+    this.extractMediaFromAnyLevel(data);
+  },
+  
+  processMediaInfoResponse(data) {
+    if (data.items) {
+      data.items.forEach(item => this.storeMediaInfo(item));
+    }
+  },
+  
+  processFeedResponse(data) {
+    if (data.items) {
+      data.items.forEach(item => {
+        if (item.media) this.storeMediaInfo(item.media);
+        else this.storeMediaInfo(item);
+      });
+    }
+  },
+  
+  storeMediaInfo(mediaItem) {
+    if (!mediaItem?.code || !mediaItem?.like_count) return;
+
+    const shortcode = mediaItem.code;
+    
+    if (this.mediaData[shortcode]) {
+      this.updateExistingMedia(this.mediaData[shortcode], mediaItem);
+      return;
+    }
+
+    const mediaInfo = {
+      code: shortcode,
+      created_at: mediaItem?.caption?.created_at || mediaItem?.taken_at,
+      like_count: mediaItem.like_count,
+      comment_count: mediaItem.comment_count,
+      play_count: mediaItem?.ig_play_count || mediaItem?.play_count || mediaItem?.view_count,
+      username: mediaItem?.caption?.user?.username || mediaItem?.owner?.username || mediaItem?.user?.username,
+      video_url: mediaItem?.video_versions?.[0]?.url,
+      img_origin: mediaItem?.image_versions2?.candidates?.[0]?.url
+    };
+
+    // 캐러셀 미디어 처리
+    if (mediaItem?.carousel_media) {
+      mediaInfo.carousel_media = mediaItem.carousel_media
+        .map(item => [item?.video_versions?.[0]?.url, item?.image_versions2?.candidates?.[0]?.url])
+        .flat()
+        .filter(url => url)
+        .join('\n');
+    }
+
+    this.mediaData[shortcode] = mediaInfo;
+
+    // ID 매핑 생성
+    if (mediaItem.id) this.mediaIdMap[mediaItem.id] = shortcode;
+    if (mediaItem.pk) this.fbIdMap[mediaItem.pk] = shortcode;
+
+    console.log('📱 미디어 정보 저장됨:', { 
+      shortcode, 
+      videoUrl: mediaInfo.video_url?.substring(0, 50) + '...',
+      hasCarousel: !!mediaInfo.carousel_media 
+    });
+  },
+  
+  updateExistingMedia(existing, newData) {
+    if (!existing.video_url && newData?.video_versions?.[0]?.url) {
+      existing.video_url = newData.video_versions[0].url;
+    }
+    if (!existing.created_at && (newData?.caption?.created_at || newData?.taken_at)) {
+      existing.created_at = newData.caption?.created_at || newData.taken_at;
+    }
+  },
+  
+  extractMediaFromAnyLevel(obj, depth = 0) {
+    if (depth > 15 || !obj || typeof obj !== 'object') return;
+    
+    // 미디어 객체 직접 감지
+    if (obj.code && obj.like_count) {
+      this.storeMediaInfo(obj);
+    }
+    
+    // 다양한 Instagram API 구조 처리
+    if (obj.data) {
+      this.processDataSection(obj.data);
+    }
+    
+    // 재귀적으로 모든 속성 탐색
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key) && obj[key] && typeof obj[key] === 'object') {
+        this.extractMediaFromAnyLevel(obj[key], depth + 1);
+      }
+    }
+  },
+  
+  processDataSection(data) {
+    // 피드 타임라인 처리
+    if (data.xdt_api__v1__feed__timeline__connection?.edges) {
+      data.xdt_api__v1__feed__timeline__connection.edges.forEach(edge => {
+        if (edge.node?.media) {
+          this.storeMediaInfo(edge.node.media);
+        }
+      });
+    }
+
+    // 릴스 피드 처리  
+    if (data.xdt_api__v1__clips__home__connection_v2?.edges) {
+      data.xdt_api__v1__clips__home__connection_v2.edges.forEach(edge => {
+        if (edge.node?.media) {
+          this.storeMediaInfo(edge.node.media);
+        } else if (edge.node) {
+          this.storeMediaInfo(edge.node);
+        }
+      });
+    }
+
+    // 단일 포스트 정보
+    if (data.xdt_api__v1__media__shortcode__web_info?.items) {
+      data.xdt_api__v1__media__shortcode__web_info.items.forEach(item => {
+        this.storeMediaInfo(item);
+      });
+    }
+  },
+  
+  extractFromPageData() {
+    // Instagram이 페이지에 포함하는 JSON 스크립트 태그 파싱
+    const scriptTags = document.querySelectorAll('script[type="application/json"]');
+    
+    for (const script of scriptTags) {
+      try {
+        const data = JSON.parse(script.textContent);
+        this.extractMediaFromAnyLevel(data);
+      } catch (error) {
+        // JSON 파싱 실패는 무시
+      }
+    }
+  },
+  
+  getMediaInfoForCurrentVideo() {
+    // 현재 페이지 URL에서 shortcode 추출
+    const urlMatch = window.location.href.match(/\/p\/([A-Za-z0-9_-]+)|\/reel\/([A-Za-z0-9_-]+)|\/reels\/([A-Za-z0-9_-]+)/);
+    const shortcode = urlMatch ? (urlMatch[1] || urlMatch[2] || urlMatch[3]) : null;
+    
+    if (shortcode && this.mediaData[shortcode]) {
+      console.log('🎯 URL에서 미디어 발견:', shortcode);
+      return this.mediaData[shortcode];
+    }
+    
+    // 가장 최근에 로드된 미디어 중 비디오가 있는 것 찾기
+    const recentMediaWithVideo = Object.values(this.mediaData)
+      .filter(media => media.video_url)
+      .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))[0];
+    
+    if (recentMediaWithVideo) {
+      console.log('🎯 최근 비디오 미디어 사용:', recentMediaWithVideo.code);
+      return recentMediaWithVideo;
+    }
+    
+    return null;
+  }
+};
+
+// 즉시 초기화
+INSTAGRAM_MEDIA_TRACKER.init();
+
 // Constants
 const CONSTANTS = {
   SERVER_URL: 'http://localhost:3000',
@@ -716,6 +926,14 @@ class VideoSaver {
       // 실제 비디오 URL 추출 시도
       const realVideoUrl = await this.extractRealVideoUrl(video);
       
+      // blob URL 우선 처리
+      const videoSrc = video.src || video.currentSrc;
+      if (videoSrc && videoSrc.startsWith('blob:')) {
+        Utils.log('info', '🎯 Blob URL 우선 처리로 전환');
+        await this.processBlobVideo(videoSrc, postUrl, metadata, video);
+        return;
+      }
+      
       if (realVideoUrl && !realVideoUrl.startsWith('blob:')) {
         // 실제 비디오 URL이 있는 경우 - 안전한 처리
         Utils.log('info', '🎯 실제 비디오 URL 발견, 전체 분석 진행');
@@ -834,40 +1052,43 @@ class VideoSaver {
 
   async extractRealVideoUrl(video) {
     try {
-      Utils.log('info', '🔍 Instagram 실제 비디오 URL 추출 시작');
+      Utils.log('info', '🔍 Instagram 실제 비디오 URL 추출 시작 (Instagram Downloader 방식)');
       
-      // 방법 1: 비디오 요소에서 직접 소스 확인
-      const videoElement = video;
-      const directSources = [
-        videoElement.src,
-        videoElement.currentSrc,
-        ...Array.from(videoElement.querySelectorAll('source')).map(s => s.src)
-      ].filter(url => url && !url.startsWith('blob:'));
-      
-      if (directSources.length > 0) {
-        Utils.log('info', '📋 비디오 요소에서 URL 발견:', directSources[0].substring(0, 80) + '...');
-        return directSources[0];
+      // 🎯 Instagram Downloader 방식: Media Tracker 우선 사용
+      const mediaInfo = INSTAGRAM_MEDIA_TRACKER.getMediaInfoForCurrentVideo();
+      if (mediaInfo?.video_url && !mediaInfo.video_url.startsWith('blob:')) {
+        Utils.log('info', '🚀 Media Tracker에서 실제 URL 발견:', {
+          shortcode: mediaInfo.code,
+          url: mediaInfo.video_url.substring(0, 80) + '...'
+        });
+        return mediaInfo.video_url;
       }
       
-      // 방법 2: Instagram 페이지 데이터에서 추출
+      // 기존 방법 1: 비디오 요소에서 소스 확인
+      const videoElement = video;
+      const videoSrc = videoElement.src || videoElement.currentSrc;
+      
+      // blob URL이면 null 반환해서 processBlobVideo 로직 사용
+      if (videoSrc) {
+        if (videoSrc.startsWith('blob:')) {
+          Utils.log('info', '🎯 Blob URL 발견 - blob 처리 로직으로 전환');
+          return null;
+        } else {
+          Utils.log('info', '📋 비디오 요소에서 직접 URL 발견:', videoSrc.substring(0, 80) + '...');
+          return videoSrc;
+        }
+      }
+      
+      // Media Tracker에서 가져온 정보가 blob URL인 경우에도 로그 남기기
+      if (mediaInfo?.video_url) {
+        Utils.log('info', '📋 Media Tracker에서 blob URL 발견, 기존 로직으로 처리:', mediaInfo.video_url.substring(0, 50) + '...');
+      }
+      
+      // 기존 방법들은 fallback으로 유지
       const instagramVideoUrl = await this.extractFromInstagramPageData();
       if (instagramVideoUrl) {
         Utils.log('info', '📋 페이지 데이터에서 URL 발견:', instagramVideoUrl.substring(0, 80) + '...');
         return instagramVideoUrl;
-      }
-      
-      // 방법 3: 네트워크 요청 분석 (향상된 버전)
-      const networkUrl = await this.extractFromNetworkRequests(video);
-      if (networkUrl) {
-        Utils.log('info', '📋 네트워크에서 URL 발견:', networkUrl.substring(0, 80) + '...');
-        return networkUrl;
-      }
-      
-      // 방법 4: DOM 깊이 분석
-      const domUrl = await this.extractFromDOMAnalysis(video);
-      if (domUrl) {
-        Utils.log('info', '📋 DOM 분석에서 URL 발견:', domUrl.substring(0, 80) + '...');
-        return domUrl;
       }
       
       Utils.log('warn', '📋 모든 방법으로 실제 URL을 찾지 못함');
@@ -896,31 +1117,57 @@ class VideoSaver {
         
         // 현재 Reel ID와 연결된 비디오 URL 찾기
         if (currentReelId && content.includes(currentReelId)) {
+          Utils.log('info', `🎯 Script에서 Reel ID ${currentReelId} 발견`);
           // Reel ID 근처에서 video_url 찾기
           const reelSection = this.extractReelSection(content, currentReelId);
           if (reelSection) {
-            // 다양한 패턴으로 비디오 URL 찾기
+            Utils.log('info', `📋 Reel 섹션 추출 성공 (길이: ${reelSection.length}자)`);
+            
+            // 디버깅: Reel 섹션에서 video/mp4 관련 키워드 확인
+            const videoKeywords = ['video_url', 'videoUrl', 'playback_url', 'video_dash_url', '.mp4', 'fbcdn.net'];
+            const foundKeywords = videoKeywords.filter(keyword => reelSection.includes(keyword));
+            Utils.log('info', `🔍 Reel 섹션에서 발견된 비디오 키워드: [${foundKeywords.join(', ')}]`);
+            
+            // 다양한 패턴으로 비디오 URL 찾기 (확장된 패턴)
             const patterns = [
               /"video_url":"([^"]+)"/,
               /"videoUrl":"([^"]+)"/,
               /"src":"([^"]+\.mp4[^"]*)"/,
               /"url":"([^"]+\.mp4[^"]*)"/,
               /"playback_url":"([^"]+)"/,
-              /"video_dash_url":"([^"]+)"/
+              /"video_dash_url":"([^"]+)"/,
+              // 새로운 패턴들 추가
+              /"video_versions":\[{"url":"([^"]+\.mp4[^"]*)"/,
+              /"dash_manifest":"([^"]+)"/,
+              /"video_codec":"[^"]*","url":"([^"]+\.mp4[^"]*)"/,
+              /https:\/\/[^"]*fbcdn\.net[^"]*\.mp4[^"]*/g,
+              /"progressive_url":"([^"]+\.mp4[^"]*)"/
             ];
             
-            for (const pattern of patterns) {
+            for (let i = 0; i < patterns.length; i++) {
+              const pattern = patterns[i];
+              Utils.log('info', `🔍 패턴 ${i+1}/${patterns.length} 시도: ${pattern.toString().substring(0, 50)}...`);
               const videoUrlMatch = reelSection.match(pattern);
               if (videoUrlMatch) {
-                const url = videoUrlMatch[1].replace(/\\u0026/g, '&').replace(/\\/g, '');
+                const url = (videoUrlMatch[1] || videoUrlMatch[0]).replace(/\\u0026/g, '&').replace(/\\/g, '');
+                Utils.log('info', `✅ 패턴 ${i+1} 매칭 성공: ${url.substring(0, 80)}...`);
                 if (url.includes('.mp4') && !url.startsWith('blob:') && 
                     (url.includes('fbcdn.net') || url.includes('cdninstagram.com'))) {
-                  Utils.log('info', `✅ Reel ID ${currentReelId}에 맞는 비디오 URL 발견`);
+                  Utils.log('info', `🎉 Reel ID ${currentReelId}에 맞는 비디오 URL 발견!`);
                   return url;
+                } else {
+                  Utils.log('warn', `❌ 패턴 ${i+1} 매칭되었지만 조건 불충족: mp4=${url.includes('.mp4')}, not-blob=${!url.startsWith('blob:')}, fbcdn=${url.includes('fbcdn.net')}, cdninstagram=${url.includes('cdninstagram.com')}`);
                 }
+              } else {
+                Utils.log('info', `❌ 패턴 ${i+1} 매칭 실패`);
               }
             }
+            Utils.log('warn', `⚠️ Reel 섹션에서 적합한 비디오 URL을 찾지 못함`);
+          } else {
+            Utils.log('warn', `⚠️ Reel 섹션 추출 실패`);
           }
+        } else if (currentReelId) {
+          Utils.log('warn', `⚠️ Script에 Reel ID ${currentReelId}가 포함되지 않음`);
         }
         
         // 강화된 전체 검색 (fallback)
@@ -944,8 +1191,9 @@ class VideoSaver {
               
               if (url.includes('.mp4') && !url.startsWith('blob:') && 
                   (url.includes('fbcdn.net') || url.includes('cdninstagram.com'))) {
-                Utils.log('warn', '⚠️ Fallback: 전체 페이지에서 비디오 URL 발견');
+                Utils.log('warn', `⚠️ FALLBACK 사용: Reel ID ${currentReelId}에 맞는 URL을 찾지 못해 다른 영상 URL 사용`);
                 Utils.log('info', `📋 발견된 URL: ${url.substring(0, 80)}...`);
+                Utils.log('error', `🚨 이는 잘못된 영상이 분석될 수 있음을 의미합니다!`);
                 return url;
               }
             }
@@ -1263,6 +1511,208 @@ class VideoSaver {
       }, CONSTANTS.TIMEOUTS.SCROLL_DEBOUNCE);
     });
   }
+
+  /**
+   * Blob URL 비디오 처리
+   * @param {string} videoUrl Blob URL
+   * @param {string} postUrl 게시물 URL  
+   * @param {Object} metadata 메타데이터
+   * @param {HTMLVideoElement} videoElement 비디오 요소
+   */
+  async processBlobVideo(videoUrl, postUrl, metadata, videoElement = null) {
+    Utils.log('info', 'blob URL 감지 - Video Element에서 직접 프레임 캡처 시도');
+    
+    let videoBlob;
+    
+    // 현재 화면에서 실제 재생 중인 video element 찾기 (Instagram SPA 대응)
+    const currentVideo = this.findCurrentPlayingVideo();
+    const targetVideo = currentVideo || videoElement;
+    
+    Utils.log('info', `타겟 비디오: ${targetVideo ? '발견됨' : '없음'}, src: ${targetVideo?.src?.substring(0, 50) || 'N/A'}`);
+    
+    // Video Element에서 직접 프레임 캡처 (더 안정적)
+    if (targetVideo) {
+      try {
+        Utils.log('info', '현재 재생 중인 비디오에서 프레임 캡처 중...');
+        videoBlob = await this.captureVideoFrame(targetVideo);
+        Utils.log('info', '✅ Video Element에서 프레임 캡처 성공');
+      } catch (frameError) {
+        Utils.log('error', '프레임 캡처 실패, blob URL 다운로드 시도', frameError);
+        
+        // 프레임 캡처 실패시 blob URL 다운로드 시도
+        try {
+          videoBlob = await this.apiClient.downloadBlobVideo(videoUrl);
+          Utils.log('info', 'Blob URL 다운로드 성공');
+        } catch (blobError) {
+          throw new Error(`비디오 처리 실패: 프레임 캡처(${frameError.message})와 Blob 다운로드(${blobError.message}) 모두 실패`);
+        }
+      }
+    } else {
+      // Video Element가 없으면 blob URL 다운로드만 시도
+      try {
+        videoBlob = await this.apiClient.downloadBlobVideo(videoUrl);
+        Utils.log('info', 'Blob URL 다운로드 성공');
+      } catch (blobError) {
+        throw new Error(`Video Element를 찾을 수 없고 Blob 다운로드도 실패: ${blobError.message}`);
+      }
+    }
+    
+    await this.apiClient.processVideoBlob({
+      platform: CONSTANTS.PLATFORMS.INSTAGRAM,
+      videoBlob,
+      postUrl,
+      metadata
+    });
+  }
+
+  /**
+   * 현재 화면에서 실제로 재생 중인 video element 찾기
+   * @returns {HTMLVideoElement|null} 현재 재생 중인 비디오 요소
+   */
+  findCurrentPlayingVideo() {
+    Utils.log('info', '🔍 현재 재생 중인 video element 검색 시작');
+    
+    const videos = document.querySelectorAll('video');
+    Utils.log('info', `페이지에서 발견된 video 요소 수: ${videos.length}`);
+    
+    for (let i = 0; i < videos.length; i++) {
+      const video = videos[i];
+      
+      // 화면에 보이고 재생 중인 비디오 찾기
+      const rect = video.getBoundingClientRect();
+      const isVisible = rect.width > 0 && rect.height > 0 && 
+                       rect.top < window.innerHeight && rect.bottom > 0;
+      const isPlaying = !video.paused && video.currentTime > 0;
+      
+      Utils.log('info', `Video ${i}: visible=${isVisible}, playing=${isPlaying}, src=${video.src?.substring(0, 30) || 'N/A'}`);
+      
+      if (isVisible && (isPlaying || video.readyState >= 2)) {
+        Utils.log('info', `✅ 활성 비디오 발견: ${i}번째 비디오`);
+        return video;
+      }
+    }
+    
+    // 재생 중인 비디오가 없으면 가장 큰 비디오 반환
+    if (videos.length > 0) {
+      const largestVideo = Array.from(videos).reduce((largest, current) => {
+        const currentRect = current.getBoundingClientRect();
+        const largestRect = largest.getBoundingClientRect();
+        return (currentRect.width * currentRect.height) > (largestRect.width * largestRect.height) ? current : largest;
+      });
+      
+      Utils.log('info', `🎯 대체 비디오 선택: 가장 큰 비디오 사용`);
+      return largestVideo;
+    }
+    
+    Utils.log('warn', '❌ 사용 가능한 video element를 찾을 수 없음');
+    return null;
+  }
+
+  /**
+   * 비디오가 준비될 때까지 대기
+   * @param {HTMLVideoElement} videoElement 비디오 요소
+   * @param {number} timeout 타임아웃 (밀리초)
+   */
+  waitForVideoReady(videoElement, timeout = 3000) {
+    return new Promise((resolve, reject) => {
+      if (videoElement.readyState >= 2) {
+        resolve();
+        return;
+      }
+
+      const timeoutId = setTimeout(() => {
+        videoElement.removeEventListener('loadeddata', onReady);
+        videoElement.removeEventListener('error', onError);
+        Utils.log('warn', '비디오 로딩 타임아웃');
+        resolve(); // 타임아웃이어도 계속 진행
+      }, timeout);
+
+      const onReady = () => {
+        clearTimeout(timeoutId);
+        videoElement.removeEventListener('loadeddata', onReady);
+        videoElement.removeEventListener('error', onError);
+        Utils.log('info', '비디오 로딩 완료');
+        resolve();
+      };
+
+      const onError = (e) => {
+        clearTimeout(timeoutId);
+        videoElement.removeEventListener('loadeddata', onReady);
+        videoElement.removeEventListener('error', onError);
+        Utils.log('error', '비디오 로딩 오류:', e);
+        resolve(); // 오류여도 계속 진행
+      };
+
+      videoElement.addEventListener('loadeddata', onReady);
+      videoElement.addEventListener('error', onError);
+    });
+  }
+
+  /**
+   * Video Element에서 현재 프레임 캡처
+   * @param {HTMLVideoElement} videoElement 비디오 요소
+   * @returns {Promise<Blob>} 캡처된 이미지 Blob
+   */
+  async captureVideoFrame(videoElement) {
+    try {
+      Utils.log('info', 'Video element에서 직접 프레임 캡처 시작');
+      
+      if (!videoElement || videoElement.tagName !== 'VIDEO') {
+        throw new Error('유효한 video element가 아닙니다.');
+      }
+
+      // 비디오 상태 상세 로깅
+      Utils.log('info', `비디오 상태: paused=${videoElement.paused}, currentTime=${videoElement.currentTime}, readyState=${videoElement.readyState}, videoWidth=${videoElement.videoWidth}, videoHeight=${videoElement.videoHeight}`);
+      Utils.log('info', `비디오 src: ${videoElement.src?.substring(0, 50) || 'N/A'}`);
+
+      // 비디오가 준비될 때까지 대기 (최대 3초)
+      if (videoElement.readyState < 2) {
+        Utils.log('info', '비디오 로딩 대기 중...');
+        await this.waitForVideoReady(videoElement, 3000);
+      }
+
+      // 비디오가 일시정지 상태면 잠시 재생하여 프레임 확보
+      const wasPaused = videoElement.paused;
+      if (wasPaused) {
+        Utils.log('info', '일시정지된 비디오를 잠시 재생하여 프레임 확보');
+        videoElement.play();
+        // 짧은 재생 후 다시 일시정지
+        await new Promise(resolve => setTimeout(resolve, 100));
+        if (wasPaused) videoElement.pause();
+      }
+
+      // Canvas 생성 및 프레임 캡처
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      canvas.width = videoElement.videoWidth || videoElement.clientWidth || 640;
+      canvas.height = videoElement.videoHeight || videoElement.clientHeight || 360;
+      
+      Utils.log('info', `캡처 해상도: ${canvas.width}x${canvas.height}`);
+      
+      // 캡처 전 컨텍스트 클리어
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+      
+      // Canvas를 Blob으로 변환
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) {
+            Utils.log('info', `프레임 캡처 완료: ${blob.size} bytes`);
+            resolve(blob);
+          } else {
+            reject(new Error('Canvas to Blob 변환 실패'));
+          }
+        }, 'image/jpeg', 0.8);
+      });
+
+      return blob;
+      
+    } catch (error) {
+      Utils.log('error', 'Video 프레임 캡처 실패', error);
+      throw error;
+    }
+  }
 }
 
 // 콘텐츠 스크립트 실행 - 기존과 동일
@@ -1274,6 +1724,36 @@ if (window.location.hostname.includes('instagram.com') ||
     window.location.hostname.includes('tiktok.com')) {
   console.log('✅ 지원되는 플랫폼에서 VideoSaver 초기화');
   window.videoSaver = new VideoSaver();
+  
+  // URL 변경 감지 및 자동 새로고침 (Instagram SPA 대응)
+  let currentUrl = window.location.href;
+  
+  const urlChangeWatcher = () => {
+    const newUrl = window.location.href;
+    if (newUrl !== currentUrl) {
+      console.log('🔄 URL 변경 감지:', currentUrl, '→', newUrl);
+      currentUrl = newUrl;
+      
+      // 새로운 페이지에서 버튼 다시 생성 (지연 후 실행)
+      setTimeout(() => {
+        if (window.videoSaver) {
+          window.videoSaver.enhanceInstagramSaveButtons();
+        }
+      }, 2000); // Instagram 콘텐츠 로딩 대기
+    }
+  };
+  
+  // URL 변경 감지 (Instagram SPA 네비게이션 대응)
+  setInterval(urlChangeWatcher, 1000); // 1초마다 확인
+  
+  // popstate 이벤트도 추가 (뒤로가기/앞으로가기)
+  window.addEventListener('popstate', () => {
+    setTimeout(() => {
+      if (window.videoSaver) {
+        window.videoSaver.enhanceInstagramSaveButtons();
+      }
+    }, 2000);
+  });
   
   // 기존 글로벌 함수들 유지
   window.refreshVideoSaver = () => {

@@ -28,7 +28,12 @@
       "Bash(tasklist:*)",
       "Bash(timeout:*)",
       "Bash(npm run server:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(dir:*)",
+      "Read(C:\\Users\\j0821\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Extensions\\ifebedegonbbimebaojpnhhhihdgjben\\2.0.8_0/**)",
+      "Read(C:\\Users\\j0821\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Extensions\\ifebedegonbbimebaojpnhhhihdgjben\\2.0.8_0/**)",
+      "Read(C:\\Users\\j0821\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Extensions\\ifebedegonbbimebaojpnhhhihdgjben\\2.0.8_0/**)",
+      "Read(C:\\Users\\j0821\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Extensions\\ifebedegonbbimebaojpnhhhihdgjben\\2.0.8_0\\js/**)"
     ],
     "deny": [],
     "ask": []

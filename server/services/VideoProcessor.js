@@ -33,7 +33,9 @@ class VideoProcessor {
 
   async downloadVideo(videoUrl, platform) {
     try {
-      console.log(`다운로드 시작: ${videoUrl}`);
+      console.log(`🔗 다운로드 시작 - Platform: ${platform}`);
+      console.log(`🔗 Video URL: ${videoUrl}`);
+      console.log(`🔗 URL 첫 100자: ${videoUrl.substring(0, 100)}...`);
       
       // blob URL 체크
       if (videoUrl.startsWith('blob:')) {
@@ -44,6 +46,8 @@ class VideoProcessor {
       const timestamp = Date.now();
       const filename = `${platform}_${timestamp}.mp4`;
       const filePath = path.join(this.downloadDir, filename);
+      
+      console.log(`📁 저장 경로: ${filePath}`);
       
       // 비디오 다운로드
       const response = await axios({
@@ -56,14 +60,27 @@ class VideoProcessor {
         }
       });
 
+      console.log(`📦 Response status: ${response.status}`);
+      console.log(`📦 Content-Type: ${response.headers['content-type']}`);
+      console.log(`📦 Content-Length: ${response.headers['content-length']}`);
+      
+
       // 파일 스트림 생성
       const writer = fs.createWriteStream(filePath);
       response.data.pipe(writer);
 
       return new Promise((resolve, reject) => {
         writer.on('finish', () => {
-          console.log(`✅ 비디오 다운로드 완료: ${filename}`);
-          resolve(filePath);
+          try {
+            const stats = fs.statSync(filePath);
+            console.log(`✅ 비디오 다운로드 완료: ${filename}`);
+            console.log(`📊 파일 크기: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+            console.log(`🕒 다운로드 시간: ${new Date().toISOString()}`);
+            resolve(filePath);
+          } catch (error) {
+            console.error('파일 정보 확인 실패:', error);
+            resolve(filePath); // 파일은 다운로드됐으므로 resolve
+          }
         });
         writer.on('error', (error) => {
           console.error('비디오 다운로드 실패:', error);
@@ -92,7 +109,8 @@ class VideoProcessor {
       
       if (fileType === 'image') {
         console.log(`📷 이미지 파일 감지 - 원본을 썸네일로 복사: ${videoPath}`);
-        const thumbnailPath = path.join(this.thumbnailDir, `${videoName}_thumb.jpg`);
+        const timestamp = Date.now();
+        const thumbnailPath = path.join(this.thumbnailDir, `${videoName}_thumb_${timestamp}.jpg`);
         fs.copyFileSync(videoPath, thumbnailPath);
         console.log(`✅ 이미지 썸네일 생성 완료: ${path.basename(thumbnailPath)}`);
         return [thumbnailPath]; // 배열로 반환하여 일관성 유지
@@ -114,7 +132,8 @@ class VideoProcessor {
 
   async generateSingleThumbnail(videoPath) {
     const videoName = path.basename(videoPath, path.extname(videoPath));
-    const thumbnailPath = path.join(this.thumbnailDir, `${videoName}_thumb.jpg`);
+    const timestamp = Date.now();
+    const thumbnailPath = path.join(this.thumbnailDir, `${videoName}_thumb_${timestamp}.jpg`);
     
     console.log(`🎬 단일 썸네일 생성: ${videoPath} -> ${thumbnailPath}`);
     
@@ -173,12 +192,13 @@ class VideoProcessor {
       console.log(`📸 ${frameCount}개 프레임을 추출합니다: [${intervals.map(t => `${t}초`).join(', ')}]`);
       
       const videoName = path.basename(videoPath, path.extname(videoPath));
+      const timestamp = Date.now();
       const framePaths = [];
       
       // 각 시점별 프레임 추출
       for (let i = 0; i < intervals.length; i++) {
         const time = intervals[i];
-        const framePath = path.join(this.thumbnailDir, `${videoName}_frame_${i+1}_${time}s.jpg`);
+        const framePath = path.join(this.thumbnailDir, `${videoName}_frame_${i+1}_${time}s_${timestamp}.jpg`);
         
         await this.extractFrameAtTime(videoPath, time, framePath);
         framePaths.push(framePath);
