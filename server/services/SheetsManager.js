@@ -146,7 +146,7 @@ class SheetsManager {
 
   async setupHeaders() {
     const headers = [
-      '번호', '일시', '플랫폼', '계정', '설명', '대카테고리', '중카테고리',
+      '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리',
       '키워드', '분석내용', '좋아요', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
     ];
 
@@ -200,7 +200,7 @@ class SheetsManager {
 
       const currentHeaders = currentHeaderResponse.data.values?.[0] || [];
       const expectedHeaders = [
-        '번호', '일시', '플랫폼', '계정', '설명', '대카테고리', '중카테고리',
+        '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리',
         '키워드', '분석내용', '좋아요', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
       ];
 
@@ -334,13 +334,12 @@ class SheetsManager {
       const nextRow = (lastRowResponse.data.values?.length || 1) + 1;
       const rowNumber = nextRow - 1; // 헤더 제외
 
-      // 데이터 행 구성
+      // 데이터 행 구성 (설명 컬럼 제거됨)
       const rowData = [
         rowNumber,                                    // 번호
         new Date(timestamp).toLocaleString('ko-KR'), // 일시
         platform.toUpperCase(),                      // 플랫폼
-        metadata.author || '', // 계정 (이미 Instagram URL 형식으로 포맷됨)
-        metadata.description || metadata.caption || '',                    // 설명 (릴스 설명 내용)
+        metadata.author || '',                       // 계정 (Instagram URL 형식)
         analysis.mainCategory || '미분류',            // 대카테고리
         analysis.middleCategory || '미분류',          // 중카테고리
         analysis.keywords?.join(', ') || '',         // 키워드
@@ -467,10 +466,9 @@ class SheetsManager {
         timestamp: row[1],
         platform: row[2],
         account: row[3],                        // 계정
-        description: row[4],                    // 설명
-        mainCategory: row[5],
-        middleCategory: row[6],
-        keywords: row[7]?.split(', ') || [],
+        mainCategory: row[4],                   // 설명 컬럼 제거로 인덱스 -1
+        middleCategory: row[5],
+        keywords: row[6]?.split(', ') || [],
         content: row[8],                        // 분석내용
         likes: row[9],
         hashtags: row[10]?.split(' ') || [],
