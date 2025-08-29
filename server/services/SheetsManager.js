@@ -104,7 +104,7 @@ class SheetsManager {
                 title: '영상 목록',
                 gridProperties: {
                   rowCount: 1000,
-                  columnCount: 17
+                  columnCount: 15
                 }
               }
             },
@@ -147,12 +147,12 @@ class SheetsManager {
   async setupHeaders() {
     const headers = [
       '번호', '일시', '플랫폼', '작성자', '제목/캡션', '대카테고리', '중카테고리',
-      '키워드', '분석내용', '분위기', '색감', '좋아요', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
+      '키워드', '분석내용', '좋아요', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
     ];
 
     await this.sheets.spreadsheets.values.update({
       spreadsheetId: this.spreadsheetId,
-      range: `${await this.getFirstSheetName()}!A1:Q1`,
+      range: `${await this.getFirstSheetName()}!A1:O1`,
       valueInputOption: 'RAW',
       resource: {
         values: [headers]
@@ -171,7 +171,7 @@ class SheetsManager {
                 startRowIndex: 0,
                 endRowIndex: 1,
                 startColumnIndex: 0,
-                endColumnIndex: 17
+                endColumnIndex: 15
               },
               cell: {
                 userEnteredFormat: {
@@ -201,7 +201,7 @@ class SheetsManager {
       const currentHeaders = currentHeaderResponse.data.values?.[0] || [];
       const expectedHeaders = [
         '번호', '일시', '플랫폼', '작성자', '제목/캡션', '대카테고리', '중카테고리',
-        '키워드', '분석내용', '분위기', '색감', '좋아요', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
+        '키워드', '분석내용', '좋아요', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
       ];
 
       // 헤더가 다르거나 길이가 다르면 업데이트
@@ -216,7 +216,7 @@ class SheetsManager {
         // 헤더 업데이트
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
-          range: `${sheetName}!A1:Q1`,
+          range: `${sheetName}!A1:O1`,
           valueInputOption: 'RAW',
           resource: {
             values: [expectedHeaders]
@@ -235,7 +235,7 @@ class SheetsManager {
                     startRowIndex: 0,
                     endRowIndex: 1,
                     startColumnIndex: 0,
-                    endColumnIndex: 17
+                    endColumnIndex: 15
                   },
                   cell: {
                     userEnteredFormat: {
@@ -315,11 +315,9 @@ class SheetsManager {
         analysis.mainCategory || '미분류',            // 대카테고리
         analysis.middleCategory || '미분류',          // 중카테고리
         analysis.keywords?.join(', ') || '',         // 키워드
-        analysis.content || '',                      // 분석내용 (새로 추가)
-        analysis.mood || '',                         // 분위기
-        analysis.colorTone || '',                    // 색감
+        analysis.content || '',                      // 분석내용
         metadata.likes || '0',                       // 좋아요
-        analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그 (AI 분석 우선, 폴백으로 메타데이터)
+        analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그
         postUrl,                                     // URL
         path.basename(videoPath),                    // 파일경로
         (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
@@ -332,7 +330,7 @@ class SheetsManager {
       // 스프레드시트에 데이터 추가
       await this.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A${nextRow}:Q${nextRow}`,
+        range: `${sheetName}!A${nextRow}:O${nextRow}`,
         valueInputOption: 'RAW',
         resource: {
           values: [rowData]
@@ -362,7 +360,7 @@ class SheetsManager {
       const sheetName = await this.getFirstSheetName();
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A2:Q`  // 헤더 제외
+        range: `${sheetName}!A2:O`  // 헤더 제외
       });
 
       const data = response.data.values || [];
@@ -371,16 +369,13 @@ class SheetsManager {
       // 카테고리별 통계 계산
       const categoryStats = {};
       const platformStats = {};
-      const moodStats = {};
 
       data.forEach(row => {
         const platform = row[2] || '미분류';
         const category = row[5] || '미분류';
-        const mood = row[9] || '미분류';  // mood 인덱스 수정 (8→9)
 
         categoryStats[category] = (categoryStats[category] || 0) + 1;
         platformStats[platform] = (platformStats[platform] || 0) + 1;
-        moodStats[mood] = (moodStats[mood] || 0) + 1;
       });
 
       // 통계 시트 업데이트
@@ -399,15 +394,6 @@ class SheetsManager {
           .sort(([,a], [,b]) => b - a)
           .map(([platform, count]) => [
             platform, 
-            count, 
-            `${(count / data.length * 100).toFixed(1)}%`
-          ]),
-        [''],
-        ['분위기별 통계', '개수', '비율'],
-        ...Object.entries(moodStats)
-          .sort(([,a], [,b]) => b - a)
-          .map(([mood, count]) => [
-            mood, 
             count, 
             `${(count / data.length * 100).toFixed(1)}%`
           ])
@@ -443,7 +429,7 @@ class SheetsManager {
       const sheetName = await this.getFirstSheetName();
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A2:Q${limit + 1}`
+        range: `${sheetName}!A2:O${limit + 1}`
       });
 
       const data = response.data.values || [];
@@ -456,15 +442,13 @@ class SheetsManager {
         mainCategory: row[5],
         middleCategory: row[6],
         keywords: row[7]?.split(', ') || [],
-        content: row[8],                        // 분석내용 추가
-        mood: row[9],
-        colorTone: row[10],
-        likes: row[11],
-        hashtags: row[12]?.split(' ') || [],
-        url: row[13],
-        filename: row[14],
-        confidence: row[15],
-        source: row[16]
+        content: row[8],                        // 분석내용
+        likes: row[9],
+        hashtags: row[10]?.split(' ') || [],
+        url: row[11],
+        filename: row[12],
+        confidence: row[13],
+        source: row[14]
       }));
     } catch (error) {
       throw new Error(`데이터 조회 실패: ${error.message}`);
