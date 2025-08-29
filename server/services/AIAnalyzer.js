@@ -544,6 +544,24 @@ class AIAnalyzer {
     };
   }
 
+  // AI 카테고리 유효성 검증 함수
+  validateCategoryPair(mainCategory, middleCategory) {
+    if (!mainCategory || !middleCategory) {
+      return { isValid: false, reason: 'Missing category' };
+    }
+    
+    // 카테고리 체계에서 유효한 조합인지 확인
+    if (!this.categories[mainCategory]) {
+      return { isValid: false, reason: 'Invalid main category' };
+    }
+    
+    if (!this.categories[mainCategory][middleCategory]) {
+      return { isValid: false, reason: 'Invalid middle category for main category' };
+    }
+    
+    return { isValid: true };
+  }
+
   findBestCategoryMatch(keyword, preferredMainCategory = null) {
     console.log('🔄 카테고리 매칭 시도:', { keyword, preferredMainCategory });
     
@@ -678,29 +696,39 @@ class AIAnalyzer {
   // 간단한 AI 프롬프트 (일관성 향상)
   buildSimpleAnalysisPrompt(metadata) {
     const platform = metadata.platform || '소셜미디어';
-    return `이 ${platform} 영상의 스크린샷을 분석해주세요. 다음 항목을 자세히 분석해주세요:
+    return `이 ${platform} 영상의 스크린샷을 보고 정확한 카테고리를 분류해주세요.
 
-1. **시각적 내용 분석**:
-   - 화면에 보이는 주요 인물, 객체, 배경
-   - 텍스트나 자막이 있다면 그 내용
-   - 색상, 분위기, 스타일
+**이미지 분석 지침:**
+1. 화면에 보이는 주요 내용 (인물, 객체, 배경, 텍스트, 자막)
+2. 영상의 주제와 목적 (요리, 패션, 게임, 교육, 엔터테인먼트 등)
+3. 시각적 단서들 (UI, 브랜드, 로고, 환경)
 
-2. **콘텐츠 추론**:
-   - 어떤 종류의 콘텐츠인지 (요리, 패션, 일상, 뉴스, 엔터테인먼트 등)
-   - 영상의 주제나 목적 추측
-   - 대상 연령층이나 타겟 오디언스
+**카테고리 분류 체계** (반드시 이 중에서 선택):
+• 게임 → 플레이·리뷰 | 가이드·분석 | e스포츠 | 장르 전문
+• 과학·기술 → 디바이스 리뷰 | 프로그래밍·코딩 강좌 | 과학 이론·실험 | 미래 트렌드
+• 교육 → 외국어 강의 | 학문·교양 | 시험·자격증 대비 | 자기계발·학습법
+• How-to & 라이프스타일 → 생활 꿀팁·가전·정리 | DIY·인테리어·홈데코 | 패션·뷰티·헤어 | 건강·운동·식단
+• 요리·먹방 → 요리·레시피 | 먹방·맛집·리뷰 | 베이킹·카페·디저트 | 다이어트·건강식
+• 사회·공익 → 시사·정치·경제 | 사회 문제·환경 | 공익·자선·봉사 | 인권·정의·평등
+• 동물 → 반려동물 브이로그 | 훈련·케어·정보 | 야생동물·자연 다큐
+• 엔터테인먼트 → 예능·밈·챌린지 | 연예 뉴스·K-culture | 웹드라마·웹예능 | 이벤트·라이브 쇼
+• 여행·이벤트 → 여행 Vlog | 정보·꿀팁·루트 | 테마 여행·캠핑·차박 | 축제·콘서트 스케치
+• 영화·드라마·애니 → 공식 예고편·클립 | 리뷰·해석 | 제작 비하인드·메이킹 | 팬 애니메이션·단편
+• 음악 → 뮤직비디오 | 커버·리믹스 | 라이브·버스킹 | 악기 연주·작곡 강좌
+• 라이프·블로그 → 일상 Vlog·Q&A | 경험담·스토리텔링 | 동기부여·마인드셋 | 가족·커플·룸메이트 일상
+• 자동차·모빌리티 → 신차 리뷰·시승 | 정비·케어·튜닝 | 모터스포츠 | 드라이브·차박 Vlog
+• 코미디 → 스케치·콩트 | 패러디·풍자 | 몰래카메라·리액션 | 스탠드업·개그 톡
 
-3. **키워드 추출**:
-   - 콘텐츠와 관련된 한글 키워드 5-8개
-   - 브랜드, 장소, 인물명이 보이면 포함
-
-반드시 JSON 형식으로 답변해주세요:
+**JSON 응답 형식:**
 {
-  "content": "영상 내용에 대한 상세한 분석 (최소 3-4문장)",
+  "main_category": "대카테고리명",
+  "middle_category": "중카테고리명", 
+  "content": "영상 내용 분석 (2-3문장)",
   "keywords": ["키워드1", "키워드2", "키워드3", "키워드4", "키워드5"],
-  "category": "콘텐츠 카테고리",
-  "target_audience": "예상 타겟층"
-}`;
+  "hashtags": ["#해시태그1", "#해시태그2", "#해시태그3", "#해시태그4", "#해시태그5"]
+}
+
+**중요:** main_category와 middle_category는 반드시 위의 정확한 카테고리명을 사용해야 합니다.`;
   }
 
   // 다중 프레임 분석용 프롬프트
@@ -889,8 +917,9 @@ JSON 형식으로 답변:
       let aiData = { 
         content: '영상 내용', 
         keywords: [], 
-        category: '일반',
-        target_audience: '일반' 
+        hashtags: [],
+        main_category: null,
+        middle_category: null
       };
       
       if (aiResponse) {
@@ -905,8 +934,9 @@ JSON 형식으로 답변:
             
             aiData.content = parsed.content || '영상 내용';
             aiData.keywords = Array.isArray(parsed.keywords) ? parsed.keywords : [];
-            aiData.category = parsed.category || '일반';
-            aiData.target_audience = parsed.target_audience || '일반';
+            aiData.hashtags = Array.isArray(parsed.hashtags) ? parsed.hashtags : [];
+            aiData.main_category = parsed.main_category;
+            aiData.middle_category = parsed.middle_category;
             
             console.log('✅ AI 데이터 추출 성공:', aiData);
           } catch (e) {
@@ -921,16 +951,38 @@ JSON 형식으로 답변:
         console.log('❌ AI 응답이 null 또는 undefined');
       }
       
-      // URL 기반 카테고리 + AI 콘텐츠 결합
+      // AI가 카테고리를 제대로 분석했는지 검증
+      let finalMainCategory = urlBasedCategory.mainCategory;
+      let finalMiddleCategory = urlBasedCategory.middleCategory;
+      
+      if (aiData.main_category && aiData.middle_category) {
+        // AI 카테고리 유효성 검증
+        const validation = this.validateCategoryPair(aiData.main_category, aiData.middle_category);
+        if (validation.isValid) {
+          console.log('✅ AI 카테고리 분석 성공, AI 분류 사용:', {
+            main: aiData.main_category,
+            middle: aiData.middle_category
+          });
+          finalMainCategory = aiData.main_category;
+          finalMiddleCategory = aiData.middle_category;
+        } else {
+          console.log('❌ AI 카테고리 무효, URL 기반 카테고리 사용:', {
+            ai_main: aiData.main_category,
+            ai_middle: aiData.middle_category,
+            url_main: urlBasedCategory.mainCategory,
+            url_middle: urlBasedCategory.middleCategory
+          });
+        }
+      }
+      
+      // 최종 분석 결과 반환
       return {
         content: aiData.content,
-        mainCategory: urlBasedCategory.mainCategory,
-        middleCategory: urlBasedCategory.middleCategory,
-        aiCategory: aiData.category, // AI가 추론한 카테고리
-        targetAudience: aiData.target_audience, // AI가 추론한 타겟층
-        keywords: aiData.keywords.slice(0, 8), // 키워드 수 확장
-        hashtags: this.generateHashtagsFromKeywords(aiData.keywords),
-        confidence: 0.8, // 하이브리드 분석의 높은 신뢰도
+        mainCategory: finalMainCategory,
+        middleCategory: finalMiddleCategory,
+        keywords: aiData.keywords.slice(0, 5),
+        hashtags: aiData.hashtags.length > 0 ? aiData.hashtags : this.generateHashtagsFromKeywords(aiData.keywords),
+        confidence: aiData.main_category ? 0.9 : 0.6, // AI 카테고리 성공시 높은 신뢰도
         source: 'HYBRID'
       };
       

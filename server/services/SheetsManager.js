@@ -104,7 +104,7 @@ class SheetsManager {
                 title: '영상 목록',
                 gridProperties: {
                   rowCount: 1000,
-                  columnCount: 15
+                  columnCount: 17
                 }
               }
             },
@@ -147,12 +147,12 @@ class SheetsManager {
   async setupHeaders() {
     const headers = [
       '번호', '일시', '플랫폼', '작성자', '제목/캡션', '대카테고리', '중카테고리',
-      '키워드', '분위기', '색감', '좋아요', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
+      '키워드', '분석내용', '분위기', '색감', '좋아요', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
     ];
 
     await this.sheets.spreadsheets.values.update({
       spreadsheetId: this.spreadsheetId,
-      range: `${await this.getFirstSheetName()}!A1:P1`,
+      range: `${await this.getFirstSheetName()}!A1:Q1`,
       valueInputOption: 'RAW',
       resource: {
         values: [headers]
@@ -171,7 +171,7 @@ class SheetsManager {
                 startRowIndex: 0,
                 endRowIndex: 1,
                 startColumnIndex: 0,
-                endColumnIndex: 15
+                endColumnIndex: 17
               },
               cell: {
                 userEnteredFormat: {
@@ -185,6 +185,80 @@ class SheetsManager {
         ]
       }
     });
+  }
+
+  // 기존 스프레드시트의 헤더가 최신 버전인지 확인하고 업데이트
+  async ensureUpdatedHeaders() {
+    try {
+      const sheetName = await this.getFirstSheetName();
+      
+      // 현재 헤더 조회
+      const currentHeaderResponse = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: `${sheetName}!1:1`
+      });
+
+      const currentHeaders = currentHeaderResponse.data.values?.[0] || [];
+      const expectedHeaders = [
+        '번호', '일시', '플랫폼', '작성자', '제목/캡션', '대카테고리', '중카테고리',
+        '키워드', '분석내용', '분위기', '색감', '좋아요', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
+      ];
+
+      // 헤더가 다르거나 길이가 다르면 업데이트
+      const needsUpdate = currentHeaders.length !== expectedHeaders.length || 
+                         !expectedHeaders.every((header, index) => currentHeaders[index] === header);
+
+      if (needsUpdate) {
+        console.log('🔄 스프레드시트 헤더 업데이트 중...');
+        console.log('기존 헤더:', currentHeaders);
+        console.log('새 헤더:', expectedHeaders);
+
+        // 헤더 업데이트
+        await this.sheets.spreadsheets.values.update({
+          spreadsheetId: this.spreadsheetId,
+          range: `${sheetName}!A1:Q1`,
+          valueInputOption: 'RAW',
+          resource: {
+            values: [expectedHeaders]
+          }
+        });
+
+        // 헤더 스타일링도 업데이트
+        await this.sheets.spreadsheets.batchUpdate({
+          spreadsheetId: this.spreadsheetId,
+          resource: {
+            requests: [
+              {
+                repeatCell: {
+                  range: {
+                    sheetId: 0,
+                    startRowIndex: 0,
+                    endRowIndex: 1,
+                    startColumnIndex: 0,
+                    endColumnIndex: 17
+                  },
+                  cell: {
+                    userEnteredFormat: {
+                      backgroundColor: { red: 0.2, green: 0.6, blue: 1.0 },
+                      textFormat: { bold: true, foregroundColor: { red: 1, green: 1, blue: 1 } }
+                    }
+                  },
+                  fields: 'userEnteredFormat(backgroundColor,textFormat)'
+                }
+              }
+            ]
+          }
+        });
+
+        console.log('✅ 스프레드시트 헤더 업데이트 완료');
+      } else {
+        console.log('✅ 스프레드시트 헤더가 이미 최신 상태입니다');
+      }
+
+    } catch (error) {
+      console.error('❌ 헤더 업데이트 실패:', error.message);
+      // 헤더 업데이트 실패해도 계속 진행
+    }
   }
 
   loadSpreadsheetId() {
@@ -214,6 +288,9 @@ class SheetsManager {
         }
       }
 
+      // 기존 스프레드시트의 헤더 업데이트 확인 및 적용
+      await this.ensureUpdatedHeaders();
+
       const { platform, postUrl, videoPath, thumbnailPath, metadata, analysis, timestamp } = videoData;
 
       // 첫 번째 시트 이름 가져오기
@@ -238,10 +315,11 @@ class SheetsManager {
         analysis.mainCategory || '미분류',            // 대카테고리
         analysis.middleCategory || '미분류',          // 중카테고리
         analysis.keywords?.join(', ') || '',         // 키워드
+        analysis.content || '',                      // 분석내용 (새로 추가)
         analysis.mood || '',                         // 분위기
         analysis.colorTone || '',                    // 색감
         metadata.likes || '0',                       // 좋아요
-        metadata.hashtags?.join(' ') || '',          // 해시태그
+        analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그 (AI 분석 우선, 폴백으로 메타데이터)
         postUrl,                                     // URL
         path.basename(videoPath),                    // 파일경로
         (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
@@ -254,7 +332,7 @@ class SheetsManager {
       // 스프레드시트에 데이터 추가
       await this.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A${nextRow}:P${nextRow}`,
+        range: `${sheetName}!A${nextRow}:Q${nextRow}`,
         valueInputOption: 'RAW',
         resource: {
           values: [rowData]
@@ -284,7 +362,7 @@ class SheetsManager {
       const sheetName = await this.getFirstSheetName();
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A2:P`  // 헤더 제외
+        range: `${sheetName}!A2:Q`  // 헤더 제외
       });
 
       const data = response.data.values || [];
@@ -298,7 +376,7 @@ class SheetsManager {
       data.forEach(row => {
         const platform = row[2] || '미분류';
         const category = row[5] || '미분류';
-        const mood = row[7] || '미분류';
+        const mood = row[9] || '미분류';  // mood 인덱스 수정 (8→9)
 
         categoryStats[category] = (categoryStats[category] || 0) + 1;
         platformStats[platform] = (platformStats[platform] || 0) + 1;
@@ -365,7 +443,7 @@ class SheetsManager {
       const sheetName = await this.getFirstSheetName();
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A2:P${limit + 1}`
+        range: `${sheetName}!A2:Q${limit + 1}`
       });
 
       const data = response.data.values || [];
@@ -378,14 +456,15 @@ class SheetsManager {
         mainCategory: row[5],
         middleCategory: row[6],
         keywords: row[7]?.split(', ') || [],
-        mood: row[8],
-        colorTone: row[9],
-        likes: row[10],
-        hashtags: row[11]?.split(' ') || [],
-        url: row[12],
-        filename: row[13],
-        confidence: row[14],
-        source: row[15]
+        content: row[8],                        // 분석내용 추가
+        mood: row[9],
+        colorTone: row[10],
+        likes: row[11],
+        hashtags: row[12]?.split(' ') || [],
+        url: row[13],
+        filename: row[14],
+        confidence: row[15],
+        source: row[16]
       }));
     } catch (error) {
       throw new Error(`데이터 조회 실패: ${error.message}`);

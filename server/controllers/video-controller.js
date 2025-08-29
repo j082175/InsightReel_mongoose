@@ -46,6 +46,28 @@ class VideoController {
   });
 
   /**
+   * 수동 헤더 업데이트
+   */
+  updateHeaders = ErrorHandler.asyncHandler(async (req, res) => {
+    try {
+      console.log('🔄 수동 헤더 업데이트 요청');
+      await this.sheetsManager.ensureUpdatedHeaders();
+      
+      res.json({
+        success: true,
+        message: '스프레드시트 헤더가 업데이트되었습니다.',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('❌ 헤더 업데이트 실패:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  /**
    * 헬스 체크
    */
   healthCheck = ErrorHandler.asyncHandler(async (req, res) => {
