@@ -445,7 +445,7 @@ class AIAnalyzer {
           keywords: Array.isArray(parsed.keywords) ? parsed.keywords.slice(0, 5) : [],
           hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags.slice(0, 5) : [],
           confidence: parsed.confidence || 0.7,
-          source: 'AI'
+          source: this.useGemini ? this.geminiModel.model : this.modelName
         };
       }
       
@@ -492,7 +492,7 @@ class AIAnalyzer {
       keywords,
       hashtags,
       confidence: 0.6,
-      source: 'TEXT_PARSE'
+      source: `${this.useGemini ? this.geminiModel.model : this.modelName}-text-parsed`
     };
   }
 
@@ -631,7 +631,7 @@ class AIAnalyzer {
       keywords: this.extractKeywordsFromText(caption + ' ' + hashtags.join(' ')),
       hashtags: this.generateHashtagsFromMetadata(hashtags, categoryResult),
       confidence: 0.5,
-      source: 'FALLBACK'
+      source: 'fallback-analysis'
     };
   }
 
@@ -858,7 +858,7 @@ JSON 형식으로 답변:
       keywords: topKeywords,
       hashtags: hashtags,
       confidence: Math.min(avgConfidence + 0.1, 0.95), // 다중 프레임 보너스
-      source: 'MULTI_FRAME',
+      source: this.useGemini ? this.geminiModel.model : this.modelName,
       frameCount: frameAnalyses.length,
       frameAnalyses: frameAnalyses, // 개별 프레임 분석 결과 보관
       analysis_metadata: {
@@ -983,7 +983,7 @@ JSON 형식으로 답변:
         keywords: aiData.keywords.slice(0, 5),
         hashtags: aiData.hashtags.length > 0 ? aiData.hashtags : this.generateHashtagsFromKeywords(aiData.keywords),
         confidence: aiData.main_category ? 0.9 : 0.6, // AI 카테고리 성공시 높은 신뢰도
-        source: 'HYBRID'
+        source: this.useGemini ? this.geminiModel.model : this.modelName
       };
       
     } catch (error) {
@@ -1003,7 +1003,7 @@ JSON 형식으로 답변:
       keywords: ['인스타그램', '릴스', '영상', '소셜미디어'],
       hashtags: ['#인스타그램', '#릴스', '#영상', '#소셜미디어'],
       confidence: 0.7,
-      source: 'URL_BASED'
+      source: 'url-based-analysis'
     };
   }
 
@@ -1110,7 +1110,7 @@ JSON 형식으로 답변:
         hashtags: this.generateHashtagsFromMetadata(metadata.hashtags || [], categoryResult),
         content: `Gemini 분석 실패: ${error.message}`,
         confidence: 0.3,
-        source: 'FALLBACK_METADATA',
+        source: 'fallback-metadata',
         frameCount: thumbnailPaths.length,
         analysisMethod: 'gemini-fallback'
       };
@@ -1186,7 +1186,7 @@ JSON 형식으로 답변:
         hashtags: Array.isArray(aiResult.hashtags) ? aiResult.hashtags.slice(0, 5) : this.generateHashtagsFromMetadata(metadata.hashtags || [], categoryResult),
         content: aiResult.content || '비디오 분석 결과',
         confidence: aiResult.confidence || 0.8,
-        source: 'gemini-ai'
+        source: this.useGemini ? this.geminiModel.model : this.modelName
       };
       
     } catch (parseError) {
@@ -1239,7 +1239,7 @@ JSON 형식으로 답변:
       hashtags: hashtags.length > 0 ? hashtags : this.generateHashtagsFromMetadata(metadata.hashtags || [], categoryResult),
       content: content,
       confidence: 0.7,
-      source: 'gemini-text-parsed'
+      source: `${this.useGemini ? this.geminiModel.model : this.modelName}-text-parsed`
     };
   }
 
