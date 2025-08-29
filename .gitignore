@@ -1,0 +1,57 @@
+# 영상 및 이미지 파일
+*.mp4
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.mov
+*.avi
+*.mkv
+*.webm
+
+# 다운로드 폴더 전체
+downloads/
+
+# 썸네일 폴더
+thumbnails/
+
+# 로그 파일
+*.log
+logs/
+
+# 임시 파일
+*.tmp
+*.temp
+
+# 시스템 파일
+.DS_Store
+Thumbs.db
+
+# Node.js (서버 관련)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 환경 설정 파일
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 에디터 설정
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS 생성 파일
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

@@ -33,7 +33,17 @@
       "Read(C:\\Users\\j0821\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Extensions\\ifebedegonbbimebaojpnhhhihdgjben\\2.0.8_0/**)",
       "Read(C:\\Users\\j0821\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Extensions\\ifebedegonbbimebaojpnhhhihdgjben\\2.0.8_0/**)",
       "Read(C:\\Users\\j0821\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Extensions\\ifebedegonbbimebaojpnhhhihdgjben\\2.0.8_0/**)",
-      "Read(C:\\Users\\j0821\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Extensions\\ifebedegonbbimebaojpnhhhihdgjben\\2.0.8_0\\js/**)"
+      "Read(C:\\Users\\j0821\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Extensions\\ifebedegonbbimebaojpnhhhihdgjben\\2.0.8_0\\js/**)",
+      "Read(C:\\Users\\j0821\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Extensions\\ifebedegonbbimebaojpnhhhihdgjben\\2.0.8_0\\js/**)",
+      "Read(C:\\Users\\j0821\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Extensions\\ifebedegonbbimebaojpnhhhihdgjben\\2.0.8_0\\js/**)",
+      "Read(C:\\Users\\j0821\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Extensions\\ifebedegonbbimebaojpnhhhihdgjben\\2.0.8_0\\js/**)",
+      "Read(C:\\Users\\j0821\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Extensions\\ifebedegonbbimebaojpnhhhihdgjben\\2.0.8_0\\js/**)",
+      "Read(C:\\Users\\j0821\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Extensions\\ifebedegonbbimebaojpnhhhihdgjben\\2.0.8_0\\js/**)",
+      "Bash(source:*)",
+      "Bash(cargo --version)",
+      "Bash(export PATH=\"$HOME/.cargo/bin:$PATH\")",
+      "Bash(cargo install:*)",
+      "Bash(claudelytics:*)"
     ],
     "deny": [],
     "ask": []
