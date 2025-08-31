@@ -1559,6 +1559,220 @@ window.INSTAGRAM_UI_SYSTEM = {
       return '0';
     }
   },
+
+  // 댓글 수 추출 함수 (좋아요 수 추출과 유사한 로직)
+  extractCommentsCount(container, video) {
+    console.log('💬 댓글 수 추출 중...');
+    
+    try {
+      // 화면 오른쪽 하단 영역에서 댓글 수 찾기
+      const screenHeight = window.innerHeight;
+      const screenWidth = window.innerWidth;
+      
+      const rightBottomArea = {
+        left: screenWidth * 0.7,
+        right: screenWidth,
+        top: screenHeight * 0.3,
+        bottom: screenHeight
+      };
+      
+      // Instagram 새 구조 - 현재 포스트 내 댓글 아이콘 기준 댓글 수 추출
+      const currentVideo = video || (container && (container._instagramCurrentVideo || container.querySelector('video')));
+      let commentButton = null;
+      
+      if (currentVideo) {
+        // 현재 비디오 근처에서 댓글 아이콘 찾기
+        let searchArea = currentVideo;
+        for (let i = 0; i < 5; i++) {
+          searchArea = searchArea.parentElement;
+          if (!searchArea) break;
+          
+          commentButton = searchArea.querySelector('[aria-label="댓글"]');
+          if (commentButton) break;
+        }
+      } else if (container) {
+        // container 내에서 댓글 아이콘 찾기
+        commentButton = container.querySelector('[aria-label="댓글"]');
+      } else {
+        // fallback: 전체 문서에서 댓글 아이콘 찾기
+        commentButton = document.querySelector('[aria-label="댓글"]');
+        console.log('🔍 container가 없어 전체 문서에서 댓글 아이콘 검색');
+      }
+      
+      if (commentButton) {
+        console.log('🎯 현재 포스트에서 댓글 아이콘 발견');
+        
+        // 댓글 버튼 바로 옆에서 댓글 수 찾기
+        let commentsSpan = null;
+        
+        // 방법 1: 댓글 버튼과 같은 level에서 댓글 수 span 찾기
+        const commentParent = commentButton.parentElement;
+        if (commentParent) {
+          const siblingSpans = commentParent.querySelectorAll('span');
+          for (const span of siblingSpans) {
+            const text = span.textContent?.trim();
+            console.log('🔍 댓글 버튼 형제 요소 검사:', text);
+            
+            if (text && this.isCommentsCountPattern(text)) {
+              const spanContext = span.closest('button');
+              const ariaLabel = spanContext?.getAttribute('aria-label') || '';
+              
+              console.log('🔍 댓글 span 컨텍스트 확인:', { text, ariaLabel });
+              
+              if (!ariaLabel.includes('좋아요') && !ariaLabel.includes('like')) {
+                console.log('✅ 현재 포스트 댓글 기준 댓글 수 발견:', text);
+                commentsSpan = span;
+                break;
+              }
+            }
+          }
+        }
+        
+        // 방법 2: 댓글 버튼의 상위 요소에서 댓글 수 찾기
+        if (!commentsSpan) {
+          let parent = commentButton;
+          for (let level = 0; level < 4; level++) {
+            parent = parent.parentElement;
+            if (!parent) break;
+            
+            const spans = parent.querySelectorAll('span');
+            for (const span of spans) {
+              const text = span.textContent?.trim();
+              console.log(`🔍 댓글 상위 ${level+1}단계에서 검사:`, text);
+              
+              if (text && this.isCommentsCountPattern(text)) {
+                const isLikeRelated = 
+                  span.closest('[aria-label*="좋아요"]') || 
+                  span.closest('[aria-label*="like"]') ||
+                  span.closest('button[aria-label*="좋아요"]') ||
+                  span.closest('button[aria-label*="like"]');
+                
+                console.log('🔍 좋아요 관련 여부:', { text, isLikeRelated: !!isLikeRelated });
+                
+                if (!isLikeRelated) {
+                  const commentRect = commentButton.getBoundingClientRect();
+                  const spanRect = span.getBoundingClientRect();
+                  const distance = Math.abs(commentRect.x - spanRect.x) + Math.abs(commentRect.y - spanRect.y);
+                  
+                  console.log('🔍 댓글 버튼과 거리:', distance);
+                  
+                  if (distance < 200) {
+                    console.log('✅ 현재 포스트 댓글 기준 댓글 수 발견 (상위 요소):', text);
+                    commentsSpan = span;
+                    break;
+                  }
+                }
+              }
+            }
+            
+            if (commentsSpan) break;
+          }
+        }
+        
+        if (commentsSpan) {
+          return this.normalizeCommentsCount(commentsSpan.textContent.trim());
+        }
+      }
+      
+      // 위치 기반 검색으로 폴백
+      const allElements = document.querySelectorAll('span, div, button');
+      const commentCandidates = [];
+      
+      for (const element of allElements) {
+        const rect = element.getBoundingClientRect();
+        
+        if (rect.left >= rightBottomArea.left && 
+            rect.right <= rightBottomArea.right && 
+            rect.top >= rightBottomArea.top && 
+            rect.bottom <= rightBottomArea.bottom) {
+          
+          const text = (element.innerText || element.textContent || '').trim();
+          
+          if (text && this.isCommentsCountPattern(text)) {
+            // 좋아요 관련 요소가 아닌지 확인
+            const isLikeRelated = element.closest('[aria-label*="좋아요"]') || 
+                                element.closest('[aria-label*="like"]');
+                                
+            if (!isLikeRelated) {
+              commentCandidates.push({
+                count: text,
+                element: element,
+                position: { x: rect.left, y: rect.top }
+              });
+            }
+          }
+        }
+      }
+      
+      if (commentCandidates.length > 0) {
+        // 댓글 수는 보통 좋아요 수보다 작으므로, 가장 작은 수를 선택
+        const bestCandidate = commentCandidates.reduce((best, current) => {
+          const bestNum = parseInt(best.count.replace(/[^0-9]/g, ''));
+          const currentNum = parseInt(current.count.replace(/[^0-9]/g, ''));
+          return currentNum < bestNum ? current : best;
+        });
+        
+        console.log('✅ 위치 기반으로 댓글 수 발견:', bestCandidate.count);
+        return this.normalizeCommentsCount(bestCandidate.count);
+      }
+      
+      console.log('ℹ️ 댓글 수를 찾을 수 없음, 기본값 0 반환');
+      return '0';
+      
+    } catch (error) {
+      console.error('❌ 댓글 수 추출 중 오류:', error);
+      return '0';
+    }
+  },
+
+  // 댓글 수 패턴 확인
+  isCommentsCountPattern(text) {
+    if (!text) return false;
+    
+    // 숫자만 있는 경우 (예: 86)
+    if (text.match(/^\d{1,}$/)) return true;
+    
+    // 한국어 단위가 포함된 경우 (예: 1천)
+    if (text.match(/^\d+([.,]\d+)?[천]$/)) return true;
+    
+    // 숫자 + K 형식 (예: 1K)
+    if (text.match(/^\d+([.,]\d+)?[Kk]$/)) return true;
+    
+    // 쉼표가 포함된 숫자 (예: 1,234)
+    if (text.match(/^\d{1,3}(,\d{3})*$/)) return true;
+    
+    // 댓글 텍스트가 포함된 경우는 제외
+    if (text.includes('댓글') || text.includes('comment')) return false;
+    
+    return false;
+  },
+
+  // 댓글 수 정규화
+  normalizeCommentsCount(text) {
+    if (!text) return '0';
+    
+    text = text.trim();
+    
+    // 이미 숫자만 있는 경우
+    if (text.match(/^\d+$/)) return text;
+    
+    // 쉼표 제거
+    if (text.includes(',')) {
+      return text.replace(/,/g, '');
+    }
+    
+    // 천 단위 처리
+    if (text.includes('천')) {
+      return text; // "1천" 그대로 유지
+    }
+    
+    // K 단위 처리 (댓글에서는 흔하지 않지만)
+    if (text.includes('K') || text.includes('k')) {
+      return text; // "1K" 그대로 유지
+    }
+    
+    return text;
+  },
   
   // 좋아요 수 패턴 확인
   isLikesCountPattern(text) {
@@ -2191,6 +2405,13 @@ window.INSTAGRAM_UI_SYSTEM = {
     if (likesCount && likesCount !== '0') {
       virtualPost._instagramLikes = likesCount;
       console.log('❤️ virtualPost에 좋아요 수 추가:', likesCount);
+    }
+    
+    // 댓글 수 추출 및 추가
+    const commentsCount = this.extractCommentsCount(null, currentVideo);
+    if (commentsCount && commentsCount !== '0') {
+      virtualPost._instagramComments = commentsCount;
+      console.log('💬 virtualPost에 댓글 수 추가:', commentsCount);
     }
     
     // shortcode 정보를 URL에 포함
@@ -2991,6 +3212,12 @@ class VideoSaver {
     if (post && post._instagramLikes) {
       Utils.log('info', '❤️ Instagram UI System에서 전달된 좋아요 수 보존:', post._instagramLikes);
       metadata.likes = post._instagramLikes;
+    }
+    
+    // Instagram UI System에서 전달된 댓글 수 정보 보존
+    if (post && post._instagramComments) {
+      Utils.log('info', '💬 Instagram UI System에서 전달된 댓글 수 보존:', post._instagramComments);
+      metadata.comments = post._instagramComments;
     }
     
     const analysisId = `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
