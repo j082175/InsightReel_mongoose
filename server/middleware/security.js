@@ -1,3 +1,5 @@
+const { ServerLogger } = require('../utils/logger');
+
 /**
  * 보안 미들웨어
  */
@@ -53,7 +55,7 @@ class SecurityMiddleware {
       res.setHeader('Access-Control-Allow-Origin', origin);
     } else {
       // 허용되지 않은 도메인 - 기존처럼 에러가 아닌 경고만
-      console.warn('⚠️ Unknown origin:', origin);
+      ServerLogger.warn('⚠️ Unknown origin:', origin);
       res.setHeader('Access-Control-Allow-Origin', origin); // 개발 중에는 허용
     }
     
@@ -183,7 +185,7 @@ class SecurityMiddleware {
       const isValidVideo = SecurityMiddleware.checkVideoMagicNumbers(buffer);
       callback(isValidVideo);
     } catch (error) {
-      console.error('파일 내용 검증 실패:', error);
+      ServerLogger.error('파일 내용 검증 실패:', error);
       callback(false);
     }
   }
@@ -289,13 +291,13 @@ class SecurityMiddleware {
     const clientIp = req.ip || req.connection.remoteAddress;
     
     // 요청 로그
-    console.log(`📝 ${new Date().toISOString()} [${req.method}] ${req.url} - ${clientIp}`);
+    ServerLogger.info(`📝 ${new Date().toISOString()} [${req.method}] ${req.url} - ${clientIp}`);
     
     // 응답 완료 시 로그
     res.on('finish', () => {
       const duration = Date.now() - startTime;
       const logLevel = res.statusCode >= 400 ? '❌' : '✅';
-      console.log(`${logLevel} ${res.statusCode} - ${duration}ms`);
+      ServerLogger.info(`${logLevel} ${res.statusCode} - ${duration}ms`);
     });
     
     next();
@@ -327,7 +329,7 @@ class SecurityMiddleware {
     const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
     
     if (missingVars.length > 0) {
-      console.warn('⚠️ 누락된 환경 변수:', missingVars.join(', '));
+      ServerLogger.warn('⚠️ 누락된 환경 변수:', missingVars.join(', '));
     }
 
     // 프로덕션 환경 추가 검증
@@ -336,7 +338,7 @@ class SecurityMiddleware {
       const missingProductionVars = productionVars.filter(varName => !process.env[varName]);
       
       if (missingProductionVars.length > 0) {
-        console.error('🚨 프로덕션 환경에 필요한 환경 변수가 누락됨:', missingProductionVars.join(', '));
+        ServerLogger.error('🚨 프로덕션 환경에 필요한 환경 변수가 누락됨:', missingProductionVars.join(', '));
       }
     }
   }

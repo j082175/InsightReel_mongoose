@@ -1,6 +1,7 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const { ServerLogger } = require('../utils/logger');
 
 class AIAnalyzer {
   constructor() {
@@ -12,19 +13,19 @@ class AIAnalyzer {
     this.geminiApiKey = process.env.GOOGLE_API_KEY;
     
     if (this.useGemini && !this.geminiApiKey) {
-      console.warn('⚠️ USE_GEMINI=true이지만 GOOGLE_API_KEY가 설정되지 않았습니다. Ollama를 사용합니다.');
+      ServerLogger.warn('USE_GEMINI=true이지만 GOOGLE_API_KEY가 설정되지 않음. Ollama 사용', null, 'AI');
       this.useGemini = false;
     }
     
-    console.log(`🔧 AI 설정 - USE_GEMINI: ${process.env.USE_GEMINI}, API_KEY 존재: ${!!this.geminiApiKey}`);
+    ServerLogger.info(`AI 설정 - USE_GEMINI: ${process.env.USE_GEMINI}, API_KEY 존재: ${!!this.geminiApiKey}`, null, 'AI');
     
     if (this.useGemini) {
       const { GoogleGenerativeAI } = require('@google/generative-ai');
       this.genAI = new GoogleGenerativeAI(this.geminiApiKey);
       this.geminiModel = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-      console.log('🔮 Gemini API 초기화 완료');
+      ServerLogger.success('Gemini API 초기화 완료', null, 'AI');
     } else {
-      console.log('🤖 Ollama 모드로 실행 중');
+      ServerLogger.info('Ollama 모드로 실행 중', null, 'AI');
     }
     
     // 2단계 카테고리 정의 (대카테고리 > 중카테고리)
@@ -147,28 +148,28 @@ class AIAnalyzer {
   }
 
   async analyzeVideo(thumbnailPaths, metadata) {
-    console.log('🔥🔥🔥 analyzeVideo 함수 시작 🔥🔥🔥');
-    console.log('📁 썸네일 경로들:', thumbnailPaths);
-    console.log('📋 메타데이터:', JSON.stringify(metadata, null, 2));
+    ServerLogger.info('analyzeVideo 함수 시작', null, 'AI');
+    ServerLogger.info('📁 썸네일 경로들:', thumbnailPaths);
+    ServerLogger.info('📋 메타데이터:', JSON.stringify(metadata, null, 2));
     
     // URL 기반 기본 카테고리 추론 (일관성 확보)
     const urlBasedCategory = this.inferCategoryFromUrl(metadata.url);
-    console.log('🎯 URL 기반 카테고리 추론:', urlBasedCategory);
+    ServerLogger.info('🎯 URL 기반 카테고리 추론:', urlBasedCategory);
     
     try {
       // 다중 프레임 분석인지 단일 프레임 분석인지 확인
       if (Array.isArray(thumbnailPaths) && thumbnailPaths.length > 1) {
-        console.log(`🎬 다중 프레임 분석 시작: ${thumbnailPaths.length}개 프레임`);
+        ServerLogger.info(`🎬 다중 프레임 분석 시작: ${thumbnailPaths.length}개 프레임`);
         return await this.analyzeMultipleFrames(thumbnailPaths, urlBasedCategory, metadata);
       } else {
         // 단일 프레임 분석 (기존 로직)
         const singlePath = Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths;
-        console.log(`📸 단일 프레임 분석 시작: ${singlePath}`);
+        ServerLogger.info(`📸 단일 프레임 분석 시작: ${singlePath}`);
         return await this.analyzeSingleFrame(singlePath, urlBasedCategory, metadata);
       }
       
     } catch (error) {
-      console.error('AI 분석 실패:', error);
+      ServerLogger.error('AI 분석 실패:', error);
       
       // 폴백: URL 기반 분석 사용
       return this.createAnalysisFromUrl(urlBasedCategory, metadata);
@@ -176,41 +177,41 @@ class AIAnalyzer {
   }
 
   async analyzeSingleFrame(thumbnailPath, urlBasedCategory, metadata) {
-    console.log(`AI 분석 시작: ${thumbnailPath}`);
+    ServerLogger.info(`AI 분석 시작: ${thumbnailPath}`);
     
     // 이미지 파일을 base64로 인코딩
-    console.log('1. 이미지 인코딩 중...');
+    ServerLogger.info('1. 이미지 인코딩 중...');
     const imageBase64 = await this.encodeImageToBase64(thumbnailPath);
-    console.log('1. 이미지 인코딩 완료, 길이:', imageBase64.length);
+    ServerLogger.info('1. 이미지 인코딩 완료, 길이:', imageBase64.length);
     
     // AI에게 분석 요청 (더 간단한 프롬프트)
-    console.log('2. AI 프롬프트 생성 중...');
+    ServerLogger.info('2. AI 프롬프트 생성 중...');
     const analysisPrompt = this.buildSimpleAnalysisPrompt(metadata);
-    console.log('2. AI 프롬프트 생성 완료, 길이:', analysisPrompt.length);
+    ServerLogger.info('2. AI 프롬프트 생성 완료, 길이:', analysisPrompt.length);
     
-    console.log('3. AI 호출 시작...');
-    console.log(`🔮 사용할 AI: ${this.useGemini ? 'Gemini' : 'Ollama'}`);
+    ServerLogger.info('3. AI 호출 시작...');
+    ServerLogger.info(`🔮 사용할 AI: ${this.useGemini ? 'Gemini' : 'Ollama'}`);
     
     let aiResponse;
     try {
       aiResponse = this.useGemini 
         ? await this.queryGemini(analysisPrompt, imageBase64)
         : await this.queryOllama(analysisPrompt, imageBase64);
-      console.log('3. AI 호출 완료');
-      console.log('AI 원본 응답:', aiResponse);
+      ServerLogger.info('3. AI 호출 완료');
+      ServerLogger.info('AI 원본 응답:', aiResponse);
     } catch (error) {
-      console.error('❌ AI 호출 실패:', error.message);
+      ServerLogger.error('❌ AI 호출 실패:', error.message);
       aiResponse = null;
     }
     
     // AI + URL 기반 하이브리드 분석
     const analysis = this.combineAnalysis(aiResponse, urlBasedCategory, metadata);
-    console.log('✅ 단일 프레임 분석 완료:', analysis);
+    ServerLogger.info('✅ 단일 프레임 분석 완료:', analysis);
     return analysis;
   }
 
   async analyzeMultipleFrames(thumbnailPaths, urlBasedCategory, metadata) {
-    console.log(`🎬 다중 프레임 분석 시작: ${thumbnailPaths.length}개 프레임`);
+    ServerLogger.info(`🎬 다중 프레임 분석 시작: ${thumbnailPaths.length}개 프레임`);
     
     // Gemini를 사용하는 경우 한 번에 모든 프레임 분석
     if (this.useGemini) {
@@ -228,7 +229,7 @@ class AIAnalyzer {
       const frameNumber = i + 1;
       
       try {
-        console.log(`📸 프레임 ${frameNumber}/${thumbnailPaths.length} 분석 중: ${path.basename(framePath)}`);
+        ServerLogger.info(`📸 프레임 ${frameNumber}/${thumbnailPaths.length} 분석 중: ${path.basename(framePath)}`);
         
         // 이미지 인코딩
         const imageBase64 = await this.encodeImageToBase64(framePath);
@@ -253,7 +254,7 @@ class AIAnalyzer {
           allContents.push(`[프레임 ${frameNumber}] ${frameAnalysis.content}`);
         }
         
-        console.log(`✅ 프레임 ${frameNumber} 분석 완료:`, frameAnalysis);
+        ServerLogger.info(`✅ 프레임 ${frameNumber} 분석 완료:`, frameAnalysis);
         
         // 과도한 요청 방지를 위한 딜레이
         if (i < thumbnailPaths.length - 1) {
@@ -261,7 +262,7 @@ class AIAnalyzer {
         }
         
       } catch (error) {
-        console.error(`❌ 프레임 ${frameNumber} 분석 실패:`, error);
+        ServerLogger.error(`❌ 프레임 ${frameNumber} 분석 실패:`, error);
         frameAnalyses.push({
           frameNumber,
           content: `프레임 ${frameNumber} 분석 실패`,
@@ -274,7 +275,7 @@ class AIAnalyzer {
     // 모든 프레임 분석 결과를 종합
     const combinedAnalysis = this.combineMultiFrameAnalyses(frameAnalyses, allKeywords, allContents, urlBasedCategory, metadata);
     
-    console.log('🎯 다중 프레임 분석 최종 결과:', combinedAnalysis);
+    ServerLogger.info('🎯 다중 프레임 분석 최종 결과:', combinedAnalysis);
     return combinedAnalysis;
   }
 
@@ -345,8 +346,8 @@ class AIAnalyzer {
 
   async queryOllama(prompt, imageBase64) {
     try {
-      console.log('AI 요청 시작 - 모델:', this.modelName);
-      console.log('AI 프롬프트 길이:', prompt.length);
+      ServerLogger.info('AI 요청 시작 - 모델:', this.modelName);
+      ServerLogger.info('AI 프롬프트 길이:', prompt.length);
       
       const response = await axios.post(`${this.ollamaUrl}/api/generate`, {
         model: this.modelName,
@@ -363,12 +364,12 @@ class AIAnalyzer {
         timeout: 60000  // 60초 타임아웃
       });
 
-      console.log('AI 응답 상태:', response.status);
-      console.log('AI 응답 길이:', response.data.response?.length || 0);
+      ServerLogger.info('AI 응답 상태:', response.status);
+      ServerLogger.info('AI 응답 길이:', response.data.response?.length || 0);
       
       return response.data.response;
     } catch (error) {
-      console.error('AI 호출 에러:', error.message);
+      ServerLogger.error('AI 호출 에러:', error.message);
       if (error.code === 'ECONNREFUSED') {
         throw new Error('Ollama 서버 연결 실패');
       }
@@ -381,8 +382,8 @@ class AIAnalyzer {
 
   async queryGemini(prompt, imageBase64) {
     try {
-      console.log('AI 요청 시작 - 모델: Gemini');
-      console.log('AI 프롬프트 길이:', prompt.length);
+      ServerLogger.info('AI 요청 시작 - 모델: Gemini');
+      ServerLogger.info('AI 프롬프트 길이:', prompt.length);
       
       // base64 이미지를 Gemini 형식으로 변환
       const imagePart = {
@@ -400,12 +401,12 @@ class AIAnalyzer {
       const response = await result.response;
       const text = response.text();
       
-      console.log('AI 응답 상태: 성공');
-      console.log('AI 응답 길이:', text?.length || 0);
+      ServerLogger.info('AI 응답 상태: 성공');
+      ServerLogger.info('AI 응답 길이:', text?.length || 0);
       
       return text;
     } catch (error) {
-      console.error('Gemini 호출 에러:', error.message);
+      ServerLogger.error('Gemini 호출 에러:', error.message);
       if (error.message.includes('quota')) {
         throw new Error('Gemini API 할당량 초과');
       }
@@ -417,26 +418,26 @@ class AIAnalyzer {
   }
 
   parseAIResponse(aiResponse, metadata) {
-    console.log('🟡 parseAIResponse 함수 시작');
-    console.log('🟡 원본 AI 응답 길이:', aiResponse ? aiResponse.length : 'null');
+    ServerLogger.info('🟡 parseAIResponse 함수 시작');
+    ServerLogger.info('🟡 원본 AI 응답 길이:', aiResponse ? aiResponse.length : 'null');
     
     try {
       // JSON 응답 추출 시도 (```json``` 마크다운 제거)
       let cleanResponse = aiResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '');
       const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
       
-      console.log('🔍 파싱 전 AI 응답 정리:', cleanResponse);
+      ServerLogger.info('🔍 파싱 전 AI 응답 정리:', cleanResponse);
       
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        console.log('🔍 파싱된 JSON:', parsed);
-        console.log('🔍 AI가 반환한 카테고리:', { 
+        ServerLogger.info('🔍 파싱된 JSON:', parsed);
+        ServerLogger.info('🔍 AI가 반환한 카테고리:', { 
           main: parsed.main_category, 
           middle: parsed.middle_category 
         });
         
         const categoryResult = this.validateAndInferCategories(parsed, metadata);
-        console.log('🔍 카테고리 검증 결과:', categoryResult);
+        ServerLogger.info('🔍 카테고리 검증 결과:', categoryResult);
         
         return {
           content: parsed.content || '내용 분석 실패',
@@ -453,9 +454,9 @@ class AIAnalyzer {
       return this.parseTextResponse(aiResponse, metadata);
       
     } catch (error) {
-      console.log('🚨 AI 응답 파싱 실패, 폴백 사용:');
-      console.log('에러:', error.message);
-      console.log('AI 원본 응답:', aiResponse);
+      ServerLogger.info('🚨 AI 응답 파싱 실패, 폴백 사용:');
+      ServerLogger.info('에러:', error.message);
+      ServerLogger.info('AI 원본 응답:', aiResponse);
       return this.getFallbackAnalysis(metadata);
     }
   }
@@ -516,27 +517,27 @@ class AIAnalyzer {
   }
 
   validateCategoryHierarchy(mainCategory, middleCategory) {
-    console.log('🔍 카테고리 검증 시작:', { mainCategory, middleCategory });
+    ServerLogger.info('🔍 카테고리 검증 시작:', { mainCategory, middleCategory });
     
     const validMainCategories = Object.keys(this.categories);
-    console.log('유효한 대카테고리들:', validMainCategories);
+    ServerLogger.info('유효한 대카테고리들:', validMainCategories);
     
     // 대카테고리 검증
     if (!mainCategory || !validMainCategories.includes(mainCategory)) {
-      console.log('❌ 대카테고리 검증 실패:', mainCategory);
+      ServerLogger.info('❌ 대카테고리 검증 실패:', mainCategory);
       return this.findBestCategoryMatch(middleCategory);
     }
     
     const validMiddleCategories = Object.keys(this.categories[mainCategory]);
-    console.log(`"${mainCategory}"의 유효한 중카테고리들:`, validMiddleCategories);
+    ServerLogger.info(`"${mainCategory}"의 유효한 중카테고리들:`, validMiddleCategories);
     
     // 중카테고리 검증
     if (!middleCategory || !validMiddleCategories.includes(middleCategory)) {
-      console.log('❌ 중카테고리 검증 실패:', middleCategory);
+      ServerLogger.info('❌ 중카테고리 검증 실패:', middleCategory);
       return this.findBestCategoryMatch(middleCategory, mainCategory);
     }
     
-    console.log('✅ 카테고리 검증 성공');
+    ServerLogger.info('✅ 카테고리 검증 성공');
     return {
       isValid: true,
       mainCategory,
@@ -563,7 +564,7 @@ class AIAnalyzer {
   }
 
   findBestCategoryMatch(keyword, preferredMainCategory = null) {
-    console.log('🔄 카테고리 매칭 시도:', { keyword, preferredMainCategory });
+    ServerLogger.info('🔄 카테고리 매칭 시도:', { keyword, preferredMainCategory });
     
     // 키워드 기반 매칭
     if (keyword) {
@@ -591,7 +592,7 @@ class AIAnalyzer {
     }
     
     // 기본값
-    console.log('⚡ 기본 카테고리 사용');
+    ServerLogger.info('⚡ 기본 카테고리 사용');
     return { isValid: true, mainCategory: '라이프·블로그', middleCategory: '일상 Vlog·Q&A' };
   }
 
@@ -776,7 +777,7 @@ JSON 형식으로 답변:
       return this.parseFrameTextResponse(aiResponse, frameNumber);
       
     } catch (error) {
-      console.error(`프레임 ${frameNumber} 응답 파싱 실패:`, error);
+      ServerLogger.error(`프레임 ${frameNumber} 응답 파싱 실패:`, error);
       return {
         frameNumber,
         content: `프레임 ${frameNumber} 분석 오류`,
@@ -910,8 +911,8 @@ JSON 형식으로 답변:
   // AI + URL 기반 하이브리드 분석
   combineAnalysis(aiResponse, urlBasedCategory, metadata) {
     try {
-      console.log('🔍 AI 응답 분석 시작...');
-      console.log('AI 응답 존재 여부:', !!aiResponse);
+      ServerLogger.info('🔍 AI 응답 분석 시작...');
+      ServerLogger.info('AI 응답 존재 여부:', !!aiResponse);
       
       // AI 응답에서 새로운 구조의 데이터 추출
       let aiData = { 
@@ -923,14 +924,14 @@ JSON 형식으로 답변:
       };
       
       if (aiResponse) {
-        console.log('AI 응답 길이:', aiResponse.length);
+        ServerLogger.info('AI 응답 길이:', aiResponse.length);
         const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-        console.log('JSON 패턴 매칭 결과:', !!jsonMatch);
+        ServerLogger.info('JSON 패턴 매칭 결과:', !!jsonMatch);
         
         if (jsonMatch) {
           try {
             const parsed = JSON.parse(jsonMatch[0]);
-            console.log('파싱된 AI 데이터:', parsed);
+            ServerLogger.info('파싱된 AI 데이터:', parsed);
             
             aiData.content = parsed.content || '영상 내용';
             aiData.keywords = Array.isArray(parsed.keywords) ? parsed.keywords : [];
@@ -938,17 +939,17 @@ JSON 형식으로 답변:
             aiData.main_category = parsed.main_category;
             aiData.middle_category = parsed.middle_category;
             
-            console.log('✅ AI 데이터 추출 성공:', aiData);
+            ServerLogger.info('✅ AI 데이터 추출 성공:', aiData);
           } catch (e) {
-            console.log('❌ AI JSON 파싱 실패:', e.message);
-            console.log('파싱 실패한 JSON:', jsonMatch[0]);
+            ServerLogger.info('❌ AI JSON 파싱 실패:', e.message);
+            ServerLogger.info('파싱 실패한 JSON:', jsonMatch[0]);
           }
         } else {
-          console.log('❌ JSON 패턴을 찾을 수 없음. AI 원본 응답:');
-          console.log(aiResponse.substring(0, 500));
+          ServerLogger.info('❌ JSON 패턴을 찾을 수 없음. AI 원본 응답:');
+          ServerLogger.info(aiResponse.substring(0, 500));
         }
       } else {
-        console.log('❌ AI 응답이 null 또는 undefined');
+        ServerLogger.info('❌ AI 응답이 null 또는 undefined');
       }
       
       // AI가 카테고리를 제대로 분석했는지 검증
@@ -959,14 +960,14 @@ JSON 형식으로 답변:
         // AI 카테고리 유효성 검증
         const validation = this.validateCategoryPair(aiData.main_category, aiData.middle_category);
         if (validation.isValid) {
-          console.log('✅ AI 카테고리 분석 성공, AI 분류 사용:', {
+          ServerLogger.info('✅ AI 카테고리 분석 성공, AI 분류 사용:', {
             main: aiData.main_category,
             middle: aiData.middle_category
           });
           finalMainCategory = aiData.main_category;
           finalMiddleCategory = aiData.middle_category;
         } else {
-          console.log('❌ AI 카테고리 무효, URL 기반 카테고리 사용:', {
+          ServerLogger.info('❌ AI 카테고리 무효, URL 기반 카테고리 사용:', {
             ai_main: aiData.main_category,
             ai_middle: aiData.middle_category,
             url_main: urlBasedCategory.mainCategory,
@@ -987,9 +988,9 @@ JSON 형식으로 답변:
       };
       
     } catch (error) {
-      console.error('❌ 하이브리드 분석 실패:', error.message);
-      console.error('Stack trace:', error.stack);
-      console.log('🔄 URL_BASED 분석으로 폴백');
+      ServerLogger.error('❌ 하이브리드 분석 실패:', error.message);
+      ServerLogger.error('Stack trace:', error.stack);
+      ServerLogger.info('🔄 URL_BASED 분석으로 폴백');
       return this.createAnalysisFromUrl(urlBasedCategory, metadata);
     }
   }
@@ -1054,7 +1055,7 @@ JSON 형식으로 답변:
   // ============ Gemini 관련 메서드들 ============
 
   async analyzeMultipleFramesWithGemini(thumbnailPaths, urlBasedCategory, metadata) {
-    console.log('🔮 Gemini 다중 프레임 분석 시작:', thumbnailPaths.length + '개');
+    ServerLogger.info('🔮 Gemini 다중 프레임 분석 시작:', thumbnailPaths.length + '개');
     
     try {
       // 모든 이미지를 Base64로 인코딩
@@ -1072,7 +1073,7 @@ JSON 형식으로 답변:
       // 다중 프레임 분석 프롬프트 생성
       const prompt = this.buildGeminiMultiFramePrompt(metadata, thumbnailPaths.length);
       
-      console.log('🔮 Gemini API 호출 시작...');
+      ServerLogger.info('🔮 Gemini API 호출 시작...');
       
       // Gemini API 호출
       const result = await this.geminiModel.generateContent([
@@ -1083,21 +1084,21 @@ JSON 형식으로 답변:
       const response = await result.response;
       const aiResponse = response.text();
       
-      console.log('🔮 Gemini AI 원본 응답:', aiResponse);
+      ServerLogger.info('🔮 Gemini AI 원본 응답:', aiResponse);
       
       // 응답 파싱 및 결과 생성
       const analysis = this.parseGeminiResponse(aiResponse, urlBasedCategory, metadata);
       analysis.frameCount = thumbnailPaths.length;
       analysis.analysisMethod = 'gemini-multi-frame';
       
-      console.log('✅ Gemini 다중 프레임 분석 완료:', analysis);
+      ServerLogger.info('✅ Gemini 다중 프레임 분석 완료:', analysis);
       return analysis;
       
     } catch (error) {
-      console.error('❌ Gemini 다중 프레임 분석 실패:', error);
+      ServerLogger.error('❌ Gemini 다중 프레임 분석 실패:', error);
       
       // Gemini 전용 모드: 실패해도 Ollama로 폴백하지 않음
-      console.log('⚠️ Gemini 전용 모드로 실행 중 - Ollama 폴백 건너뜀');
+      ServerLogger.info('⚠️ Gemini 전용 모드로 실행 중 - Ollama 폴백 건너뜀');
       
       // 기본 분석 결과 반환
       const categoryResult = this.determineFinalCategory('', '', urlBasedCategory, metadata);
@@ -1168,7 +1169,7 @@ JSON 형식으로 답변:
       const cleanResponse = aiResponse.replace(/```json\n?|\n?```/g, '').trim();
       const aiResult = JSON.parse(cleanResponse);
       
-      console.log('✅ Gemini JSON 파싱 성공:', aiResult);
+      ServerLogger.info('✅ Gemini JSON 파싱 성공:', aiResult);
       
       // 카테고리 검증 및 조합
       const categoryResult = this.determineFinalCategory(
@@ -1190,7 +1191,7 @@ JSON 형식으로 답변:
       };
       
     } catch (parseError) {
-      console.warn('⚠️ Gemini JSON 파싱 실패, 텍스트 분석으로 전환:', parseError.message);
+      ServerLogger.warn('⚠️ Gemini JSON 파싱 실패, 텍스트 분석으로 전환:', parseError.message);
       
       // JSON 파싱 실패 시 텍스트 기반 분석
       return this.parseTextResponse(aiResponse, urlBasedCategory, metadata);

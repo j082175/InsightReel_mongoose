@@ -43,7 +43,8 @@
       "Bash(cargo --version)",
       "Bash(export PATH=\"$HOME/.cargo/bin:$PATH\")",
       "Bash(cargo install:*)",
-      "Bash(claudelytics:*)"
+      "Bash(claudelytics:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": [],

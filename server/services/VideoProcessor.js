@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
+const { ServerLogger } = require('../utils/logger');
 
 // ffprobe 경로 설정
 let ffprobePath;
@@ -33,9 +34,9 @@ class VideoProcessor {
 
   async downloadVideo(videoUrl, platform) {
     try {
-      console.log(`🔗 다운로드 시작 - Platform: ${platform}`);
-      console.log(`🔗 Video URL: ${videoUrl}`);
-      console.log(`🔗 URL 첫 100자: ${videoUrl.substring(0, 100)}...`);
+      ServerLogger.info(`🔗 다운로드 시작 - Platform: ${platform}`);
+      ServerLogger.info(`🔗 Video URL: ${videoUrl}`);
+      ServerLogger.info(`🔗 URL 첫 100자: ${videoUrl.substring(0, 100)}...`);
       
       // blob URL 체크
       if (videoUrl.startsWith('blob:')) {
@@ -47,7 +48,7 @@ class VideoProcessor {
       const filename = `${platform}_${timestamp}.mp4`;
       const filePath = path.join(this.downloadDir, filename);
       
-      console.log(`📁 저장 경로: ${filePath}`);
+      ServerLogger.info(`📁 저장 경로: ${filePath}`);
       
       // 비디오 다운로드
       const response = await axios({
@@ -60,9 +61,9 @@ class VideoProcessor {
         }
       });
 
-      console.log(`📦 Response status: ${response.status}`);
-      console.log(`📦 Content-Type: ${response.headers['content-type']}`);
-      console.log(`📦 Content-Length: ${response.headers['content-length']}`);
+      ServerLogger.info(`📦 Response status: ${response.status}`);
+      ServerLogger.info(`📦 Content-Type: ${response.headers['content-type']}`);
+      ServerLogger.info(`📦 Content-Length: ${response.headers['content-length']}`);
       
 
       // 파일 스트림 생성
@@ -73,23 +74,23 @@ class VideoProcessor {
         writer.on('finish', () => {
           try {
             const stats = fs.statSync(filePath);
-            console.log(`✅ 비디오 다운로드 완료: ${filename}`);
-            console.log(`📊 파일 크기: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
-            console.log(`🕒 다운로드 시간: ${new Date().toISOString()}`);
+            ServerLogger.info(`✅ 비디오 다운로드 완료: ${filename}`);
+            ServerLogger.info(`📊 파일 크기: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+            ServerLogger.info(`🕒 다운로드 시간: ${new Date().toISOString()}`);
             resolve(filePath);
           } catch (error) {
-            console.error('파일 정보 확인 실패:', error);
+            ServerLogger.error('파일 정보 확인 실패:', error);
             resolve(filePath); // 파일은 다운로드됐으므로 resolve
           }
         });
         writer.on('error', (error) => {
-          console.error('비디오 다운로드 실패:', error);
+          ServerLogger.error('비디오 다운로드 실패:', error);
           reject(error);
         });
       });
 
     } catch (error) {
-      console.error('비디오 다운로드 에러:', error);
+      ServerLogger.error('비디오 다운로드 에러:', error);
       
       // blob URL 에러인 경우 더 명확한 메시지
       if (error.message.includes('Blob URL')) {
@@ -108,11 +109,11 @@ class VideoProcessor {
       const fileType = await this.detectFileType(videoPath);
       
       if (fileType === 'image') {
-        console.log(`📷 이미지 파일 감지 - 원본을 썸네일로 복사: ${videoPath}`);
+        ServerLogger.info(`📷 이미지 파일 감지 - 원본을 썸네일로 복사: ${videoPath}`);
         const timestamp = Date.now();
         const thumbnailPath = path.join(this.thumbnailDir, `${videoName}_thumb_${timestamp}.jpg`);
         fs.copyFileSync(videoPath, thumbnailPath);
-        console.log(`✅ 이미지 썸네일 생성 완료: ${path.basename(thumbnailPath)}`);
+        ServerLogger.info(`✅ 이미지 썸네일 생성 완료: ${path.basename(thumbnailPath)}`);
         return [thumbnailPath]; // 배열로 반환하여 일관성 유지
       }
       
@@ -125,7 +126,7 @@ class VideoProcessor {
       }
 
     } catch (error) {
-      console.error('썸네일 생성 실패:', error);
+      ServerLogger.error('썸네일 생성 실패:', error);
       throw error;
     }
   }
@@ -135,7 +136,7 @@ class VideoProcessor {
     const timestamp = Date.now();
     const thumbnailPath = path.join(this.thumbnailDir, `${videoName}_thumb_${timestamp}.jpg`);
     
-    console.log(`🎬 단일 썸네일 생성: ${videoPath} -> ${thumbnailPath}`);
+    ServerLogger.info(`🎬 단일 썸네일 생성: ${videoPath} -> ${thumbnailPath}`);
     
     return new Promise((resolve, reject) => {
       const ffmpeg = spawn(ffmpegPath, [
@@ -155,41 +156,41 @@ class VideoProcessor {
 
       ffmpeg.on('close', (code) => {
         if (code === 0 && fs.existsSync(thumbnailPath)) {
-          console.log(`✅ 단일 썸네일 생성 완료: ${path.basename(thumbnailPath)}`);
+          ServerLogger.info(`✅ 단일 썸네일 생성 완료: ${path.basename(thumbnailPath)}`);
           resolve([thumbnailPath]); // 배열로 반환
         } else {
-          console.error(`❌ FFmpeg 썸네일 생성 실패 (코드: ${code})`);
-          console.error(`📄 FFmpeg stderr:`, stderrOutput);
-          console.error(`📁 입력 파일: ${videoPath}`);
-          console.error(`📁 출력 파일: ${thumbnailPath}`);
+          ServerLogger.error(`❌ FFmpeg 썸네일 생성 실패 (코드: ${code})`);
+          ServerLogger.error(`📄 FFmpeg stderr:`, stderrOutput);
+          ServerLogger.error(`📁 입력 파일: ${videoPath}`);
+          ServerLogger.error(`📁 출력 파일: ${thumbnailPath}`);
           reject(new Error(`FFmpeg 실행 실패 (코드: ${code})`));
         }
       });
 
       ffmpeg.on('error', (error) => {
-        console.error('❌ FFmpeg 프로세스 에러:', error);
+        ServerLogger.error('❌ FFmpeg 프로세스 에러:', error);
         reject(error);
       });
 
       ffmpeg.stderr.on('data', (data) => {
-        console.log(`FFmpeg: ${data}`);
+        ServerLogger.info(`FFmpeg: ${data}`);
       });
     });
   }
 
   async generateMultipleFrames(videoPath) {
     try {
-      console.log(`🎬 다중 프레임 생성 시작: ${videoPath}`);
+      ServerLogger.info(`🎬 다중 프레임 생성 시작: ${videoPath}`);
       
       // 먼저 비디오 길이 확인
       const duration = await this.getVideoDuration(videoPath);
-      console.log(`📏 비디오 길이: ${duration}초`);
+      ServerLogger.info(`📏 비디오 길이: ${duration}초`);
       
       // 적절한 프레임 수 결정
       const frameCount = this.calculateOptimalFrameCount(duration);
       const intervals = this.calculateFrameIntervals(duration, frameCount);
       
-      console.log(`📸 ${frameCount}개 프레임을 추출합니다: [${intervals.map(t => `${t}초`).join(', ')}]`);
+      ServerLogger.info(`📸 ${frameCount}개 프레임을 추출합니다: [${intervals.map(t => `${t}초`).join(', ')}]`);
       
       const videoName = path.basename(videoPath, path.extname(videoPath));
       const timestamp = Date.now();
@@ -204,11 +205,11 @@ class VideoProcessor {
         framePaths.push(framePath);
       }
       
-      console.log(`✅ 다중 프레임 생성 완료: ${framePaths.length}개`);
+      ServerLogger.info(`✅ 다중 프레임 생성 완료: ${framePaths.length}개`);
       return framePaths;
       
     } catch (error) {
-      console.error('다중 프레임 생성 실패:', error);
+      ServerLogger.error('다중 프레임 생성 실패:', error);
       throw error;
     }
   }
@@ -239,7 +240,7 @@ class VideoProcessor {
   async extractFrameAtTime(videoPath, timeInSeconds, outputPath) {
     const timeString = this.secondsToTimeString(timeInSeconds);
     
-    console.log(`🔍 프레임 추출 시도: ${timeInSeconds}초 -> ${timeString}`);
+    ServerLogger.info(`🔍 프레임 추출 시도: ${timeInSeconds}초 -> ${timeString}`);
     
     return new Promise((resolve, reject) => {
       const ffmpeg = spawn(ffmpegPath, [
@@ -259,20 +260,20 @@ class VideoProcessor {
 
       ffmpeg.on('close', (code) => {
         if (code === 0 && fs.existsSync(outputPath)) {
-          console.log(`✅ 프레임 추출 완료: ${timeString} -> ${path.basename(outputPath)}`);
+          ServerLogger.info(`✅ 프레임 추출 완료: ${timeString} -> ${path.basename(outputPath)}`);
           resolve(outputPath);
         } else {
-          console.error(`❌ FFmpeg 프레임 추출 실패 (코드: ${code})`);
-          console.error(`📄 FFmpeg stderr:`, stderrOutput);
-          console.error(`📁 입력 파일: ${videoPath}`);
-          console.error(`📁 출력 파일: ${outputPath}`);
-          console.error(`⏰ 시간: ${timeString}`);
+          ServerLogger.error(`❌ FFmpeg 프레임 추출 실패 (코드: ${code})`);
+          ServerLogger.error(`📄 FFmpeg stderr:`, stderrOutput);
+          ServerLogger.error(`📁 입력 파일: ${videoPath}`);
+          ServerLogger.error(`📁 출력 파일: ${outputPath}`);
+          ServerLogger.error(`⏰ 시간: ${timeString}`);
           reject(new Error(`프레임 추출 실패 (코드: ${code})`));
         }
       });
 
       ffmpeg.on('error', (error) => {
-        console.error(`❌ FFmpeg 프로세스 에러:`, error);
+        ServerLogger.error(`❌ FFmpeg 프로세스 에러:`, error);
         reject(error);
       });
 
@@ -284,7 +285,7 @@ class VideoProcessor {
 
   async getVideoDuration(videoPath) {
     return new Promise((resolve, reject) => {
-      console.log(`🔍 비디오 길이 확인 시작: ${videoPath}`);
+      ServerLogger.info(`🔍 비디오 길이 확인 시작: ${videoPath}`);
       
       const ffprobe = spawn(ffprobePath, [
         '-v', 'quiet',
@@ -306,11 +307,11 @@ class VideoProcessor {
 
       ffprobe.on('close', (code) => {
         try {
-          console.log(`📊 ffprobe 종료 코드: ${code}`);
+          ServerLogger.info(`📊 ffprobe 종료 코드: ${code}`);
           if (code === 0 && output.trim()) {
             const info = JSON.parse(output);
             const duration = parseFloat(info.format.duration);
-            console.log(`✅ 비디오 길이 감지 성공: ${duration}초`);
+            ServerLogger.info(`✅ 비디오 길이 감지 성공: ${duration}초`);
             resolve(duration);
           } else {
             console.warn(`⚠️ ffprobe 실패 (코드: ${code}), ffmpeg로 재시도`);
@@ -318,17 +319,17 @@ class VideoProcessor {
             
             // ffprobe 실패시 ffmpeg로 재시도
             this.getVideoDurationWithFFmpeg(videoPath).then(resolve).catch(() => {
-              console.error(`❌ ffmpeg로도 실패, 기본값 30초 사용`);
+              ServerLogger.error(`❌ ffmpeg로도 실패, 기본값 30초 사용`);
               resolve(30);
             });
           }
         } catch (error) {
-          console.error(`❌ JSON 파싱 실패:`, error.message);
-          console.error(`📄 Output:`, output);
+          ServerLogger.error(`❌ JSON 파싱 실패:`, error.message);
+          ServerLogger.error(`📄 Output:`, output);
           
           // 파싱 실패시 ffmpeg로 재시도
           this.getVideoDurationWithFFmpeg(videoPath).then(resolve).catch(() => {
-            console.error(`❌ ffmpeg로도 실패, 기본값 30초 사용`);
+            ServerLogger.error(`❌ ffmpeg로도 실패, 기본값 30초 사용`);
             resolve(30);
           });
         }
@@ -338,7 +339,7 @@ class VideoProcessor {
 
   async getVideoDurationWithFFmpeg(videoPath) {
     return new Promise((resolve, reject) => {
-      console.log(`🔄 ffmpeg로 비디오 길이 재시도: ${videoPath}`);
+      ServerLogger.info(`🔄 ffmpeg로 비디오 길이 재시도: ${videoPath}`);
       
       const ffmpeg = spawn(ffmpegPath, [
         '-i', videoPath,
@@ -361,15 +362,15 @@ class VideoProcessor {
             const minutes = parseInt(durationMatch[2]);
             const seconds = parseFloat(durationMatch[3]);
             const totalSeconds = hours * 3600 + minutes * 60 + seconds;
-            console.log(`✅ ffmpeg로 비디오 길이 감지 성공: ${totalSeconds}초`);
+            ServerLogger.info(`✅ ffmpeg로 비디오 길이 감지 성공: ${totalSeconds}초`);
             resolve(totalSeconds);
           } else {
-            console.error(`❌ ffmpeg에서 Duration 찾을 수 없음`);
-            console.error(`📄 stderr:`, stderrOutput);
+            ServerLogger.error(`❌ ffmpeg에서 Duration 찾을 수 없음`);
+            ServerLogger.error(`📄 stderr:`, stderrOutput);
             reject(new Error('Duration not found in ffmpeg output'));
           }
         } catch (error) {
-          console.error(`❌ ffmpeg 출력 파싱 실패:`, error.message);
+          ServerLogger.error(`❌ ffmpeg 출력 파싱 실패:`, error.message);
           reject(error);
         }
       });
@@ -414,7 +415,7 @@ class VideoProcessor {
         });
       });
     } catch (error) {
-      console.error('비디오 정보 추출 실패:', error);
+      ServerLogger.error('비디오 정보 추출 실패:', error);
       throw error;
     }
   }
@@ -428,7 +429,7 @@ class VideoProcessor {
         mb: (stats.size / (1024 * 1024)).toFixed(2)
       };
     } catch (error) {
-      console.error('파일 크기 확인 실패:', error);
+      ServerLogger.error('파일 크기 확인 실패:', error);
       return null;
     }
   }
@@ -445,9 +446,9 @@ class VideoProcessor {
       // 썸네일 폴더 정리
       this.cleanDirectory(this.thumbnailDir, weekAgo, now);
       
-      console.log('✅ 오래된 파일 정리 완료');
+      ServerLogger.info('✅ 오래된 파일 정리 완료');
     } catch (error) {
-      console.error('파일 정리 실패:', error);
+      ServerLogger.error('파일 정리 실패:', error);
     }
   }
 
@@ -503,7 +504,7 @@ class VideoProcessor {
       
       if (now - stats.mtime.getTime() > maxAge) {
         fs.unlinkSync(filePath);
-        console.log(`🗑️ 삭제됨: ${file}`);
+        ServerLogger.info(`🗑️ 삭제됨: ${file}`);
       }
     });
   }

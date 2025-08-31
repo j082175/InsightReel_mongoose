@@ -51,7 +51,7 @@ class VideoController {
    */
   updateHeaders = ErrorHandler.asyncHandler(async (req, res) => {
     try {
-      console.log('🔄 수동 헤더 업데이트 요청');
+      ServerLogger.info('🔄 수동 헤더 업데이트 요청');
       await this.sheetsManager.ensureUpdatedHeaders();
       
       res.json({
@@ -230,9 +230,9 @@ class VideoController {
       );
     }
     
-    console.log(`🎬 Processing ${platform} blob video:`, postUrl);
-    console.log(`📁 File info: ${file.filename} (${file.size} bytes)`);
-    console.log(`🔍 Analysis type: ${analysisType}`);
+    ServerLogger.info(`🎬 Processing ${platform} blob video:`, postUrl);
+    ServerLogger.info(`📁 File info: ${file.filename} (${file.size} bytes)`);
+    ServerLogger.info(`🔍 Analysis type: ${analysisType}`);
     
     try {
       const result = await this.executeVideoProcessingPipeline({
@@ -271,10 +271,10 @@ class VideoController {
     try {
       // 1단계: 비디오 준비
       if (isBlob && videoPath) {
-        console.log('1️⃣ 업로드된 비디오 사용');
+        ServerLogger.info('1️⃣ 업로드된 비디오 사용');
         pipeline.videoPath = videoPath;
       } else if (videoUrl) {
-        console.log('1️⃣ 비디오 다운로드 중...');
+        ServerLogger.info('1️⃣ 비디오 다운로드 중...');
         pipeline.videoPath = await this.videoProcessor.downloadVideo(videoUrl, platform);
       } else {
         throw new Error('비디오 URL 또는 파일이 필요합니다');
@@ -282,11 +282,11 @@ class VideoController {
       
       // 2단계: 썸네일/프레임 생성
       if (analysisType === 'multi-frame' || analysisType === 'full') {
-        console.log('2️⃣ 다중 프레임 추출 중...');
+        ServerLogger.info('2️⃣ 다중 프레임 추출 중...');
         pipeline.thumbnailPaths = await this.videoProcessor.generateThumbnail(pipeline.videoPath, analysisType);
-        console.log(`✅ ${pipeline.thumbnailPaths.length}개 프레임 추출 완료`);
+        ServerLogger.info(`✅ ${pipeline.thumbnailPaths.length}개 프레임 추출 완료`);
       } else {
-        console.log('2️⃣ 단일 썸네일 생성 중...');
+        ServerLogger.info('2️⃣ 단일 썸네일 생성 중...');
         const singleThumbnail = await this.videoProcessor.generateThumbnail(pipeline.videoPath, analysisType);
         // 단일 프레임도 배열로 통일
         pipeline.thumbnailPaths = Array.isArray(singleThumbnail) ? singleThumbnail : [singleThumbnail];
@@ -294,20 +294,20 @@ class VideoController {
       
       // 3단계: AI 분석
       if (pipeline.thumbnailPaths.length > 1) {
-        console.log(`3️⃣ 다중 프레임 AI 분석 중... (${pipeline.thumbnailPaths.length}개 프레임)`);
+        ServerLogger.info(`3️⃣ 다중 프레임 AI 분석 중... (${pipeline.thumbnailPaths.length}개 프레임)`);
       } else {
-        console.log('3️⃣ 단일 프레임 AI 분석 중...');
+        ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
       }
       pipeline.analysis = await this.aiAnalyzer.analyzeVideo(pipeline.thumbnailPaths, metadata);
       
       // 4단계: 구글 시트 저장 (선택사항)
-      console.log('4️⃣ 구글 시트 저장 중...');
+      ServerLogger.info('4️⃣ 구글 시트 저장 중...');
       try {
         // metadata에서 _instagramAuthor를 author로 변환
         const processedMetadata = { ...metadata };
         if (metadata._instagramAuthor) {
           processedMetadata.author = metadata._instagramAuthor;
-          console.log('👤 Instagram 계정 정보 처리:', metadata._instagramAuthor);
+          ServerLogger.info('👤 Instagram 계정 정보 처리:', metadata._instagramAuthor);
         }
         
         await this.sheetsManager.saveVideoData({
@@ -320,13 +320,13 @@ class VideoController {
           analysis: pipeline.analysis,
           timestamp: new Date().toISOString()
         });
-        console.log('✅ 구글 시트 저장 완료');
+        ServerLogger.info('✅ 구글 시트 저장 완료');
       } catch (error) {
         console.warn('⚠️ 구글 시트 저장 실패 (무시하고 계속):', error.message);
         // 구글 시트 저장 실패는 전체 처리를 중단시키지 않음
       }
       
-      console.log('✅ 비디오 처리 파이프라인 완료');
+      ServerLogger.info('✅ 비디오 처리 파이프라인 완료');
       
       return {
         category: pipeline.analysis.category,
@@ -360,7 +360,7 @@ class VideoController {
       if (pipeline.videoPath) {
         if (fs.existsSync(pipeline.videoPath)) {
           fs.unlinkSync(pipeline.videoPath);
-          console.log('🧹 임시 비디오 파일 정리됨');
+          ServerLogger.info('🧹 임시 비디오 파일 정리됨');
         }
       }
       
@@ -373,7 +373,7 @@ class VideoController {
         for (const thumbnailPath of pathsToClean) {
           if (thumbnailPath && fs.existsSync(thumbnailPath)) {
             fs.unlinkSync(thumbnailPath);
-            console.log(`🧹 임시 썸네일 파일 정리됨: ${path.basename(thumbnailPath)}`);
+            ServerLogger.info(`🧹 임시 썸네일 파일 정리됨: ${path.basename(thumbnailPath)}`);
           }
         }
       }
@@ -388,7 +388,7 @@ class VideoController {
   updateStats() {
     this.stats.total++;
     this.stats.today++;
-    console.log(`📊 처리 통계 업데이트: 총 ${this.stats.total}개, 오늘 ${this.stats.today}개`);
+    ServerLogger.info(`📊 처리 통계 업데이트: 총 ${this.stats.total}개, 오늘 ${this.stats.today}개`);
   }
 
   /**

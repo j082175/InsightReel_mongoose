@@ -138,7 +138,7 @@ class SheetsManager {
       // 헤더 설정
       await this.setupHeaders();
 
-      console.log(`✅ 새 스프레드시트 생성됨: ${this.spreadsheetId}`);
+      ServerLogger.info(`✅ 새 스프레드시트 생성됨: ${this.spreadsheetId}`);
       return response.data;
     } catch (error) {
       throw new Error(`스프레드시트 생성 실패: ${error.message}`);
@@ -210,9 +210,9 @@ class SheetsManager {
                          !expectedHeaders.every((header, index) => currentHeaders[index] === header);
 
       if (needsUpdate) {
-        console.log('🔄 스프레드시트 헤더 업데이트 중...');
-        console.log('기존 헤더:', currentHeaders);
-        console.log('새 헤더:', expectedHeaders);
+        ServerLogger.info('🔄 스프레드시트 헤더 업데이트 중...');
+        ServerLogger.info('기존 헤더:', currentHeaders);
+        ServerLogger.info('새 헤더:', expectedHeaders);
 
         // 기존 P, Q 컬럼 내용 삭제 (불필요한 컬럼들)
         try {
@@ -220,9 +220,9 @@ class SheetsManager {
             spreadsheetId: this.spreadsheetId,
             range: `${sheetName}!P:Q`
           });
-          console.log('🗑️ 기존 P, Q 컬럼 내용 삭제 완료');
+          ServerLogger.info('🗑️ 기존 P, Q 컬럼 내용 삭제 완료');
         } catch (error) {
-          console.log('⚠️ P, Q 컬럼 삭제 중 오류 (무시):', error.message);
+          ServerLogger.info('⚠️ P, Q 컬럼 삭제 중 오류 (무시):', error.message);
         }
 
         // 헤더 업데이트
@@ -280,13 +280,13 @@ class SheetsManager {
           }
         });
 
-        console.log('✅ 스프레드시트 헤더 업데이트 완료');
+        ServerLogger.info('✅ 스프레드시트 헤더 업데이트 완료');
       } else {
-        console.log('✅ 스프레드시트 헤더가 이미 최신 상태입니다');
+        ServerLogger.info('✅ 스프레드시트 헤더가 이미 최신 상태입니다');
       }
 
     } catch (error) {
-      console.error('❌ 헤더 업데이트 실패:', error.message);
+      ServerLogger.error('❌ 헤더 업데이트 실패:', error.message);
       // 헤더 업데이트 실패해도 계속 진행
     }
   }
@@ -301,7 +301,7 @@ class SheetsManager {
       }
       return false;
     } catch (error) {
-      console.error('스프레드시트 ID 로드 실패:', error);
+      ServerLogger.error('스프레드시트 ID 로드 실패:', error);
       return false;
     }
   }
@@ -370,7 +370,7 @@ class SheetsManager {
       // 통계 업데이트
       await this.updateStatistics();
 
-      console.log(`✅ 구글 시트에 데이터 저장 완료: 행 ${nextRow}`);
+      ServerLogger.info(`✅ 구글 시트에 데이터 저장 완료: 행 ${nextRow}`);
       
       return {
         success: true,
@@ -379,7 +379,7 @@ class SheetsManager {
       };
 
     } catch (error) {
-      console.error('구글 시트 저장 실패:', error);
+      ServerLogger.error('구글 시트 저장 실패:', error);
       throw new Error(`데이터 저장 실패: ${error.message}`);
     }
   }
@@ -435,7 +435,7 @@ class SheetsManager {
           range: 'Stats!A:Z'
         });
       } catch (error) {
-        console.log('⚠️  Stats 시트가 없거나 접근할 수 없습니다. 통계 업데이트 건너뜀.');
+        ServerLogger.info('⚠️  Stats 시트가 없거나 접근할 수 없습니다. 통계 업데이트 건너뜀.');
         return;
       }
 
@@ -448,9 +448,9 @@ class SheetsManager {
         }
       });
 
-      console.log('✅ 통계 업데이트 완료');
+      ServerLogger.info('✅ 통계 업데이트 완료');
     } catch (error) {
-      console.error('통계 업데이트 실패:', error);
+      ServerLogger.error('통계 업데이트 실패:', error);
     }
   }
 
@@ -502,12 +502,12 @@ class SheetsManager {
       // 해당 시트 찾기
       const sheet = spreadsheet.data.sheets.find(s => s.properties.title === sheetName);
       if (!sheet) {
-        console.log(`⚠️  시트 "${sheetName}"을 찾을 수 없습니다.`);
+        ServerLogger.info(`⚠️  시트 "${sheetName}"을 찾을 수 없습니다.`);
         return;
       }
 
       const currentRowCount = sheet.properties.gridProperties.rowCount;
-      console.log(`📏 현재 시트 "${sheetName}" 행 수: ${currentRowCount}, 필요한 행: ${requiredRow}`);
+      ServerLogger.info(`📏 현재 시트 "${sheetName}" 행 수: ${currentRowCount}, 필요한 행: ${requiredRow}`);
 
       // 행 수가 부족하면 확장 (여유분 100행 추가)
       if (requiredRow >= currentRowCount) {
@@ -531,11 +531,11 @@ class SheetsManager {
           }
         });
 
-        console.log(`✅ 시트 "${sheetName}" 행 수를 ${currentRowCount}에서 ${newRowCount}로 확장했습니다.`);
+        ServerLogger.info(`✅ 시트 "${sheetName}" 행 수를 ${currentRowCount}에서 ${newRowCount}로 확장했습니다.`);
       }
 
     } catch (error) {
-      console.error('시트 확장 실패:', error);
+      ServerLogger.error('시트 확장 실패:', error);
       // 확장 실패해도 계속 진행 (기존 로직 유지)
     }
   }

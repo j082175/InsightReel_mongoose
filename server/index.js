@@ -8,6 +8,7 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const VideoProcessor = require('./services/VideoProcessor');
 const AIAnalyzer = require('./services/AIAnalyzer');
 const SheetsManager = require('./services/SheetsManager');
+const { ServerLogger } = require('./utils/logger');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -122,34 +123,34 @@ app.post('/api/process-video', async (req, res) => {
   try {
     const { platform, videoUrl, postUrl, metadata, analysisType = 'quick' } = req.body;
     
-    console.log(`🎬 Processing ${platform} video:`, postUrl);
-    console.log(`🔍 Analysis type: ${analysisType}`);
+    ServerLogger.info(`🎬 Processing ${platform} video:`, postUrl);
+    ServerLogger.info(`🔍 Analysis type: ${analysisType}`);
     
     // 1단계: 비디오 다운로드
-    console.log('1️⃣ 비디오 다운로드 중...');
+    ServerLogger.info('1️⃣ 비디오 다운로드 중...');
     const videoPath = await videoProcessor.downloadVideo(videoUrl, platform);
     
     // 2단계: 썸네일/프레임 생성
     if (analysisType === 'multi-frame' || analysisType === 'full') {
-      console.log('2️⃣ 다중 프레임 추출 중...');
+      ServerLogger.info('2️⃣ 다중 프레임 추출 중...');
       var thumbnailPaths = await videoProcessor.generateThumbnail(videoPath, analysisType);
-      console.log(`✅ ${thumbnailPaths.length}개 프레임 추출 완료`);
+      ServerLogger.info(`✅ ${thumbnailPaths.length}개 프레임 추출 완료`);
     } else {
-      console.log('2️⃣ 단일 썸네일 생성 중...');
+      ServerLogger.info('2️⃣ 단일 썸네일 생성 중...');
       var singleThumbnail = await videoProcessor.generateThumbnail(videoPath, analysisType);
       var thumbnailPaths = Array.isArray(singleThumbnail) ? singleThumbnail : [singleThumbnail];
     }
     
     // 3단계: AI 분석
     if (thumbnailPaths.length > 1) {
-      console.log(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
+      ServerLogger.info(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
     } else {
-      console.log('3️⃣ 단일 프레임 AI 분석 중...');
+      ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
     }
     const analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, metadata);
     
     // 4단계: 구글 시트 저장
-    console.log('4. 구글 시트 저장 중...');
+    ServerLogger.info('4. 구글 시트 저장 중...');
     await sheetsManager.saveVideoData({
       platform,
       postUrl,
@@ -165,7 +166,7 @@ app.post('/api/process-video', async (req, res) => {
     stats.total++;
     stats.today++;
     
-    console.log('✅ 비디오 처리 완료');
+    ServerLogger.info('✅ 비디오 처리 완료');
     
     res.json({
       success: true,
@@ -184,7 +185,7 @@ app.post('/api/process-video', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('비디오 처리 실패:', error);
+    ServerLogger.error('비디오 처리 실패:', error);
     res.status(500).json({
       success: false,
       message: '비디오 처리 중 오류가 발생했습니다.',
@@ -230,9 +231,9 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     const { platform, postUrl, analysisType = 'quick' } = req.body;
     const metadata = JSON.parse(req.body.metadata || '{}');
     
-    console.log(`🎬 Processing ${platform} blob video from:`, postUrl);
-    console.log(`📁 Uploaded file: ${req.file ? `${req.file.filename} (${req.file.size} bytes)` : 'None'}`);
-    console.log(`🔍 Analysis type: ${analysisType}`);
+    ServerLogger.info(`🎬 Processing ${platform} blob video from:`, postUrl);
+    ServerLogger.info(`📁 Uploaded file: ${req.file ? `${req.file.filename} (${req.file.size} bytes)` : 'None'}`);
+    ServerLogger.info(`🔍 Analysis type: ${analysisType}`);
     
     if (!req.file) {
       return res.status(400).json({ 
@@ -245,25 +246,25 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     
     // 2단계: 썸네일/프레임 생성
     if (analysisType === 'multi-frame' || analysisType === 'full') {
-      console.log('2️⃣ 다중 프레임 추출 중...');
+      ServerLogger.info('2️⃣ 다중 프레임 추출 중...');
       var thumbnailPaths = await videoProcessor.generateThumbnail(videoPath, analysisType);
-      console.log(`✅ ${thumbnailPaths.length}개 프레임 추출 완료`);
+      ServerLogger.info(`✅ ${thumbnailPaths.length}개 프레임 추출 완료`);
     } else {
-      console.log('2️⃣ 단일 썸네일 생성 중...');
+      ServerLogger.info('2️⃣ 단일 썸네일 생성 중...');
       var singleThumbnail = await videoProcessor.generateThumbnail(videoPath, analysisType);
       var thumbnailPaths = Array.isArray(singleThumbnail) ? singleThumbnail : [singleThumbnail];
     }
     
     // 3단계: AI 분석
     if (thumbnailPaths.length > 1) {
-      console.log(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
+      ServerLogger.info(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
     } else {
-      console.log('3️⃣ 단일 프레임 AI 분석 중...');
+      ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
     }
     const analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, metadata);
     
     // 4단계: 구글 시트 저장
-    console.log('4️⃣ 구글 시트 저장 중...');
+    ServerLogger.info('4️⃣ 구글 시트 저장 중...');
     await sheetsManager.saveVideoData({
       platform,
       postUrl,
@@ -279,7 +280,7 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     stats.total++;
     stats.today++;
     
-    console.log('✅ blob 비디오 처리 완료');
+    ServerLogger.info('✅ blob 비디오 처리 완료');
     
     res.json({
       success: true,
@@ -298,7 +299,7 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     });
     
   } catch (error) {
-    console.error('blob 비디오 처리 실패:', error);
+    ServerLogger.error('blob 비디오 처리 실패:', error);
     res.status(500).json({
       success: false,
       message: '비디오 처리 중 오류가 발생했습니다.',
@@ -309,7 +310,7 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
 
 // 에러 핸들러
 app.use((err, req, res, next) => {
-  console.error('서버 에러:', err);
+  ServerLogger.error('서버 에러:', err);
   res.status(500).json({
     error: '서버 내부 오류',
     message: err.message
@@ -326,7 +327,7 @@ app.use((req, res) => {
 
 // 서버 시작
 app.listen(PORT, () => {
-  console.log(`
+  ServerLogger.info(`
 🎬 영상 자동저장 분석기 서버 실행중
 📍 포트: ${PORT}
 🌐 URL: http://localhost:${PORT}

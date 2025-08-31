@@ -1,3 +1,5 @@
+const { ServerLogger } = require('../utils/logger');
+
 /**
  * 에러 처리 미들웨어
  */
@@ -84,7 +86,7 @@ class ErrorHandler {
     };
 
     if (error.statusCode >= 500) {
-      console.error('🚨 Server Error:', JSON.stringify(logData, null, 2));
+      ServerLogger.error('🚨 Server Error:', JSON.stringify(logData, null, 2));
     } else if (error.statusCode >= 400) {
       console.warn('⚠️ Client Error:', JSON.stringify(logData, null, 2));
     } else {
