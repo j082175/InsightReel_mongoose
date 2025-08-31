@@ -1325,13 +1325,115 @@ window.INSTAGRAM_UI_SYSTEM = {
       console.log('📍 오른쪽 하단 검색 영역:', rightBottomArea);
       console.log('📏 화면 크기:', { width: screenWidth, height: screenHeight });
       
-      // 좋아요 수를 찾기 위한 여러 선택자 시도
+      // Instagram 새 구조 - 현재 포스트 내 하트 아이콘 기준 좋아요 수 추출
+      const currentVideo = video || (container && (container._instagramCurrentVideo || container.querySelector('video')));
+      let heartButton = null;
+      
+      if (currentVideo) {
+        // 현재 비디오 근처에서 하트 아이콘 찾기
+        let searchArea = currentVideo;
+        for (let i = 0; i < 5; i++) {
+          searchArea = searchArea.parentElement;
+          if (!searchArea) break;
+          
+          heartButton = searchArea.querySelector('[aria-label="좋아요"]');
+          if (heartButton) break;
+        }
+      } else if (container) {
+        // container 내에서 하트 아이콘 찾기
+        heartButton = container.querySelector('[aria-label="좋아요"]');
+      } else {
+        // fallback: 전체 문서에서 하트 아이콘 찾기
+        heartButton = document.querySelector('[aria-label="좋아요"]');
+        console.log('🔍 container가 없어 전체 문서에서 하트 아이콘 검색');
+      }
+      
+      if (heartButton) {
+        console.log('🎯 현재 포스트에서 하트 아이콘 발견');
+        
+        // 하트 버튼 바로 옆에서 좋아요 수 찾기 (Instagram의 새로운 구조)
+        let likesSpan = null;
+        
+        // 방법 1: 하트 버튼과 같은 level에서 좋아요 수 span 찾기
+        const heartParent = heartButton.parentElement;
+        if (heartParent) {
+          const siblingSpans = heartParent.querySelectorAll('span');
+          for (const span of siblingSpans) {
+            const text = span.textContent?.trim();
+            console.log('🔍 하트 버튼 형제 요소 검사:', text);
+            
+            // 좋아요 수 패턴이고 댓글 관련 텍스트가 아닌 경우
+            if (text && /^\d+([.,]\d+)?[만KMk천]?$/.test(text) && text.length < 10) {
+              // 댓글 관련 요소가 아닌지 확인
+              const spanContext = span.closest('button');
+              const ariaLabel = spanContext?.getAttribute('aria-label') || '';
+              
+              console.log('🔍 span 컨텍스트 확인:', { text, ariaLabel });
+              
+              // 좋아요 버튼과 연관되어 있고 댓글이 아닌 경우
+              if (!ariaLabel.includes('댓글') && !ariaLabel.includes('comment')) {
+                console.log('✅ 현재 포스트 하트 기준 좋아요 수 발견:', text);
+                likesSpan = span;
+                break;
+              }
+            }
+          }
+        }
+        
+        // 방법 2: 하트 버튼의 상위 요소에서 좋아요 수 찾기 (기존 방식 개선)
+        if (!likesSpan) {
+          let parent = heartButton;
+          for (let level = 0; level < 4; level++) {
+            parent = parent.parentElement;
+            if (!parent) break;
+            
+            const spans = parent.querySelectorAll('span');
+            for (const span of spans) {
+              const text = span.textContent?.trim();
+              console.log(`🔍 상위 ${level+1}단계에서 검사:`, text);
+              
+              // 좋아요 수 패턴 확인
+              if (text && /^\d+([.,]\d+)?[만KMk천]?$/.test(text) && text.length < 10) {
+                // 댓글 관련 요소가 아닌지 더 엄격하게 확인
+                const isCommentRelated = 
+                  span.closest('[aria-label*="댓글"]') || 
+                  span.closest('[aria-label*="comment"]') ||
+                  span.closest('button[aria-label*="댓글"]') ||
+                  span.closest('button[aria-label*="comment"]');
+                
+                console.log('🔍 댓글 관련 여부:', { text, isCommentRelated: !!isCommentRelated });
+                
+                if (!isCommentRelated) {
+                  // 하트 버튼과의 거리 확인 (너무 멀리 떨어진 것은 제외)
+                  const heartRect = heartButton.getBoundingClientRect();
+                  const spanRect = span.getBoundingClientRect();
+                  const distance = Math.abs(heartRect.x - spanRect.x) + Math.abs(heartRect.y - spanRect.y);
+                  
+                  console.log('🔍 하트 버튼과 거리:', distance);
+                  
+                  if (distance < 200) { // 200px 이내에 있는 경우만
+                    console.log('✅ 현재 포스트 하트 기준 좋아요 수 발견 (상위 요소):', text);
+                    likesSpan = span;
+                    break;
+                  }
+                }
+              }
+            }
+            
+            if (likesSpan) break;
+          }
+        }
+        
+        if (likesSpan) {
+          return this.normalizeLikesCount(likesSpan.textContent.trim());
+        }
+      }
+      
+      // 기존 선택자들도 시도 (폴백)
       const likeSelectors = [
         'button[aria-label*="좋아요"] span',
         'button[aria-label*="like"] span',
         '[data-testid="like-count"]',
-        'button:has(svg[aria-label*="좋아요"]) + span',
-        'button:has(svg[aria-label*="like"]) + span',
         'span[title*="좋아요"]',
         'span[title*="like"]'
       ];
@@ -1380,12 +1482,18 @@ window.INSTAGRAM_UI_SYSTEM = {
           }
           
           // 좋아요 수 패턴 확인
-          if (text && this.isLikesCountPattern(text)) {
-            likeCandidates.push({
-              count: text,
-              element: element,
-              position: { x: rect.left, y: rect.top }
-            });
+          if (text) {
+            const isPattern = this.isLikesCountPattern(text);
+            console.log(`🔍 패턴 체크: "${text}" -> ${isPattern}`);
+            
+            if (isPattern) {
+              likeCandidates.push({
+                count: text,
+                element: element,
+                position: { x: rect.left, y: rect.top }
+              });
+              console.log(`✅ 좋아요 후보 추가: "${text}"`);
+            }
           }
         }
       }
@@ -1393,13 +1501,47 @@ window.INSTAGRAM_UI_SYSTEM = {
       console.log(`📊 오른쪽 하단 영역에서 ${elementsInArea}개 요소 검사, ${likeCandidates.length}개 좋아요 후보 발견`);
       
       if (likeCandidates.length > 0) {
-        // 가장 적합한 후보 선택 (가장 아래에 있는 것 우선)
-        const bestCandidate = likeCandidates.reduce((best, current) => {
-          return current.position.y > best.position.y ? current : best;
-        });
+        console.log('🔍 좋아요 후보들:', likeCandidates.map(c => ({ count: c.count, y: c.position.y })));
         
-        console.log('✅ 위치 기반으로 좋아요 수 발견:', bestCandidate.count);
-        return this.normalizeLikesCount(bestCandidate.count);
+        // 더 적합한 후보 선택 로직
+        let bestCandidate = null;
+        
+        // 우선순위 1: "만" 단위가 있는 것 (예: 4만, 1.2만 등)
+        const candidatesWithMillion = likeCandidates.filter(c => c.count.includes('만'));
+        if (candidatesWithMillion.length > 0) {
+          // 만 단위 중에서 가장 큰 값
+          bestCandidate = candidatesWithMillion.reduce((best, current) => {
+            const bestNum = parseFloat(best.count.replace('만', ''));
+            const currentNum = parseFloat(current.count.replace('만', ''));
+            return currentNum > bestNum ? current : best;
+          });
+          console.log('✅ 위치 기반으로 좋아요 수 발견 (만 단위 우선):', bestCandidate.count);
+        } 
+        // 우선순위 2: "천" 단위가 있는 것
+        else {
+          const candidatesWithThousand = likeCandidates.filter(c => c.count.includes('천') || c.count.includes('K'));
+          if (candidatesWithThousand.length > 0) {
+            bestCandidate = candidatesWithThousand.reduce((best, current) => {
+              const bestNum = parseFloat(best.count.replace(/[천K]/g, ''));
+              const currentNum = parseFloat(current.count.replace(/[천K]/g, ''));
+              return currentNum > bestNum ? current : best;
+            });
+            console.log('✅ 위치 기반으로 좋아요 수 발견 (천 단위 우선):', bestCandidate.count);
+          }
+          // 우선순위 3: 일반 숫자 중 가장 큰 것
+          else {
+            bestCandidate = likeCandidates.reduce((best, current) => {
+              const bestNum = parseInt(best.count.replace(/[,]/g, ''));
+              const currentNum = parseInt(current.count.replace(/[,]/g, ''));
+              return currentNum > bestNum ? current : best;
+            });
+            console.log('✅ 위치 기반으로 좋아요 수 발견 (큰 수 우선):', bestCandidate.count);
+          }
+        }
+        
+        if (bestCandidate) {
+          return this.normalizeLikesCount(bestCandidate.count);
+        }
       }
       
       // MediaInfo에서 좋아요 수 추출 시도
@@ -1425,6 +1567,9 @@ window.INSTAGRAM_UI_SYSTEM = {
     // 숫자만 있는 경우 (예: 1234)
     if (text.match(/^\d{1,}$/)) return true;
     
+    // 한국어 단위가 포함된 경우 (예: 4만, 1.2만, 5천)
+    if (text.match(/^\d+([.,]\d+)?[만천]$/)) return true;
+    
     // 숫자 + K/M 형식 (예: 1.2K, 5M)
     if (text.match(/^\d+([.,]\d+)?[KkMm]$/)) return true;
     
@@ -1434,6 +1579,7 @@ window.INSTAGRAM_UI_SYSTEM = {
     // 좋아요 텍스트가 포함된 경우는 제외
     if (text.includes('좋아요') || text.includes('like')) return false;
     
+    console.log('🔍 좋아요 패턴 확인:', { text, isMatch: false });
     return false;
   },
   
@@ -1451,7 +1597,16 @@ window.INSTAGRAM_UI_SYSTEM = {
       return text.replace(/,/g, '');
     }
     
-    // K, M 단위 처리는 원본 형태 유지 (서버에서 처리하거나 사용자가 읽기 쉽게)
+    // 만, 천 단위 처리 (한국 Instagram)
+    if (text.includes('만')) {
+      return text; // "150.8만" 그대로 유지
+    }
+    
+    if (text.includes('천')) {
+      return text; // "5.2천" 그대로 유지
+    }
+    
+    // K, M 단위 처리는 원본 형태 유지 (해외 Instagram)
     if (text.match(/\d+[.,]\d*[KkMm]/)) {
       return text;
     }
@@ -1460,7 +1615,7 @@ window.INSTAGRAM_UI_SYSTEM = {
       return text;
     }
     
-    // 숫자 추출
+    // 숫자만 있는 경우는 그대로 반환
     const numbers = text.match(/\d+/);
     return numbers ? numbers[0] : '0';
   },
@@ -3415,12 +3570,117 @@ class VideoSaver {
         console.log('❤️ 위치 기반 좋아요 수 추출 결과:', likes);
       }
       
+      // 댓글 수 추출 - 현재 포스트 내 댓글 버튼 기준 방식 사용
+      let comments = '0';
+      
+      // 현재 포스트 내에서 댓글 버튼 찾기
+      let commentButton = null;
+      const currentVideo = post._instagramCurrentVideo || post.querySelector('video');
+      
+      if (currentVideo) {
+        // 현재 비디오 근처에서 댓글 버튼 찾기
+        let searchArea = currentVideo;
+        for (let i = 0; i < 5; i++) {
+          searchArea = searchArea.parentElement;
+          if (!searchArea) break;
+          
+          commentButton = searchArea.querySelector('[aria-label="댓글"]');
+          if (commentButton) break;
+        }
+      } else {
+        // post 내에서 댓글 버튼 찾기
+        commentButton = post.querySelector('[aria-label="댓글"]');
+      }
+      
+      if (commentButton) {
+        console.log('🎯 현재 포스트에서 댓글 버튼 발견');
+        
+        // 방법 1: 댓글 버튼과 같은 level에서 댓글 수 span 찾기
+        const commentParent = commentButton.parentElement;
+        if (commentParent) {
+          const siblingSpans = commentParent.querySelectorAll('span');
+          for (const span of siblingSpans) {
+            const text = span.textContent?.trim();
+            console.log('🔍 댓글 버튼 형제 요소 검사:', text);
+            
+            // 댓글 수 패턴이고 좋아요 관련 텍스트가 아닌 경우
+            if (text && /^\d+([.,]\d+)?[만KMk천]?$/.test(text) && text.length < 10) {
+              // 좋아요 관련 요소가 아닌지 확인
+              const spanContext = span.closest('button');
+              const ariaLabel = spanContext?.getAttribute('aria-label') || '';
+              
+              console.log('🔍 댓글 span 컨텍스트 확인:', { text, ariaLabel });
+              
+              // 댓글 버튼과 연관되어 있고 좋아요가 아닌 경우
+              if (!ariaLabel.includes('좋아요') && !ariaLabel.includes('like')) {
+                console.log('✅ 현재 포스트 댓글 기준 댓글 수 발견:', text);
+                comments = text;
+                break;
+              }
+            }
+          }
+        }
+        
+        // 방법 2: 댓글 버튼의 textContent에서 숫자 추출 (예: "댓글7992" → "7992")
+        if (comments === '0') {
+          const commentText = commentButton.textContent?.replace('댓글', '').trim();
+          if (commentText && /^\d+([.,]\d+)?[만KMk천]?$/.test(commentText)) {
+            comments = commentText;
+            console.log('✅ 현재 포스트 댓글 버튼에서 댓글 수 발견:', comments);
+          }
+        }
+        
+        // 방법 3: 댓글 버튼 주변에서 찾기 (기존 방식 개선)
+        if (comments === '0') {
+          let parent = commentButton;
+          for (let level = 0; level < 4; level++) {
+            parent = parent.parentElement;
+            if (!parent) break;
+            
+            const spans = parent.querySelectorAll('span');
+            for (const span of spans) {
+              const text = span.textContent?.trim();
+              console.log(`🔍 댓글 상위 ${level+1}단계에서 검사:`, text);
+              
+              // 댓글 수 패턴 확인
+              if (text && /^\d+([.,]\d+)?[만KMk천]?$/.test(text) && text.length < 10) {
+                // 좋아요가 아니고 이미 발견된 좋아요 수와 다른 숫자
+                const isLikeRelated = 
+                  span.closest('[aria-label*="좋아요"]') || 
+                  span.closest('[aria-label*="like"]') ||
+                  span.closest('button[aria-label*="좋아요"]') ||
+                  span.closest('button[aria-label*="like"]');
+                
+                console.log('🔍 좋아요 관련 여부:', { text, isLikeRelated: !!isLikeRelated, likes });
+                
+                if (!isLikeRelated && text !== likes) {
+                  // 댓글 버튼과의 거리 확인
+                  const commentRect = commentButton.getBoundingClientRect();
+                  const spanRect = span.getBoundingClientRect();
+                  const distance = Math.abs(commentRect.x - spanRect.x) + Math.abs(commentRect.y - spanRect.y);
+                  
+                  console.log('🔍 댓글 버튼과 거리:', distance);
+                  
+                  if (distance < 200) { // 200px 이내에 있는 경우만
+                    comments = text;
+                    console.log('✅ 현재 포스트 댓글 버튼 주변에서 댓글 수 발견 (상위 요소):', text);
+                    break;
+                  }
+                }
+              }
+            }
+            if (comments !== '0') break;
+          }
+        }
+      }
+      
       const hashtags = Utils.extractHashtags(caption);
       
       return {
         author: author.trim(),
         caption: caption.trim(),
         likes: likes.trim(),
+        comments: comments.trim(),
         hashtags,
         timestamp: new Date().toISOString()
       };

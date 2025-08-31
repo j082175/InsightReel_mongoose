@@ -63,6 +63,7 @@ export class InstagramHandler {
         author: '',
         caption: '',
         likes: '0',
+        comments: '0',
         hashtags: []
       };
 
@@ -96,24 +97,8 @@ export class InstagramHandler {
         }
       }
 
-      // 좋아요 수 추출
-      const likesElements = [
-        '[aria-label*="좋아요"] span',
-        'button[data-testid="like"] + span',
-        '.x1lliihq[role="button"] span'
-      ];
-      
-      for (const selector of likesElements) {
-        const likesElement = document.querySelector(selector);
-        if (likesElement) {
-          const likesText = likesElement.innerText.trim();
-          const likesMatch = likesText.match(/[\d,]+/);
-          if (likesMatch) {
-            metadata.likes = likesMatch[0];
-            break;
-          }
-        }
-      }
+      // 좋아요 수와 댓글 수를 정확히 구분하여 추출
+      this.extractEngagementData(metadata);
 
       // 해시태그 추출
       if (metadata.caption) {
@@ -123,12 +108,147 @@ export class InstagramHandler {
         }
       }
 
-      Utils.log('info', '메타데이터 추출 완료', metadata);
+      Utils.log('info', '메타데이터 추출 완료', {
+        author: metadata.author,
+        caption: metadata.caption.substring(0, 50) + '...',
+        likes: metadata.likes,
+        comments: metadata.comments,
+        hashtags: metadata.hashtags
+      });
+      
       return metadata;
       
     } catch (error) {
       Utils.log('error', '메타데이터 추출 실패', error);
-      return { author: '', caption: '', likes: '0', hashtags: [] };
+      return { author: '', caption: '', likes: '0', comments: '0', hashtags: [] };
+    }
+  }
+
+  /**
+   * 좋아요 수와 댓글 수를 정확히 구분하여 추출
+   */
+  extractEngagementData(metadata) {
+    try {
+      // Instagram의 액션 섹션 찾기 (좋아요, 댓글, 공유, 저장 버튼이 있는 영역)
+      const actionSections = [
+        'section', 
+        'div[role="group"]',
+        'article > div > div:last-child > section'
+      ];
+
+      let actionSection = null;
+      for (const selector of actionSections) {
+        actionSection = document.querySelector(selector);
+        if (actionSection && actionSection.querySelector('[aria-label*="좋아요"]')) {
+          Utils.log('info', `액션 섹션 발견: ${selector}`);
+          break;
+        }
+      }
+
+      if (!actionSection) {
+        Utils.log('warn', '액션 섹션을 찾을 수 없음, 전체 문서에서 검색');
+        actionSection = document;
+      }
+
+      // 방법 1: aria-label을 이용한 정확한 좋아요 수 추출
+      const likeSelectors = [
+        '[aria-label*="좋아요"] span',
+        '[aria-label*="like"] span', 
+        'button[aria-label*="좋아요"] + div span',
+        'button[aria-label*="like"] + div span'
+      ];
+
+      for (const selector of likeSelectors) {
+        const likeElement = actionSection.querySelector(selector);
+        if (likeElement) {
+          const likeText = likeElement.innerText.trim();
+          Utils.log('info', `좋아요 후보 발견: "${likeText}" (선택자: ${selector})`);
+          
+          // 숫자만 추출
+          const likeMatch = likeText.match(/[\d,]+/);
+          if (likeMatch && !likeText.includes('댓글') && !likeText.includes('comment')) {
+            metadata.likes = likeMatch[0].replace(/,/g, '');
+            Utils.log('info', `좋아요 수 설정: ${metadata.likes}`);
+            break;
+          }
+        }
+      }
+
+      // 방법 2: 댓글 수 추출
+      const commentSelectors = [
+        '[aria-label*="댓글"] span',
+        '[aria-label*="comment"] span',
+        'button[aria-label*="댓글"] + div span',
+        'button[aria-label*="comment"] + div span',
+        'a[href*="/comments/"] span'
+      ];
+
+      for (const selector of commentSelectors) {
+        const commentElement = actionSection.querySelector(selector);
+        if (commentElement) {
+          const commentText = commentElement.innerText.trim();
+          Utils.log('info', `댓글 후보 발견: "${commentText}" (선택자: ${selector})`);
+          
+          // 숫자만 추출
+          const commentMatch = commentText.match(/[\d,]+/);
+          if (commentMatch && (commentText.includes('댓글') || commentText.includes('comment'))) {
+            metadata.comments = commentMatch[0].replace(/,/g, '');
+            Utils.log('info', `댓글 수 설정: ${metadata.comments}`);
+            break;
+          }
+        }
+      }
+
+      // 방법 3: 텍스트 패턴으로 구분하기 (fallback)
+      if (metadata.likes === '0' || metadata.comments === '0') {
+        Utils.log('info', '대안 방법으로 좋아요/댓글 수 추출 시도');
+        this.extractEngagementByText(actionSection, metadata);
+      }
+
+      Utils.log('info', '최종 추출 결과', { 
+        likes: metadata.likes, 
+        comments: metadata.comments 
+      });
+
+    } catch (error) {
+      Utils.log('error', '좋아요/댓글 수 추출 실패', error);
+    }
+  }
+
+  /**
+   * 텍스트 패턴을 이용한 좋아요/댓글 수 추출 (fallback 방법)
+   */
+  extractEngagementByText(container, metadata) {
+    try {
+      // 모든 span 요소에서 숫자가 포함된 텍스트 찾기
+      const spans = container.querySelectorAll('span');
+      
+      for (const span of spans) {
+        const text = span.innerText.trim();
+        const numberMatch = text.match(/[\d,]+/);
+        
+        if (numberMatch) {
+          const number = numberMatch[0].replace(/,/g, '');
+          
+          // 좋아요 관련 키워드 체크
+          if ((text.includes('좋아요') || text.includes('like')) && 
+              !text.includes('댓글') && !text.includes('comment') && 
+              metadata.likes === '0') {
+            metadata.likes = number;
+            Utils.log('info', `텍스트 패턴으로 좋아요 수 발견: ${number} ("${text}")`);
+          }
+          
+          // 댓글 관련 키워드 체크
+          if ((text.includes('댓글') || text.includes('comment')) && 
+              !text.includes('좋아요') && !text.includes('like') && 
+              metadata.comments === '0') {
+            metadata.comments = number;
+            Utils.log('info', `텍스트 패턴으로 댓글 수 발견: ${number} ("${text}")`);
+          }
+        }
+      }
+    } catch (error) {
+      Utils.log('error', '텍스트 패턴 추출 실패', error);
     }
   }
 
@@ -956,41 +1076,23 @@ export class InstagramHandler {
     }
 
     try {
-      // 작성자
-      const authorElement = Utils.safeQuerySelector(post, CONSTANTS.SELECTORS.INSTAGRAM.AUTHOR);
-      const author = authorElement?.textContent || '';
+      // 현재 활성 포스트의 메타데이터 추출 (개선된 방법 사용)
+      const currentMetadata = this.extractPostMetadata();
       
-      // 캡션 (여러 선택자 시도)
-      let caption = '';
-      const captionSelectors = CONSTANTS.SELECTORS.INSTAGRAM.CAPTION;
-      Utils.log('info', '캡션 추출 시도', { selectors: captionSelectors });
-      
-      for (const selector of captionSelectors) {
-        const captionElement = Utils.safeQuerySelector(post, selector);
-        if (captionElement && captionElement.textContent.trim()) {
-          caption = captionElement.textContent.trim();
-          Utils.log('info', '캡션 추출 성공', { selector, caption: caption.substring(0, 100) });
-          break;
-        }
-      }
-      
-      if (!caption) {
-        Utils.log('warn', '캡션을 찾을 수 없음');
-      }
-      
-      // 좋아요 수
-      const likesElement = Utils.safeQuerySelector(post, CONSTANTS.SELECTORS.INSTAGRAM.LIKES);
-      const likes = likesElement?.textContent || '0';
-      
-      // 해시태그 추출
-      const hashtags = Utils.extractHashtags(caption);
-      Utils.log('info', '해시태그 추출 결과', { hashtags, captionLength: caption.length });
+      Utils.log('info', '추출된 메타데이터 (extractMetadata)', {
+        author: currentMetadata.author,
+        caption: currentMetadata.caption?.substring(0, 50) + '...',
+        likes: currentMetadata.likes,
+        comments: currentMetadata.comments,
+        hashtags: currentMetadata.hashtags
+      });
       
       return {
-        author: author.trim(),
-        caption: caption.trim(),
-        likes: likes.trim(),
-        hashtags,
+        author: currentMetadata.author,
+        caption: currentMetadata.caption,
+        likes: currentMetadata.likes,
+        comments: currentMetadata.comments,
+        hashtags: currentMetadata.hashtags,
         timestamp: new Date().toISOString()
       };
     } catch (error) {

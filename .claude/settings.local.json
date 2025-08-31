@@ -46,6 +46,7 @@
       "Bash(claudelytics:*)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "defaultMode": "plan"
   }
 }

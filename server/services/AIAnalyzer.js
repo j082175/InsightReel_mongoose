@@ -21,7 +21,7 @@ class AIAnalyzer {
     if (this.useGemini) {
       const { GoogleGenerativeAI } = require('@google/generative-ai');
       this.genAI = new GoogleGenerativeAI(this.geminiApiKey);
-      this.geminiModel = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      this.geminiModel = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       console.log('🔮 Gemini API 초기화 완료');
     } else {
       console.log('🤖 Ollama 모드로 실행 중');

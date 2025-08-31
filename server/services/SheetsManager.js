@@ -201,7 +201,7 @@ class SheetsManager {
       const currentHeaders = currentHeaderResponse.data.values?.[0] || [];
       const expectedHeaders = [
         '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리',
-        '키워드', '분석내용', '좋아요', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
+        '키워드', '분석내용', '좋아요', '댓글수', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
       ];
 
       // 헤더가 다르거나 길이가 다르면 업데이트
@@ -334,7 +334,7 @@ class SheetsManager {
       const nextRow = (lastRowResponse.data.values?.length || 1) + 1;
       const rowNumber = nextRow - 1; // 헤더 제외
 
-      // 데이터 행 구성 (설명 컬럼 제거됨)
+      // 데이터 행 구성 (댓글수 컬럼 추가)
       const rowData = [
         rowNumber,                                    // 번호
         new Date(timestamp).toLocaleString('ko-KR'), // 일시
@@ -345,6 +345,7 @@ class SheetsManager {
         analysis.keywords?.join(', ') || '',         // 키워드
         analysis.content || '',                      // 분석내용
         metadata.likes || '0',                       // 좋아요
+        metadata.comments || '0',                    // 댓글수
         analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그
         postUrl,                                     // URL
         path.basename(videoPath),                    // 파일경로
@@ -355,10 +356,10 @@ class SheetsManager {
       // 시트 행 수가 부족하면 확장
       await this.ensureSheetCapacity(sheetName, nextRow);
 
-      // 스프레드시트에 데이터 추가
+      // 스프레드시트에 데이터 추가 (댓글수 컬럼 추가로 O→P로 변경)
       await this.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A${nextRow}:O${nextRow}`,
+        range: `${sheetName}!A${nextRow}:P${nextRow}`,
         valueInputOption: 'RAW',
         resource: {
           values: [rowData]
