@@ -154,15 +154,13 @@ class VideoController {
   /**
    * 비디오 처리 (URL 방식)
    */
-  processVideo = ErrorHandler.asyncHandler(async (req, res) => {
+  processVideo = (req, res) => {
     const { platform, videoUrl, postUrl, metadata, analysisType = 'quick' } = req.body;
     
     ServerLogger.info(`Processing ${platform} video: ${postUrl}`, null, 'VIDEO');
     ServerLogger.info(`Analysis type: ${analysisType}`, null, 'VIDEO');
-    ServerLogger.info(`Request body keys: ${Object.keys(req.body).join(', ')}`, null, 'VIDEO');
-    ServerLogger.info(`Full request body`, req.body, 'VIDEO');
     
-    try {
+    return ErrorHandler.safeApiResponse(async () => {
       const result = await this.executeVideoProcessingPipeline({
         platform,
         videoUrl,
@@ -173,15 +171,11 @@ class VideoController {
       });
 
       this.updateStats();
-      
-      res.json({
-        success: true,
+      return {
         message: '비디오가 성공적으로 처리되었습니다.',
         data: result
-      });
-
-    } catch (error) {
-      ServerLogger.error('비디오 처리 실패', error, 'VIDEO');
+      };
+    }, req, res, 'Video Processing');
       
       // 구체적인 에러 타입별 처리
       if (error.message.includes('다운로드')) {

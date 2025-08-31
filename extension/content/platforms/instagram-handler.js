@@ -1,6 +1,7 @@
 import { CONSTANTS } from '../constants.js';
 import { Utils } from '../utils.js';
 import { BasePlatformHandler } from './base-handler.js';
+import { ErrorHandler } from '../error-handler.js';
 
 /**
  * Instagram 플랫폼 핸들러
@@ -35,7 +36,7 @@ export class InstagramHandler extends BasePlatformHandler {
     this.observeExistingVideos();
     
     setTimeout(() => {
-      this.safeExecute(async () => {
+      ErrorHandler.safeExecute(async () => {
         this.processExistingSaveButtons();
         this.addAnalysisButtons();
       }, '저장 버튼 향상').finally(() => {
