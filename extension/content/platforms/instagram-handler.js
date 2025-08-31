@@ -1,21 +1,15 @@
 import { CONSTANTS } from '../constants.js';
 import { Utils } from '../utils.js';
-import { SettingsManager } from '../settings-manager.js';
+import { BasePlatformHandler } from './base-handler.js';
 
 /**
  * Instagram 플랫폼 핸들러
  */
-export class InstagramHandler {
+export class InstagramHandler extends BasePlatformHandler {
   constructor(apiClient, uiManager) {
-    this.apiClient = apiClient;
-    this.uiManager = uiManager;
-    this.settingsManager = new SettingsManager();
-    this.isProcessing = false;
-    this.lastEnhancementTime = 0;
-    this.processedButtons = new Set();
-    this.processedVideos = new Set();
+    super(apiClient, uiManager, 'instagram');
     
-    // 현재 중심 영상 추적
+    // Instagram 특화 기능
     this.currentActiveVideo = null;
     this.videoObserver = null;
     this.setupVideoTracking();
@@ -30,27 +24,23 @@ export class InstagramHandler {
       return;
     }
 
-    this.isProcessing = true;
-    Utils.log('info', 'Instagram 저장 버튼 기능 향상 시작');
-    this.lastEnhancementTime = Date.now();
+    this.startProcessing();
+    this.log('info', '저장 버튼 기능 향상 시작');
     
     // Instagram SPA 네비게이션 시 캐시 초기화
-    this.processedButtons.clear();
-    this.processedVideos.clear();
-    Utils.log('info', '🔄 Instagram SPA 대응: 처리된 요소 캐시 초기화');
+    this.clearProcessedItems('all');
+    this.log('info', '🔄 SPA 대응: 처리된 요소 캐시 초기화');
     
     // 영상 추적 시스템 재시작
     this.observeExistingVideos();
     
     setTimeout(() => {
-      try {
+      this.safeExecute(async () => {
         this.processExistingSaveButtons();
         this.addAnalysisButtons();
-      } catch (error) {
-        Utils.log('error', '저장 버튼 향상 중 오류', error);
-      } finally {
-        this.isProcessing = false;
-      }
+      }, '저장 버튼 향상').finally(() => {
+        this.endProcessing();
+      });
     }, 1000);
   }
 
@@ -108,7 +98,7 @@ export class InstagramHandler {
         }
       }
 
-      Utils.log('info', '메타데이터 추출 완료', {
+      this.log('info', '메타데이터 추출 완료', {
         author: metadata.author,
         caption: metadata.caption.substring(0, 50) + '...',
         likes: metadata.likes,
@@ -119,7 +109,7 @@ export class InstagramHandler {
       return metadata;
       
     } catch (error) {
-      Utils.log('error', '메타데이터 추출 실패', error);
+      this.log('error', '메타데이터 추출 실패', error);
       return { author: '', caption: '', likes: '0', comments: '0', hashtags: [] };
     }
   }
@@ -140,13 +130,13 @@ export class InstagramHandler {
       for (const selector of actionSections) {
         actionSection = document.querySelector(selector);
         if (actionSection && actionSection.querySelector('[aria-label*="좋아요"]')) {
-          Utils.log('info', `액션 섹션 발견: ${selector}`);
+          this.log('info', `액션 섹션 발견: ${selector}`);
           break;
         }
       }
 
       if (!actionSection) {
-        Utils.log('warn', '액션 섹션을 찾을 수 없음, 전체 문서에서 검색');
+        this.log('warn', '액션 섹션을 찾을 수 없음, 전체 문서에서 검색');
         actionSection = document;
       }
 
@@ -162,13 +152,13 @@ export class InstagramHandler {
         const likeElement = actionSection.querySelector(selector);
         if (likeElement) {
           const likeText = likeElement.innerText.trim();
-          Utils.log('info', `좋아요 후보 발견: "${likeText}" (선택자: ${selector})`);
+          this.log('info', `좋아요 후보 발견: "${likeText}" (선택자: ${selector})`);
           
           // 숫자만 추출
           const likeMatch = likeText.match(/[\d,]+/);
           if (likeMatch && !likeText.includes('댓글') && !likeText.includes('comment')) {
             metadata.likes = likeMatch[0].replace(/,/g, '');
-            Utils.log('info', `좋아요 수 설정: ${metadata.likes}`);
+            this.log('info', `좋아요 수 설정: ${metadata.likes}`);
             break;
           }
         }
@@ -187,13 +177,13 @@ export class InstagramHandler {
         const commentElement = actionSection.querySelector(selector);
         if (commentElement) {
           const commentText = commentElement.innerText.trim();
-          Utils.log('info', `댓글 후보 발견: "${commentText}" (선택자: ${selector})`);
+          this.log('info', `댓글 후보 발견: "${commentText}" (선택자: ${selector})`);
           
           // 숫자만 추출
           const commentMatch = commentText.match(/[\d,]+/);
           if (commentMatch && (commentText.includes('댓글') || commentText.includes('comment'))) {
             metadata.comments = commentMatch[0].replace(/,/g, '');
-            Utils.log('info', `댓글 수 설정: ${metadata.comments}`);
+            this.log('info', `댓글 수 설정: ${metadata.comments}`);
             break;
           }
         }
@@ -201,17 +191,17 @@ export class InstagramHandler {
 
       // 방법 3: 텍스트 패턴으로 구분하기 (fallback)
       if (metadata.likes === '0' || metadata.comments === '0') {
-        Utils.log('info', '대안 방법으로 좋아요/댓글 수 추출 시도');
+        this.log('info', '대안 방법으로 좋아요/댓글 수 추출 시도');
         this.extractEngagementByText(actionSection, metadata);
       }
 
-      Utils.log('info', '최종 추출 결과', { 
+      this.log('info', '최종 추출 결과', { 
         likes: metadata.likes, 
         comments: metadata.comments 
       });
 
     } catch (error) {
-      Utils.log('error', '좋아요/댓글 수 추출 실패', error);
+      this.log('error', '좋아요/댓글 수 추출 실패', error);
     }
   }
 
@@ -235,7 +225,7 @@ export class InstagramHandler {
               !text.includes('댓글') && !text.includes('comment') && 
               metadata.likes === '0') {
             metadata.likes = number;
-            Utils.log('info', `텍스트 패턴으로 좋아요 수 발견: ${number} ("${text}")`);
+            this.log('info', `텍스트 패턴으로 좋아요 수 발견: ${number} ("${text}")`);
           }
           
           // 댓글 관련 키워드 체크
@@ -243,12 +233,12 @@ export class InstagramHandler {
               !text.includes('좋아요') && !text.includes('like') && 
               metadata.comments === '0') {
             metadata.comments = number;
-            Utils.log('info', `텍스트 패턴으로 댓글 수 발견: ${number} ("${text}")`);
+            this.log('info', `텍스트 패턴으로 댓글 수 발견: ${number} ("${text}")`);
           }
         }
       }
     } catch (error) {
-      Utils.log('error', '텍스트 패턴 추출 실패', error);
+      this.log('error', '텍스트 패턴 추출 실패', error);
     }
   }
 
@@ -258,13 +248,13 @@ export class InstagramHandler {
    */
   shouldSkipEnhancement() {
     if (this.isProcessing) {
-      Utils.log('info', '이미 처리 중이므로 스킵');
+      this.log('info', '이미 처리 중이므로 스킵');
       return true;
     }
     
     const now = Date.now();
     if (now - this.lastEnhancementTime < CONSTANTS.TIMEOUTS.ENHANCEMENT_THROTTLE) {
-      Utils.log('info', '쓰로틀링으로 인해 스킵');
+      this.log('info', '쓰로틀링으로 인해 스킵');
       return true;
     }
     
@@ -276,7 +266,7 @@ export class InstagramHandler {
    */
   processExistingSaveButtons() {
     const saveButtons = Utils.safeQuerySelectorAll(document, CONSTANTS.SELECTORS.INSTAGRAM.SAVE_BUTTONS);
-    Utils.log('info', `발견된 저장 버튼 수: ${saveButtons.length}`);
+    this.log('info', `발견된 저장 버튼 수: ${saveButtons.length}`);
     
     let newButtonsEnhanced = 0;
     
@@ -286,11 +276,11 @@ export class InstagramHandler {
           newButtonsEnhanced++;
         }
       } catch (error) {
-        Utils.log('error', `버튼 ${index + 1} 향상 실패`, error);
+        this.log('error', `버튼 ${index + 1} 향상 실패`, error);
       }
     });
     
-    Utils.log('info', `새로 향상된 저장 버튼: ${newButtonsEnhanced}개`);
+    this.log('info', `새로 향상된 저장 버튼: ${newButtonsEnhanced}개`);
   }
 
   /**
@@ -302,24 +292,24 @@ export class InstagramHandler {
   enhanceSingleButton(svg, index) {
     const button = this.findButtonElement(svg);
     if (!button) {
-      Utils.log('warn', `버튼 ${index + 1}: 버튼 요소를 찾을 수 없음`);
+      this.log('warn', `버튼 ${index + 1}: 버튼 요소를 찾을 수 없음`);
       return false;
     }
 
-    const buttonId = this.generateButtonId(button);
-    if (this.processedButtons.has(buttonId)) {
-      Utils.log('info', `버튼 ${index + 1}: 이미 처리된 버튼`);
+    const buttonId = this.generateUniqueId(button, 'instagram_btn');
+    if (this.isProcessed(buttonId, 'button')) {
+      this.log('info', `버튼 ${index + 1}: 이미 처리된 버튼`);
       return false;
     }
 
     const { post, video } = this.findPostAndVideo(button);
     if (!video) {
-      Utils.log('warn', `버튼 ${index + 1}: 연결된 비디오를 찾을 수 없음`);
+      this.log('warn', `버튼 ${index + 1}: 연결된 비디오를 찾을 수 없음`);
       return false;
     }
 
     this.enhanceButtonWithVideoAnalysis(button, post, video, index);
-    this.processedButtons.add(buttonId);
+    this.markAsProcessed(buttonId, 'button');
     return true;
   }
 
@@ -335,17 +325,6 @@ export class InstagramHandler {
            svg.parentElement?.parentElement;
   }
 
-  /**
-   * 버튼 고유 ID 생성
-   * @param {Element} button 버튼 요소
-   * @returns {string} 버튼 ID
-   */
-  generateButtonId(button) {
-    // 버튼의 위치와 부모 요소를 조합해서 고유 ID 생성
-    const rect = button.getBoundingClientRect();
-    const parentClass = button.parentElement?.className || '';
-    return `btn_${Math.round(rect.top)}_${Math.round(rect.left)}_${parentClass.substring(0, 10)}`;
-  }
 
   /**
    * 게시물과 비디오 찾기
@@ -423,7 +402,7 @@ export class InstagramHandler {
         // Instagram downloader 방식으로 미디어 정보 조회
         const mediaInfo = this.getMediaInfoForVideo(mostVisibleVideo);
         
-        Utils.log('info', '활성 영상 변경됨', { 
+        this.log('info', '활성 영상 변경됨', { 
           videoSrc: mostVisibleVideo.src?.substring(0, 50) + '...',
           mediaCode: mediaInfo?.code,
           realVideoUrl: mediaInfo?.video_url?.substring(0, 50) + '...',
@@ -557,7 +536,7 @@ export class InstagramHandler {
     if (mediaItem.id) this.mediaIdMap[mediaItem.id] = shortcode;
     if (mediaItem.pk) this.fbIdMap[mediaItem.pk] = shortcode;
 
-    Utils.log('info', '미디어 정보 저장됨', { 
+    this.log('info', '미디어 정보 저장됨', { 
       shortcode, 
       videoUrl: mediaInfo.video_url?.substring(0, 50) + '...',
       hasCarousel: !!mediaInfo.carousel_media 
@@ -770,21 +749,21 @@ export class InstagramHandler {
     // 방법 1: React Props에서 찾기
     const mediaFromProps = this.findMediaFromReactProps(videoElement);
     if (mediaFromProps) {
-      Utils.log('info', 'React Props에서 미디어 발견', { code: mediaFromProps.code });
+      this.log('info', 'React Props에서 미디어 발견', { code: mediaFromProps.code });
       return mediaFromProps;
     }
 
     // 방법 2: URL에서 shortcode 추출해서 찾기
     const shortcode = this.extractPostId(videoElement);
     if (shortcode && this.mediaData[shortcode]) {
-      Utils.log('info', 'shortcode로 미디어 발견', { shortcode });
+      this.log('info', 'shortcode로 미디어 발견', { shortcode });
       return this.mediaData[shortcode];
     }
 
     // 방법 3: 현재 페이지 URL에서 찾기
     const urlShortcode = this.extractShortcodeFromUrl(window.location.href);
     if (urlShortcode && this.mediaData[urlShortcode]) {
-      Utils.log('info', '페이지 URL에서 미디어 발견', { shortcode: urlShortcode });
+      this.log('info', '페이지 URL에서 미디어 발견', { shortcode: urlShortcode });
       return this.mediaData[urlShortcode];
     }
 
@@ -794,7 +773,7 @@ export class InstagramHandler {
       .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))[0];
     
     if (recentMediaWithVideo) {
-      Utils.log('info', '최근 비디오 미디어 사용', { code: recentMediaWithVideo.code });
+      this.log('info', '최근 비디오 미디어 사용', { code: recentMediaWithVideo.code });
       return recentMediaWithVideo;
     }
 
@@ -817,7 +796,7 @@ export class InstagramHandler {
     videos.forEach(video => {
       this.videoObserver.observe(video);
     });
-    Utils.log('info', `${videos.length}개의 기존 영상 관찰 시작`);
+    this.log('info', `${videos.length}개의 기존 영상 관찰 시작`);
   }
 
   /**
@@ -834,7 +813,7 @@ export class InstagramHandler {
             
             newVideos.forEach(video => {
               this.videoObserver.observe(video);
-              Utils.log('info', '새로운 영상 감지 및 관찰 시작', { src: video.src?.substring(0, 50) + '...' });
+              this.log('info', '새로운 영상 감지 및 관찰 시작', { src: video.src?.substring(0, 50) + '...' });
             });
           }
         });
@@ -854,7 +833,7 @@ export class InstagramHandler {
   findVideoByVisibility() {
     // 현재 추적 중인 활성 영상이 있으면 우선 반환
     if (this.currentActiveVideo && Utils.isElementVisible(this.currentActiveVideo)) {
-      Utils.log('info', '현재 활성 영상 사용');
+      this.log('info', '현재 활성 영상 사용');
       return this.currentActiveVideo;
     }
 
@@ -902,7 +881,7 @@ export class InstagramHandler {
    * @param {number} index 버튼 인덱스
    */
   enhanceButtonWithVideoAnalysis(button, post, video, index) {
-    Utils.log('info', `저장 버튼 ${index + 1}에 영상 분석 기능 추가`);
+    this.log('info', `저장 버튼 ${index + 1}에 영상 분석 기능 추가`);
     
     const clickHandler = this.createClickHandler(post, video);
     button.addEventListener('click', clickHandler, false);
@@ -912,7 +891,7 @@ export class InstagramHandler {
     // 글로벌 테스트 함수 (개발 중에만)
     if (typeof window !== 'undefined') {
       window.testVideoAnalysis = () => {
-        Utils.log('info', '수동 테스트 실행');
+        this.log('info', '수동 테스트 실행');
         clickHandler({ type: 'manual_test' });
       };
     }
@@ -929,24 +908,24 @@ export class InstagramHandler {
     
     return async (event) => {
       if (isProcessing) {
-        Utils.log('info', '이미 처리 중이므로 스킵');
+        this.log('info', '이미 처리 중이므로 스킵');
         return;
       }
       
       isProcessing = true;
-      Utils.log('info', 'Instagram 저장 버튼 클릭 이벤트 감지');
+      this.log('info', 'Instagram 저장 버튼 클릭 이벤트 감지');
       
       // 자동 분석 설정 확인
       const isAutoAnalysisEnabled = await this.settingsManager.isAutoAnalysisEnabled();
-      Utils.log('info', `자동 분석 설정: ${isAutoAnalysisEnabled}`);
+      this.log('info', `자동 분석 설정: ${isAutoAnalysisEnabled}`);
       
       if (isAutoAnalysisEnabled) {
-        Utils.log('info', '자동 분석 실행됨');
+        this.log('info', '자동 분석 실행됨');
         try {
           await Utils.delay(CONSTANTS.TIMEOUTS.PROCESSING_DELAY);
           await this.processVideoFromSaveAction(post, video);
         } catch (error) {
-          Utils.log('error', '자동 분석 실패', error);
+          this.log('error', '자동 분석 실패', error);
           this.uiManager.showNotification(
             `Instagram 저장은 완료되었지만 AI 분석에 실패했습니다: ${error.message}`, 
             CONSTANTS.NOTIFICATION_TYPES.WARNING
@@ -954,7 +933,7 @@ export class InstagramHandler {
         }
       } else {
         // 자동 분석이 비활성화된 경우 저장만 완료 알림
-        Utils.log('info', '자동 분석 비활성화됨 - 저장만 완료');
+        this.log('info', '자동 분석 비활성화됨 - 저장만 완료');
         this.uiManager.showNotification(
           '✅ 영상이 Instagram에 저장되었습니다!', 
           CONSTANTS.NOTIFICATION_TYPES.SUCCESS
@@ -984,7 +963,7 @@ export class InstagramHandler {
     
     // 3. 실제 미디어 URL이 있으면 우선 사용
     if (mediaInfo?.video_url && !mediaInfo.video_url.startsWith('blob:')) {
-      Utils.log('info', '실제 미디어 URL 사용', { 
+      this.log('info', '실제 미디어 URL 사용', { 
         code: mediaInfo.code,
         originalUrl: videoUrl?.substring(0, 50) + '...', 
         realUrl: mediaInfo.video_url.substring(0, 50) + '...' 
@@ -992,7 +971,7 @@ export class InstagramHandler {
       videoUrl = mediaInfo.video_url;
     }
     
-    Utils.log('info', '저장된 영상 분석 시작', { 
+    this.log('info', '저장된 영상 분석 시작', { 
       code: mediaInfo?.code,
       videoUrl: videoUrl?.substring(0, 50) + '...', 
       postUrl 
@@ -1023,7 +1002,7 @@ export class InstagramHandler {
    * @param {HTMLVideoElement} videoElement 비디오 요소
    */
   async processBlobVideo(videoUrl, postUrl, metadata, videoElement = null) {
-    Utils.log('info', 'blob URL 감지 - Video Element에서 직접 캡처 시도');
+    this.log('info', 'blob URL 감지 - Video Element에서 직접 캡처 시도');
     
     let videoBlob;
     
@@ -1031,12 +1010,12 @@ export class InstagramHandler {
       // 먼저 blob URL로 다운로드 시도
       videoBlob = await this.apiClient.downloadBlobVideo(videoUrl);
     } catch (blobError) {
-      Utils.log('warn', 'Blob URL 다운로드 실패, Video Element 방식으로 대체', blobError);
+      this.log('warn', 'Blob URL 다운로드 실패, Video Element 방식으로 대체', blobError);
       
       // 실패 시 Video Element에서 프레임 캡처
       if (videoElement) {
         videoBlob = await this.apiClient.captureVideoFrame(videoElement);
-        Utils.log('info', 'Video Element에서 프레임 캡처 성공');
+        this.log('info', 'Video Element에서 프레임 캡처 성공');
       } else {
         throw new Error('Video Element를 찾을 수 없어 프레임 캡처 불가');
       }
@@ -1079,7 +1058,7 @@ export class InstagramHandler {
       // 현재 활성 포스트의 메타데이터 추출 (개선된 방법 사용)
       const currentMetadata = this.extractPostMetadata();
       
-      Utils.log('info', '추출된 메타데이터 (extractMetadata)', {
+      this.log('info', '추출된 메타데이터 (extractMetadata)', {
         author: currentMetadata.author,
         caption: currentMetadata.caption?.substring(0, 50) + '...',
         likes: currentMetadata.likes,
@@ -1096,7 +1075,7 @@ export class InstagramHandler {
         timestamp: new Date().toISOString()
       };
     } catch (error) {
-      Utils.log('error', '인스타그램 메타데이터 추출 실패', error);
+      this.log('error', '인스타그램 메타데이터 추출 실패', error);
       return { timestamp: new Date().toISOString() };
     }
   }
@@ -1105,16 +1084,16 @@ export class InstagramHandler {
    * 수동으로 저장 버튼 추가 (대안 방법)
    */
   addCustomSaveButtons() {
-    Utils.log('info', 'Instagram 커스텀 저장 버튼 추가 시도');
+    this.log('info', 'Instagram 커스텀 저장 버튼 추가 시도');
     
     const videos = Utils.safeQuerySelectorAll(document, CONSTANTS.SELECTORS.INSTAGRAM.VIDEOS);
-    Utils.log('info', `전체 비디오 요소 수: ${videos.length}`);
+    this.log('info', `전체 비디오 요소 수: ${videos.length}`);
     
     videos.forEach((video, index) => {
       try {
         this.addCustomButtonToVideo(video, index);
       } catch (error) {
-        Utils.log('error', `비디오 ${index + 1} 커스텀 버튼 추가 실패`, error);
+        this.log('error', `비디오 ${index + 1} 커스텀 버튼 추가 실패`, error);
       }
     });
   }
@@ -1128,13 +1107,13 @@ export class InstagramHandler {
     // 이미 버튼이 있는지 확인
     const existingButton = video.closest('div').querySelector('.video-save-button');
     if (existingButton) {
-      Utils.log('info', `비디오 ${index + 1}: 이미 버튼이 있음`);
+      this.log('info', `비디오 ${index + 1}: 이미 버튼이 있음`);
       return;
     }
     
     const container = video.closest('article') || video.parentElement;
     if (!container) {
-      Utils.log('warn', `비디오 ${index + 1}: 적절한 컨테이너를 찾을 수 없음`);
+      this.log('warn', `비디오 ${index + 1}: 적절한 컨테이너를 찾을 수 없음`);
       return;
     }
     
@@ -1156,18 +1135,18 @@ export class InstagramHandler {
     
     try {
       actionArea.appendChild(saveButton);
-      Utils.log('success', `비디오 ${index + 1}: 커스텀 저장 버튼 추가 완료`);
+      this.log('success', `비디오 ${index + 1}: 커스텀 저장 버튼 추가 완료`);
       
       // 가시성 확인
       setTimeout(() => {
         if (!Utils.isElementVisible(saveButton)) {
-          Utils.log('info', `버튼 ${index + 1}이 보이지 않음. 플로팅 버튼으로 변경`);
+          this.log('info', `버튼 ${index + 1}이 보이지 않음. 플로팅 버튼으로 변경`);
           this.uiManager.createFloatingButton(video, saveButton);
         }
       }, 500);
       
     } catch (error) {
-      Utils.log('error', `버튼 ${index + 1} 추가 실패`, error);
+      this.log('error', `버튼 ${index + 1} 추가 실패`, error);
       this.uiManager.createFloatingButton(video, saveButton);
     }
   }
@@ -1206,7 +1185,7 @@ export class InstagramHandler {
       );
       
     } catch (error) {
-      Utils.log('error', '커스텀 버튼 처리 실패', error);
+      this.log('error', '커스텀 버튼 처리 실패', error);
       this.uiManager.showNotification(
         '영상 처리에 실패했습니다. 서버 연결을 확인해주세요.', 
         CONSTANTS.NOTIFICATION_TYPES.ERROR
@@ -1218,16 +1197,16 @@ export class InstagramHandler {
    * 분석 전용 버튼 추가
    */
   addAnalysisButtons() {
-    Utils.log('info', 'Instagram 분석 버튼 추가 시작');
+    this.log('info', 'Instagram 분석 버튼 추가 시작');
     
     const posts = Utils.safeQuerySelectorAll(document, CONSTANTS.SELECTORS.INSTAGRAM.POSTS);
-    Utils.log('info', `발견된 게시물: ${posts.length}개`);
+    this.log('info', `발견된 게시물: ${posts.length}개`);
     
     posts.forEach((post, index) => {
       try {
         this.addAnalysisButtonToPost(post, index);
       } catch (error) {
-        Utils.log('error', `게시물 ${index + 1} 분석 버튼 추가 실패`, error);
+        this.log('error', `게시물 ${index + 1} 분석 버튼 추가 실패`, error);
       }
     });
   }
@@ -1240,13 +1219,13 @@ export class InstagramHandler {
   addAnalysisButtonToPost(post, index) {
     const video = Utils.safeQuerySelector(post, CONSTANTS.SELECTORS.INSTAGRAM.VIDEOS);
     if (!video) {
-      Utils.log('info', `게시물 ${index + 1}: 비디오 없음, 스킵`);
+      this.log('info', `게시물 ${index + 1}: 비디오 없음, 스킵`);
       return; // 비디오가 없는 게시물은 스킵
     }
 
     // 기존 분석 버튼이 있는지 확인
     if (post.querySelector('.analysis-button')) {
-      Utils.log('info', `게시물 ${index + 1}: 이미 분석 버튼 존재`);
+      this.log('info', `게시물 ${index + 1}: 이미 분석 버튼 존재`);
       return;
     }
 
@@ -1258,7 +1237,7 @@ export class InstagramHandler {
     for (const selector of CONSTANTS.SELECTORS.INSTAGRAM.SAVE_BUTTONS) {
       saveButton = Utils.safeQuerySelector(post, selector);
       if (saveButton) {
-        Utils.log('info', `게시물 ${index + 1}: 저장 버튼 발견 (선택자: ${selector})`);
+        this.log('info', `게시물 ${index + 1}: 저장 버튼 발견 (선택자: ${selector})`);
         break;
       }
     }
@@ -1271,13 +1250,13 @@ export class InstagramHandler {
         const buttons = actionArea.querySelectorAll('[role="button"]');
         if (buttons.length >= 4) {
           saveButton = buttons[buttons.length - 1]; // 보통 마지막이 저장 버튼
-          Utils.log('info', `게시물 ${index + 1}: 액션 영역에서 저장 버튼 추정`);
+          this.log('info', `게시물 ${index + 1}: 액션 영역에서 저장 버튼 추정`);
         }
       }
     }
 
     if (!saveButton) {
-      Utils.log('warn', `게시물 ${index + 1}: 저장 버튼을 찾을 수 없음`);
+      this.log('warn', `게시물 ${index + 1}: 저장 버튼을 찾을 수 없음`);
       // 저장 버튼이 없어도 비디오가 있으면 플로팅 버튼으로 추가
       this.addFloatingAnalysisButton(post, video, index);
       return;
@@ -1306,13 +1285,13 @@ export class InstagramHandler {
         } else {
           parentContainer.appendChild(analysisButton);
         }
-        Utils.log('success', `게시물 ${index + 1}: 분석 버튼 추가 완료`);
+        this.log('success', `게시물 ${index + 1}: 분석 버튼 추가 완료`);
       } else {
         // 플로팅 버튼으로 폴백
         this.addFloatingAnalysisButton(post, video, index);
       }
     } catch (error) {
-      Utils.log('error', `게시물 ${index + 1}: 분석 버튼 배치 실패`, error);
+      this.log('error', `게시물 ${index + 1}: 분석 버튼 배치 실패`, error);
       // 플로팅 버튼으로 폴백
       this.addFloatingAnalysisButton(post, video, index);
     }
@@ -1339,9 +1318,9 @@ export class InstagramHandler {
       const videoContainer = video.parentElement;
       videoContainer.style.position = 'relative';
       videoContainer.appendChild(analysisButton);
-      Utils.log('success', `게시물 ${index + 1}: 플로팅 분석 버튼 추가 완료`);
+      this.log('success', `게시물 ${index + 1}: 플로팅 분석 버튼 추가 완료`);
     } catch (error) {
-      Utils.log('error', `게시물 ${index + 1}: 플로팅 분석 버튼 추가 실패`, error);
+      this.log('error', `게시물 ${index + 1}: 플로팅 분석 버튼 추가 실패`, error);
     }
   }
 
@@ -1452,7 +1431,7 @@ export class InstagramHandler {
     button.style.pointerEvents = 'none';
 
     try {
-      Utils.log('info', '수동 분석 버튼 클릭됨');
+      this.log('info', '수동 분석 버튼 클릭됨');
       
       // 동일한 분석 로직 사용
       await this.processVideoFromSaveAction(post, video);
@@ -1466,7 +1445,7 @@ export class InstagramHandler {
       );
       
     } catch (error) {
-      Utils.log('error', '수동 분석 실패', error);
+      this.log('error', '수동 분석 실패', error);
       
       // 에러 상태로 변경
       button.innerHTML = '<div style="font-size: 10px;">❌</div>';
@@ -1488,23 +1467,22 @@ export class InstagramHandler {
    * Observer들과 이벤트 리스너 정리 (메모리 누수 방지)
    */
   cleanup() {
-    Utils.log('info', 'Instagram handler 정리 시작');
+    this.log('info', 'Instagram handler 정리 시작');
     
     // IntersectionObserver 정리
     if (this.videoObserver) {
       this.videoObserver.disconnect();
       this.videoObserver = null;
-      Utils.log('info', 'VideoObserver 정리 완료');
+      this.log('info', 'VideoObserver 정리 완료');
     }
 
     // 현재 활성 영상 참조 해제
     this.currentActiveVideo = null;
     
-    // 캐시 정리
-    this.processedButtons.clear();
-    this.processedVideos.clear();
+    // 캐시 정리  
+    this.cleanup();
     
-    Utils.log('info', 'Instagram handler 정리 완료');
+    this.log('info', 'Instagram handler 정리 완료');
   }
 
   /**
@@ -1521,7 +1499,7 @@ export class InstagramHandler {
     const checkUrlChange = () => {
       if (window.location.href !== currentUrl) {
         currentUrl = window.location.href;
-        Utils.log('info', 'SPA 네비게이션 감지 - Observer 재설정');
+        this.log('info', 'SPA 네비게이션 감지 - Observer 재설정');
         this.cleanup();
         // 짧은 지연 후 재설정
         setTimeout(() => {

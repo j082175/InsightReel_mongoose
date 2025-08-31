@@ -1,34 +1,33 @@
 import { CONSTANTS } from '../constants.js';
 import { Utils } from '../utils.js';
+import { BasePlatformHandler } from './base-handler.js';
 
 /**
  * TikTok 플랫폼 핸들러
  */
-export class TikTokHandler {
+export class TikTokHandler extends BasePlatformHandler {
   constructor(apiClient, uiManager) {
-    this.apiClient = apiClient;
-    this.uiManager = uiManager;
-    this.processedVideos = new Set();
+    super(apiClient, uiManager, 'tiktok');
   }
 
   /**
    * TikTok 저장 버튼 추가
    */
   addSaveButtons() {
-    Utils.log('info', 'TikTok 저장 버튼 추가 시작');
+    this.log('info', '저장 버튼 추가 시작');
     
     const videoContainers = Utils.safeQuerySelectorAll(
       document, 
       CONSTANTS.SELECTORS.TIKTOK.VIDEO_PLAYER
     );
     
-    Utils.log('info', `발견된 TikTok 비디오: ${videoContainers.length}개`);
+    this.log('info', `발견된 비디오: ${videoContainers.length}개`);
     
     videoContainers.forEach((container, index) => {
       try {
         this.processVideoContainer(container, index);
       } catch (error) {
-        Utils.log('error', `TikTok 비디오 ${index + 1} 처리 실패`, error);
+        this.log('error', `비디오 ${index + 1} 처리 실패`, error);
       }
     });
   }
@@ -39,18 +38,18 @@ export class TikTokHandler {
    * @param {number} index 인덱스
    */
   processVideoContainer(videoContainer, index) {
-    const videoId = this.generateVideoId(videoContainer);
+    const videoId = this.generateUniqueId(videoContainer, 'tiktok_video');
     
     // 이미 처리된 비디오는 스킵
-    if (this.processedVideos.has(videoId)) {
-      Utils.log('info', `TikTok 비디오 ${index + 1}: 이미 처리됨`);
+    if (this.isProcessed(videoId, 'video')) {
+      this.log('info', `비디오 ${index + 1}: 이미 처리됨`);
       return;
     }
 
     // 기존 버튼 확인
     if (videoContainer.querySelector('.video-save-button')) {
-      Utils.log('info', `TikTok 비디오 ${index + 1}: 이미 버튼이 존재함`);
-      this.processedVideos.add(videoId);
+      this.log('info', `비디오 ${index + 1}: 이미 버튼이 존재함`);
+      this.markAsProcessed(videoId, 'video');
       return;
     }
     
@@ -60,29 +59,18 @@ export class TikTokHandler {
     );
     
     if (!videoElement) {
-      Utils.log('warn', `TikTok 비디오 ${index + 1}: video 요소를 찾을 수 없음`);
+      this.log('warn', `비디오 ${index + 1}: video 요소를 찾을 수 없음`);
       return;
     }
     
     const sideActions = this.findSideActions(videoContainer);
     if (!sideActions) {
-      Utils.log('warn', `TikTok 비디오 ${index + 1}: 사이드 액션 영역을 찾을 수 없음`);
+      this.log('warn', `비디오 ${index + 1}: 사이드 액션 영역을 찾을 수 없음`);
       return;
     }
     
     this.addSaveButtonToSideActions(sideActions, videoContainer, videoElement, index);
-    this.processedVideos.add(videoId);
-  }
-
-  /**
-   * 비디오 고유 ID 생성
-   * @param {Element} videoContainer 비디오 컨테이너
-   * @returns {string} 비디오 ID
-   */
-  generateVideoId(videoContainer) {
-    const rect = videoContainer.getBoundingClientRect();
-    const videoSrc = videoContainer.querySelector('video')?.src || '';
-    return `tiktok_${Math.round(rect.top)}_${Math.round(rect.left)}_${videoSrc.substring(0, 20)}`;
+    this.markAsProcessed(videoId, 'video');
   }
 
   /**
@@ -135,9 +123,9 @@ export class TikTokHandler {
     
     try {
       sideActions.appendChild(saveButton);
-      Utils.log('success', `TikTok 비디오 ${index + 1}: 저장 버튼 추가 완료`);
+      this.log('success', `TikTok 비디오 ${index + 1}: 저장 버튼 추가 완료`);
     } catch (error) {
-      Utils.log('error', `TikTok 비디오 ${index + 1}: 버튼 추가 실패`, error);
+      this.log('error', `TikTok 비디오 ${index + 1}: 버튼 추가 실패`, error);
       // 실패 시 플로팅 버튼으로 대체
       this.uiManager.createFloatingButton(videoElement, saveButton);
     }
@@ -206,7 +194,7 @@ export class TikTokHandler {
       const postUrl = window.location.href;
       const metadata = this.extractMetadata(videoContainer);
       
-      Utils.log('info', 'TikTok 비디오 처리 시작', { videoUrl, postUrl });
+      this.log('info', 'TikTok 비디오 처리 시작', { videoUrl, postUrl });
       
       if (!videoUrl) {
         throw new Error('비디오 URL을 찾을 수 없습니다.');
@@ -226,7 +214,7 @@ export class TikTokHandler {
       );
       
     } catch (error) {
-      Utils.log('error', 'TikTok 비디오 처리 실패', error);
+      this.log('error', 'TikTok 비디오 처리 실패', error);
       this.uiManager.updateButtonState(button, 'error');
       this.uiManager.showNotification(
         '영상 처리에 실패했습니다. 서버 연결을 확인해주세요.', 
@@ -243,7 +231,7 @@ export class TikTokHandler {
    * @param {Element} videoElement 비디오 요소
    */
   async processBlobVideo(videoUrl, postUrl, metadata, videoElement) {
-    Utils.log('info', 'TikTok blob URL 처리 중');
+    this.log('info', 'TikTok blob URL 처리 중');
     
     try {
       const videoBlob = await this.apiClient.downloadBlobVideo(videoUrl);
@@ -255,7 +243,7 @@ export class TikTokHandler {
         metadata
       });
     } catch (error) {
-      Utils.log('warn', 'TikTok blob URL 다운로드 실패, Canvas 프레임 캡처로 대체', error);
+      this.log('warn', 'TikTok blob URL 다운로드 실패, Canvas 프레임 캡처로 대체', error);
       
       if (!videoElement) {
         throw new Error('비디오 요소가 없어서 Canvas 프레임 캡처를 할 수 없습니다.');
@@ -337,7 +325,7 @@ export class TikTokHandler {
         platform: CONSTANTS.PLATFORMS.TIKTOK
       };
     } catch (error) {
-      Utils.log('error', 'TikTok 메타데이터 추출 실패', error);
+      this.log('error', 'TikTok 메타데이터 추출 실패', error);
       return { 
         timestamp: new Date().toISOString(),
         platform: CONSTANTS.PLATFORMS.TIKTOK
@@ -355,7 +343,7 @@ export class TikTokHandler {
       const videoElement = Utils.safeQuerySelector(videoContainer, 'video');
       return videoElement?.duration || 0;
     } catch (error) {
-      Utils.log('warn', '비디오 길이 추출 실패', error);
+      this.log('warn', '비디오 길이 추출 실패', error);
       return 0;
     }
   }
@@ -383,7 +371,7 @@ export class TikTokHandler {
       
       return false;
     } catch (error) {
-      Utils.log('warn', '라이브 방송 확인 실패', error);
+      this.log('warn', '라이브 방송 확인 실패', error);
       return false;
     }
   }
@@ -397,7 +385,7 @@ export class TikTokHandler {
     const checkPageChange = Utils.throttle(() => {
       if (window.location.pathname !== currentPath) {
         currentPath = window.location.pathname;
-        Utils.log('info', 'TikTok 페이지 변경 감지');
+        this.log('info', 'TikTok 페이지 변경 감지');
         
         // 새 페이지 로드 후 버튼 추가
         setTimeout(() => {
@@ -416,7 +404,7 @@ export class TikTokHandler {
     // popstate 이벤트도 감지 (뒤로가기/앞으로가기)
     window.addEventListener('popstate', checkPageChange);
     
-    Utils.log('info', 'TikTok 페이지 변경 관찰 시작');
+    this.log('info', 'TikTok 페이지 변경 관찰 시작');
   }
 
   /**
@@ -424,7 +412,7 @@ export class TikTokHandler {
    */
   observeScrollChanges() {
     const scrollHandler = Utils.debounce(() => {
-      Utils.log('info', 'TikTok 스크롤 기반 새 비디오 검색');
+      this.log('info', 'TikTok 스크롤 기반 새 비디오 검색');
       this.addSaveButtons();
     }, CONSTANTS.TIMEOUTS.SCROLL_DEBOUNCE);
     
@@ -438,6 +426,6 @@ export class TikTokHandler {
     };
     
     window.addEventListener('scroll', throttledScrollHandler, { passive: true });
-    Utils.log('info', 'TikTok 스크롤 기반 비디오 감지 시작');
+    this.log('info', 'TikTok 스크롤 기반 비디오 감지 시작');
   }
 }

@@ -2,6 +2,7 @@ const VideoProcessor = require('../services/VideoProcessor');
 const AIAnalyzer = require('../services/AIAnalyzer');
 const SheetsManager = require('../services/SheetsManager');
 const ErrorHandler = require('../middleware/error-handler');
+const { ServerLogger } = require('../utils/logger');
 
 /**
  * 비디오 처리 컨트롤러
@@ -59,7 +60,7 @@ class VideoController {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('❌ 헤더 업데이트 실패:', error);
+      ServerLogger.error('헤더 업데이트 실패', error, 'VIDEO');
       res.status(500).json({
         success: false,
         error: error.message
@@ -156,10 +157,10 @@ class VideoController {
   processVideo = ErrorHandler.asyncHandler(async (req, res) => {
     const { platform, videoUrl, postUrl, metadata, analysisType = 'quick' } = req.body;
     
-    console.log(`🎬 Processing ${platform} video:`, postUrl);
-    console.log(`🔍 Analysis type: ${analysisType}`);
-    console.log(`📋 Request body keys:`, Object.keys(req.body));
-    console.log(`📋 Full request body:`, JSON.stringify(req.body, null, 2));
+    ServerLogger.info(`Processing ${platform} video: ${postUrl}`, null, 'VIDEO');
+    ServerLogger.info(`Analysis type: ${analysisType}`, null, 'VIDEO');
+    ServerLogger.info(`Request body keys: ${Object.keys(req.body).join(', ')}`, null, 'VIDEO');
+    ServerLogger.info(`Full request body`, req.body, 'VIDEO');
     
     try {
       const result = await this.executeVideoProcessingPipeline({
@@ -180,7 +181,7 @@ class VideoController {
       });
 
     } catch (error) {
-      console.error('❌ 비디오 처리 실패:', error);
+      ServerLogger.error('비디오 처리 실패', error, 'VIDEO');
       
       // 구체적인 에러 타입별 처리
       if (error.message.includes('다운로드')) {
@@ -252,7 +253,7 @@ class VideoController {
       });
 
     } catch (error) {
-      console.error('❌ Blob 비디오 처리 실패:', error);
+      ServerLogger.error('Blob 비디오 처리 실패', error, 'VIDEO');
       throw error;
     }
   });

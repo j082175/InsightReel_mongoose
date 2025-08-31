@@ -1,6 +1,7 @@
 const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
+const { ServerLogger } = require('../utils/logger');
 
 class SheetsManager {
   constructor() {
@@ -16,7 +17,7 @@ class SheetsManager {
     try {
       await this.authenticate();
     } catch (error) {
-      console.log('구글 시트 초기화 실패 (설정 필요):', error.message);
+      ServerLogger.warn('구글 시트 초기화 실패 (설정 필요)', error.message, 'SHEETS');
     }
   }
 
