@@ -1,7 +1,8 @@
 // Service Worker - 백그라운드 작업 처리
+// CONSTANTS 모듈은 ES6 모듈이므로 동적 import 사용
 class BackgroundService {
   constructor() {
-    this.serverUrl = 'http://localhost:3000';
+    this.serverUrl = 'http://localhost:3000'; // 일단 하드코딩 유지 (Service Worker 제한)
     this.init();
   }
 

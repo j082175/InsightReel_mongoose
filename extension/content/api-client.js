@@ -5,7 +5,7 @@ import { Utils } from './utils.js';
  * API 통신 클라이언트
  */
 export class ApiClient {
-  constructor(serverUrl = CONSTANTS.SERVER_URL) {
+  constructor(serverUrl = CONSTANTS.SERVER.BASE_URL) {
     this.serverUrl = serverUrl;
   }
 
