@@ -5,13 +5,17 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
+// 설정 검증 먼저 실행
+const { getConfig } = require('./config/config-validator');
+const config = getConfig(); // 여기서 검증 실행
+
 const VideoProcessor = require('./services/VideoProcessor');
 const AIAnalyzer = require('./services/AIAnalyzer');
 const SheetsManager = require('./services/SheetsManager');
 const { ServerLogger } = require('./utils/logger');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = config.get('PORT');
 
 // 미들웨어 설정
 app.use(cors({
@@ -116,6 +120,12 @@ app.get('/api/test-sheets', async (req, res) => {
       suggestion: '구글 API 키 설정과 인증을 확인해주세요.'
     });
   }
+});
+
+// 설정 상태 확인 API
+app.get('/api/config/health', (req, res) => {
+  const healthStatus = config.healthCheck();
+  res.json(healthStatus);
 });
 
 // 비디오 처리 메인 엔드포인트
@@ -342,5 +352,6 @@ app.listen(PORT, () => {
 💡 테스트 URL:
 - Ollama 테스트: http://localhost:${PORT}/api/test-ollama
 - 구글 시트 테스트: http://localhost:${PORT}/api/test-sheets
+- 설정 상태 확인: http://localhost:${PORT}/api/config/health
   `);
 });

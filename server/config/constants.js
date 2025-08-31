@@ -26,7 +26,10 @@ const SERVER_CONSTANTS = {
     PROCESS_BLOB: '/api/process-video-blob',
     ANALYZE: '/api/analyze',
     STATS: '/api/stats',
-    HEALTH: '/api/health',
+    HEALTH: '/health',
+    CONFIG_HEALTH: '/api/config/health',
+    TEST_OLLAMA: '/api/test-ollama',
+    TEST_SHEETS: '/api/test-sheets',
     UPDATE_HEADERS: '/api/update-headers'
   },
 
