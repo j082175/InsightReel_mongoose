@@ -48,8 +48,24 @@ export class ApiClient {
       }
 
       const result = await response.json();
+      
+      // 새로운 표준 응답 형식 처리
+      if (result.success === false) {
+        const errorMessage = result.error?.message || result.message || '처리 실패';
+        throw new Error(errorMessage);
+      }
+      
       Utils.log('success', 'Video processed successfully', result);
-      return result;
+      
+      // 기존 코드와의 호환성을 위해 data 필드를 최상위로 이동
+      const compatibleResult = {
+        success: result.success,
+        message: result.message,
+        timestamp: result.timestamp,
+        ...(result.data || result)
+      };
+      
+      return compatibleResult;
 
     } catch (error) {
       Utils.log('error', 'Video processing failed', error);
@@ -85,8 +101,24 @@ export class ApiClient {
       }
 
       const result = await response.json();
+      
+      // 새로운 표준 응답 형식 처리
+      if (result.success === false) {
+        const errorMessage = result.error?.message || result.message || '처리 실패';
+        throw new Error(errorMessage);
+      }
+      
       Utils.log('success', 'Video blob processed successfully', result);
-      return result;
+      
+      // 기존 코드와의 호환성을 위해 data 필드를 최상위로 이동
+      const compatibleResult = {
+        success: result.success,
+        message: result.message,
+        timestamp: result.timestamp,
+        ...(result.data || result)
+      };
+      
+      return compatibleResult;
 
     } catch (error) {
       Utils.log('error', 'Video blob processing failed', error);

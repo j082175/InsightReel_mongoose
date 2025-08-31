@@ -13,6 +13,8 @@ const VideoProcessor = require('./services/VideoProcessor');
 const AIAnalyzer = require('./services/AIAnalyzer');
 const SheetsManager = require('./services/SheetsManager');
 const { ServerLogger } = require('./utils/logger');
+const ResponseHandler = require('./utils/response-handler');
+const { API_MESSAGES, ERROR_CODES } = require('./config/api-messages');
 
 const app = express();
 const PORT = config.get('PORT');
@@ -80,31 +82,33 @@ const checkDateReset = () => {
 
 // 건강 상태 확인
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    useGemini: process.env.USE_GEMINI === 'true'
+  ResponseHandler.health(res, {
+    useGemini: process.env.USE_GEMINI === 'true',
+    version: '1.0.0'
   });
 });
 
 // 통계 조회
 app.get('/api/stats', (req, res) => {
-  checkDateReset();
-  res.json(stats);
+  try {
+    checkDateReset();
+    ResponseHandler.success(res, stats, '통계 정보를 성공적으로 조회했습니다.');
+  } catch (error) {
+    ResponseHandler.serverError(res, error, '통계 조회 중 오류가 발생했습니다.');
+  }
 });
 
 // Ollama 연결 테스트
 app.get('/api/test-ollama', async (req, res) => {
   try {
     const result = await aiAnalyzer.testConnection();
-    res.json({ status: 'ok', result });
+    ResponseHandler.success(res, result, API_MESSAGES.CONNECTION.OLLAMA_SUCCESS);
   } catch (error) {
-    res.status(500).json({ 
-      status: 'error', 
-      message: error.message,
+    ResponseHandler.serverError(res, {
+      ...error,
+      code: ERROR_CODES.OLLAMA_CONNECTION_FAILED,
       suggestion: 'Ollama가 설치되고 실행 중인지 확인해주세요. `ollama serve` 명령으로 실행할 수 있습니다.'
-    });
+    }, API_MESSAGES.CONNECTION.OLLAMA_FAILED);
   }
 });
 
@@ -112,20 +116,34 @@ app.get('/api/test-ollama', async (req, res) => {
 app.get('/api/test-sheets', async (req, res) => {
   try {
     const result = await sheetsManager.testConnection();
-    res.json({ status: 'ok', result });
+    ResponseHandler.success(res, result, API_MESSAGES.CONNECTION.SHEETS_SUCCESS);
   } catch (error) {
-    res.status(500).json({ 
-      status: 'error', 
-      message: error.message,
+    ResponseHandler.serverError(res, {
+      ...error,
+      code: ERROR_CODES.SHEETS_CONNECTION_FAILED,
       suggestion: '구글 API 키 설정과 인증을 확인해주세요.'
-    });
+    }, API_MESSAGES.CONNECTION.SHEETS_FAILED);
   }
 });
 
 // 설정 상태 확인 API
 app.get('/api/config/health', (req, res) => {
-  const healthStatus = config.healthCheck();
-  res.json(healthStatus);
+  try {
+    const healthStatus = config.healthCheck();
+    const isHealthy = healthStatus.status === 'healthy';
+    
+    if (isHealthy) {
+      ResponseHandler.success(res, healthStatus, API_MESSAGES.CONNECTION.CONFIG_VALID);
+    } else {
+      ResponseHandler.clientError(res, {
+        code: ERROR_CODES.INVALID_CONFIGURATION,
+        message: API_MESSAGES.CONNECTION.CONFIG_INVALID,
+        details: healthStatus
+      }, 422);
+    }
+  } catch (error) {
+    ResponseHandler.serverError(res, error, '설정 상태 확인 중 오류가 발생했습니다.');
+  }
 });
 
 // 비디오 처리 메인 엔드포인트
@@ -178,29 +196,35 @@ app.post('/api/process-video', async (req, res) => {
     
     ServerLogger.info('✅ 비디오 처리 완료');
     
-    res.json({
-      success: true,
-      message: '비디오가 성공적으로 처리되었습니다.',
-      category: analysis.category,
-      mainCategory: analysis.mainCategory,
-      middleCategory: analysis.middleCategory,
-      keywords: analysis.keywords,
-      hashtags: analysis.hashtags,
-      confidence: analysis.confidence,
-      frameCount: analysis.frameCount || 1,
-      analysisType: analysisType,
-      videoPath,
-      thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
-      thumbnailPaths: thumbnailPaths
-    });
+    const responseData = {
+      processing: {
+        platform,
+        analysisType,
+        frameCount: analysis.frameCount || 1
+      },
+      analysis: {
+        category: analysis.category,
+        mainCategory: analysis.mainCategory,
+        middleCategory: analysis.middleCategory,
+        keywords: analysis.keywords,
+        hashtags: analysis.hashtags,
+        confidence: analysis.confidence
+      },
+      files: {
+        videoPath,
+        thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
+        thumbnailPaths: thumbnailPaths
+      }
+    };
+
+    ResponseHandler.success(res, responseData, API_MESSAGES.VIDEO.PROCESSING_SUCCESS);
     
   } catch (error) {
     ServerLogger.error('비디오 처리 실패:', error);
-    res.status(500).json({
-      success: false,
-      message: '비디오 처리 중 오류가 발생했습니다.',
-      error: error.message
-    });
+    ResponseHandler.serverError(res, {
+      ...error,
+      code: ERROR_CODES.VIDEO_PROCESSING_FAILED
+    }, API_MESSAGES.VIDEO.PROCESSING_FAILED);
   }
 });
 
@@ -208,9 +232,12 @@ app.post('/api/process-video', async (req, res) => {
 app.get('/api/videos', async (req, res) => {
   try {
     const videos = await sheetsManager.getRecentVideos();
-    res.json(videos);
+    ResponseHandler.success(res, videos, API_MESSAGES.DATA.FETCH_SUCCESS);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    ResponseHandler.serverError(res, {
+      ...error,
+      code: ERROR_CODES.DATA_FETCH_FAILED
+    }, API_MESSAGES.DATA.FETCH_FAILED);
   }
 });
 
@@ -218,20 +245,32 @@ app.get('/api/videos', async (req, res) => {
 app.post('/api/upload', upload.single('video'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: '파일이 업로드되지 않았습니다.' });
+      return ResponseHandler.clientError(res, {
+        code: ERROR_CODES.FILE_NOT_FOUND,
+        message: API_MESSAGES.VIDEO.FILE_NOT_UPLOADED
+      }, 400);
     }
     
     const thumbnailPath = await videoProcessor.generateThumbnail(req.file.path);
     const analysis = await aiAnalyzer.analyzeVideo(thumbnailPath, {});
     
-    res.json({
-      success: true,
-      file: req.file,
+    const responseData = {
+      file: {
+        name: req.file.filename,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      },
       thumbnail: thumbnailPath,
       analysis
-    });
+    };
+
+    ResponseHandler.success(res, responseData, API_MESSAGES.FILE.UPLOAD_SUCCESS);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    ResponseHandler.serverError(res, {
+      ...error,
+      code: ERROR_CODES.FILE_UPLOAD_FAILED
+    }, API_MESSAGES.FILE.UPLOAD_FAILED);
   }
 });
 
@@ -246,10 +285,10 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     ServerLogger.info(`🔍 Analysis type: ${analysisType}`);
     
     if (!req.file) {
-      return res.status(400).json({ 
-        success: false,
-        error: '비디오 파일이 업로드되지 않았습니다.' 
-      });
+      return ResponseHandler.clientError(res, {
+        code: ERROR_CODES.FILE_NOT_FOUND,
+        message: API_MESSAGES.VIDEO.FILE_NOT_UPLOADED
+      }, 400);
     }
     
     const videoPath = req.file.path;
@@ -292,47 +331,51 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     
     ServerLogger.info('✅ blob 비디오 처리 완료');
     
-    res.json({
-      success: true,
-      message: '비디오가 성공적으로 처리되었습니다.',
-      category: analysis.category,
-      mainCategory: analysis.mainCategory,
-      middleCategory: analysis.middleCategory,
-      keywords: analysis.keywords,
-      hashtags: analysis.hashtags,
-      confidence: analysis.confidence,
-      frameCount: analysis.frameCount || 1,
-      analysisType: analysisType,
-      videoPath,
-      thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
-      thumbnailPaths: thumbnailPaths
-    });
+    const responseData = {
+      processing: {
+        platform,
+        analysisType,
+        frameCount: analysis.frameCount || 1,
+        source: 'blob-upload'
+      },
+      analysis: {
+        category: analysis.category,
+        mainCategory: analysis.mainCategory,
+        middleCategory: analysis.middleCategory,
+        keywords: analysis.keywords,
+        hashtags: analysis.hashtags,
+        confidence: analysis.confidence
+      },
+      files: {
+        videoPath,
+        thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
+        thumbnailPaths: thumbnailPaths
+      }
+    };
+
+    ResponseHandler.success(res, responseData, API_MESSAGES.VIDEO.PROCESSING_SUCCESS);
     
   } catch (error) {
     ServerLogger.error('blob 비디오 처리 실패:', error);
-    res.status(500).json({
-      success: false,
-      message: '비디오 처리 중 오류가 발생했습니다.',
-      error: error.message
-    });
+    ResponseHandler.serverError(res, {
+      ...error,
+      code: ERROR_CODES.VIDEO_PROCESSING_FAILED
+    }, API_MESSAGES.VIDEO.PROCESSING_FAILED);
   }
 });
 
 // 에러 핸들러
 app.use((err, req, res, next) => {
   ServerLogger.error('서버 에러:', err);
-  res.status(500).json({
-    error: '서버 내부 오류',
-    message: err.message
-  });
+  ResponseHandler.serverError(res, {
+    ...err,
+    code: ERROR_CODES.INTERNAL_SERVER_ERROR
+  }, API_MESSAGES.COMMON.INTERNAL_ERROR);
 });
 
 // 404 핸들러
 app.use((req, res) => {
-  res.status(404).json({
-    error: '페이지를 찾을 수 없습니다.',
-    path: req.path
-  });
+  ResponseHandler.notFound(res, `경로 '${req.path}'를 찾을 수 없습니다.`);
 });
 
 // 서버 시작
