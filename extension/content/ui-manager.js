@@ -1,5 +1,5 @@
 import { CONSTANTS } from './constants.js';
-import { Utils } from './utils.js';
+import { Utils, TimeUtils, DOMUtils, StringUtils } from './utils.js';
 
 /**
  * UI 및 DOM 조작 관리자

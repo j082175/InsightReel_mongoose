@@ -1,5 +1,5 @@
 import { CONSTANTS } from './constants.js';
-import { Utils } from './utils.js';
+import { Utils, TimeUtils } from './utils.js';
 import { ApiClient } from './api-client.js';
 import { UIManager } from './ui-manager.js';
 import { InstagramHandler } from './platforms/instagram-handler.js';

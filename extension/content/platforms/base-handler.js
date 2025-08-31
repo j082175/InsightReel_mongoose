@@ -1,4 +1,4 @@
-import { Utils } from '../utils.js';
+import { Utils, StringUtils, TimeUtils } from '../utils.js';
 import { SettingsManager } from '../settings-manager.js';
 
 /**
@@ -39,11 +39,11 @@ export class BasePlatformHandler {
    */
   generateUniqueId(element, prefix = 'item') {
     if (!element) {
-      return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      return StringUtils.generateUniqueId(prefix);
     }
     
     const rect = element.getBoundingClientRect();
-    const timestamp = Date.now();
+    const timestamp = TimeUtils.getCurrentUnixTimestamp();
     return `${prefix}_${Math.round(rect.top)}_${Math.round(rect.left)}_${timestamp}`;
   }
 
@@ -114,7 +114,7 @@ export class BasePlatformHandler {
    * @returns {boolean} 실행 가능 여부
    */
   shouldSkipEnhancement(minInterval = 1000) {
-    const now = Date.now();
+    const now = TimeUtils.getCurrentUnixTimestamp();
     if (this.isProcessing || (now - this.lastEnhancementTime) < minInterval) {
       return true;
     }
@@ -126,7 +126,7 @@ export class BasePlatformHandler {
    */
   startProcessing() {
     this.isProcessing = true;
-    this.lastEnhancementTime = Date.now();
+    this.lastEnhancementTime = TimeUtils.getCurrentUnixTimestamp();
     this.log('info', '처리 시작');
   }
 

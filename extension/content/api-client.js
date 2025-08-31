@@ -1,5 +1,5 @@
 import { CONSTANTS } from './constants.js';
-import { Utils } from './utils.js';
+import { Utils, TimeUtils, DOMUtils } from './utils.js';
 
 /**
  * API 통신 클라이언트

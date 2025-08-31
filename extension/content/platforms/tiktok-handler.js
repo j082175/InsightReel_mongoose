@@ -1,5 +1,5 @@
 import { CONSTANTS } from '../constants.js';
-import { Utils } from '../utils.js';
+import { Utils, StringUtils, TimeUtils, DOMUtils } from '../utils.js';
 import { BasePlatformHandler } from './base-handler.js';
 
 /**
