@@ -370,18 +370,18 @@ class SheetsManager {
         }
       }
 
-      // 데이터 행 구성 (동적 카테고리 컬럼 포함)
+      // 데이터 행 구성 (올바른 순서로 복구)
       const rowData = [
         rowNumber,                                    // 번호
         displayDate,                                 // 일시 (업로드 날짜 우선)
         platform.toUpperCase(),                      // 플랫폼
-        metadata.author || '',                       // 계정 (Instagram URL 형식)
+        metadata.author || '',                       // 계정
         analysis.mainCategory || '미분류',            // 대카테고리
         analysis.middleCategory || '미분류',          // 중카테고리
         fullCategoryPath,                            // 전체카테고리경로 (동적)
         categoryDepth,                               // 카테고리깊이
         analysis.keywords?.join(', ') || '',         // 키워드
-        analysis.content || '',                      // 분석내용
+        analysis.content || '',                      // 분석내용 (영상 분석 결과)
         metadata.likes || '0',                       // 좋아요
         metadata.comments || '0',                    // 댓글수
         analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그

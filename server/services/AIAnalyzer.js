@@ -186,6 +186,7 @@ class AIAnalyzer {
    * 동적 카테고리 분석 (새로운 시스템)
    */
   async analyzeDynamicCategories(thumbnailPaths, metadata) {
+    const dynamicStartTime = Date.now();
     ServerLogger.info('🚀 동적 카테고리 분석 시작', null, 'AI');
     
     try {
@@ -194,6 +195,9 @@ class AIAnalyzer {
       ServerLogger.info('📝 동적 프롬프트 생성 완료', null, 'AI');
       
       let aiResponse = null;
+      
+      // AI 분석 수행
+      const aiStartTime = Date.now();
       
       // 프레임 수에 따른 분석 방법 선택
       if (Array.isArray(thumbnailPaths) && thumbnailPaths.length > 1) {
@@ -208,12 +212,22 @@ class AIAnalyzer {
         aiResponse = await this.queryGemini(dynamicPrompt, imageBase64);
       }
       
+      const aiEndTime = Date.now();
+      const aiDuration = aiEndTime - aiStartTime;
+      ServerLogger.info(`⏱️ AI 동적 질의 소요시간: ${aiDuration}ms (${(aiDuration / 1000).toFixed(2)}초)`);
+      
       if (!aiResponse) {
         throw new Error('AI 응답을 받지 못했습니다');
       }
       
       // 동적 카테고리 응답 처리
+      const processStartTime = Date.now();
       const result = this.dynamicCategoryManager.processDynamicCategoryResponse(aiResponse, metadata);
+      const processEndTime = Date.now();
+      const processDuration = processEndTime - processStartTime;
+      
+      const dynamicEndTime = Date.now();
+      const dynamicTotalDuration = dynamicEndTime - dynamicStartTime;
       
       ServerLogger.info('✅ 동적 카테고리 분석 완료:', {
         mainCategory: result.mainCategory,
@@ -222,13 +236,15 @@ class AIAnalyzer {
         confidence: result.confidence
       });
       
+      // ServerLogger.info(`⏱️ 분석 세부 소요시간: 프롬프트=${promptDuration}ms, AI질의=${aiDuration}ms, 처리=${processDuration}ms`);
+      ServerLogger.info(`⏱️ 동적 분석 총 소요시간: ${dynamicTotalDuration}ms (${(dynamicTotalDuration / 1000).toFixed(2)}초)`);
+      
       return {
-        content: result.fullPath, // 호환성을 위해 fullPath를 content로 설정
+        content: result.content || '영상 분석 내용',  // AI 분석 내용 (카테고리 아님!)
         mainCategory: result.mainCategory,
-        middleCategory: result.categoryPath[1] || '일반', // 호환성을 위해 두 번째 레벨을 middle로 설정
-        fullCategoryPath: result.fullPath,
-        categoryPath: result.categoryPath,
-        categoryDepth: result.depth,
+        middleCategory: result.middleCategory || result.categoryPath[1] || '일반',
+        fullPath: result.fullPath,             // 동적 카테고리 전체 경로
+        depth: result.depth,                   // 카테고리 깊이
         keywords: result.keywords,
         hashtags: result.hashtags,
         confidence: result.confidence,
@@ -237,7 +253,10 @@ class AIAnalyzer {
       };
       
     } catch (error) {
+      const dynamicEndTime = Date.now();
+      const dynamicTotalDuration = dynamicEndTime - dynamicStartTime;
       ServerLogger.error('동적 카테고리 분석 실패:', error);
+      ServerLogger.info(`⏱️ 동적 분석 실패 소요시간: ${dynamicTotalDuration}ms`);
       
       // 폴백: 기본 카테고리 사용
       const fallback = this.dynamicCategoryManager.getFallbackCategory(metadata);

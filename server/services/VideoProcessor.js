@@ -33,6 +33,7 @@ class VideoProcessor {
   }
 
   async downloadVideo(videoUrl, platform) {
+    const startTime = Date.now();
     try {
       ServerLogger.info(`🔗 다운로드 시작 - Platform: ${platform}`);
       ServerLogger.info(`🔗 Video URL: ${videoUrl}`);
@@ -73,10 +74,12 @@ class VideoProcessor {
       return new Promise((resolve, reject) => {
         writer.on('finish', () => {
           try {
+            const endTime = Date.now();
+            const downloadTime = endTime - startTime;
             const stats = fs.statSync(filePath);
             ServerLogger.info(`✅ 비디오 다운로드 완료: ${filename}`);
             ServerLogger.info(`📊 파일 크기: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
-            ServerLogger.info(`🕒 다운로드 시간: ${new Date().toISOString()}`);
+            ServerLogger.info(`⏱️ 다운로드 소요시간: ${downloadTime}ms (${(downloadTime / 1000).toFixed(2)}초)`);
             resolve(filePath);
           } catch (error) {
             ServerLogger.error('파일 정보 확인 실패:', error);
@@ -102,6 +105,7 @@ class VideoProcessor {
   }
 
   async generateThumbnail(videoPath, analysisType = 'quick') {
+    const startTime = Date.now();
     try {
       const videoName = path.basename(videoPath, path.extname(videoPath));
       
@@ -113,17 +117,26 @@ class VideoProcessor {
         const timestamp = Date.now();
         const thumbnailPath = path.join(this.thumbnailDir, `${videoName}_thumb_${timestamp}.jpg`);
         fs.copyFileSync(videoPath, thumbnailPath);
+        const endTime = Date.now();
+        const processingTime = endTime - startTime;
         ServerLogger.info(`✅ 이미지 썸네일 생성 완료: ${path.basename(thumbnailPath)}`);
+        ServerLogger.info(`⏱️ 이미지 처리 소요시간: ${processingTime}ms`);
         return [thumbnailPath]; // 배열로 반환하여 일관성 유지
       }
       
       // 분석 타입에 따라 다른 처리
+      let result;
       if (analysisType === 'multi-frame' || analysisType === 'full') {
-        return await this.generateMultipleFrames(videoPath);
+        result = await this.generateMultipleFrames(videoPath);
       } else {
         // 기존 단일 썸네일 방식
-        return await this.generateSingleThumbnail(videoPath);
+        result = await this.generateSingleThumbnail(videoPath);
       }
+      
+      const endTime = Date.now();
+      const processingTime = endTime - startTime;
+      ServerLogger.info(`⏱️ 썸네일 생성 총 소요시간: ${processingTime}ms (${(processingTime / 1000).toFixed(2)}초)`);
+      return result;
 
     } catch (error) {
       ServerLogger.error('썸네일 생성 실패:', error);
@@ -132,6 +145,7 @@ class VideoProcessor {
   }
 
   async generateSingleThumbnail(videoPath) {
+    const startTime = Date.now();
     const videoName = path.basename(videoPath, path.extname(videoPath));
     const timestamp = Date.now();
     const thumbnailPath = path.join(this.thumbnailDir, `${videoName}_thumb_${timestamp}.jpg`);
@@ -155,8 +169,11 @@ class VideoProcessor {
       });
 
       ffmpeg.on('close', (code) => {
+        const endTime = Date.now();
+        const processingTime = endTime - startTime;
         if (code === 0 && fs.existsSync(thumbnailPath)) {
           ServerLogger.info(`✅ 단일 썸네일 생성 완료: ${path.basename(thumbnailPath)}`);
+          ServerLogger.info(`⏱️ FFmpeg 처리 소요시간: ${processingTime}ms`);
           resolve([thumbnailPath]); // 배열로 반환
         } else {
           ServerLogger.error(`❌ FFmpeg 썸네일 생성 실패 (코드: ${code})`);
@@ -179,6 +196,7 @@ class VideoProcessor {
   }
 
   async generateMultipleFrames(videoPath) {
+    const frameStartTime = Date.now();
     try {
       ServerLogger.info(`🎬 다중 프레임 생성 시작: ${videoPath}`);
       
@@ -205,7 +223,10 @@ class VideoProcessor {
         framePaths.push(framePath);
       }
       
+      const frameEndTime = Date.now();
+      const frameProcessingTime = frameEndTime - frameStartTime;
       ServerLogger.info(`✅ 다중 프레임 생성 완료: ${framePaths.length}개`);
+      ServerLogger.info(`⏱️ 다중 프레임 생성 소요시간: ${frameProcessingTime}ms (${(frameProcessingTime / 1000).toFixed(2)}초)`);
       return framePaths;
       
     } catch (error) {
@@ -215,10 +236,10 @@ class VideoProcessor {
   }
 
   calculateOptimalFrameCount(duration) {
-    if (duration <= 10) return 3;      // 10초 이하: 3프레임
-    if (duration <= 30) return 5;      // 30초 이하: 5프레임  
-    if (duration <= 60) return 7;      // 60초 이하: 7프레임
-    return Math.min(10, Math.ceil(duration / 10)); // 10초당 1프레임, 최대 10개
+    if (duration <= 10) return 6;      // 10초 이하: 6프레임 (기존 3 → 6)
+    if (duration <= 30) return 10;     // 30초 이하: 10프레임 (기존 5 → 10)
+    if (duration <= 60) return 14;     // 60초 이하: 14프레임 (기존 7 → 14)
+    return Math.min(20, Math.ceil(duration / 5)); // 5초당 1프레임, 최대 20개 (기존: 10초당 1개, 최대 10개)
   }
 
   calculateFrameIntervals(duration, frameCount) {
@@ -284,6 +305,7 @@ class VideoProcessor {
   }
 
   async getVideoDuration(videoPath) {
+    const startTime = Date.now();
     return new Promise((resolve, reject) => {
       ServerLogger.info(`🔍 비디오 길이 확인 시작: ${videoPath}`);
       
@@ -311,7 +333,10 @@ class VideoProcessor {
           if (code === 0 && output.trim()) {
             const info = JSON.parse(output);
             const duration = parseFloat(info.format.duration);
+            const endTime = Date.now();
+            const processingTime = endTime - startTime;
             ServerLogger.info(`✅ 비디오 길이 감지 성공: ${duration}초`);
+            ServerLogger.info(`⏱️ ffprobe 처리 소요시간: ${processingTime}ms`);
             resolve(duration);
           } else {
             console.warn(`⚠️ ffprobe 실패 (코드: ${code}), ffmpeg로 재시도`);
@@ -338,6 +363,7 @@ class VideoProcessor {
   }
 
   async getVideoDurationWithFFmpeg(videoPath) {
+    const startTime = Date.now();
     return new Promise((resolve, reject) => {
       ServerLogger.info(`🔄 ffmpeg로 비디오 길이 재시도: ${videoPath}`);
       
@@ -362,7 +388,10 @@ class VideoProcessor {
             const minutes = parseInt(durationMatch[2]);
             const seconds = parseFloat(durationMatch[3]);
             const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+            const endTime = Date.now();
+            const processingTime = endTime - startTime;
             ServerLogger.info(`✅ ffmpeg로 비디오 길이 감지 성공: ${totalSeconds}초`);
+            ServerLogger.info(`⏱️ ffmpeg 처리 소요시간: ${processingTime}ms`);
             resolve(totalSeconds);
           } else {
             ServerLogger.error(`❌ ffmpeg에서 Duration 찾을 수 없음`);

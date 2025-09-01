@@ -189,11 +189,13 @@ class DynamicCategoryManager {
 
       return {
         mainCategory: normalized.parts[0],
+        middleCategory: normalized.parts[1] || '일반',  // 중카테고리 추가 (호환성)
         fullPath: normalized.normalized,
         categoryPath: normalized.parts,
         depth: normalized.depth,
         keywords: Array.isArray(categoryData.keywords) ? categoryData.keywords.slice(0, 5) : [],
         hashtags: Array.isArray(categoryData.hashtags) ? categoryData.hashtags.slice(0, 5) : [],
+        content: categoryData.content || categoryData.description || '',  // AI 분석 내용 보존
         confidence: categoryData.confidence || 0.8,
         source: 'dynamic-ai-generated',
         normalized: true
@@ -243,11 +245,13 @@ class DynamicCategoryManager {
 
     return {
       mainCategory: bestMainCategory,
+      middleCategory: '일반',  // 중카테고리 추가 (호환성)
       fullPath: `${bestMainCategory} > 일반`,
       categoryPath: [bestMainCategory, '일반'],
       depth: 2,
       keywords: ['영상', '콘텐츠'],
       hashtags: ['#영상', '#콘텐츠'],
+      content: `${bestMainCategory} 관련 콘텐츠`,  // 기본 분석 내용
       confidence: 0.5,
       source: 'fallback-metadata',
       normalized: false
@@ -415,6 +419,7 @@ class DynamicCategoryManager {
   "main_category": "선택한 대카테고리",
   "category_path": ["하위1", "하위2", "하위3"],
   "full_path": "대카테고리 > 하위1 > 하위2 > 하위3",
+  "content": "영상에서 보이는 내용과 주요 활동을 설명",
   "keywords": ["키워드1", "키워드2", "키워드3", "키워드4", "키워드5"],
   "hashtags": ["#해시태그1", "#해시태그2", "#해시태그3", "#해시태그4", "#해시태그5"],
   "confidence": 0.95,
