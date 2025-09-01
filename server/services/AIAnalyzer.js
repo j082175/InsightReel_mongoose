@@ -205,7 +205,7 @@ class AIAnalyzer {
     }
     
     // AI + URL 기반 하이브리드 분석
-    const analysis = this.combineAnalysis(aiResponse, urlBasedCategory, metadata);
+    const analysis = await this.combineAnalysis(aiResponse, urlBasedCategory, metadata, [thumbnailPath]);
     ServerLogger.info('✅ 단일 프레임 분석 완료:', analysis);
     return analysis;
   }
@@ -417,7 +417,7 @@ class AIAnalyzer {
     }
   }
 
-  parseAIResponse(aiResponse, metadata) {
+  async parseAIResponse(aiResponse, metadata, imagePaths = null) {
     ServerLogger.info('🟡 parseAIResponse 함수 시작');
     ServerLogger.info('🟡 원본 AI 응답 길이:', aiResponse ? aiResponse.length : 'null');
     
@@ -436,7 +436,7 @@ class AIAnalyzer {
           middle: parsed.middle_category 
         });
         
-        const categoryResult = this.validateAndInferCategories(parsed, metadata);
+        const categoryResult = await this.validateAndInferCategories(parsed, metadata, imagePaths);
         ServerLogger.info('🔍 카테고리 검증 결과:', categoryResult);
         
         return {
@@ -497,7 +497,7 @@ class AIAnalyzer {
     };
   }
 
-  validateAndInferCategories(parsed, metadata) {
+  async validateAndInferCategories(parsed, metadata, imagePaths = null) {
     // AI 응답에서 카테고리 정보 추출
     let mainCategory = parsed.main_category;
     let middleCategory = parsed.middle_category;
@@ -543,6 +543,122 @@ class AIAnalyzer {
       mainCategory,
       middleCategory
     };
+  }
+
+  // AI 카테고리 재분석 함수
+  async retryAnalysisWithCorrection(imagePaths, metadata, errorReason) {
+    try {
+      ServerLogger.info('🔄 재분석 시작:', { errorReason, imageCount: imagePaths.length });
+      
+      // 오류 이유에 따른 수정된 프롬프트 생성
+      let correctionPrompt = '';
+      if (errorReason === 'Invalid main category') {
+        correctionPrompt = `
+⚠️ **중요**: 이전 분석에서 잘못된 대카테고리를 선택했습니다.
+반드시 다음 15개 대카테고리 중 하나만 선택하세요:
+게임, 과학·기술, 교육, How-to & 라이프스타일, 뉴스·시사, 사회·공익, 스포츠, 동물, 엔터테인먼트, 여행·이벤트, 영화·드라마·애니, 음악, 라이프·블로그, 자동차·모빌리티, 코미디
+
+다른 카테고리명은 절대 사용하지 마세요.
+`;
+      } else if (errorReason === 'Invalid middle category for main category') {
+        correctionPrompt = `
+⚠️ **중요**: 이전 분석에서 대카테고리와 중카테고리 조합이 잘못되었습니다.
+각 대카테고리에 맞는 정확한 중카테고리만 선택하세요.
+예: "게임" → "플레이·리뷰", "가이드·분석", "e스포츠", "장르 전문" 중 하나만
+
+잘못된 조합을 절대 만들지 마세요.
+`;
+      } else {
+        correctionPrompt = `
+⚠️ **중요**: 이전 분석에서 카테고리 오류가 발생했습니다.
+아래 카테고리 체계를 정확히 따라주세요.
+`;
+      }
+      
+      // 기본 프롬프트에 수정 지시사항 추가
+      const retryPrompt = correctionPrompt + this.buildSimpleAnalysisPrompt(metadata);
+      
+      let retryResult = null;
+      
+      // Gemini 재시도
+      if (this.useGemini) {
+        try {
+          if (imagePaths.length === 1) {
+            ServerLogger.info('🔄 Gemini 단일 프레임 재분석 시도');
+            const imageBase64 = await this.encodeImageToBase64(imagePaths[0]);
+            retryResult = await this.queryGemini(retryPrompt, imageBase64);
+          } else {
+            ServerLogger.info(`🔄 Gemini 다중 프레임 재분석 시도 (${imagePaths.length}개)`);
+            retryResult = await this.retryMultiFrameAnalysisWithGemini(imagePaths, metadata, correctionPrompt);
+          }
+        } catch (error) {
+          ServerLogger.info('❌ Gemini 재분석 실패:', error.message);
+        }
+      }
+      
+      // Ollama 재시도 (Gemini 실패 시)
+      if (!retryResult && imagePaths.length === 1) {
+        try {
+          ServerLogger.info('🔄 Ollama 재분석 시도');
+          const imageBase64 = await this.encodeImageToBase64(imagePaths[0]);
+          retryResult = await this.queryOllama(retryPrompt, imageBase64);
+        } catch (error) {
+          ServerLogger.info('❌ Ollama 재분석 실패:', error.message);
+        }
+      }
+      
+      if (retryResult) {
+        ServerLogger.info('✅ 재분석 응답 수신');
+        return retryResult;
+      } else {
+        ServerLogger.info('❌ 모든 재분석 시도 실패');
+        return null;
+      }
+    } catch (error) {
+      ServerLogger.error('재분석 중 오류:', error);
+      return null;
+    }
+  }
+
+  // 다중 프레임 재분석 함수 (Gemini용)
+  async retryMultiFrameAnalysisWithGemini(imagePaths, metadata, correctionPrompt) {
+    try {
+      // 모든 이미지를 Base64로 인코딩
+      const imageContents = [];
+      for (const imagePath of imagePaths) {
+        const imageBase64 = await this.encodeImageToBase64(imagePath);
+        imageContents.push({
+          inlineData: {
+            data: imageBase64,
+            mimeType: "image/jpeg"
+          }
+        });
+      }
+      
+      // 다중 프레임 재분석 프롬프트 생성
+      const basePrompt = this.buildGeminiMultiFramePrompt(metadata, imagePaths.length);
+      const retryPrompt = correctionPrompt + basePrompt;
+      
+      ServerLogger.info('🔮 Gemini 다중 프레임 재분석 API 호출...');
+      
+      // Gemini API 호출
+      const result = await this.geminiModel.generateContent([
+        retryPrompt,
+        ...imageContents
+      ]);
+      
+      const response = await result.response;
+      const aiResponse = response.text();
+      
+      ServerLogger.info('✅ Gemini 다중 프레임 재분석 응답 수신');
+      
+      // 응답 파싱
+      return await this.parseAIResponse(aiResponse, metadata, imagePaths);
+      
+    } catch (error) {
+      ServerLogger.error('다중 프레임 재분석 오류:', error);
+      throw error;
+    }
   }
 
   // AI 카테고리 유효성 검증 함수
@@ -909,7 +1025,7 @@ JSON 형식으로 답변:
   }
 
   // AI + URL 기반 하이브리드 분석
-  combineAnalysis(aiResponse, urlBasedCategory, metadata) {
+  async combineAnalysis(aiResponse, urlBasedCategory, metadata, imagePaths = null) {
     try {
       ServerLogger.info('🔍 AI 응답 분석 시작...');
       ServerLogger.info('AI 응답 존재 여부:', !!aiResponse);
@@ -967,12 +1083,46 @@ JSON 형식으로 답변:
           finalMainCategory = aiData.main_category;
           finalMiddleCategory = aiData.middle_category;
         } else {
-          ServerLogger.info('❌ AI 카테고리 무효, URL 기반 카테고리 사용:', {
+          ServerLogger.info('❌ AI 카테고리 무효, 재분석 시도:', {
             ai_main: aiData.main_category,
             ai_middle: aiData.middle_category,
+            reason: validation.reason,
             url_main: urlBasedCategory.mainCategory,
             url_middle: urlBasedCategory.middleCategory
           });
+          
+          // 재분석 시도 (1회만)
+          try {
+            ServerLogger.info('🔄 AI 카테고리 재분석 중...');
+            const retryResponse = await this.retryAnalysisWithCorrection(imagePaths, metadata, validation.reason);
+            
+            if (retryResponse && retryResponse.main_category && retryResponse.middle_category) {
+              const retryValidation = this.validateCategoryPair(retryResponse.main_category, retryResponse.middle_category);
+              if (retryValidation.isValid) {
+                ServerLogger.info('✅ 재분석 성공, 수정된 AI 분류 사용:', {
+                  main: retryResponse.main_category,
+                  middle: retryResponse.middle_category
+                });
+                finalMainCategory = retryResponse.main_category;
+                finalMiddleCategory = retryResponse.middle_category;
+                // 재분석 결과로 다른 필드도 업데이트
+                aiData.content = retryResponse.content || aiData.content;
+                aiData.keywords = retryResponse.keywords || aiData.keywords;
+                aiData.hashtags = retryResponse.hashtags || aiData.hashtags;
+                aiData.confidence = retryResponse.confidence || aiData.confidence;
+              } else {
+                ServerLogger.info('❌ 재분석도 실패, URL 기반 카테고리 사용:', {
+                  retry_main: retryResponse.main_category,
+                  retry_middle: retryResponse.middle_category,
+                  reason: retryValidation.reason
+                });
+              }
+            } else {
+              ServerLogger.info('❌ 재분석 응답 없음, URL 기반 카테고리 사용');
+            }
+          } catch (retryError) {
+            ServerLogger.info('❌ 재분석 중 오류 발생, URL 기반 카테고리 사용:', retryError.message);
+          }
         }
       }
       
