@@ -13,11 +13,13 @@
 │   ├── controllers/          # API 컨트롤러
 │   ├── middleware/           # Express 미들웨어
 │   ├── services/             # 핵심 서비스 로직
-│   │   ├── AIAnalyzer.js    # AI 분석 (Gemini)
-│   │   ├── VideoProcessor.js # 비디오 다운로드 및 썸네일 생성
-│   │   └── SheetsManager.js  # Google Sheets 연동
+│   │   ├── AIAnalyzer.js    # AI 분석 (Gemini) + 성능 측정
+│   │   ├── VideoProcessor.js # 비디오 다운로드 및 썸네일 생성 + 성능 측정
+│   │   ├── SheetsManager.js  # Google Sheets 연동 + 성능 측정
+│   │   └── DynamicCategoryManager.js # 플랫폼별 카테고리 관리
 │   └── utils/
-│       └── logger.js         # 로깅 유틸리티
+│       ├── logger.js         # 로깅 유틸리티
+│       └── performance-logger.js # 성능 측정 및 분석 유틸리티
 ├── extension/                # Chrome 확장 프로그램
 │   ├── background/          # 백그라운드 스크립트
 │   ├── content/             # 컨텐츠 스크립트
@@ -68,8 +70,10 @@ GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
 PORT=3000
 ```
 
-### 3. 한국어 처리
-- **카테고리 분류**: 한국어 카테고리 체계 사용 (게임, 라이프·블로그 등)
+### 3. 한국어 처리 및 플랫폼별 카테고리
+- **플랫폼별 카테고리 시스템**:
+  - **YouTube**: 15개 카테고리 (게임, 과학기술, 교육, 노하우/스타일, 뉴스/정치, 비영리/사회운동, 스포츠, 애완동물/동물, 엔터테인먼트, 여행/이벤트, 영화/애니메이션, 음악, 인물/블로그, 자동차/교통, 코미디)
+  - **TikTok/Instagram**: 12개 카테고리 (엔터테인먼트, 뷰티 및 스타일, 퍼포먼스, 스포츠 및 아웃도어, 사회, 라이프스타일, 차량 및 교통, 재능, 자연, 문화/교육/기술, 가족/연애, 초자연적 현상 및 공포)
 - **키워드 추출**: 한글 형태소 분석 포함
 - **에러 메시지**: 한글로 작성
 
@@ -79,6 +83,7 @@ PORT=3000
 - **주석**: 한글 사용 권장
 - **에러 처리**: try-catch 블록 일관되게 사용
 - **로깅**: ServerLogger 사용 (console.log 직접 사용 금지)
+- **성능 측정**: PerformanceLogger 클래스 활용
 - **비동기**: async/await 패턴 사용
 
 ### 2. 테스트 작성
@@ -111,15 +116,18 @@ PORT=3000
 
 ## 🚀 자주 사용하는 작업
 
-### 1. 새로운 비디오 처리 흐름
-1. 클라이언트에서 URL 전송
-2. VideoProcessor가 비디오 다운로드
-3. 썸네일 생성 (FFmpeg)
-4. AIAnalyzer가 이미지 분석
-5. 카테고리 및 키워드 추출
-6. SheetsManager가 Google Sheets에 저장
+### 1. 새로운 비디오 처리 흐름 (성능 측정 포함)
+1. **PerformanceLogger로 전체 프로세스 시작** - 총 소요시간 측정 시작
+2. **클라이언트에서 URL 전송** - 플랫폼 정보 포함
+3. **VideoProcessor가 비디오 다운로드** - 다운로드 시간 측정
+4. **썸네일 생성 (FFmpeg)** - FFmpeg 처리 시간 측정
+5. **AIAnalyzer가 이미지 분석** - AI 분석 시간 측정
+6. **DynamicCategoryManager로 플랫폼별 카테고리 적용** - 카테고리 생성 시간 측정
+7. **키워드 추출 및 정규화**
+8. **SheetsManager가 Google Sheets에 저장** - 저장 시간 측정
+9. **PerformanceLogger로 전체 프로세스 완료** - 총 소요시간 및 성능 분석 결과 출력
 
-### 2. 에러 디버깅
+### 2. 성능 모니터링 및 로그 분석
 ```bash
 # API 헬스 체크
 curl http://localhost:3000/health
@@ -131,10 +139,19 @@ curl http://localhost:3000/api/test-sheets
 echo $GOOGLE_API_KEY
 ```
 
-### 3. 테스트 실패 시
+**성능 로그 해석:**
+- `⏱️ 다운로드 소요시간: 2500ms (2.50초)` - 비디오 다운로드 시간
+- `⏱️ 썸네일 생성 소요시간: 800ms (0.80초)` - FFmpeg 썸네일 생성 시간
+- `⏱️ AI 동적 질의 소요시간: 11155ms (11.15초)` - Gemini AI 분석 시간
+- `⏱️ 스프레드시트 저장 소요시간: 1200ms (1.20초)` - Google Sheets 저장 시간
+- `⏱️ 총 소요시간: 15655ms (15.66초)` - 전체 처리 시간
+- `📊 성능 분석: ⚡ 빠름/⏳ 보통/🐌 느림` - 성능 평가 결과
+
+### 4. 테스트 실패 시
 - Mock 설정 확인 (특히 외부 API)
 - 환경 변수 설정 확인
 - 비동기 처리 타이밍 문제 체크
+- PerformanceLogger 시간 측정 검증
 
 ## 🎨 Chrome 확장 프로그램 가이드라인
 
@@ -150,20 +167,32 @@ echo $GOOGLE_API_KEY
 
 ## 📊 성능 최적화 포인트
 
-### 1. 비디오 처리
+### 1. 비디오 처리 성능
 - 대용량 파일 스트림 처리
 - 동시 다운로드 제한 (최대 3개)
 - 썸네일 생성 시 해상도 최적화
+- **성능 기준**: 다운로드 <5초, 썸네일 생성 <2초
 
-### 2. AI 분석
-- 이미지 압축 후 전송
-- 캐싱 활용 (동일 URL)
+### 2. AI 분석 성능
+- 이미지 압축 후 전송 (최적 해상도)
+- 캐싱 활용 (동일 URL/이미지)
 - 배치 처리 고려
+- **성능 기준**: AI 분석 <15초 (일반), <30초 (복잡)
+- **플랫폼별 최적화**: YouTube vs TikTok/Instagram 프롬프트 차별화
 
-### 3. Google Sheets
+### 3. Google Sheets 성능
 - 배치 업데이트 사용
 - 필요한 범위만 조회
 - 통계는 별도 시트에 캐싱
+- **성능 기준**: 저장 <3초
+
+### 4. 전체 시스템 성능 모니터링
+- **PerformanceLogger 활용**: 실시간 성능 추적
+- **성능 분류 기준**:
+  - ⚡ 빠름: <30초 총 처리시간
+  - ⏳ 보통: 30-60초 총 처리시간  
+  - 🐌 느림: >60초 총 처리시간
+- **자동 최적화 권장**: 60초 초과시 프레임 수 조정/모델 최적화 제안
 
 ## 🐛 알려진 이슈 및 해결법
 
@@ -179,6 +208,12 @@ echo $GOOGLE_API_KEY
 - 문제: 분당 요청 제한 초과
 - 해결: 요청 간 딜레이 추가, 배치 처리 활용
 
+### 4. 성능 측정 관련 이슈
+- 문제: `ReferenceError: dynamicStartTime is not defined`
+- 해결: 각 메소드 시작 부분에 시간 측정 변수 초기화 확인
+- 문제: PerformanceLogger 메모리 누수
+- 해결: cleanup() 메소드를 통한 정기적인 메모리 정리
+
 ## 🔄 향후 개선 사항
 1. **테스트 커버리지 확대** (현재 27.6% → 목표 70%)
 2. **에러 복구 메커니즘** 강화
@@ -186,6 +221,18 @@ echo $GOOGLE_API_KEY
 4. **멀티 플랫폼 지원** 확대 (YouTube, Facebook 등)
 5. **AI 모델 최적화** (속도 및 정확도 개선)
 6. **대시보드 UI** 개선
+7. **성능 최적화 자동화** (임계값 기반 자동 조정)
+8. **플랫폼별 AI 프롬프트 최적화** (정확도 향상)
+
+## ✅ 최근 완료된 주요 기능
+1. **성능 측정 시스템** (2024-09-01)
+   - PerformanceLogger 클래스 구현
+   - 전체 비디오 처리 파이프라인 시간 측정
+   - 단계별 성능 분석 및 최적화 권장
+2. **플랫폼별 카테고리 분리** (2024-09-01)
+   - YouTube: 15개 카테고리 유지
+   - TikTok/Instagram: 12개 새로운 카테고리 적용
+   - DynamicCategoryManager 완전 리팩토링
 
 ## 💡 개발 팁
 
@@ -194,16 +241,24 @@ echo $GOOGLE_API_KEY
 - 한글 주석과 에러 메시지 유지
 - 기존 코드 스타일 따르기
 - 외부 API Mock 처리 철저히
+- **성능 측정 필수**: 새 기능 구현 시 PerformanceLogger 활용
 
 ### 디버깅 시
 - ServerLogger의 로그 레벨 활용
 - 브라우저 개발자 도구 네트워크 탭 확인
 - Gemini API 응답 모니터링
+- **성능 로그 분석**: 시간 측정 로그를 통한 병목 지점 파악
 
 ### 성능 문제 시
-- 프로파일링 먼저 수행
-- 병목 지점 식별 후 최적화
-- 캐싱 적극 활용
+- **PerformanceLogger 먼저 활용**: 정확한 시간 측정
+- 병목 지점 식별 후 최적화 (AI 분석이 대부분 가장 느림)
+- 캐싱 적극 활용 (특히 동일 URL/이미지)
+- **플랫폼별 최적화**: YouTube vs TikTok/Instagram 차별화
+
+### 플랫폼별 개발 시
+- **카테고리 확인**: getMainCategoriesForPlatform() 메소드 활용
+- **AI 프롬프트 차별화**: 플랫폼 특성에 맞는 분석 프롬프트 사용
+- **로그에서 플랫폼 정보 확인**: 플랫폼별 카테고리 개수 로그 모니터링
 
 ## 📚 참고 문서
 - [Gemini API](https://ai.google.dev/gemini-api/docs)
@@ -211,8 +266,45 @@ echo $GOOGLE_API_KEY
 - [FFmpeg Documentation](https://ffmpeg.org/documentation.html)
 - [Jest Testing](https://jestjs.io/docs/getting-started)
 
+## 🏷️ 주요 클래스 및 메소드
+
+### PerformanceLogger (utils/performance-logger.js)
+```javascript
+// 전체 프로세스 시간 측정
+const tracker = performanceLogger.startTotalProcess('url', 'instagram');
+// ... 작업 수행 ...
+tracker.finish(); // 총 소요시간과 성능 분석 출력
+
+// 개별 타이머
+performanceLogger.start('download');
+// ... 다운로드 작업 ...
+performanceLogger.endAndLog('download', '비디오 다운로드 완료');
+```
+
+### DynamicCategoryManager (services/DynamicCategoryManager.js)
+```javascript
+// 플랫폼별 카테고리 가져오기
+const categories = manager.getMainCategoriesForPlatform('youtube'); // 15개
+const categories = manager.getMainCategoriesForPlatform('tiktok');  // 12개
+
+// AI 프롬프트 생성 (플랫폼별 자동 적용)
+const prompt = manager.buildDynamicCategoryPrompt(platform);
+```
+
+### 성능 로그 패턴
+```bash
+🚀 전체 영상 처리 시작 - URL, 플랫폼: instagram
+⏱️ 다운로드 소요시간: 2500ms (2.50초)
+⏱️ 썸네일 생성 소요시간: 800ms (0.80초)  
+⏱️ AI 동적 질의 소요시간: 11155ms (11.15초)
+⏱️ 스프레드시트 저장 소요시간: 1200ms (1.20초)
+🏁 전체 영상 처리 완료 - URL, 플랫폼: instagram
+⏱️ 총 소요시간: 15655ms (15.66초)
+📊 성능 분석: ⏳ 보통 (15.66초)
+```
+
 ---
 
-**Last Updated**: 2024-09-01
+**Last Updated**: 2024-09-01 (성능 측정 시스템 및 플랫폼별 카테고리 추가)
 **Maintainer**: JUNSOOCHO
 **License**: MIT

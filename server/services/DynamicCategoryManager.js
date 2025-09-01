@@ -14,13 +14,30 @@ class DynamicCategoryManager {
     this.loadNormalizationRules();
     this.loadCategoryStats();
     
-    // 고정된 대카테고리 (변경 불가)
-    this.FIXED_MAIN_CATEGORIES = [
-      "게임", "과학기술", "교육", "노하우/스타일", "뉴스/정치",
-      "비영리/사회운동", "스포츠", "애완동물/동물", "엔터테인먼트",
-      "여행/이벤트", "영화/애니메이션", "음악", "인물/블로그", 
-      "자동차/교통", "코미디"
-    ];
+    // 플랫폼별 대카테고리 설정
+    this.PLATFORM_CATEGORIES = {
+      // YouTube용 기존 15개 대카테고리
+      youtube: [
+        "게임", "과학기술", "교육", "노하우/스타일", "뉴스/정치",
+        "비영리/사회운동", "스포츠", "애완동물/동물", "엔터테인먼트",
+        "여행/이벤트", "영화/애니메이션", "음악", "인물/블로그", 
+        "자동차/교통", "코미디"
+      ],
+      // TikTok/Instagram용 12개 대카테고리
+      tiktok: [
+        "엔터테인먼트", "뷰티 및 스타일", "퍼포먼스", "스포츠 및 아웃도어",
+        "사회", "라이프스타일", "차량 및 교통", "재능",
+        "자연", "문화, 교육 및 기술", "가족 및 연애", "초자연적 현상 및 공포"
+      ],
+      instagram: [
+        "엔터테인먼트", "뷰티 및 스타일", "퍼포먼스", "스포츠 및 아웃도어",
+        "사회", "라이프스타일", "차량 및 교통", "재능",
+        "자연", "문화, 교육 및 기술", "가족 및 연애", "초자연적 현상 및 공포"
+      ]
+    };
+    
+    // 하위 호환성을 위해 FIXED_MAIN_CATEGORIES 유지 (기본값은 YouTube)
+    this.FIXED_MAIN_CATEGORIES = this.PLATFORM_CATEGORIES.youtube;
   }
 
   /**
@@ -398,13 +415,40 @@ class DynamicCategoryManager {
   /**
    * 동적 카테고리 프롬프트 생성
    */
+  /**
+   * 플랫폼에 맞는 대카테고리 목록 반환
+   * @param {string} platform - 플랫폼 이름 (youtube, tiktok, instagram)
+   * @returns {Array} 대카테고리 목록
+   */
+  getMainCategoriesForPlatform(platform) {
+    const normalizedPlatform = platform?.toLowerCase();
+    
+    // YouTube는 기존 15개 카테고리 사용
+    if (normalizedPlatform === 'youtube') {
+      return this.PLATFORM_CATEGORIES.youtube;
+    }
+    
+    // TikTok, Instagram은 새로운 12개 카테고리 사용
+    if (normalizedPlatform === 'tiktok' || normalizedPlatform === 'instagram') {
+      return this.PLATFORM_CATEGORIES[normalizedPlatform] || this.PLATFORM_CATEGORIES.tiktok;
+    }
+    
+    // 기본값은 YouTube 카테고리
+    ServerLogger.warn(`알 수 없는 플랫폼: ${platform}, YouTube 카테고리 사용`, null, 'DynamicCategoryManager');
+    return this.PLATFORM_CATEGORIES.youtube;
+  }
+
   buildDynamicCategoryPrompt(metadata) {
-    const platform = metadata.platform || '소셜미디어';
+    // 플랫폼에 따라 다른 대카테고리 사용
+    const platform = metadata.platform || 'youtube';
+    const categories = this.getMainCategoriesForPlatform(platform);
+    
+    ServerLogger.info(`플랫폼: ${platform}, 대카테고리 수: ${categories.length}개`, null, 'DynamicCategoryManager');
     
     return `이 ${platform} 영상을 분석하여 카테고리를 분류해주세요.
 
 **분류 규칙:**
-1. 대카테고리는 반드시 다음 중 하나 선택: ${this.FIXED_MAIN_CATEGORIES.join(', ')}
+1. 대카테고리는 반드시 다음 중 하나 선택: ${categories.join(', ')}
 2. 하위 카테고리는 콘텐츠에 맞게 적절한 깊이까지 자유롭게 생성
 3. 너무 깊게 들어가지 말고, 의미있는 구분선까지만 생성 (최대 4-5단계)
 4. 한국어 사용, 간결하고 명확한 용어 사용
