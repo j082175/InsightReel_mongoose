@@ -6,10 +6,19 @@ class VideoSaverPopup {
   }
 
   async init() {
-    await this.checkServerStatus();
-    await this.loadStats();
+    console.log('🚀 팝업 초기화 시작');
+    
+    // 설정을 먼저 로드한 후 이벤트 리스너 설정
+    await this.loadSettings();
     this.setupEventListeners();
-    this.loadSettings();
+    
+    // 서버 상태와 통계는 병렬로 처리
+    await Promise.all([
+      this.checkServerStatus(),
+      this.loadStats()
+    ]);
+    
+    console.log('📋 팝업 초기화 완료');
   }
 
   async checkServerStatus() {
@@ -44,6 +53,9 @@ class VideoSaverPopup {
   }
 
   setupEventListeners() {
+    // 디바운스 타이머들을 인스턴스 변수로 관리
+    this.debounceTimers = {};
+    
     // 스프레드시트 열기
     document.getElementById('openSheets').addEventListener('click', async () => {
       try {
@@ -77,11 +89,29 @@ class VideoSaverPopup {
       await this.testConnection();
     });
 
-    // 설정 토글
+    // 설정 토글 - 개별 디바운싱
     const toggles = ['autoAnalyze', 'autoSave', 'showNotifications'];
     toggles.forEach(id => {
       document.getElementById(id).addEventListener('change', (e) => {
-        this.saveSetting(id, e.target.checked);
+        // 해당 ID의 이전 타이머 취소
+        if (this.debounceTimers[id]) {
+          clearTimeout(this.debounceTimers[id]);
+        }
+        
+        // 즉시 시각적 피드백
+        const element = e.target;
+        element.style.transform = 'scale(1.1)';
+        element.style.transition = 'transform 0.15s ease';
+        setTimeout(() => {
+          element.style.transform = 'scale(1)';
+        }, 150);
+        
+        console.log(`${id} 토글: ${e.target.checked}`); // 디버그용
+        
+        // 200ms 후 실제 저장 (더 빠르게)
+        this.debounceTimers[id] = setTimeout(() => {
+          this.saveSetting(id, e.target.checked);
+        }, 200);
       });
     });
   }
@@ -112,22 +142,60 @@ class VideoSaverPopup {
     }
   }
 
-  loadSettings() {
-    chrome.storage.sync.get(['videosaverSettings'], (result) => {
-      const settings = result.videosaverSettings || {};
+  async loadSettings() {
+    try {
+      const result = await new Promise((resolve) => {
+        chrome.storage.sync.get(['videosaverSettings'], resolve);
+      });
       
-      // 자동 분석 설정 (기본값: false로 변경)
-      document.getElementById('autoAnalyze').checked = settings.autoAnalysis || false;
-      // 기존 설정들 (기본값: true 유지)
-      document.getElementById('autoSave').checked = settings.autoSave !== false;
-      document.getElementById('showNotifications').checked = settings.showNotifications !== false;
-    });
+      const settings = result.videosaverSettings || {};
+      console.log('📋 로드된 설정:', settings);
+      
+      // DOM 요소가 준비되었는지 확인
+      const autoAnalyze = document.getElementById('autoAnalyze');
+      const autoSave = document.getElementById('autoSave');
+      const showNotifications = document.getElementById('showNotifications');
+      
+      if (!autoAnalyze || !autoSave || !showNotifications) {
+        console.warn('⚠️ DOM 요소가 아직 준비되지 않음');
+        return;
+      }
+      
+      // 명시적으로 저장된 값 사용 (undefined인 경우만 기본값)
+      autoAnalyze.checked = settings.autoAnalysis !== undefined ? settings.autoAnalysis : false;
+      autoSave.checked = settings.autoSave !== undefined ? settings.autoSave : true;
+      showNotifications.checked = settings.showNotifications !== undefined ? settings.showNotifications : true;
+      
+      // 설정 로드 완료 후 설정 영역을 부드럽게 표시
+      const settingsContainer = document.getElementById('settingsContainer');
+      if (settingsContainer) {
+        settingsContainer.style.opacity = '1';
+      }
+      
+      console.log('✅ UI 반영 완료');
+      
+    } catch (error) {
+      console.error('❌ 설정 로드 실패:', error);
+      
+      // 에러 발생 시에도 설정 영역 표시 (기본값으로)
+      const settingsContainer = document.getElementById('settingsContainer');
+      if (settingsContainer) {
+        settingsContainer.style.opacity = '1';
+      }
+    }
   }
 
-  saveSetting(key, value) {
-    // 우리의 설정 시스템과 연동
-    chrome.storage.sync.get(['videosaverSettings'], (result) => {
+  async saveSetting(key, value) {
+    try {
+      console.log(`💾 설정 저장 시작: ${key} = ${value}`);
+      
+      // 현재 설정 가져오기
+      const result = await new Promise((resolve) => {
+        chrome.storage.sync.get(['videosaverSettings'], resolve);
+      });
+      
       const currentSettings = result.videosaverSettings || {};
+      console.log('📋 현재 저장된 설정:', currentSettings);
       
       let settingKey = key;
       // autoAnalyze를 autoAnalysis로 매핑
@@ -140,13 +208,60 @@ class VideoSaverPopup {
         [settingKey]: value
       };
       
-      chrome.storage.sync.set({ 
-        videosaverSettings: updatedSettings 
-      }, () => {
-        console.log(`설정 저장됨: ${settingKey} = ${value}`);
-        this.showNotification(`✅ 설정이 저장되었습니다`);
+      console.log('🔄 업데이트될 설정:', updatedSettings);
+      
+      // 설정 저장
+      await new Promise((resolve) => {
+        chrome.storage.sync.set({ 
+          videosaverSettings: updatedSettings 
+        }, resolve);
       });
-    });
+      
+      console.log(`✅ 설정 저장 완료: ${settingKey} = ${value}`);
+      
+      // 간단한 시각적 피드백 (알림 대신 체크마크)
+      this.showQuickFeedback(settingKey);
+      
+    } catch (error) {
+      console.error('❌ 설정 저장 실패:', error);
+      this.showNotification(`❌ 설정 저장에 실패했습니다`);
+    }
+  }
+
+  showQuickFeedback(settingKey) {
+    // 토글 옆에 간단한 체크마크 표시 (1초만)
+    const settingElement = document.getElementById(settingKey === 'autoAnalysis' ? 'autoAnalyze' : settingKey);
+    if (settingElement && settingElement.parentElement) {
+      const feedback = document.createElement('span');
+      feedback.textContent = '✓';
+      feedback.style.cssText = `
+        color: #4caf50;
+        font-weight: bold;
+        margin-left: 5px;
+        animation: fadeOut 1s ease-out forwards;
+      `;
+      
+      // CSS 애니메이션 추가
+      if (!document.getElementById('feedback-animation')) {
+        const style = document.createElement('style');
+        style.id = 'feedback-animation';
+        style.textContent = `
+          @keyframes fadeOut {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      settingElement.parentElement.appendChild(feedback);
+      
+      setTimeout(() => {
+        if (feedback.parentElement) {
+          feedback.parentElement.removeChild(feedback);
+        }
+      }, 1000);
+    }
   }
 
   showNotification(message) {

@@ -7,12 +7,19 @@ class BackgroundService {
   }
 
   init() {
-    // 확장프로그램 설치 시
+    // 확장프로그램 설치 시 (정말 설치일 때만!)
     chrome.runtime.onInstalled.addListener((details) => {
+      console.log('Service Worker 시작, 이유:', details.reason);
+      
       if (details.reason === 'install') {
+        console.log('⚡ 실제 설치: 기본 설정 초기화');
         this.handleInstall();
       } else if (details.reason === 'update') {
+        console.log('⚡ 업데이트: 설정 유지');
         this.handleUpdate(details.previousVersion);
+      } else {
+        console.log('⚡ 재시작: 설정 그대로 유지');
+        // 재시작 시에는 설정을 건드리지 않음
       }
     });
 
@@ -32,11 +39,13 @@ class BackgroundService {
   handleInstall() {
     console.log('영상 자동저장 분석기가 설치되었습니다.');
     
-    // 기본 설정
+    // 올바른 설정 키와 구조 사용
     chrome.storage.sync.set({
-      autoAnalyze: true,
-      autoSave: true,
-      showNotifications: true,
+      videosaverSettings: {
+        autoAnalysis: false,    // 기본값 false (팝업과 일치)
+        autoSave: true,
+        showNotifications: true
+      },
       serverUrl: this.serverUrl
     });
 
@@ -198,17 +207,23 @@ class BackgroundService {
   getStoredSettings() {
     return new Promise((resolve) => {
       chrome.storage.sync.get([
-        'autoAnalyze', 'autoSave', 'showNotifications', 
-        'serverUrl', 'spreadsheetUrl'
+        'videosaverSettings', 'serverUrl', 'spreadsheetUrl'
       ], (result) => {
-        resolve(result);
+        // 올바른 설정 구조로 반환
+        const settings = result.videosaverSettings || {};
+        resolve({
+          ...settings,
+          serverUrl: result.serverUrl,
+          spreadsheetUrl: result.spreadsheetUrl
+        });
       });
     });
   }
 
   showNotification(message, type = 'basic') {
-    chrome.storage.sync.get(['showNotifications'], (result) => {
-      if (result.showNotifications === false) return;
+    chrome.storage.sync.get(['videosaverSettings'], (result) => {
+      const settings = result.videosaverSettings || {};
+      if (settings.showNotifications === false) return;
       
       chrome.notifications.create({
         type: type,

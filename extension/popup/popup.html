@@ -162,7 +162,7 @@
     🔧 연결 테스트
   </button>
 
-  <div class="settings">
+  <div class="settings" id="settingsContainer" style="opacity: 0; transition: opacity 0.3s ease;">
     <h3 style="margin: 0 0 10px 0; font-size: 14px;">설정</h3>
     
     <div class="setting-item">
@@ -176,7 +176,7 @@
     <div class="setting-item">
       <span>즉시 저장</span>
       <label class="toggle">
-        <input type="checkbox" id="autoSave" checked>
+        <input type="checkbox" id="autoSave">
         <span class="slider"></span>
       </label>
     </div>
@@ -184,7 +184,7 @@
     <div class="setting-item">
       <span>알림 표시</span>
       <label class="toggle">
-        <input type="checkbox" id="showNotifications" checked>
+        <input type="checkbox" id="showNotifications">
         <span class="slider"></span>
       </label>
     </div>
