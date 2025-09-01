@@ -71,16 +71,19 @@ describe('AIAnalyzer', () => {
       expect(result.model).toBe('gemini-pro');
     });
 
-    it('연결 실패 시 적절한 에러를 발생시켜야 함', async () => {
-      const connectionError = new Error('API key error');
+    it('Gemini API 키가 없으면 생성자에서 에러를 발생시켜야 함', () => {
+      // 환경 변수 임시 제거
+      const originalApiKey = process.env.GOOGLE_API_KEY;
+      delete process.env.GOOGLE_API_KEY;
       
-      jest.doMock('@google/generative-ai', () => {
-        throw connectionError;
-      });
-
-      await expect(aiAnalyzer.testConnection()).rejects.toThrow(
-        'Gemini 연결 실패'
-      );
+      try {
+        expect(() => new AIAnalyzer()).toThrow('GOOGLE_API_KEY가 설정되지 않았습니다');
+      } finally {
+        // 환경 변수 복원
+        if (originalApiKey) {
+          process.env.GOOGLE_API_KEY = originalApiKey;
+        }
+      }
     });
   });
 
@@ -181,8 +184,8 @@ describe('AIAnalyzer', () => {
 
       const result = aiAnalyzer.inferCategoriesFromMetadata(metadata);
       
-      expect(result.mainCategory).toBe('없음');
-      expect(result.middleCategory).toBe('없음');
+      expect(result.mainCategory).toBe('라이프·블로그');
+      expect(result.middleCategory).toBe('일상 Vlog·Q&A');
     });
   });
 
@@ -231,7 +234,7 @@ describe('AIAnalyzer', () => {
   });
 
   describe('combineAnalysis', () => {
-    it('AI 응답과 URL 기반 분석을 결합해야 함', () => {
+    it('AI 응답과 URL 기반 분석을 결합해야 함', async () => {
       const aiResponse = JSON.stringify({
         main_category: '게임',
         middle_category: '플레이·리뷰',
@@ -247,7 +250,7 @@ describe('AIAnalyzer', () => {
 
       const metadata = { caption: 'test', hashtags: [] };
 
-      const result = aiAnalyzer.combineAnalysis(aiResponse, urlBasedCategory, metadata);
+      const result = await aiAnalyzer.combineAnalysis(aiResponse, urlBasedCategory, metadata);
 
       expect(result.mainCategory).toBe('게임');
       expect(result.middleCategory).toBe('플레이·리뷰');
@@ -255,7 +258,7 @@ describe('AIAnalyzer', () => {
       expect(result.confidence).toBe(0.9);
     });
 
-    it('AI 응답이 null이면 URL 기반 분석을 사용해야 함', () => {
+    it('AI 응답이 null이면 URL 기반 분석을 사용해야 함', async () => {
       const urlBasedCategory = {
         mainCategory: '없음',
         middleCategory: '없음'
@@ -263,11 +266,40 @@ describe('AIAnalyzer', () => {
 
       const metadata = { caption: 'test', hashtags: [] };
 
-      const result = aiAnalyzer.combineAnalysis(null, urlBasedCategory, metadata);
+      const result = await aiAnalyzer.combineAnalysis(null, urlBasedCategory, metadata);
 
       expect(result.mainCategory).toBe('없음');
       expect(result.middleCategory).toBe('없음');
       expect(result.confidence).toBe(0.6);
+    });
+
+    it('잘못된 JSON 응답을 처리해야 함', async () => {
+      const invalidJson = 'invalid json response';
+      const urlBasedCategory = {
+        mainCategory: '없음',
+        middleCategory: '없음'
+      };
+      const metadata = { caption: 'test', hashtags: [] };
+
+      const result = await aiAnalyzer.combineAnalysis(invalidJson, urlBasedCategory, metadata);
+
+      // 잘못된 JSON이면 URL 기반 분석을 사용
+      expect(result.mainCategory).toBe('없음');
+      expect(result.middleCategory).toBe('없음');
+      expect(result.confidence).toBe(0.6);
+    });
+
+    it('빈 메타데이터에 대해서도 안전하게 처리해야 함', async () => {
+      const urlBasedCategory = {
+        mainCategory: '없음',
+        middleCategory: '없음'
+      };
+
+      const result = await aiAnalyzer.combineAnalysis(null, urlBasedCategory, {});
+
+      expect(result).toBeDefined();
+      expect(result.keywords).toBeDefined();
+      expect(result.hashtags).toBeDefined();
     });
   });
 

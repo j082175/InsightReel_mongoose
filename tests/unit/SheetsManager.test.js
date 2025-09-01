@@ -418,12 +418,13 @@ describe('SheetsManager', () => {
 
     it('최근 비디오 목록을 반환해야 함', async () => {
       // getRecentVideos는 A2부터 시작하므로 헤더를 제외한 데이터만 반환
+      // 실제 컬럼 순서에 맞춰 Mock 데이터 수정 (총 17개 컬럼)
       mockSheetsAPI.spreadsheets.values.get.mockResolvedValue({
         data: {
           values: [
-            // 데이터 행들만 (헤더 제외)
-            ['1', '2024-01-01', 'instagram', 'test_user', '게임', '플레이·리뷰', '게임, 플레이', '', 'content1', '100', '#게임 #플레이', 'https://instagram.com/p/test1', 'path1', '0.9', 'completed'],
-            ['2', '2024-01-02', 'tiktok', 'test_user2', '음악', '뮤직비디오', '음악, 비디오', '', 'content2', '200', '#음악 #비디오', 'https://tiktok.com/@test/video/123', 'path2', '0.8', 'completed']
+            // [id, timestamp, platform, account, mainCategory, middleCategory, fullCategoryPath, categoryDepth, keywords, content, likes, comments, hashtags, url, filename, confidence, source]
+            ['1', '2024-01-01', 'instagram', 'test_user', '게임', '플레이·리뷰', '게임, 플레이', '', 'content1', '100', '50', '30', '#게임 #플레이', 'https://instagram.com/p/test1', 'path1', '0.9', 'completed'],
+            ['2', '2024-01-02', 'tiktok', 'test_user2', '음악', '뮤직비디오', '음악, 비디오', '', 'content2', '200', '80', '40', '#음악 #비디오', 'https://tiktok.com/@test/video/123', 'path2', '0.8', 'completed']
           ]
         }
       });

@@ -186,7 +186,7 @@ class AIAnalyzer {
    * 동적 카테고리 분석 (새로운 시스템)
    */
   async analyzeDynamicCategories(thumbnailPaths, metadata) {
-    const dynamicStartTime = Date.now();
+    let dynamicStartTime = Date.now(); // let 사용으로 변경하여 스코프 명확화
     ServerLogger.info('🚀 동적 카테고리 분석 시작', null, 'AI');
     
     try {
@@ -254,7 +254,8 @@ class AIAnalyzer {
       
     } catch (error) {
       const dynamicEndTime = Date.now();
-      const dynamicTotalDuration = dynamicEndTime - dynamicStartTime;
+      // dynamicStartTime이 undefined일 경우를 대비한 안전장치
+      const dynamicTotalDuration = dynamicStartTime ? (dynamicEndTime - dynamicStartTime) : 0;
       ServerLogger.error('동적 카테고리 분석 실패:', error);
       ServerLogger.info(`⏱️ 동적 분석 실패 소요시간: ${dynamicTotalDuration}ms`);
       
