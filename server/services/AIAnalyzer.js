@@ -5,16 +5,13 @@ const { ServerLogger } = require('../utils/logger');
 
 class AIAnalyzer {
   constructor() {
-    this.ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
-    this.modelName = process.env.OLLAMA_MODEL || 'llava:latest';
     
     // Gemini 설정
     this.useGemini = process.env.USE_GEMINI === 'true';
     this.geminiApiKey = process.env.GOOGLE_API_KEY;
     
     if (this.useGemini && !this.geminiApiKey) {
-      ServerLogger.warn('USE_GEMINI=true이지만 GOOGLE_API_KEY가 설정되지 않음. Ollama 사용', null, 'AI');
-      this.useGemini = false;
+      throw new Error('GOOGLE_API_KEY가 설정되지 않았습니다. Gemini API 키가 필요합니다.');
     }
     
     ServerLogger.info(`AI 설정 - USE_GEMINI: ${process.env.USE_GEMINI}, API_KEY 존재: ${!!this.geminiApiKey}`, null, 'AI');
@@ -25,7 +22,7 @@ class AIAnalyzer {
       this.geminiModel = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       ServerLogger.success('Gemini API 초기화 완료', null, 'AI');
     } else {
-      ServerLogger.info('Ollama 모드로 실행 중', null, 'AI');
+      throw new Error('Gemini API를 사용해야 합니다. USE_GEMINI=true로 설정하세요.');
     }
     
     // 2단계 카테고리 정의 (대카테고리 > 중카테고리)
@@ -121,29 +118,24 @@ class AIAnalyzer {
     };
   }
 
+  /**
+   * Gemini 연결 테스트
+   */
   async testConnection() {
     try {
-      const response = await axios.get(`${this.ollamaUrl}/api/tags`, {
-        timeout: 5000
-      });
+      const { GoogleGenerativeAI } = require('@google/generative-ai');
+      const genAI = new GoogleGenerativeAI(this.geminiApiKey);
+      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
       
-      const models = response.data.models || [];
-      const hasLlava = models.some(model => model.name.includes('llava'));
-      
-      if (!hasLlava) {
-        throw new Error('LLaVA 모델이 설치되지 않았습니다. `ollama pull llava` 명령으로 설치해주세요.');
-      }
-      
+      const result = await model.generateContent('Hello');
       return {
-        status: 'connected',
-        models: models.map(m => m.name),
-        recommendedModel: this.modelName
+        status: 'success',
+        service: 'Gemini',
+        model: 'gemini-pro',
+        response: result.response.text()
       };
     } catch (error) {
-      if (error.code === 'ECONNREFUSED') {
-        throw new Error('Ollama 서버가 실행되지 않았습니다. `ollama serve` 명령으로 시작해주세요.');
-      }
-      throw error;
+      throw new Error(`Gemini 연결 실패: ${error.message}`);
     }
   }
 
@@ -190,13 +182,11 @@ class AIAnalyzer {
     ServerLogger.info('2. AI 프롬프트 생성 완료, 길이:', analysisPrompt.length);
     
     ServerLogger.info('3. AI 호출 시작...');
-    ServerLogger.info(`🔮 사용할 AI: ${this.useGemini ? 'Gemini' : 'Ollama'}`);
+    ServerLogger.info('🔮 사용할 AI: Gemini');
     
     let aiResponse;
     try {
-      aiResponse = this.useGemini 
-        ? await this.queryGemini(analysisPrompt, imageBase64)
-        : await this.queryOllama(analysisPrompt, imageBase64);
+      aiResponse = await this.queryGemini(analysisPrompt, imageBase64);
       ServerLogger.info('3. AI 호출 완료');
       ServerLogger.info('AI 원본 응답:', aiResponse);
     } catch (error) {
@@ -213,12 +203,8 @@ class AIAnalyzer {
   async analyzeMultipleFrames(thumbnailPaths, urlBasedCategory, metadata) {
     ServerLogger.info(`🎬 다중 프레임 분석 시작: ${thumbnailPaths.length}개 프레임`);
     
-    // Gemini를 사용하는 경우 한 번에 모든 프레임 분석
-    if (this.useGemini) {
-      return await this.analyzeMultipleFramesWithGemini(thumbnailPaths, urlBasedCategory, metadata);
-    }
-    
-    // Ollama를 사용하는 경우 순차 분석 (기존 방식)
+    // Gemini를 사용한 한 번에 모든 프레임 분석
+    return await this.analyzeMultipleFramesWithGemini(thumbnailPaths, urlBasedCategory, metadata);
     const frameAnalyses = [];
     const allKeywords = [];
     const allContents = [];
@@ -237,10 +223,8 @@ class AIAnalyzer {
         // 프레임별 분석 프롬프트 (더 상세한 분석)
         const framePrompt = this.buildFrameAnalysisPrompt(metadata, frameNumber, thumbnailPaths.length);
         
-        // AI 호출
-        const aiResponse = this.useGemini 
-          ? await this.queryGemini(framePrompt, imageBase64)
-          : await this.queryOllama(framePrompt, imageBase64);
+        // Gemini AI 호출
+        const aiResponse = await this.queryGemini(framePrompt, imageBase64);
         
         // 응답 파싱
         const frameAnalysis = this.parseFrameResponse(aiResponse, frameNumber);
@@ -344,41 +328,6 @@ class AIAnalyzer {
 - "main_category": "How-to & 라이프스타일", "middle_category": "생활 꿀팁·가전·정리" (✅)`;
   }
 
-  async queryOllama(prompt, imageBase64) {
-    try {
-      ServerLogger.info('AI 요청 시작 - 모델:', this.modelName);
-      ServerLogger.info('AI 프롬프트 길이:', prompt.length);
-      
-      const response = await axios.post(`${this.ollamaUrl}/api/generate`, {
-        model: this.modelName,
-        prompt: prompt,
-        images: [imageBase64],
-        stream: false,
-        options: {
-          temperature: 0.1,  // 더 일관된 답변을 위해 매우 낮은 온도
-          top_k: 5,          // 토큰 선택 범위 줄임
-          top_p: 0.7,        // 확률 임계값 낮춤
-          seed: 42           // 동일 시드로 일관성 보장
-        }
-      }, {
-        timeout: 60000  // 60초 타임아웃
-      });
-
-      ServerLogger.info('AI 응답 상태:', response.status);
-      ServerLogger.info('AI 응답 길이:', response.data.response?.length || 0);
-      
-      return response.data.response;
-    } catch (error) {
-      ServerLogger.error('AI 호출 에러:', error.message);
-      if (error.code === 'ECONNREFUSED') {
-        throw new Error('Ollama 서버 연결 실패');
-      }
-      if (error.response?.status === 404) {
-        throw new Error(`모델 '${this.modelName}'을 찾을 수 없습니다. 'ollama pull llava' 명령으로 설치해주세요.`);
-      }
-      throw error;
-    }
-  }
 
   async queryGemini(prompt, imageBase64) {
     try {
@@ -446,7 +395,7 @@ class AIAnalyzer {
           keywords: Array.isArray(parsed.keywords) ? parsed.keywords.slice(0, 5) : [],
           hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags.slice(0, 5) : [],
           confidence: parsed.confidence || 0.7,
-          source: this.useGemini ? this.geminiModel.model : this.modelName
+          source: 'gemini'
         };
       }
       
@@ -493,7 +442,7 @@ class AIAnalyzer {
       keywords,
       hashtags,
       confidence: 0.6,
-      source: `${this.useGemini ? this.geminiModel.model : this.modelName}-text-parsed`
+      source: 'gemini-text-parsed'
     };
   }
 
@@ -596,16 +545,6 @@ class AIAnalyzer {
         }
       }
       
-      // Ollama 재시도 (Gemini 실패 시)
-      if (!retryResult && imagePaths.length === 1) {
-        try {
-          ServerLogger.info('🔄 Ollama 재분석 시도');
-          const imageBase64 = await this.encodeImageToBase64(imagePaths[0]);
-          retryResult = await this.queryOllama(retryPrompt, imageBase64);
-        } catch (error) {
-          ServerLogger.info('❌ Ollama 재분석 실패:', error.message);
-        }
-      }
       
       if (retryResult) {
         ServerLogger.info('✅ 재분석 응답 수신');
@@ -797,17 +736,8 @@ class AIAnalyzer {
   // 통계용 분석 결과 요약
   // URL 패턴 기반 카테고리 추론 (일관성 확보)
   inferCategoryFromUrl(url) {
-    if (!url) return { mainCategory: '라이프·블로그', middleCategory: '일상 Vlog·Q&A' };
-    
-    const urlLower = url.toLowerCase();
-    
-    // Instagram 릴스는 기본적으로 라이프 블로그 성격
-    if (urlLower.includes('instagram.com/reels')) {
-      return { mainCategory: '라이프·블로그', middleCategory: '일상 Vlog·Q&A' };
-    }
-    
-    // 기타 플랫폼별 기본 추론 로직 (확장 가능)
-    return { mainCategory: '라이프·블로그', middleCategory: '일상 Vlog·Q&A' };
+    // URL만으로는 정확한 카테고리 추론이 어려우므로 "없음"으로 설정
+    return { mainCategory: '없음', middleCategory: '없음' };
   }
 
   // 간단한 AI 프롬프트 (일관성 향상)
@@ -970,12 +900,12 @@ JSON 형식으로 답변:
     
     return {
       content: combinedContent,
-      mainCategory: urlBasedCategory.mainCategory,
-      middleCategory: urlBasedCategory.middleCategory,
+      mainCategory: urlBasedCategory.mainCategory, // "없음"이 그대로 저장됨
+      middleCategory: urlBasedCategory.middleCategory, // "없음"이 그대로 저장됨
       keywords: topKeywords,
       hashtags: hashtags,
       confidence: Math.min(avgConfidence + 0.1, 0.95), // 다중 프레임 보너스
-      source: this.useGemini ? this.geminiModel.model : this.modelName,
+      source: 'gemini',
       frameCount: frameAnalyses.length,
       frameAnalyses: frameAnalyses, // 개별 프레임 분석 결과 보관
       analysis_metadata: {
@@ -1134,7 +1064,7 @@ JSON 형식으로 답변:
         keywords: aiData.keywords.slice(0, 5),
         hashtags: aiData.hashtags.length > 0 ? aiData.hashtags : this.generateHashtagsFromKeywords(aiData.keywords),
         confidence: aiData.main_category ? 0.9 : 0.6, // AI 카테고리 성공시 높은 신뢰도
-        source: this.useGemini ? this.geminiModel.model : this.modelName
+        source: 'gemini'
       };
       
     } catch (error) {
@@ -1148,12 +1078,12 @@ JSON 형식으로 답변:
   // URL 기반 분석 생성
   createAnalysisFromUrl(urlBasedCategory, metadata) {
     return {
-      content: '인스타그램 릴스 영상',
-      mainCategory: urlBasedCategory.mainCategory,
-      middleCategory: urlBasedCategory.middleCategory,
-      keywords: ['인스타그램', '릴스', '영상', '소셜미디어'],
-      hashtags: ['#인스타그램', '#릴스', '#영상', '#소셜미디어'],
-      confidence: 0.7,
+      content: '영상 분석',
+      mainCategory: urlBasedCategory.mainCategory, // "없음"이 그대로 저장됨
+      middleCategory: urlBasedCategory.middleCategory, // "없음"이 그대로 저장됨
+      keywords: ['영상', '소셜미디어', '콘텐츠'],
+      hashtags: ['#영상', '#소셜미디어', '#콘텐츠'],
+      confidence: 0.3,
       source: 'url-based-analysis'
     };
   }
@@ -1247,8 +1177,8 @@ JSON 형식으로 답변:
     } catch (error) {
       ServerLogger.error('❌ Gemini 다중 프레임 분석 실패:', error);
       
-      // Gemini 전용 모드: 실패해도 Ollama로 폴백하지 않음
-      ServerLogger.info('⚠️ Gemini 전용 모드로 실행 중 - Ollama 폴백 건너뜀');
+      // Gemini 전용 모드로 실행 중
+      ServerLogger.info('⚠️ Gemini 전용 모드로 실행 중');
       
       // 기본 분석 결과 반환
       const categoryResult = this.determineFinalCategory('', '', urlBasedCategory, metadata);
@@ -1337,7 +1267,7 @@ JSON 형식으로 답변:
         hashtags: Array.isArray(aiResult.hashtags) ? aiResult.hashtags.slice(0, 5) : this.generateHashtagsFromMetadata(metadata.hashtags || [], categoryResult),
         content: aiResult.content || '비디오 분석 결과',
         confidence: aiResult.confidence || 0.8,
-        source: this.useGemini ? this.geminiModel.model : this.modelName
+        source: 'gemini'
       };
       
     } catch (parseError) {
@@ -1390,7 +1320,7 @@ JSON 형식으로 답변:
       hashtags: hashtags.length > 0 ? hashtags : this.generateHashtagsFromMetadata(metadata.hashtags || [], categoryResult),
       content: content,
       confidence: 0.7,
-      source: `${this.useGemini ? this.geminiModel.model : this.modelName}-text-parsed`
+      source: 'gemini-text-parsed'
     };
   }
 

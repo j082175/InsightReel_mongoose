@@ -16,9 +16,8 @@ describe('AIAnalyzer', () => {
 
   beforeEach(() => {
     // 환경 변수 초기화
-    process.env.OLLAMA_URL = 'http://localhost:11434';
-    process.env.OLLAMA_MODEL = 'llava:test';
-    process.env.USE_GEMINI = 'false';
+    process.env.USE_GEMINI = 'true';
+    process.env.GOOGLE_API_KEY = 'test-api-key';
     
     aiAnalyzer = new AIAnalyzer();
     
@@ -28,9 +27,8 @@ describe('AIAnalyzer', () => {
 
   describe('constructor', () => {
     it('기본 설정으로 초기화되어야 함', () => {
-      expect(aiAnalyzer.ollamaUrl).toBe('http://localhost:11434');
-      expect(aiAnalyzer.modelName).toBe('llava:test');
-      expect(aiAnalyzer.useGemini).toBe(false);
+      expect(aiAnalyzer.useGemini).toBe(true);
+      expect(aiAnalyzer.geminiApiKey).toBe('test-api-key');
     });
 
     it('Gemini 설정이 활성화되면 Gemini 모델을 초기화해야 함', () => {
@@ -50,49 +48,38 @@ describe('AIAnalyzer', () => {
   });
 
   describe('testConnection', () => {
-    it('Ollama 연결이 성공하면 모델 정보를 반환해야 함', async () => {
-      const mockResponse = {
-        data: {
-          models: [
-            { name: 'llava:latest' },
-            { name: 'llama2:latest' }
-          ]
-        }
+    it('Gemini 연결이 성공하면 서비스 정보를 반환해야 함', async () => {
+      // Gemini API mock
+      const mockGenerativeAI = {
+        getGenerativeModel: jest.fn().mockReturnValue({
+          generateContent: jest.fn().mockResolvedValue({
+            response: {
+              text: () => 'Hello from Gemini'
+            }
+          })
+        })
       };
 
-      mockedAxios.get.mockResolvedValueOnce(mockResponse);
+      jest.doMock('@google/generative-ai', () => ({
+        GoogleGenerativeAI: jest.fn(() => mockGenerativeAI)
+      }));
 
       const result = await aiAnalyzer.testConnection();
 
-      expect(result.status).toBe('connected');
-      expect(result.models).toEqual(['llava:latest', 'llama2:latest']);
-      expect(result.recommendedModel).toBe('llava:test');
-    });
-
-    it('LLaVA 모델이 없으면 에러를 발생시켜야 함', async () => {
-      const mockResponse = {
-        data: {
-          models: [
-            { name: 'llama2:latest' }
-          ]
-        }
-      };
-
-      mockedAxios.get.mockResolvedValueOnce(mockResponse);
-
-      await expect(aiAnalyzer.testConnection()).rejects.toThrow(
-        'LLaVA 모델이 설치되지 않았습니다'
-      );
+      expect(result.status).toBe('success');
+      expect(result.service).toBe('Gemini');
+      expect(result.model).toBe('gemini-pro');
     });
 
     it('연결 실패 시 적절한 에러를 발생시켜야 함', async () => {
-      const connectionError = new Error('Connection failed');
-      connectionError.code = 'ECONNREFUSED';
+      const connectionError = new Error('API key error');
       
-      mockedAxios.get.mockRejectedValueOnce(connectionError);
+      jest.doMock('@google/generative-ai', () => {
+        throw connectionError;
+      });
 
       await expect(aiAnalyzer.testConnection()).rejects.toThrow(
-        'Ollama 서버가 실행되지 않았습니다'
+        'Gemini 연결 실패'
       );
     });
   });
@@ -120,19 +107,19 @@ describe('AIAnalyzer', () => {
   });
 
   describe('inferCategoryFromUrl', () => {
-    it('Instagram 릴스 URL에 대해 올바른 카테고리를 반환해야 함', () => {
+    it('URL 기반 분석은 "없음"을 반환해야 함', () => {
       const url = 'https://instagram.com/reels/abc123';
       const result = aiAnalyzer.inferCategoryFromUrl(url);
 
-      expect(result.mainCategory).toBe('라이프·블로그');
-      expect(result.middleCategory).toBe('일상 Vlog·Q&A');
+      expect(result.mainCategory).toBe('없음');
+      expect(result.middleCategory).toBe('없음');
     });
 
-    it('URL이 없으면 기본 카테고리를 반환해야 함', () => {
+    it('URL이 없어도 "없음"을 반환해야 함', () => {
       const result = aiAnalyzer.inferCategoryFromUrl(null);
 
-      expect(result.mainCategory).toBe('라이프·블로그');
-      expect(result.middleCategory).toBe('일상 Vlog·Q&A');
+      expect(result.mainCategory).toBe('없음');
+      expect(result.middleCategory).toBe('없음');
     });
   });
 
@@ -194,8 +181,8 @@ describe('AIAnalyzer', () => {
 
       const result = aiAnalyzer.inferCategoriesFromMetadata(metadata);
       
-      expect(result.mainCategory).toBe('라이프·블로그');
-      expect(result.middleCategory).toBe('일상 Vlog·Q&A');
+      expect(result.mainCategory).toBe('없음');
+      expect(result.middleCategory).toBe('없음');
     });
   });
 
@@ -254,8 +241,8 @@ describe('AIAnalyzer', () => {
       });
 
       const urlBasedCategory = {
-        mainCategory: '라이프·블로그',
-        middleCategory: '일상 Vlog·Q&A'
+        mainCategory: '없음',
+        middleCategory: '없음'
       };
 
       const metadata = { caption: 'test', hashtags: [] };
@@ -270,16 +257,16 @@ describe('AIAnalyzer', () => {
 
     it('AI 응답이 null이면 URL 기반 분석을 사용해야 함', () => {
       const urlBasedCategory = {
-        mainCategory: '라이프·블로그',
-        middleCategory: '일상 Vlog·Q&A'
+        mainCategory: '없음',
+        middleCategory: '없음'
       };
 
       const metadata = { caption: 'test', hashtags: [] };
 
       const result = aiAnalyzer.combineAnalysis(null, urlBasedCategory, metadata);
 
-      expect(result.mainCategory).toBe('라이프·블로그');
-      expect(result.middleCategory).toBe('일상 Vlog·Q&A');
+      expect(result.mainCategory).toBe('없음');
+      expect(result.middleCategory).toBe('없음');
       expect(result.confidence).toBe(0.6);
     });
   });
@@ -287,17 +274,17 @@ describe('AIAnalyzer', () => {
   describe('createAnalysisFromUrl', () => {
     it('URL 기반 분석 결과를 생성해야 함', () => {
       const urlBasedCategory = {
-        mainCategory: '라이프·블로그',
-        middleCategory: '일상 Vlog·Q&A'
+        mainCategory: '없음',
+        middleCategory: '없음'
       };
 
       const metadata = { caption: 'test' };
 
       const result = aiAnalyzer.createAnalysisFromUrl(urlBasedCategory, metadata);
 
-      expect(result.content).toBe('인스타그램 릴스 영상');
-      expect(result.mainCategory).toBe('라이프·블로그');
-      expect(result.middleCategory).toBe('일상 Vlog·Q&A');
+      expect(result.content).toBe('영상 분석');
+      expect(result.mainCategory).toBe('없음');
+      expect(result.middleCategory).toBe('없음');
       expect(result.source).toBe('url-based-analysis');
     });
   });

@@ -129,7 +129,6 @@ class VideoSaverServer {
     this.app.get('/api/stats', this.videoController.getStats);
     
     // 서비스 연결 테스트
-    this.app.get('/api/test-ollama', this.videoController.testOllama);
     this.app.get('/api/test-sheets', this.videoController.testSheets);
     
     // 비디오 처리 (URL 방식)
@@ -185,7 +184,6 @@ class VideoSaverServer {
       endpoints: {
         "GET /health": "서버 상태 확인",
         "GET /api/stats": "처리 통계 조회",
-        "GET /api/test-ollama": "Ollama 연결 테스트",
         "GET /api/test-sheets": "구글 시트 연결 테스트",
         "POST /api/process-video": "비디오 처리 (URL 방식)",
         "POST /api/process-video-blob": "비디오 처리 (파일 업로드)",
@@ -218,13 +216,11 @@ class VideoSaverServer {
 🧩 모듈화: ✅
 
 📋 설정 체크리스트:
-[ ] Ollama 설치 및 실행 (ollama serve)
-[ ] LLaVA 모델 다운로드 (ollama pull llava)
+[ ] Gemini API 키 설정 (.env 파일)
 [ ] 구글 API 키 설정 (.env 파일)
 [ ] Chrome 확장프로그램 로드
 
 💡 테스트 URL:
-- Ollama 테스트: http://localhost:${this.port}/api/test-ollama
 - 구글 시트 테스트: http://localhost:${this.port}/api/test-sheets
 - API 문서: http://localhost:${this.port}/api/docs
       `);

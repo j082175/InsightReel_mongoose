@@ -103,29 +103,6 @@ class VideoController {
     res.json(health);
   });
 
-  /**
-   * Ollama 연결 테스트
-   */
-  testOllama = ErrorHandler.asyncHandler(async (req, res) => {
-    try {
-      const result = await this.aiAnalyzer.testConnection();
-      // 기존 API 형식 유지 (호환성)
-      res.json({ 
-        status: 'ok', 
-        result,
-        // 새 형식도 함께 제공
-        success: true,
-        data: result
-      });
-    } catch (error) {
-      // 기존 에러 형식 유지
-      res.status(500).json({ 
-        status: 'error', 
-        message: 'Ollama 서버에 연결할 수 없습니다. `ollama serve` 명령으로 서버를 시작해주세요.',
-        suggestion: 'Ollama가 설치되고 실행 중인지 확인해주세요. `ollama serve` 명령으로 실행할 수 있습니다.'
-      });
-    }
-  });
 
   /**
    * 구글 시트 연결 테스트
@@ -192,7 +169,7 @@ class VideoController {
         );
       } else if (error.message.includes('분석')) {
         throw ErrorHandler.createError(
-          'AI 분석에 실패했습니다. Ollama 서버 상태를 확인해주세요.',
+          'AI 분석에 실패했습니다. Gemini API 상태를 확인해주세요.',
           500,
           'AI_ANALYSIS_ERROR'
         );

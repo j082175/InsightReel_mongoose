@@ -96,15 +96,11 @@ class VideoSaverPopup {
       // 서버 연결 테스트
       const serverResponse = await fetch(`${this.serverUrl}/health`);
       
-      // Ollama 연결 테스트
-      const ollamaResponse = await fetch(`${this.serverUrl}/api/test-ollama`);
-      
       // 구글 시트 연결 테스트
       const sheetsResponse = await fetch(`${this.serverUrl}/api/test-sheets`);
 
       let message = '연결 테스트 결과:\n';
       message += `서버: ${serverResponse.ok ? '✅' : '❌'}\n`;
-      message += `AI (Ollama): ${ollamaResponse.ok ? '✅' : '❌'}\n`;
       message += `구글 시트: ${sheetsResponse.ok ? '✅' : '❌'}`;
 
       this.showNotification(message);

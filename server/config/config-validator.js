@@ -86,17 +86,6 @@ class ConfigValidator {
         }
       },
       {
-        key: 'OLLAMA_URL',
-        type: 'string',
-        default: 'http://localhost:11434',
-        validate: (val) => /^https?:\/\/.+/.test(val)
-      },
-      {
-        key: 'OLLAMA_MODEL',
-        type: 'string',
-        default: 'llava:latest'
-      },
-      {
         key: 'MAX_FILE_SIZE',
         type: 'string',
         default: '50mb',
@@ -316,10 +305,6 @@ GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
 # 또는 Gemini API 사용
 USE_GEMINI=true
 GOOGLE_API_KEY=your_api_key_here
-
-# Ollama 설정 (로컬 AI)
-OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=llava:latest
 
 # 파일 업로드 설정
 MAX_FILE_SIZE=50mb

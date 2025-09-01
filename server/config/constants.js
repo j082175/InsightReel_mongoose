@@ -28,7 +28,6 @@ const SERVER_CONSTANTS = {
     STATS: '/api/stats',
     HEALTH: '/health',
     CONFIG_HEALTH: '/api/config/health',
-    TEST_OLLAMA: '/api/test-ollama',
     TEST_SHEETS: '/api/test-sheets',
     UPDATE_HEADERS: '/api/update-headers'
   },
@@ -51,8 +50,7 @@ const SERVER_CONSTANTS = {
   // 🔍 AI 설정
   AI: {
     MODELS: {
-      GEMINI: 'gemini-2.5-flash',
-      OLLAMA_DEFAULT: 'llava:latest'
+      GEMINI: 'gemini-2.5-flash'
     },
     
     CONFIDENCE_THRESHOLDS: {

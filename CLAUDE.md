@@ -13,7 +13,7 @@
 │   ├── controllers/          # API 컨트롤러
 │   ├── middleware/           # Express 미들웨어
 │   ├── services/             # 핵심 서비스 로직
-│   │   ├── AIAnalyzer.js    # AI 분석 (Ollama/Gemini)
+│   │   ├── AIAnalyzer.js    # AI 분석 (Gemini)
 │   │   ├── VideoProcessor.js # 비디오 다운로드 및 썸네일 생성
 │   │   └── SheetsManager.js  # Google Sheets 연동
 │   └── utils/
@@ -50,16 +50,14 @@ node server/index.js
 ## 🔧 개발 시 주의사항
 
 ### 1. 외부 의존성
-- **Ollama**: 로컬에서 실행 중이어야 함 (http://localhost:11434)
+- **Gemini API**: Google API 키 필요
 - **FFmpeg**: 시스템에 설치되어 있어야 함
 - **Google Sheets API**: 인증 토큰 또는 서비스 계정 키 필요
 
 ### 2. 환경 변수 (.env)
 ```bash
-# AI 설정
-OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=llava:latest
-USE_GEMINI=false
+# AI 설정 (Gemini)
+USE_GEMINI=true
 GOOGLE_API_KEY=your-gemini-key
 
 # Google Sheets
@@ -101,7 +99,6 @@ PORT=3000
 - `GET /api/config/health` - 설정 상태 확인
 
 ### 외부 서비스 테스트
-- `GET /api/test-ollama` - Ollama 연결 테스트
 - `GET /api/test-sheets` - Google Sheets 연결 테스트
 
 ### 비디오 처리
@@ -124,17 +121,14 @@ PORT=3000
 
 ### 2. 에러 디버깅
 ```bash
-# Ollama 상태 확인
-curl http://localhost:11434/api/tags
-
 # API 헬스 체크
 curl http://localhost:3000/health
 
 # Google Sheets 연결 테스트
 curl http://localhost:3000/api/test-sheets
 
-# Ollama 연결 테스트
-curl http://localhost:3000/api/test-ollama
+# Gemini API 키 확인
+echo $GOOGLE_API_KEY
 ```
 
 ### 3. 테스트 실패 시
@@ -204,7 +198,7 @@ curl http://localhost:3000/api/test-ollama
 ### 디버깅 시
 - ServerLogger의 로그 레벨 활용
 - 브라우저 개발자 도구 네트워크 탭 확인
-- Ollama 로그 모니터링
+- Gemini API 응답 모니터링
 
 ### 성능 문제 시
 - 프로파일링 먼저 수행
@@ -212,7 +206,7 @@ curl http://localhost:3000/api/test-ollama
 - 캐싱 적극 활용
 
 ## 📚 참고 문서
-- [Ollama API](https://github.com/ollama/ollama/blob/main/docs/api.md)
+- [Gemini API](https://ai.google.dev/gemini-api/docs)
 - [Google Sheets API](https://developers.google.com/sheets/api)
 - [FFmpeg Documentation](https://ffmpeg.org/documentation.html)
 - [Jest Testing](https://jestjs.io/docs/getting-started)

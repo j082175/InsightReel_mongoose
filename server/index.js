@@ -98,20 +98,6 @@ app.get('/api/stats', (req, res) => {
   }
 });
 
-// Ollama 연결 테스트
-app.get('/api/test-ollama', async (req, res) => {
-  try {
-    const result = await aiAnalyzer.testConnection();
-    ResponseHandler.success(res, result, API_MESSAGES.CONNECTION.OLLAMA_SUCCESS);
-  } catch (error) {
-    ResponseHandler.serverError(res, {
-      ...error,
-      code: ERROR_CODES.OLLAMA_CONNECTION_FAILED,
-      suggestion: 'Ollama가 설치되고 실행 중인지 확인해주세요. `ollama serve` 명령으로 실행할 수 있습니다.'
-    }, API_MESSAGES.CONNECTION.OLLAMA_FAILED);
-  }
-});
-
 // 구글 시트 연결 테스트
 app.get('/api/test-sheets', async (req, res) => {
   try {
@@ -387,13 +373,10 @@ app.listen(PORT, () => {
 📊 Health Check: http://localhost:${PORT}/health
 
 📋 설정 체크리스트:
-[ ] Ollama 설치 및 실행 (ollama serve)
-[ ] LLaVA 모델 다운로드 (ollama pull llava)
-[ ] 구글 API 키 설정 (.env 파일)
+[ ] Gemini API 키 설정 (.env 파일)
 [ ] Chrome 확장프로그램 로드
 
 💡 테스트 URL:
-- Ollama 테스트: http://localhost:${PORT}/api/test-ollama
 - 구글 시트 테스트: http://localhost:${PORT}/api/test-sheets
 - 설정 상태 확인: http://localhost:${PORT}/api/config/health
   `);

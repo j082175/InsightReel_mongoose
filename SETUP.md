@@ -6,7 +6,7 @@
 
 - **Node.js** (v16 이상)
 - **Chrome 브라우저**
-- **Ollama** (로컬 AI)
+- **Gemini API 키** (Google AI)
 - **구글 계정** (스프레드시트용)
 
 ## 🚀 1단계: 기본 설치
@@ -25,28 +25,32 @@ cd "영상자동저장분석기"
 npm install
 ```
 
-## 🤖 2단계: Ollama 설치 및 설정
+## 🤖 2단계: Gemini API 설정
 
-### 2.1 Ollama 설치
+### 2.1 Gemini API 키 발급
+1. [Google AI Studio](https://aistudio.google.com/app/apikey) 접속
+2. "Create API Key" 클릭
+3. API 키 복사
+4. `.env` 파일에 설정:
+
 ```bash
-# Windows: https://ollama.ai/download 에서 다운로드
-# 또는 PowerShell에서:
-# winget install Ollama.Ollama
+# .env 파일 생성
+cp .env.example .env
 ```
 
-### 2.2 LLaVA 모델 다운로드
-```bash
-# Ollama 서버 시작
-ollama serve
-
-# 새 터미널에서 모델 다운로드 (약 4GB)
-ollama pull llava
+```env
+# Gemini API 설정
+USE_GEMINI=true
+GOOGLE_API_KEY=your-gemini-api-key-here
 ```
 
-### 2.3 테스트
+### 2.2 테스트
 ```bash
-# 모델 테스트
-ollama run llava "이미지를 설명해주세요"
+# API 키 확인
+echo $GOOGLE_API_KEY
+
+# 서버에서 테스트
+curl "http://localhost:3000/health"
 ```
 
 ## 📊 3단계: 구글 시트 설정
@@ -66,6 +70,11 @@ cp .env.example .env
 ```
 
 ```env
+# Gemini API
+USE_GEMINI=true
+GOOGLE_API_KEY=your-gemini-api-key-here
+
+# Google Sheets
 GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account","project_id":"your-project"...}
 ```
 
@@ -143,13 +152,13 @@ npm run dev
 
 ## 🔧 문제해결
 
-### "Ollama 연결 실패"
+### "Gemini API 연결 실패"
 ```bash
-# Ollama 서버 상태 확인
-ollama list
+# API 키 확인
+echo $GOOGLE_API_KEY
 
-# 서버 재시작
-ollama serve
+# 서버 로그 확인
+npm run dev
 ```
 
 ### "구글 시트 연결 실패"
@@ -176,24 +185,20 @@ CLEANUP_DAYS=7  # 7일 후 파일 자동 삭제
 MAX_FILE_SIZE=50mb  # 최대 파일 크기
 ```
 
-### AI 분석 모델 변경
-```bash
-# 다른 Ollama 모델 사용
-ollama pull llava:13b  # 더 정확하지만 느린 모델
-ollama pull llava:34b  # 가장 정확하지만 매우 느린 모델
-```
-
+### AI 분석 설정 변경
 ```env
-# .env에서 모델 변경
-OLLAMA_MODEL=llava:13b
+# .env에서 설정 변경
+# Gemini 모델 옵션: gemini-1.5-flash, gemini-1.5-pro
+USE_GEMINI=true
+GOOGLE_API_KEY=your-api-key
 ```
 
 ## 💡 팁
 
-1. **처음 사용할 때**: LLaVA 모델이 로딩되는 데 시간이 걸릴 수 있습니다
-2. **성능 향상**: GPU가 있다면 Ollama가 자동으로 사용합니다
+1. **처음 사용할 때**: Gemini API 키 설정을 반드시 확인하세요
+2. **성능 향상**: Gemini 모델은 클라우드 기반으로 빠른 처리 속도를 제공합니다
 3. **저장 공간**: 영상 파일이 계속 쌓이므로 주기적으로 정리해주세요
-4. **구글 API 제한**: 하루 100회 무료 제한이 있습니다
+4. **Gemini API 제한**: 무료 티어에서 일정 한도 내에서 사용 가능합니다
 
 ## 🔄 업데이트
 
@@ -202,8 +207,9 @@ OLLAMA_MODEL=llava:13b
 git pull origin main
 npm install
 
-# Ollama 모델 업데이트
-ollama pull llava
+# .env 파일 설정 업데이트 확인
+# USE_GEMINI=true
+# GOOGLE_API_KEY=your-key
 ```
 
 이제 완전 무료 영상 자동저장 분석기를 사용할 준비가 완료되었습니다! 🎉

@@ -13,8 +13,8 @@ global.console = {
 // 테스트용 환경 변수 설정
 process.env.NODE_ENV = 'test';
 process.env.PORT = '3001';
-process.env.OLLAMA_URL = 'http://localhost:11434';
-process.env.USE_GEMINI = 'false'; // 테스트 시 Gemini 비활성화
+process.env.USE_GEMINI = 'true'; // 테스트 시 Gemini 활성화
+process.env.GOOGLE_API_KEY = 'test-api-key';
 
 // 전역 타임아웃 설정
 jest.setTimeout(30000);

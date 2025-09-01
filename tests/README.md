@@ -57,7 +57,7 @@ tests/
 
 ### 테스트 환경
 - 테스트용 환경 변수는 `.env.test` 파일 사용
-- 실제 서비스(Ollama, Google Sheets)는 Mock으로 대체
+- 실제 서비스(Gemini API, Google Sheets)는 Mock으로 대체
 - 파일 시스템 접근은 메모리 기반으로 처리
 
 ### 커버리지 목표

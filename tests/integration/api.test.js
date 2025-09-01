@@ -98,21 +98,6 @@ describe('API Integration Tests', () => {
       });
     });
 
-    app.get('/api/test-ollama', async (req, res) => {
-      try {
-        const result = await aiAnalyzer.testConnection();
-        res.json({
-          success: true,
-          data: result
-        });
-      } catch (error) {
-        res.status(500).json({
-          success: false,
-          message: '연결 테스트 실패',
-          error: error.message
-        });
-      }
-    });
 
     app.get('/api/test-sheets', async (req, res) => {
       try {
@@ -253,7 +238,7 @@ describe('API Integration Tests', () => {
     // Mock 반환값 설정
     mockConfig.healthCheck.mockReturnValue({
       status: 'healthy',
-      services: ['ollama', 'sheets']
+      services: ['sheets']
     });
   });
 
@@ -282,36 +267,6 @@ describe('API Integration Tests', () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data).toHaveProperty('total');
       expect(response.body.data).toHaveProperty('today');
-    });
-  });
-
-  describe('GET /api/test-ollama', () => {
-    it('Ollama 연결이 성공하면 200을 반환해야 함', async () => {
-      mockAIAnalyzer.testConnection.mockResolvedValue({
-        status: 'connected',
-        models: ['llava:latest']
-      });
-
-      const response = await request(app)
-        .get('/api/test-ollama')
-        .expect(200);
-
-      expect(response.body.success).toBe(true);
-      expect(response.body.data.status).toBe('connected');
-      expect(mockAIAnalyzer.testConnection).toHaveBeenCalled();
-    });
-
-    it('Ollama 연결이 실패하면 500을 반환해야 함', async () => {
-      mockAIAnalyzer.testConnection.mockRejectedValue(
-        new Error('Connection failed')
-      );
-
-      const response = await request(app)
-        .get('/api/test-ollama')
-        .expect(500);
-
-      expect(response.body.success).toBe(false);
-      expect(response.body.message).toContain('연결 테스트 실패');
     });
   });
 
