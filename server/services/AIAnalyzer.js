@@ -185,6 +185,7 @@ class AIAnalyzer {
     ServerLogger.info('🔮 사용할 AI: Gemini');
     
     let aiResponse;
+    let geminiError = null;
     try {
       aiResponse = await this.queryGemini(analysisPrompt, imageBase64);
       ServerLogger.info('3. AI 호출 완료');
@@ -192,10 +193,11 @@ class AIAnalyzer {
     } catch (error) {
       ServerLogger.error('❌ AI 호출 실패:', error.message);
       aiResponse = null;
+      geminiError = this.generateGeminiErrorDetails(error);
     }
     
     // AI + URL 기반 하이브리드 분석
-    const analysis = await this.combineAnalysis(aiResponse, urlBasedCategory, metadata, [thumbnailPath]);
+    const analysis = await this.combineAnalysis(aiResponse, urlBasedCategory, metadata, [thumbnailPath], geminiError);
     ServerLogger.info('✅ 단일 프레임 분석 완료:', analysis);
     return analysis;
   }
@@ -955,7 +957,7 @@ JSON 형식으로 답변:
   }
 
   // AI + URL 기반 하이브리드 분석
-  async combineAnalysis(aiResponse, urlBasedCategory, metadata, imagePaths = null) {
+  async combineAnalysis(aiResponse, urlBasedCategory, metadata, imagePaths = null, geminiError = null) {
     try {
       ServerLogger.info('🔍 AI 응답 분석 시작...');
       ServerLogger.info('AI 응답 존재 여부:', !!aiResponse);
@@ -1057,7 +1059,7 @@ JSON 형식으로 답변:
       }
       
       // 최종 분석 결과 반환
-      return {
+      const result = {
         content: aiData.content,
         mainCategory: finalMainCategory,
         middleCategory: finalMiddleCategory,
@@ -1066,6 +1068,20 @@ JSON 형식으로 답변:
         confidence: aiData.main_category ? 0.9 : 0.6, // AI 카테고리 성공시 높은 신뢰도
         source: 'gemini'
       };
+
+      // Gemini 오류 정보가 있으면 추가
+      if (geminiError) {
+        result.aiError = {
+          occurred: true,
+          type: 'gemini_analysis_failed',
+          message: geminiError.userMessage,
+          technical: geminiError.technical,
+          timestamp: geminiError.timestamp,
+          retryable: geminiError.retryable
+        };
+      }
+
+      return result;
       
     } catch (error) {
       ServerLogger.error('❌ 하이브리드 분석 실패:', error.message);
@@ -1177,8 +1193,8 @@ JSON 형식으로 답변:
     } catch (error) {
       ServerLogger.error('❌ Gemini 다중 프레임 분석 실패:', error);
       
-      // Gemini 전용 모드로 실행 중
-      ServerLogger.info('⚠️ Gemini 전용 모드로 실행 중');
+      // 상세한 오류 정보 생성
+      const errorDetails = this.generateGeminiErrorDetails(error);
       
       // 기본 분석 결과 반환
       const categoryResult = this.determineFinalCategory('', '', urlBasedCategory, metadata);
@@ -1193,7 +1209,16 @@ JSON 형식으로 답변:
         confidence: 0.3,
         source: 'fallback-metadata',
         frameCount: thumbnailPaths.length,
-        analysisMethod: 'gemini-fallback'
+        analysisMethod: 'gemini-fallback',
+        // 클라이언트용 오류 정보 추가
+        aiError: {
+          occurred: true,
+          type: 'gemini_analysis_failed',
+          message: errorDetails.userMessage,
+          technical: errorDetails.technical,
+          timestamp: new Date().toISOString(),
+          retryable: errorDetails.retryable
+        }
       };
     }
   }
@@ -1350,6 +1375,63 @@ JSON 형식으로 답변:
       fullCategory: `${categoryResult.mainCategory} > ${categoryResult.middleCategory}`,
       mainCategory: categoryResult.mainCategory,
       middleCategory: categoryResult.middleCategory
+    };
+  }
+
+  /**
+   * Gemini 오류 상세 정보 생성
+   */
+  generateGeminiErrorDetails(error) {
+    const errorMessage = error.message || '';
+    const errorCode = error.code || error.status || 'UNKNOWN';
+    
+    // 일반적인 Gemini API 오류 패턴 분석
+    let userMessage = '🤖 AI 분석 중 오류가 발생했습니다';
+    let technical = errorMessage;
+    let retryable = false;
+    
+    // API 키 관련 오류
+    if (errorMessage.includes('API_KEY') || errorMessage.includes('authentication') || errorCode === 401) {
+      userMessage = '🔑 API 키 인증 오류 - 관리자에게 문의하세요';
+      retryable = false;
+    }
+    // 할당량 초과
+    else if (errorMessage.includes('quota') || errorMessage.includes('QUOTA_EXCEEDED') || errorCode === 429) {
+      userMessage = '📊 일일 사용량 초과 - 잠시 후 다시 시도해주세요';
+      retryable = true;
+    }
+    // 네트워크 타임아웃
+    else if (errorMessage.includes('timeout') || errorMessage.includes('ECONNRESET') || errorMessage.includes('ENOTFOUND')) {
+      userMessage = '🌐 네트워크 연결 오류 - 잠시 후 다시 시도해주세요';
+      retryable = true;
+    }
+    // 이미지 크기/형식 오류
+    else if (errorMessage.includes('image') && (errorMessage.includes('large') || errorMessage.includes('format'))) {
+      userMessage = '🖼️ 이미지 처리 오류 - 영상 품질 문제일 수 있습니다';
+      retryable = true;
+    }
+    // 서버 내부 오류
+    else if (errorCode >= 500 || errorMessage.includes('Internal error')) {
+      userMessage = '⚙️ AI 서비스 일시적 오류 - 잠시 후 다시 시도해주세요';
+      retryable = true;
+    }
+    // 요청이 너무 큰 경우
+    else if (errorMessage.includes('too large') || errorMessage.includes('REQUEST_TOO_LARGE')) {
+      userMessage = '📏 요청 크기 초과 - 영상이 너무 길거나 복잡합니다';
+      retryable = false;
+    }
+    // 콘텐츠 정책 위반
+    else if (errorMessage.includes('safety') || errorMessage.includes('blocked')) {
+      userMessage = '🛡️ 콘텐츠 정책으로 인해 분석할 수 없습니다';
+      retryable = false;
+    }
+
+    return {
+      userMessage,
+      technical,
+      retryable,
+      errorCode,
+      timestamp: new Date().toISOString()
     };
   }
 }

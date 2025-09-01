@@ -203,6 +203,11 @@ app.post('/api/process-video', async (req, res) => {
       }
     };
 
+    // AI 오류 정보가 있으면 추가
+    if (analysis.aiError) {
+      responseData.aiError = analysis.aiError;
+    }
+
     ResponseHandler.success(res, responseData, API_MESSAGES.VIDEO.PROCESSING_SUCCESS);
     
   } catch (error) {
@@ -338,6 +343,11 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
         thumbnailPaths: thumbnailPaths
       }
     };
+
+    // AI 오류 정보가 있으면 추가
+    if (analysis.aiError) {
+      responseData.aiError = analysis.aiError;
+    }
 
     ResponseHandler.success(res, responseData, API_MESSAGES.VIDEO.PROCESSING_SUCCESS);
     

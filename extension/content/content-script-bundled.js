@@ -3689,6 +3689,9 @@ class ApiClient {
 
       const result = await response.json();
       
+      // AI 오류 정보 확인 및 사용자에게 표시
+      this.checkAndShowAiErrors(result);
+      
       // 기존 API 응답 형식과 새 응답 형식 둘 다 지원
       if (result.success !== undefined) {
         // 새 형식: { success: true, data: {...} }
@@ -3731,6 +3734,9 @@ class ApiClient {
       }
 
       const result = await response.json();
+      
+      // AI 오류 정보 확인 및 사용자에게 표시
+      this.checkAndShowAiErrors(result);
       
       // 기존 API 응답 형식과 새 응답 형식 둘 다 지원
       if (result.success !== undefined) {
@@ -3802,6 +3808,62 @@ class ApiClient {
       throw new Error(`blob 비디오 다운로드 실패: ${error.message}`);
     }
   }
+
+  // AI 오류 정보 확인 및 사용자 알림 표시
+  checkAndShowAiErrors(result) {
+    try {
+      // 새 형식에서 data 내부의 aiError 확인
+      const data = result.data || result;
+      
+      if (data && data.aiError && data.aiError.occurred) {
+        const error = data.aiError;
+        
+        // 오류 유형별 아이콘 선택
+        let icon = '🤖';
+        if (error.type === 'gemini_analysis_failed') {
+          if (error.message.includes('API 키')) icon = '🔑';
+          else if (error.message.includes('사용량 초과')) icon = '📊';
+          else if (error.message.includes('네트워크')) icon = '🌐';
+          else if (error.message.includes('이미지')) icon = '🖼️';
+          else if (error.message.includes('콘텐츠 정책')) icon = '🛡️';
+          else if (error.message.includes('크기 초과')) icon = '📏';
+          else if (error.message.includes('서비스 오류')) icon = '⚙️';
+        }
+        
+        // 사용자 친화적 메시지 표시
+        const userMessage = `${icon} ${error.message}`;
+        const notificationType = error.retryable ? 
+          CONSTANTS.NOTIFICATION_TYPES.INFO : 
+          CONSTANTS.NOTIFICATION_TYPES.ERROR;
+        
+        // UI Manager 찾기 (전역에서)
+        const uiManager = window.videoSaver?.uiManager;
+        if (uiManager && uiManager.showNotification) {
+          uiManager.showNotification(userMessage, notificationType, 5000);
+        } else {
+          // fallback: console 및 간단한 알림
+          console.warn('AI 오류:', userMessage);
+        }
+        
+        // 재시도 가능한 오류인 경우 추가 정보
+        if (error.retryable && uiManager) {
+          setTimeout(() => {
+            uiManager.showNotification('💡 잠시 후 다시 시도해보세요', CONSTANTS.NOTIFICATION_TYPES.INFO, 3000);
+          }, 2000);
+        }
+        
+        Utils.log('warn', 'AI Error detected', {
+          type: error.type,
+          message: error.message,
+          technical: error.technical,
+          retryable: error.retryable,
+          timestamp: error.timestamp
+        });
+      }
+    } catch (checkError) {
+      Utils.log('error', 'Error checking AI errors', checkError);
+    }
+  }
 }
 
 // UI Manager Class (핵심 기능만)
@@ -3824,32 +3886,115 @@ class UIManager {
 
   _createNotification(message, type, duration) {
     const notification = document.createElement('div');
-    const bgColor = type === CONSTANTS.NOTIFICATION_TYPES.SUCCESS ? '#4caf50' : 
-                    type === CONSTANTS.NOTIFICATION_TYPES.ERROR ? '#f44336' : '#2196f3';
     
+    // 타입별 색상 및 아이콘 설정
+    const colors = {
+      [CONSTANTS.NOTIFICATION_TYPES.SUCCESS]: { bg: '#4caf50', border: '#388e3c' },
+      [CONSTANTS.NOTIFICATION_TYPES.ERROR]: { bg: '#f44336', border: '#d32f2f' },
+      [CONSTANTS.NOTIFICATION_TYPES.INFO]: { bg: '#2196f3', border: '#1976d2' }
+    };
+    
+    const color = colors[type] || colors[CONSTANTS.NOTIFICATION_TYPES.INFO];
+    
+    // 기존 알림들의 개수 확인 (위치 조정용)
+    const existingNotifications = document.querySelectorAll('[data-ai-notification]');
+    const topOffset = 20 + (existingNotifications.length * 80);
+    
+    notification.setAttribute('data-ai-notification', 'true');
     notification.style.cssText = `
       position: fixed;
-      top: 20px;
+      top: ${topOffset}px;
       right: 20px;
-      background: ${bgColor};
+      background: linear-gradient(135deg, ${color.bg} 0%, ${color.border} 100%);
       color: white;
-      padding: 15px 20px;
-      border-radius: 8px;
-      z-index: 10000;
+      padding: 16px 20px;
+      border-radius: 12px;
+      z-index: 10001;
       font-size: 14px;
-      font-weight: bold;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      max-width: 300px;
+      font-weight: 500;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15), 0 3px 10px rgba(0,0,0,0.1);
+      max-width: 350px;
+      min-width: 250px;
       white-space: pre-line;
+      border: 1px solid rgba(255,255,255,0.2);
+      backdrop-filter: blur(10px);
+      transform: translateX(100%);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
     `;
+    
     notification.textContent = message;
+    
+    // 닫기 버튼 추가 (오류 메시지인 경우)
+    if (type === CONSTANTS.NOTIFICATION_TYPES.ERROR) {
+      const closeBtn = document.createElement('div');
+      closeBtn.innerHTML = '×';
+      closeBtn.style.cssText = `
+        position: absolute;
+        top: 8px;
+        right: 12px;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,0.2);
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+        transition: background 0.2s;
+      `;
+      closeBtn.onmouseover = () => closeBtn.style.background = 'rgba(255,255,255,0.3)';
+      closeBtn.onmouseout = () => closeBtn.style.background = 'rgba(255,255,255,0.2)';
+      closeBtn.onclick = () => this._removeNotification(notification);
+      
+      notification.appendChild(closeBtn);
+      notification.style.paddingRight = '45px';
+    }
+    
     document.body.appendChild(notification);
+    
+    // 슬라이드 인 애니메이션
+    requestAnimationFrame(() => {
+      notification.style.transform = 'translateX(0)';
+    });
 
+    // 자동 제거 타이머
+    setTimeout(() => {
+      this._removeNotification(notification);
+    }, duration);
+    
+    // 클릭시 제거 (오류가 아닌 경우)
+    if (type !== CONSTANTS.NOTIFICATION_TYPES.ERROR) {
+      notification.onclick = () => this._removeNotification(notification);
+    }
+  }
+
+  // 알림 제거 함수 (애니메이션 포함)
+  _removeNotification(notification) {
+    if (!notification || !document.body.contains(notification)) return;
+    
+    notification.style.transform = 'translateX(100%)';
+    notification.style.opacity = '0';
+    
     setTimeout(() => {
       if (document.body.contains(notification)) {
         document.body.removeChild(notification);
+        // 남은 알림들의 위치 재조정
+        this._repositionNotifications();
       }
-    }, duration);
+    }, 300);
+  }
+
+  // 남은 알림들의 위치 재조정
+  _repositionNotifications() {
+    const notifications = document.querySelectorAll('[data-ai-notification]');
+    notifications.forEach((notification, index) => {
+      const topOffset = 20 + (index * 80);
+      notification.style.top = `${topOffset}px`;
+    });
   }
 }
 
