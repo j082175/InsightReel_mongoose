@@ -15,6 +15,7 @@ const SheetsManager = require('./services/SheetsManager');
 const { ServerLogger } = require('./utils/logger');
 const ResponseHandler = require('./utils/response-handler');
 const { API_MESSAGES, ERROR_CODES } = require('./config/api-messages');
+const videoQueue = require('./utils/VideoQueue');
 
 const app = express();
 const PORT = config.get('PORT');
@@ -137,112 +138,125 @@ app.post('/api/process-video', async (req, res) => {
   try {
     const { platform, videoUrl, postUrl, metadata, analysisType = 'quick' } = req.body;
     
-    ServerLogger.info(`🎬 Processing ${platform} video:`, postUrl);
-    ServerLogger.info(`🔍 Analysis type: ${analysisType}`);
+    // 큐 상태 확인 및 로깅
+    const queueStatus = videoQueue.getStatus();
+    ServerLogger.info(`📋 현재 큐 상태:`, queueStatus);
     
-    // 1단계: 비디오 다운로드
-    ServerLogger.info('1️⃣ 비디오 다운로드 중...');
-    const videoPath = await videoProcessor.downloadVideo(videoUrl, platform);
-    
-    // 2단계: 썸네일/프레임 생성
-    if (analysisType === 'multi-frame' || analysisType === 'full') {
-      ServerLogger.info('2️⃣ 다중 프레임 추출 중...');
-      var thumbnailPaths = await videoProcessor.generateThumbnail(videoPath, analysisType);
-      ServerLogger.info(`✅ ${thumbnailPaths.length}개 프레임 추출 완료`);
-    } else {
-      ServerLogger.info('2️⃣ 단일 썸네일 생성 중...');
-      var singleThumbnail = await videoProcessor.generateThumbnail(videoPath, analysisType);
-      var thumbnailPaths = Array.isArray(singleThumbnail) ? singleThumbnail : [singleThumbnail];
-    }
-    
-    // 3단계: AI 분석 (먼저 실행)
-    if (thumbnailPaths.length > 1) {
-      ServerLogger.info(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
-    } else {
-      ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
-    }
-    const analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, metadata);
-    
-    // AI 분석에서 오류가 발생한 경우 시트 저장 중단
-    if (analysis.aiError && analysis.aiError.occurred) {
-      ServerLogger.error('❌ AI 분석 실패로 인한 처리 중단:', analysis.aiError.message);
-      
-      // 통계는 업데이트하지 않음
-      ServerLogger.info('⚠️ AI 분석 오류로 인해 시트 저장을 건너뜁니다');
-      
-      const responseData = {
-        processing: {
+    // 큐에 작업 추가
+    const result = await videoQueue.addToQueue({
+      id: `url_${platform}_${Date.now()}`,
+      type: 'url',
+      data: { platform, videoUrl, postUrl, metadata, analysisType },
+      processor: async (taskData) => {
+        const { platform, videoUrl, postUrl, metadata, analysisType } = taskData;
+        
+        ServerLogger.info(`🎬 Processing ${platform} video:`, postUrl);
+        ServerLogger.info(`🔍 Analysis type: ${analysisType}`);
+        
+        // 1단계: 비디오 다운로드
+        ServerLogger.info('1️⃣ 비디오 다운로드 중...');
+        const videoPath = await videoProcessor.downloadVideo(videoUrl, platform);
+        
+        // 2단계: 썸네일/프레임 생성
+        if (analysisType === 'multi-frame' || analysisType === 'full') {
+          ServerLogger.info('2️⃣ 다중 프레임 추출 중...');
+          var thumbnailPaths = await videoProcessor.generateThumbnail(videoPath, analysisType);
+          ServerLogger.info(`✅ ${thumbnailPaths.length}개 프레임 추출 완료`);
+        } else {
+          ServerLogger.info('2️⃣ 단일 썸네일 생성 중...');
+          var singleThumbnail = await videoProcessor.generateThumbnail(videoPath, analysisType);
+          var thumbnailPaths = Array.isArray(singleThumbnail) ? singleThumbnail : [singleThumbnail];
+        }
+        
+        // 3단계: AI 분석 (먼저 실행)
+        if (thumbnailPaths.length > 1) {
+          ServerLogger.info(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
+        } else {
+          ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
+        }
+        const analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, metadata);
+        
+        // AI 분석에서 오류가 발생한 경우 시트 저장 중단
+        if (analysis.aiError && analysis.aiError.occurred) {
+          ServerLogger.error('❌ AI 분석 실패로 인한 처리 중단:', analysis.aiError.message);
+          
+          // 통계는 업데이트하지 않음
+          ServerLogger.info('⚠️ AI 분석 오류로 인해 시트 저장을 건너뜁니다');
+          
+          return {
+            processing: {
+              platform,
+              analysisType,
+              frameCount: analysis.frameCount || 1,
+              skippedSaving: true
+            },
+            analysis: {
+              category: analysis.category,
+              mainCategory: analysis.mainCategory,
+              middleCategory: analysis.middleCategory,
+              keywords: analysis.keywords,
+              hashtags: analysis.hashtags,
+              confidence: analysis.confidence
+            },
+            files: {
+              videoPath,
+              thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
+              thumbnailPaths: thumbnailPaths
+            },
+            aiError: analysis.aiError
+          };
+        }
+        
+        // 4단계: 구글 시트 저장 (AI 분석 성공 시에만)
+        ServerLogger.info('4️⃣ 구글 시트 저장 중...');
+        await sheetsManager.saveVideoData({
           platform,
-          analysisType,
-          frameCount: analysis.frameCount || 1,
-          skippedSaving: true
-        },
-        analysis: {
-          category: analysis.category,
-          mainCategory: analysis.mainCategory,
-          middleCategory: analysis.middleCategory,
-          keywords: analysis.keywords,
-          hashtags: analysis.hashtags,
-          confidence: analysis.confidence
-        },
-        files: {
+          postUrl,
           videoPath,
           thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
-          thumbnailPaths: thumbnailPaths
-        },
-        aiError: analysis.aiError
-      };
+          thumbnailPaths: thumbnailPaths,
+          metadata,
+          analysis,
+          timestamp: new Date().toISOString()
+        });
+        
+        // 통계 업데이트
+        stats.total++;
+        stats.today++;
+        
+        ServerLogger.info('✅ 비디오 처리 완료');
+        
+        const responseData = {
+          processing: {
+            platform,
+            analysisType,
+            frameCount: analysis.frameCount || 1
+          },
+          analysis: {
+            category: analysis.category,
+            mainCategory: analysis.mainCategory,
+            middleCategory: analysis.middleCategory,
+            keywords: analysis.keywords,
+            hashtags: analysis.hashtags,
+            confidence: analysis.confidence
+          },
+          files: {
+            videoPath,
+            thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
+            thumbnailPaths: thumbnailPaths
+          }
+        };
 
-      ResponseHandler.success(res, responseData, '비디오 처리 완료 (AI 분석 오류로 시트 저장 생략)');
-      return;
-    }
-    
-    // 4단계: 구글 시트 저장 (AI 분석 성공 시에만)
-    ServerLogger.info('4️⃣ 구글 시트 저장 중...');
-    await sheetsManager.saveVideoData({
-      platform,
-      postUrl,
-      videoPath,
-      thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
-      thumbnailPaths: thumbnailPaths,
-      metadata,
-      analysis,
-      timestamp: new Date().toISOString()
-    });
-    
-    // 통계 업데이트
-    stats.total++;
-    stats.today++;
-    
-    ServerLogger.info('✅ 비디오 처리 완료');
-    
-    const responseData = {
-      processing: {
-        platform,
-        analysisType,
-        frameCount: analysis.frameCount || 1
-      },
-      analysis: {
-        category: analysis.category,
-        mainCategory: analysis.mainCategory,
-        middleCategory: analysis.middleCategory,
-        keywords: analysis.keywords,
-        hashtags: analysis.hashtags,
-        confidence: analysis.confidence
-      },
-      files: {
-        videoPath,
-        thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
-        thumbnailPaths: thumbnailPaths
+        // AI 오류 정보가 있으면 추가
+        if (analysis.aiError) {
+          responseData.aiError = analysis.aiError;
+        }
+
+        return responseData;
       }
-    };
+    });
 
-    // AI 오류 정보가 있으면 추가
-    if (analysis.aiError) {
-      responseData.aiError = analysis.aiError;
-    }
-
-    ResponseHandler.success(res, responseData, API_MESSAGES.VIDEO.PROCESSING_SUCCESS);
+    ResponseHandler.success(res, result, API_MESSAGES.VIDEO.PROCESSING_SUCCESS);
     
   } catch (error) {
     ServerLogger.error('비디오 처리 실패:', error);
@@ -263,6 +277,19 @@ app.get('/api/videos', async (req, res) => {
       ...error,
       code: ERROR_CODES.DATA_FETCH_FAILED
     }, API_MESSAGES.DATA.FETCH_FAILED);
+  }
+});
+
+// 큐 상태 조회 엔드포인트
+app.get('/api/queue/status', async (req, res) => {
+  try {
+    const queueStatus = videoQueue.getStatus();
+    ResponseHandler.success(res, queueStatus, '큐 상태 조회 성공');
+  } catch (error) {
+    ResponseHandler.serverError(res, {
+      ...error,
+      code: 'QUEUE_STATUS_FAILED'
+    }, '큐 상태 조회 실패');
   }
 });
 
@@ -318,107 +345,120 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     
     const videoPath = req.file.path;
     
-    // 2단계: 썸네일/프레임 생성
-    if (analysisType === 'multi-frame' || analysisType === 'full') {
-      ServerLogger.info('2️⃣ 다중 프레임 추출 중...');
-      var thumbnailPaths = await videoProcessor.generateThumbnail(videoPath, analysisType);
-      ServerLogger.info(`✅ ${thumbnailPaths.length}개 프레임 추출 완료`);
-    } else {
-      ServerLogger.info('2️⃣ 단일 썸네일 생성 중...');
-      var singleThumbnail = await videoProcessor.generateThumbnail(videoPath, analysisType);
-      var thumbnailPaths = Array.isArray(singleThumbnail) ? singleThumbnail : [singleThumbnail];
-    }
+    // 큐 상태 확인 및 로깅
+    const queueStatus = videoQueue.getStatus();
+    ServerLogger.info(`📋 현재 큐 상태:`, queueStatus);
     
-    // 3단계: AI 분석 (먼저 실행)
-    if (thumbnailPaths.length > 1) {
-      ServerLogger.info(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
-    } else {
-      ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
-    }
-    const analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, metadata);
-    
-    // AI 분석에서 오류가 발생한 경우 시트 저장 중단
-    if (analysis.aiError && analysis.aiError.occurred) {
-      ServerLogger.error('❌ AI 분석 실패로 인한 처리 중단:', analysis.aiError.message);
-      
-      // 통계는 업데이트하지 않음
-      ServerLogger.info('⚠️ AI 분석 오류로 인해 시트 저장을 건너뜁니다');
-      
-      const responseData = {
-        processing: {
+    // 큐에 작업 추가
+    const result = await videoQueue.addToQueue({
+      id: `blob_${platform}_${Date.now()}`,
+      type: 'blob',
+      data: { platform, postUrl, analysisType, metadata, videoPath },
+      processor: async (taskData) => {
+        const { platform, postUrl, analysisType, metadata, videoPath } = taskData;
+        
+        // 2단계: 썸네일/프레임 생성
+        if (analysisType === 'multi-frame' || analysisType === 'full') {
+          ServerLogger.info('2️⃣ 다중 프레임 추출 중...');
+          var thumbnailPaths = await videoProcessor.generateThumbnail(videoPath, analysisType);
+          ServerLogger.info(`✅ ${thumbnailPaths.length}개 프레임 추출 완료`);
+        } else {
+          ServerLogger.info('2️⃣ 단일 썸네일 생성 중...');
+          var singleThumbnail = await videoProcessor.generateThumbnail(videoPath, analysisType);
+          var thumbnailPaths = Array.isArray(singleThumbnail) ? singleThumbnail : [singleThumbnail];
+        }
+        
+        // 3단계: AI 분석 (먼저 실행)
+        if (thumbnailPaths.length > 1) {
+          ServerLogger.info(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
+        } else {
+          ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
+        }
+        const analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, metadata);
+        
+        // AI 분석에서 오류가 발생한 경우 시트 저장 중단
+        if (analysis.aiError && analysis.aiError.occurred) {
+          ServerLogger.error('❌ AI 분석 실패로 인한 처리 중단:', analysis.aiError.message);
+          
+          // 통계는 업데이트하지 않음
+          ServerLogger.info('⚠️ AI 분석 오류로 인해 시트 저장을 건너뜁니다');
+          
+          return {
+            processing: {
+              platform,
+              analysisType,
+              frameCount: analysis.frameCount || 1,
+              skippedSaving: true,
+              source: 'blob-upload'
+            },
+            analysis: {
+              category: analysis.category,
+              mainCategory: analysis.mainCategory,
+              middleCategory: analysis.middleCategory,
+              keywords: analysis.keywords,
+              hashtags: analysis.hashtags,
+              confidence: analysis.confidence
+            },
+            files: {
+              videoPath,
+              thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
+              thumbnailPaths: thumbnailPaths
+            },
+            aiError: analysis.aiError
+          };
+        }
+        
+        // 4단계: 구글 시트 저장 (AI 분석 성공 시에만)
+        ServerLogger.info('4️⃣ 구글 시트 저장 중...');
+        await sheetsManager.saveVideoData({
           platform,
-          analysisType,
-          frameCount: analysis.frameCount || 1,
-          skippedSaving: true,
-          source: 'blob-upload'
-        },
-        analysis: {
-          category: analysis.category,
-          mainCategory: analysis.mainCategory,
-          middleCategory: analysis.middleCategory,
-          keywords: analysis.keywords,
-          hashtags: analysis.hashtags,
-          confidence: analysis.confidence
-        },
-        files: {
+          postUrl,
           videoPath,
           thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
-          thumbnailPaths: thumbnailPaths
-        },
-        aiError: analysis.aiError
-      };
+          thumbnailPaths: thumbnailPaths,
+          metadata,
+          analysis,
+          timestamp: new Date().toISOString()
+        });
+        
+        // 통계 업데이트
+        stats.total++;
+        stats.today++;
+        
+        ServerLogger.info('✅ blob 비디오 처리 완료');
+        
+        const responseData = {
+          processing: {
+            platform,
+            analysisType,
+            frameCount: analysis.frameCount || 1,
+            source: 'blob-upload'
+          },
+          analysis: {
+            category: analysis.category,
+            mainCategory: analysis.mainCategory,
+            middleCategory: analysis.middleCategory,
+            keywords: analysis.keywords,
+            hashtags: analysis.hashtags,
+            confidence: analysis.confidence
+          },
+          files: {
+            videoPath,
+            thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
+            thumbnailPaths: thumbnailPaths
+          }
+        };
 
-      ResponseHandler.success(res, responseData, '비디오 처리 완료 (AI 분석 오류로 시트 저장 생략)');
-      return;
-    }
-    
-    // 4단계: 구글 시트 저장 (AI 분석 성공 시에만)
-    ServerLogger.info('4️⃣ 구글 시트 저장 중...');
-    await sheetsManager.saveVideoData({
-      platform,
-      postUrl,
-      videoPath,
-      thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
-      thumbnailPaths: thumbnailPaths,
-      metadata,
-      analysis,
-      timestamp: new Date().toISOString()
-    });
-    
-    // 통계 업데이트
-    stats.total++;
-    stats.today++;
-    
-    ServerLogger.info('✅ blob 비디오 처리 완료');
-    
-    const responseData = {
-      processing: {
-        platform,
-        analysisType,
-        frameCount: analysis.frameCount || 1,
-        source: 'blob-upload'
-      },
-      analysis: {
-        category: analysis.category,
-        mainCategory: analysis.mainCategory,
-        middleCategory: analysis.middleCategory,
-        keywords: analysis.keywords,
-        hashtags: analysis.hashtags,
-        confidence: analysis.confidence
-      },
-      files: {
-        videoPath,
-        thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
-        thumbnailPaths: thumbnailPaths
+        // AI 오류 정보가 있으면 추가
+        if (analysis.aiError) {
+          responseData.aiError = analysis.aiError;
+        }
+
+        return responseData;
       }
-    };
+    });
 
-    // AI 오류 정보가 있으면 추가
-    if (analysis.aiError) {
-      responseData.aiError = analysis.aiError;
-    }
-
-    ResponseHandler.success(res, responseData, API_MESSAGES.VIDEO.PROCESSING_SUCCESS);
+    ResponseHandler.success(res, result, API_MESSAGES.VIDEO.PROCESSING_SUCCESS);
     
   } catch (error) {
     ServerLogger.error('blob 비디오 처리 실패:', error);

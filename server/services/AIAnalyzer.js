@@ -583,7 +583,29 @@ class AIAnalyzer {
       
       if (retryResult) {
         ServerLogger.info('✅ 재분석 응답 수신');
-        return retryResult;
+        ServerLogger.info('🔍 재분석 원본 응답 길이:', retryResult.length);
+        
+        // JSON 파싱 시도
+        try {
+          const jsonMatch = retryResult.match(/```json\s*([\s\S]*?)\s*```|```\s*([\s\S]*?)\s*```|(\{[\s\S]*\})/);
+          if (jsonMatch) {
+            const jsonStr = jsonMatch[1] || jsonMatch[2] || jsonMatch[3];
+            const parsed = JSON.parse(jsonStr);
+            ServerLogger.info('✅ 재분석 JSON 파싱 성공:', { 
+              main: parsed.main_category, 
+              middle: parsed.middle_category 
+            });
+            return parsed;
+          } else {
+            ServerLogger.info('❌ 재분석 응답에서 JSON 패턴을 찾을 수 없음');
+            ServerLogger.info('🔍 재분석 응답 샘플:', retryResult.substring(0, 200));
+            return null;
+          }
+        } catch (parseError) {
+          ServerLogger.error('❌ 재분석 JSON 파싱 실패:', parseError.message);
+          ServerLogger.info('🔍 재분석 응답 샘플:', retryResult.substring(0, 200));
+          return null;
+        }
       } else {
         ServerLogger.info('❌ 모든 재분석 시도 실패');
         return null;
@@ -639,6 +661,11 @@ class AIAnalyzer {
   validateCategoryPair(mainCategory, middleCategory) {
     if (!mainCategory || !middleCategory) {
       return { isValid: false, reason: 'Missing category' };
+    }
+    
+    // "없음" 카테고리는 무효로 처리
+    if (mainCategory === '없음' || middleCategory === '없음') {
+      return { isValid: false, reason: 'Invalid category - contains 없음' };
     }
     
     // 카테고리 체계에서 유효한 조합인지 확인
@@ -1037,9 +1064,18 @@ JSON 형식으로 답변:
       let finalMainCategory = urlBasedCategory.mainCategory;
       let finalMiddleCategory = urlBasedCategory.middleCategory;
       
+      ServerLogger.info('🔍 AI 카테고리 검증 전:', {
+        main: aiData.main_category,
+        middle: aiData.middle_category,
+        hasMain: !!aiData.main_category,
+        hasMiddle: !!aiData.middle_category
+      });
+      
       if (aiData.main_category && aiData.middle_category) {
         // AI 카테고리 유효성 검증
         const validation = this.validateCategoryPair(aiData.main_category, aiData.middle_category);
+        ServerLogger.info('🔍 카테고리 검증 결과:', validation);
+        
         if (validation.isValid) {
           ServerLogger.info('✅ AI 카테고리 분석 성공, AI 분류 사용:', {
             main: aiData.main_category,
