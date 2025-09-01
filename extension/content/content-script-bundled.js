@@ -1418,35 +1418,8 @@ window.INSTAGRAM_UI_SYSTEM = {
   },
   
   findVideoByShortcode(targetShortcode) {
-    // 현재 shortcode와 일치하는 video element 찾기
+    // URL 기반으로 현재 활성 video 추정 (성공하는 방법)
     const videos = document.querySelectorAll('video');
-    console.log('🔍 shortcode와 일치하는 video 검색 시작:', targetShortcode);
-    
-    // 1. React Props 방식으로 검색
-    for (let i = 0; i < videos.length; i++) {
-      const video = videos[i];
-      const rect = video.getBoundingClientRect();
-      
-      // 화면에 보이는 video만 검사
-      if (rect.top < window.innerHeight && rect.bottom > 0) {
-        console.log(`📹 Video ${i} 검사 중:`, video.src?.substring(0, 50));
-        
-        // 이 video의 React Props에서 shortcode 추출
-        const videoShortcode = this.extractShortcodeFromVideoElement(video);
-        console.log(`📋 Video ${i}의 shortcode:`, videoShortcode);
-        
-        if (videoShortcode === targetShortcode) {
-          console.log(`✅ 일치하는 video 발견: ${i}번째`);
-          return video;
-        }
-      }
-    }
-    
-    // 2. React Props 실패시 - 페이지 URL 기반으로 현재 활성 video 추정
-    console.log('⚠️ React Props로 매칭 실패, URL 기반 활성 video 선택');
-    console.log('🌐 현재 페이지 shortcode:', targetShortcode);
-    
-    // URL이 변경되었다면 가장 최근에 화면에 나타난 video가 현재 video일 가능성 높음
     const visibleVideos = Array.from(videos).filter(video => {
       const rect = video.getBoundingClientRect();
       return rect.top < window.innerHeight && rect.bottom > 0;
@@ -1455,11 +1428,9 @@ window.INSTAGRAM_UI_SYSTEM = {
     if (visibleVideos.length > 0) {
       // 가장 중앙에 위치한 video 선택 (Instagram 특성상 메인 video가 중앙에 위치)
       const centerVideo = this.findCenterMostVideo(visibleVideos);
-      console.log('🎯 중앙 기준 선택된 video:', centerVideo?.src?.substring(0, 50));
       return centerVideo;
     }
     
-    console.log('❌ 모든 방법 실패, 기본 활성 video 반환');
     return this.findCurrentActiveVideo();
   },
   
@@ -1483,42 +1454,6 @@ window.INSTAGRAM_UI_SYSTEM = {
     return bestVideo;
   },
   
-  extractShortcodeFromVideoElement(video) {
-    // video element에서 직접 shortcode 추출
-    let element = video;
-    const maxDepth = 10;
-    
-    for (let depth = 0; depth <= maxDepth && element; depth++) {
-      const reactProps = this.getReactPropsFromElement(element);
-      if (!reactProps) {
-        element = element.parentElement;
-        continue;
-      }
-      
-      if (reactProps.children && reactProps.children.props) {
-        const props = reactProps.children.props;
-        
-        // Instagram downloader와 동일한 순서로 검사
-        if (props?.videoFBID) {
-          const shortcode = window.INSTAGRAM_MEDIA_TRACKER?.fbIdMap[props.videoFBID];
-          if (shortcode) return shortcode;
-        }
-        
-        if (props?.post?.code) {
-          return props.post.code;
-        }
-        
-        if (props.href) {
-          const match = props.href.match(/\/p\/([A-Za-z0-9_-]+)/);
-          if (match) return match[1];
-        }
-      }
-      
-      element = element.parentElement;
-    }
-    
-    return null;
-  },
   
   async extractMediaInfoFromContainer(container, video) {
     console.log('🔍 미디어 정보 추출 시작 - 컨테이너별 개별 추출');
@@ -1816,28 +1751,7 @@ window.INSTAGRAM_UI_SYSTEM = {
         return selectedText.text;
       }
       
-      // 현재 화면에서 직접 검색 (React Props 활용)
-      console.log('🔍 React Props에서 설명 검색 중...');
-      const activeVideo = targetVideo || this.findCurrentActiveVideo();
-      if (activeVideo) {
-        let element = activeVideo;
-        for (let depth = 0; depth < 10 && element; depth++) {
-          const reactProps = this.getReactPropsFromElement(element);
-          if (reactProps && reactProps.children && reactProps.children.props) {
-            const props = reactProps.children.props;
-            
-            // caption, text, title 등에서 설명 찾기
-            const captionFields = ['caption', 'text', 'title', 'description', 'body'];
-            for (const field of captionFields) {
-              if (props[field] && typeof props[field] === 'string' && props[field].length > 3) {
-                console.log(`✅ React Props에서 설명 발견! (${field}):`, props[field]);
-                return props[field].trim();
-              }
-            }
-          }
-          element = element.parentElement;
-        }
-      }
+      // React Props 방법은 제거됨 (실패하는 방법)
       
       // 최후의 방법: 모든 텍스트 노드 검색
       console.log('🔍 전체 DOM에서 설명 검색 중...');
@@ -1885,36 +1799,8 @@ window.INSTAGRAM_UI_SYSTEM = {
         }
       }
       
-      // React Props 직접 탐색
-      const videoElement = video || container.querySelector('video');
-      if (videoElement) {
-        let element = videoElement;
-        for (let depth = 0; depth < 15 && element; depth++) {
-          const reactProps = this.getReactPropsFromElement(element);
-          if (reactProps) {
-            // 다양한 caption 필드 검사
-            const captionPaths = [
-              'children.props.caption.text',
-              'children.props.media.caption.text', 
-              'children.props.post.caption.text',
-              'caption.text',
-              'media.caption.text',
-              'post.caption.text'
-            ];
-            
-            for (const path of captionPaths) {
-              const captionText = this.getNestedProperty(reactProps, path);
-              if (captionText && typeof captionText === 'string' && captionText.length > 10) {
-                console.log(`✅ React Props에서 설명 발견 (${path}):`, captionText.substring(0, 100));
-                return captionText;
-              }
-            }
-          }
-          element = element.parentElement;
-        }
-      }
-      
-      console.log('❌ React Props에서 설명 찾기 실패');
+      // React Props 직접 탐색 방법 제거됨 (실패하는 방법)
+      console.log('❌ React Props 방법 비활성화됨');
       return null;
       
     } catch (error) {
@@ -2988,190 +2874,16 @@ window.INSTAGRAM_UI_SYSTEM = {
   },
   
   extractShortcodeFromReactProps(container, video) {
-    // 1. 먼저 현재 URL에서 shortcode 추출 시도 (Instagram downloader도 이를 사용)
+    // URL에서 shortcode 추출 (성공하는 방법)
     const urlShortcode = this.extractShortcodeFromURL();
     if (urlShortcode) {
-      console.log('🔗 URL에서 shortcode 추출 성공:', urlShortcode);
       return urlShortcode;
     }
     
-    // 2. Instagram downloader의 E() 함수와 정확히 동일한 로직
-    // 클릭 시점에 현재 화면의 실제 video element를 찾아서 분석
-    const currentVideo = this.findCurrentActiveVideo();
-    let element = currentVideo || video; // 현재 활성 video 우선 사용
-    const maxDepth = 15;
-    
-    console.log('🎯 분석 대상 video element:', element);
-    console.log('🔗 분석 대상 video src:', element?.src?.substring(0, 100));
-    
-    for (let depth = 0; depth <= maxDepth && element; depth++) {
-      console.log(`🔍 Props 검색 중 (깊이 ${depth}):`, element.tagName);
-      
-      // React Props 확인 (Instagram downloader의 e() 함수와 동일)
-      const reactProps = this.getReactPropsFromElement(element);
-      if (!reactProps) {
-        element = element.parentElement;
-        continue;
-      }
-      
-      if (reactProps.children && reactProps.children.props) {
-        const props = reactProps.children.props;
-        
-        // Instagram downloader와 동일한 순서로 검사
-        if (props?.videoFBID) {
-          console.log('🔍 videoFBID 발견:', props.videoFBID);
-          console.log('📋 현재 fbIdMap 키들:', Object.keys(window.INSTAGRAM_MEDIA_TRACKER?.fbIdMap || {}));
-          
-          const shortcode = window.INSTAGRAM_MEDIA_TRACKER?.fbIdMap[props.videoFBID];
-          if (shortcode) {
-            console.log('📹 videoFBID로 shortcode 찾음:', props.videoFBID, '→', shortcode);
-            return shortcode;
-          } else {
-            console.log('❌ videoFBID는 있지만 fbIdMap에 매핑 없음:', props.videoFBID);
-            console.log('📊 fbIdMap 전체 내용:', window.INSTAGRAM_MEDIA_TRACKER?.fbIdMap);
-          }
-        }
-        
-        if (props?.media$key?.id) {
-          const shortcode = window.INSTAGRAM_MEDIA_TRACKER?.mediaIdMap[props.media$key.id];
-          if (shortcode) {
-            console.log('🔑 media$key.id로 shortcode 찾음:', props.media$key.id, '→', shortcode);
-            return shortcode;
-          }
-        }
-        
-        if (props?.post?.id) {
-          const shortcode = window.INSTAGRAM_MEDIA_TRACKER?.fbIdMap[props.post.id];
-          if (shortcode) {
-            console.log('📄 post.id로 shortcode 찾음:', props.post.id, '→', shortcode);
-            return shortcode;
-          }
-        }
-        
-        if (props.href) {
-          const match = props.href.match(/\/p\/([A-Za-z0-9_-]+)/);
-          if (match) {
-            console.log('🔗 href에서 shortcode 찾음:', match[1]);
-            return match[1];
-          }
-        }
-        
-        if (props?.postId) {
-          const shortcode = window.INSTAGRAM_MEDIA_TRACKER?.fbIdMap[props.postId];
-          if (shortcode) {
-            console.log('📮 postId로 shortcode 찾음:', props.postId, '→', shortcode);
-            return shortcode;
-          }
-        }
-        
-        if (props?.mediaId) {
-          const shortcode = window.INSTAGRAM_MEDIA_TRACKER?.fbIdMap[props.mediaId];
-          if (shortcode) {
-            console.log('🎬 mediaId로 shortcode 찾음:', props.mediaId, '→', shortcode);
-            return shortcode;
-          }
-        }
-        
-        if (props?.post?.code) {
-          console.log('📋 post.code로 shortcode 찾음:', props.post.code);
-          return props.post.code;
-        }
-      }
-      
-      element = element.parentElement;
-    }
-    
     return null;
   },
   
-  getReactPropsFromElement(element) {
-    if (!element) return null;
-    
-    // 1. 기본 React 속성 검사
-    for (let prop in element) {
-      if (prop.startsWith("__reactProps$")) {
-        console.log('✅ __reactProps$ 발견:', prop);
-        return element[prop];
-      }
-      if (prop.startsWith("__reactInternalInstance")) {
-        console.log('✅ __reactInternalInstance 발견:', prop);
-        return element[prop];
-      }
-      if (prop.startsWith("__reactFiber")) {
-        console.log('✅ __reactFiber 발견:', prop);
-        return element[prop];
-      }
-    }
-    
-    // 2. Object.getOwnPropertyDescriptors로 숨겨진 속성 검사
-    try {
-      const descriptors = Object.getOwnPropertyDescriptors(element);
-      for (const key in descriptors) {
-        if (key.startsWith('__react') || key.startsWith('_react')) {
-          console.log('✅ 숨겨진 React 속성 발견:', key);
-          return element[key];
-        }
-      }
-    } catch (e) {}
-    
-    // 3. getOwnPropertyNames로 더 깊은 검사
-    try {
-      const propNames = Object.getOwnPropertyNames(element);
-      for (const name of propNames) {
-        if (name.startsWith('__react') || name.startsWith('_react')) {
-          console.log('✅ 깊은 React 속성 발견:', name);
-          return element[name];
-        }
-      }
-      
-      // 모든 키 로깅 (최대 10개만)
-      const allKeys = propNames.slice(0, 10);
-      console.log('🔍 Element의 속성들 (처음 10개):', allKeys);
-      
-    } catch (e) {}
-    
-    return null;
-  },
   
-  findShortcodeInProps(props, depth = 0) {
-    if (depth > 5 || !props || typeof props !== 'object') return null;
-    
-    // 1. videoFBID로 shortcode 찾기 (Instagram downloader 방식)
-    const loggingData = props.loggingMetaData?.coreVideoPlayerMetaData;
-    if (loggingData?.videoFBID) {
-      console.log('🎯 videoFBID 발견:', loggingData.videoFBID);
-      
-      // Media Tracker에서 이 FBID로 shortcode 찾기
-      if (window.INSTAGRAM_MEDIA_TRACKER) {
-        const shortcode = window.INSTAGRAM_MEDIA_TRACKER.fbIdMap[loggingData.videoFBID];
-        if (shortcode) {
-          console.log('✅ FBID로 shortcode 발견:', shortcode);
-          return shortcode;
-        }
-      }
-    }
-    
-    // 2. 직접 shortcode 찾기 (fallback)
-    if (props.code && typeof props.code === 'string' && props.code.match(/^[A-Za-z0-9_-]+$/)) {
-      return props.code;
-    }
-    
-    // 3. children에서 재귀 검색
-    if (props.children && typeof props.children === 'object') {
-      const result = this.findShortcodeInProps(props.children, depth + 1);
-      if (result) return result;
-    }
-    
-    // 4. 다른 키들에서 재귀 검색
-    for (const key in props) {
-      if (typeof props[key] === 'object' && key !== 'children' && key !== 'loggingMetaData') {
-        const result = this.findShortcodeInProps(props[key], depth + 1);
-        if (result) return result;
-      }
-    }
-    
-    return null;
-  },
   
   extractShortcodeFromContainer(container) {
     // 1. 컨테이너 내부에서 링크 요소 찾기
