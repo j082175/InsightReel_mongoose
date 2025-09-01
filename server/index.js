@@ -174,7 +174,9 @@ app.post('/api/process-video', async (req, res) => {
         } else {
           ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
         }
-        const analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, metadata);
+        // metadata에 platform 정보 추가
+        const enrichedMetadata = { ...metadata, platform };
+        const analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, enrichedMetadata);
         
         // AI 분석에서 오류가 발생한 경우 시트 저장 중단
         if (analysis.aiError && analysis.aiError.occurred) {
@@ -374,7 +376,9 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
         } else {
           ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
         }
-        const analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, metadata);
+        // metadata에 platform 정보 추가
+        const enrichedMetadata = { ...metadata, platform };
+        const analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, enrichedMetadata);
         
         // AI 분석에서 오류가 발생한 경우 시트 저장 중단
         if (analysis.aiError && analysis.aiError.occurred) {
