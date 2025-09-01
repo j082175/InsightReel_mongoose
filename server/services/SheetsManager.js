@@ -105,7 +105,7 @@ class SheetsManager {
                 title: '영상 목록',
                 gridProperties: {
                   rowCount: 1000,
-                  columnCount: 15
+                  columnCount: 17
                 }
               }
             },
@@ -147,13 +147,13 @@ class SheetsManager {
 
   async setupHeaders() {
     const headers = [
-      '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리',
-      '키워드', '분석내용', '좋아요', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
+      '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
+      '키워드', '분석내용', '좋아요', '댓글수', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
     ];
 
     await this.sheets.spreadsheets.values.update({
       spreadsheetId: this.spreadsheetId,
-      range: `${await this.getFirstSheetName()}!A1:O1`,
+      range: `${await this.getFirstSheetName()}!A1:Q1`,
       valueInputOption: 'RAW',
       resource: {
         values: [headers]
@@ -172,7 +172,7 @@ class SheetsManager {
                 startRowIndex: 0,
                 endRowIndex: 1,
                 startColumnIndex: 0,
-                endColumnIndex: 15
+                endColumnIndex: 17
               },
               cell: {
                 userEnteredFormat: {
@@ -201,7 +201,7 @@ class SheetsManager {
 
       const currentHeaders = currentHeaderResponse.data.values?.[0] || [];
       const expectedHeaders = [
-        '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리',
+        '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
         '키워드', '분석내용', '좋아요', '댓글수', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
       ];
 
@@ -228,7 +228,7 @@ class SheetsManager {
         // 헤더 업데이트
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
-          range: `${sheetName}!A1:O1`,
+          range: `${sheetName}!A1:Q1`,
           valueInputOption: 'RAW',
           resource: {
             values: [expectedHeaders]
@@ -265,7 +265,7 @@ class SheetsManager {
                     startRowIndex: 0,
                     endRowIndex: 1,
                     startColumnIndex: 0,
-                    endColumnIndex: 15  // A1:O1만 헤더 스타일 적용
+                    endColumnIndex: 17  // A1:Q1까지 헤더 스타일 적용
                   },
                   cell: {
                     userEnteredFormat: {
@@ -347,7 +347,30 @@ class SheetsManager {
         ServerLogger.info(`📅 처리 날짜 사용 (업로드 날짜 없음): ${timestamp} -> ${displayDate}`);
       }
 
-      // 데이터 행 구성 (댓글수 컬럼 추가)
+      // 동적 카테고리 모드 확인
+      const isDynamicMode = process.env.USE_DYNAMIC_CATEGORIES === 'true';
+      let fullCategoryPath = '';
+      let categoryDepth = 0;
+      
+      if (isDynamicMode && analysis.fullPath) {
+        // 동적 카테고리 모드: AI가 생성한 전체 경로 사용
+        fullCategoryPath = analysis.fullPath;
+        categoryDepth = analysis.depth || 0;
+        ServerLogger.info(`🎯 동적 카테고리 데이터: ${fullCategoryPath} (깊이: ${categoryDepth})`);
+      } else {
+        // 기존 모드: 대카테고리 > 중카테고리 형식으로 구성
+        const mainCat = analysis.mainCategory || '미분류';
+        const middleCat = analysis.middleCategory || '미분류';
+        if (middleCat && middleCat !== '미분류') {
+          fullCategoryPath = `${mainCat} > ${middleCat}`;
+          categoryDepth = 2;
+        } else {
+          fullCategoryPath = mainCat;
+          categoryDepth = 1;
+        }
+      }
+
+      // 데이터 행 구성 (동적 카테고리 컬럼 포함)
       const rowData = [
         rowNumber,                                    // 번호
         displayDate,                                 // 일시 (업로드 날짜 우선)
@@ -355,6 +378,8 @@ class SheetsManager {
         metadata.author || '',                       // 계정 (Instagram URL 형식)
         analysis.mainCategory || '미분류',            // 대카테고리
         analysis.middleCategory || '미분류',          // 중카테고리
+        fullCategoryPath,                            // 전체카테고리경로 (동적)
+        categoryDepth,                               // 카테고리깊이
         analysis.keywords?.join(', ') || '',         // 키워드
         analysis.content || '',                      // 분석내용
         metadata.likes || '0',                       // 좋아요
@@ -369,10 +394,10 @@ class SheetsManager {
       // 시트 행 수가 부족하면 확장
       await this.ensureSheetCapacity(sheetName, nextRow);
 
-      // 스프레드시트에 데이터 추가 (댓글수 컬럼 추가로 O→P로 변경)
+      // 스프레드시트에 데이터 추가 (동적 카테고리 컬럼 포함 P1까지)
       await this.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A${nextRow}:P${nextRow}`,
+        range: `${sheetName}!A${nextRow}:Q${nextRow}`,
         valueInputOption: 'RAW',
         resource: {
           values: [rowData]
@@ -382,7 +407,8 @@ class SheetsManager {
       // 통계 업데이트
       await this.updateStatistics();
 
-      ServerLogger.info(`✅ 구글 시트에 데이터 저장 완료: 행 ${nextRow}`);
+      const modeInfo = isDynamicMode ? '동적 카테고리' : '기존 모드';
+      ServerLogger.info(`✅ 구글 시트에 데이터 저장 완료 (${modeInfo}): 행 ${nextRow}`);
       
       return {
         success: true,
@@ -402,7 +428,7 @@ class SheetsManager {
       const sheetName = await this.getFirstSheetName();
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A2:O`  // 헤더 제외
+        range: `${sheetName}!A2:Q`  // 헤더 제외 (Q까지 확장)
       });
 
       const data = response.data.values || [];
@@ -471,7 +497,7 @@ class SheetsManager {
       const sheetName = await this.getFirstSheetName();
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A2:O${limit + 1}`
+        range: `${sheetName}!A2:Q${limit + 1}`
       });
 
       const data = response.data.values || [];
@@ -480,16 +506,19 @@ class SheetsManager {
         timestamp: row[1],
         platform: row[2],
         account: row[3],                        // 계정
-        mainCategory: row[4],                   // 설명 컬럼 제거로 인덱스 -1
-        middleCategory: row[5],
-        keywords: row[6]?.split(', ') || [],
-        content: row[8],                        // 분석내용
-        likes: row[9],
-        hashtags: row[10]?.split(' ') || [],
-        url: row[11],
-        filename: row[12],
-        confidence: row[13],
-        source: row[14]
+        mainCategory: row[4],                   // 대카테고리
+        middleCategory: row[5],                 // 중카테고리
+        fullCategoryPath: row[6],               // 전체카테고리경로
+        categoryDepth: row[7],                  // 카테고리깊이
+        keywords: row[8]?.split(', ') || [],    // 키워드
+        content: row[9],                        // 분석내용
+        likes: row[10],                         // 좋아요
+        comments: row[11],                      // 댓글수
+        hashtags: row[12]?.split(' ') || [],    // 해시태그
+        url: row[13],                           // URL
+        filename: row[14],                      // 파일경로
+        confidence: row[15],                    // 신뢰도
+        source: row[16]                         // 분석상태
       }));
     } catch (error) {
       throw new Error(`데이터 조회 실패: ${error.message}`);

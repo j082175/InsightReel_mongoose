@@ -1,4 +1,5 @@
 const { ServerLogger } = require('../utils/logger');
+const DynamicCategoryManager = require('./DynamicCategoryManager');
 
 /**
  * AI 프롬프트 동적 생성 클래스
@@ -6,6 +7,8 @@ const { ServerLogger } = require('../utils/logger');
 class PromptBuilder {
   constructor(categoryManager) {
     this.categoryManager = categoryManager;
+    this.dynamicCategoryManager = new DynamicCategoryManager();
+    this.useDynamicCategories = process.env.USE_DYNAMIC_CATEGORIES === 'true';
   }
 
   /**
@@ -27,6 +30,12 @@ class PromptBuilder {
    * 단일 프레임 분석 프롬프트 생성
    */
   buildSingleFramePrompt(metadata) {
+    // 동적 카테고리 모드인 경우
+    if (this.useDynamicCategories) {
+      return this.dynamicCategoryManager.buildDynamicCategoryPrompt(metadata);
+    }
+    
+    // 기존 2단계 카테고리 모드
     const platform = metadata.platform || '소셜미디어';
     const categoryStructure = this.buildCategoryStructure();
     const mainCategories = this.categoryManager.getMainCategories();
@@ -62,6 +71,15 @@ ${categoryStructure}
    * 다중 프레임 분석 프롬프트 생성
    */
   buildMultipleFramesPrompt(frameCount, metadata) {
+    // 동적 카테고리 모드인 경우
+    if (this.useDynamicCategories) {
+      const dynamicPrompt = this.dynamicCategoryManager.buildDynamicCategoryPrompt(metadata);
+      // 다중 프레임용으로 약간 수정
+      return dynamicPrompt.replace('영상을 분석하여', `${frameCount}개 프레임으로 구성된 영상을 분석하여`)
+        .replace('콘텐츠 정보:', `이 ${frameCount}개의 이미지들은 같은 비디오에서 시간순으로 추출된 프레임들입니다. 전체적인 흐름과 내용을 파악하여 분석해주세요.\n\n콘텐츠 정보:`);
+    }
+    
+    // 기존 2단계 카테고리 모드
     const platform = metadata.platform || '소셜미디어';
     const categoryStructure = this.buildCategoryStructure();
     const mainCategories = this.categoryManager.getMainCategories();

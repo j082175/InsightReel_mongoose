@@ -2,9 +2,14 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { ServerLogger } = require('../utils/logger');
+const DynamicCategoryManager = require('./DynamicCategoryManager');
 
 class AIAnalyzer {
   constructor() {
+    
+    // 동적 카테고리 시스템 초기화
+    this.dynamicCategoryManager = new DynamicCategoryManager();
+    this.useDynamicCategories = process.env.USE_DYNAMIC_CATEGORIES === 'true';
     
     // Gemini 설정
     this.useGemini = process.env.USE_GEMINI === 'true';
@@ -144,6 +149,15 @@ class AIAnalyzer {
     ServerLogger.info('📁 썸네일 경로들:', thumbnailPaths);
     ServerLogger.info('📋 메타데이터:', JSON.stringify(metadata, null, 2));
     
+    // 동적 카테고리 모드인지 확인
+    if (this.useDynamicCategories) {
+      ServerLogger.info('🚀 동적 카테고리 모드 사용', null, 'AI');
+      return await this.analyzeDynamicCategories(thumbnailPaths, metadata);
+    }
+    
+    // 기존 2단계 카테고리 분석
+    ServerLogger.info('📊 기존 2단계 카테고리 모드 사용', null, 'AI');
+    
     // URL 기반 기본 카테고리 추론 (일관성 확보)
     const urlBasedCategory = this.inferCategoryFromUrl(metadata.url);
     ServerLogger.info('🎯 URL 기반 카테고리 추론:', urlBasedCategory);
@@ -166,6 +180,140 @@ class AIAnalyzer {
       // 폴백: URL 기반 분석 사용
       return this.createAnalysisFromUrl(urlBasedCategory, metadata);
     }
+  }
+
+  /**
+   * 동적 카테고리 분석 (새로운 시스템)
+   */
+  async analyzeDynamicCategories(thumbnailPaths, metadata) {
+    ServerLogger.info('🚀 동적 카테고리 분석 시작', null, 'AI');
+    
+    try {
+      // 동적 프롬프트 생성
+      const dynamicPrompt = this.dynamicCategoryManager.buildDynamicCategoryPrompt(metadata);
+      ServerLogger.info('📝 동적 프롬프트 생성 완료', null, 'AI');
+      
+      let aiResponse = null;
+      
+      // 프레임 수에 따른 분석 방법 선택
+      if (Array.isArray(thumbnailPaths) && thumbnailPaths.length > 1) {
+        // 다중 프레임 분석
+        ServerLogger.info(`🎬 다중 프레임 동적 분석: ${thumbnailPaths.length}개`);
+        aiResponse = await this.queryDynamicMultiFrame(dynamicPrompt, thumbnailPaths);
+      } else {
+        // 단일 프레임 분석
+        const singlePath = Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths;
+        ServerLogger.info(`📸 단일 프레임 동적 분석: ${singlePath}`);
+        const imageBase64 = await this.encodeImageToBase64(singlePath);
+        aiResponse = await this.queryGemini(dynamicPrompt, imageBase64);
+      }
+      
+      if (!aiResponse) {
+        throw new Error('AI 응답을 받지 못했습니다');
+      }
+      
+      // 동적 카테고리 응답 처리
+      const result = this.dynamicCategoryManager.processDynamicCategoryResponse(aiResponse, metadata);
+      
+      ServerLogger.info('✅ 동적 카테고리 분석 완료:', {
+        mainCategory: result.mainCategory,
+        fullPath: result.fullPath,
+        depth: result.depth,
+        confidence: result.confidence
+      });
+      
+      return {
+        content: result.fullPath, // 호환성을 위해 fullPath를 content로 설정
+        mainCategory: result.mainCategory,
+        middleCategory: result.categoryPath[1] || '일반', // 호환성을 위해 두 번째 레벨을 middle로 설정
+        fullCategoryPath: result.fullPath,
+        categoryPath: result.categoryPath,
+        categoryDepth: result.depth,
+        keywords: result.keywords,
+        hashtags: result.hashtags,
+        confidence: result.confidence,
+        source: result.source,
+        isDynamicCategory: true
+      };
+      
+    } catch (error) {
+      ServerLogger.error('동적 카테고리 분석 실패:', error);
+      
+      // 폴백: 기본 카테고리 사용
+      const fallback = this.dynamicCategoryManager.getFallbackCategory(metadata);
+      return {
+        content: fallback.fullPath,
+        mainCategory: fallback.mainCategory,
+        middleCategory: fallback.categoryPath[1] || '일반',
+        fullCategoryPath: fallback.fullPath,
+        categoryPath: fallback.categoryPath,
+        categoryDepth: fallback.depth,
+        keywords: fallback.keywords,
+        hashtags: fallback.hashtags,
+        confidence: fallback.confidence,
+        source: 'dynamic-fallback',
+        isDynamicCategory: true,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * 다중 프레임 동적 분석
+   */
+  async queryDynamicMultiFrame(prompt, thumbnailPaths) {
+    const maxRetries = 3;
+    const retryDelays = [10000, 10000, 10000];
+    
+    // 모든 이미지를 Base64로 인코딩
+    const imageContents = [];
+    for (const imagePath of thumbnailPaths) {
+      const imageBase64 = await this.encodeImageToBase64(imagePath);
+      imageContents.push({
+        inlineData: {
+          data: imageBase64,
+          mimeType: "image/jpeg"
+        }
+      });
+    }
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        ServerLogger.info(`🔮 동적 다중 프레임 Gemini 호출 (시도 ${attempt + 1}/${maxRetries})`);
+        
+        const result = await this.geminiModel.generateContent([
+          prompt,
+          ...imageContents
+        ]);
+        
+        const response = await result.response;
+        const text = response.text();
+        
+        ServerLogger.info('✅ 동적 다중 프레임 응답 성공');
+        return text;
+        
+      } catch (error) {
+        ServerLogger.error(`동적 다중 프레임 에러 (시도 ${attempt + 1}/${maxRetries}):`, error.message);
+        
+        // 재시도 불가능한 오류들
+        if (error.message.includes('API key') || 
+            error.message.includes('authentication') ||
+            error.message.includes('permission') ||
+            error.message.includes('quota')) {
+          break;
+        }
+        
+        if (attempt === maxRetries - 1) {
+          throw error;
+        }
+        
+        const delay = retryDelays[attempt];
+        ServerLogger.info(`⏳ ${delay/1000}초 후 재시도...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    throw new Error('모든 재시도 실패');
   }
 
   async analyzeSingleFrame(thumbnailPath, urlBasedCategory, metadata) {
