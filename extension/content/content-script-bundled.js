@@ -288,47 +288,25 @@ window.INSTAGRAM_UI_SYSTEM = {
     
     // 디버그 모드 상태에 따라 초기 표시 설정
     const isDebugMode = window._instagramDebugMode || false;
-    debugOverlay.textContent = isDebugMode ? '✅ 디버그' : '🔍 디버그';
-    debugOverlay.style.background = isDebugMode ? 'rgba(76, 175, 80, 0.8)' : 'rgba(25, 118, 210, 0.8)';
+    debugOverlay.textContent = '⚪ 더미';
+    debugOverlay.style.background = 'rgba(128, 128, 128, 0.8)';
     
     // 호버 효과
     debugOverlay.addEventListener('mouseenter', () => {
       debugOverlay.style.transform = 'scale(1.05)';
-      debugOverlay.style.background = isDebugMode ? 'rgba(76, 175, 80, 0.9)' : 'rgba(25, 118, 210, 0.9)';
+      debugOverlay.style.background = 'rgba(128, 128, 128, 0.9)';
     });
     
     debugOverlay.addEventListener('mouseleave', () => {
       debugOverlay.style.transform = 'scale(1)';
-      debugOverlay.style.background = isDebugMode ? 'rgba(76, 175, 80, 0.8)' : 'rgba(25, 118, 210, 0.8)';
+      debugOverlay.style.background = 'rgba(128, 128, 128, 0.8)';
     });
     
-    // 클릭 이벤트
+    // 클릭 이벤트 (더미 - 기능 없음)
     debugOverlay.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      
-      // 전역 디버그 모드 토글
-      window._instagramDebugMode = !window._instagramDebugMode;
-      const debugMode = window._instagramDebugMode;
-      
-      if (debugMode) {
-        // 디버그 모드 활성화
-        document.querySelectorAll('.debug-overlay-btn').forEach(btn => {
-          btn.style.background = 'rgba(76, 175, 80, 0.8)';
-          btn.textContent = '✅ 디버그';
-        });
-        // 즉시 디버그 시각화 시작
-        this.startDebugVisualization();
-        console.log('🐛 디버그 모드 활성화됨');
-      } else {
-        // 디버그 모드 비활성화
-        this.clearDebugVisuals();
-        document.querySelectorAll('.debug-overlay-btn').forEach(btn => {
-          btn.style.background = 'rgba(25, 118, 210, 0.8)';
-          btn.textContent = '🔍 디버그';
-        });
-        console.log('🐛 디버그 모드 비활성화됨');
-      }
+      console.log('⚪ 더미 버튼 클릭됨 (기능 없음)');
     });
     
     container.appendChild(debugOverlay);
