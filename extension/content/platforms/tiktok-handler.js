@@ -310,6 +310,9 @@ export class TikTokHandler extends BasePlatformHandler {
       // 해시태그 추출
       const hashtags = Utils.extractHashtags(caption);
       
+      // 업로드 날짜 추출
+      const uploadDate = this.extractUploadDate();
+      
       // TikTok 특화 정보
       const duration = this.getVideoDuration(videoContainer);
       const isLive = this.checkIfLive(videoContainer);
@@ -319,6 +322,7 @@ export class TikTokHandler extends BasePlatformHandler {
         caption: caption.trim(),
         likes: likes.trim(),
         hashtags,
+        uploadDate,
         duration,
         isLive,
         timestamp: new Date().toISOString(),
@@ -330,6 +334,175 @@ export class TikTokHandler extends BasePlatformHandler {
         timestamp: new Date().toISOString(),
         platform: CONSTANTS.PLATFORMS.TIKTOK
       };
+    }
+  }
+
+  /**
+   * TikTok 업로드 날짜 추출
+   * @returns {string|null} ISO 날짜 문자열 또는 null
+   */
+  extractUploadDate() {
+    try {
+      // TikTok 날짜 표시 위치들
+      const dateSelectors = [
+        'time[datetime]',
+        'time[title]',
+        '[data-e2e="video-desc"] time',
+        '[data-e2e="browse-video-desc"] time',
+        'div[data-e2e="video-meta"] time',
+        'span[data-e2e="video-publish-date"]'
+      ];
+
+      // 방법 1: datetime 속성이 있는 time 요소
+      for (const selector of dateSelectors) {
+        const timeElement = document.querySelector(selector);
+        if (timeElement) {
+          // datetime 속성 우선
+          if (timeElement.dateTime || timeElement.getAttribute('datetime')) {
+            const datetime = timeElement.dateTime || timeElement.getAttribute('datetime');
+            const uploadDate = new Date(datetime).toISOString();
+            this.log('info', `TikTok 업로드 날짜 추출 성공 (datetime): ${datetime} -> ${uploadDate}`);
+            return uploadDate;
+          }
+          
+          // title 속성 확인
+          if (timeElement.title) {
+            try {
+              const parsedDate = new Date(timeElement.title);
+              if (!isNaN(parsedDate.getTime())) {
+                const uploadDate = parsedDate.toISOString();
+                this.log('info', `TikTok 업로드 날짜 추출 성공 (title): ${timeElement.title} -> ${uploadDate}`);
+                return uploadDate;
+              }
+            } catch (e) {}
+          }
+
+          // innerText에서 상대적 시간 파싱
+          const timeText = timeElement.innerText.trim();
+          const parsedDate = this.parseRelativeDate(timeText);
+          if (parsedDate) {
+            const uploadDate = parsedDate.toISOString();
+            this.log('info', `TikTok 업로드 날짜 추출 성공 (상대시간): ${timeText} -> ${uploadDate}`);
+            return uploadDate;
+          }
+        }
+      }
+
+      // 방법 2: 상대적 시간 텍스트를 전체 문서에서 검색
+      const relativeTimeSelectors = [
+        'span', 'div', 'a'
+      ];
+
+      for (const selector of relativeTimeSelectors) {
+        const elements = document.querySelectorAll(selector);
+        for (const element of elements) {
+          const text = element.innerText.trim();
+          // "1일 전", "2주 전", "3개월 전" 패턴 확인
+          if (this.isRelativeTimePattern(text)) {
+            const parsedDate = this.parseRelativeDate(text);
+            if (parsedDate) {
+              const uploadDate = parsedDate.toISOString();
+              this.log('info', `TikTok 업로드 날짜 추출 성공 (패턴매칭): ${text} -> ${uploadDate}`);
+              return uploadDate;
+            }
+          }
+        }
+      }
+
+      this.log('warn', 'TikTok 업로드 날짜를 찾을 수 없음');
+      return null;
+
+    } catch (error) {
+      this.log('error', 'TikTok 업로드 날짜 추출 실패', error);
+      return null;
+    }
+  }
+
+  /**
+   * 상대적 시간 패턴 확인
+   */
+  isRelativeTimePattern(text) {
+    const patterns = [
+      /^\d+분\s*전$/,
+      /^\d+시간\s*전$/,
+      /^\d+일\s*전$/,
+      /^\d+주\s*전$/,
+      /^\d+개월\s*전$/,
+      /^\d+년\s*전$/,
+      /^\d+\s*minutes?\s*ago$/i,
+      /^\d+\s*hours?\s*ago$/i,
+      /^\d+\s*days?\s*ago$/i,
+      /^\d+\s*weeks?\s*ago$/i,
+      /^\d+\s*months?\s*ago$/i,
+      /^\d+\s*years?\s*ago$/i
+    ];
+    return patterns.some(pattern => pattern.test(text));
+  }
+
+  /**
+   * 상대적 시간 텍스트를 Date 객체로 변환
+   */
+  parseRelativeDate(timeText) {
+    try {
+      const now = new Date();
+      
+      // 한국어 패턴
+      const koreanPatterns = [
+        { pattern: /(\d+)분\s*전/, unit: 'minutes' },
+        { pattern: /(\d+)시간\s*전/, unit: 'hours' },
+        { pattern: /(\d+)일\s*전/, unit: 'days' },
+        { pattern: /(\d+)주\s*전/, unit: 'weeks' },
+        { pattern: /(\d+)개월\s*전/, unit: 'months' },
+        { pattern: /(\d+)년\s*전/, unit: 'years' }
+      ];
+
+      // 영어 패턴
+      const englishPatterns = [
+        { pattern: /(\d+)\s*minutes?\s*ago/i, unit: 'minutes' },
+        { pattern: /(\d+)\s*hours?\s*ago/i, unit: 'hours' },
+        { pattern: /(\d+)\s*days?\s*ago/i, unit: 'days' },
+        { pattern: /(\d+)\s*weeks?\s*ago/i, unit: 'weeks' },
+        { pattern: /(\d+)\s*months?\s*ago/i, unit: 'months' },
+        { pattern: /(\d+)\s*years?\s*ago/i, unit: 'years' }
+      ];
+
+      const allPatterns = [...koreanPatterns, ...englishPatterns];
+
+      for (const { pattern, unit } of allPatterns) {
+        const match = timeText.match(pattern);
+        if (match) {
+          const amount = parseInt(match[1]);
+          const date = new Date(now);
+          
+          switch (unit) {
+            case 'minutes':
+              date.setMinutes(date.getMinutes() - amount);
+              break;
+            case 'hours':
+              date.setHours(date.getHours() - amount);
+              break;
+            case 'days':
+              date.setDate(date.getDate() - amount);
+              break;
+            case 'weeks':
+              date.setDate(date.getDate() - (amount * 7));
+              break;
+            case 'months':
+              date.setMonth(date.getMonth() - amount);
+              break;
+            case 'years':
+              date.setFullYear(date.getFullYear() - amount);
+              break;
+          }
+          
+          return date;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      this.log('error', 'TikTok 상대적 시간 파싱 실패', { timeText, error });
+      return null;
     }
   }
 

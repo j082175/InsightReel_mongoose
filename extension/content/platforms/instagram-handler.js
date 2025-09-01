@@ -49,13 +49,16 @@ export class InstagramHandler extends BasePlatformHandler {
    * 현재 포스트의 메타데이터 추출
    */
   extractPostMetadata() {
+    console.log('🔍 extractPostMetadata 함수 시작!');
+    this.log('info', '🔍 extractPostMetadata 함수 시작');
     try {
       const metadata = {
         author: '',
         caption: '',
         likes: '0',
         comments: '0',
-        hashtags: []
+        hashtags: [],
+        uploadDate: null
       };
 
       // 작성자 추출
@@ -104,7 +107,8 @@ export class InstagramHandler extends BasePlatformHandler {
         caption: metadata.caption.substring(0, 50) + '...',
         likes: metadata.likes,
         comments: metadata.comments,
-        hashtags: metadata.hashtags
+        hashtags: metadata.hashtags,
+        uploadDate: metadata.uploadDate
       });
       
       return metadata;
@@ -140,6 +144,11 @@ export class InstagramHandler extends BasePlatformHandler {
         this.log('warn', '액션 섹션을 찾을 수 없음, 전체 문서에서 검색');
         actionSection = document;
       }
+
+      // 업로드 날짜 추출 (좋아요/댓글 수와 함께)
+      this.log('info', '📅 업로드 날짜 추출 시작...', { author: metadata.author });
+      this.extractUploadDate(metadata);
+      this.log('info', '📅 업로드 날짜 추출 완료', { uploadDate: metadata.uploadDate });
 
       // 방법 1: aria-label을 이용한 정확한 좋아요 수 추출
       const likeSelectors = [
@@ -203,6 +212,237 @@ export class InstagramHandler extends BasePlatformHandler {
 
     } catch (error) {
       this.log('error', '좋아요/댓글 수 추출 실패', error);
+    }
+  }
+
+  /**
+   * 업로드 날짜 추출 (IG Sorter 데이터 우선 활용)
+   */
+  extractUploadDate(metadata) {
+    this.log('info', '🔍 extractUploadDate 함수 시작', { author: metadata.author });
+    try {
+      // 방법 1: IG Sorter 블록 데이터에서 날짜 추출
+      const igSorterDate = this.getIGSorterUploadDate(metadata.author);
+      if (igSorterDate) {
+        metadata.uploadDate = igSorterDate;
+        this.log('info', `업로드 날짜 추출 성공 (IG Sorter): ${igSorterDate}`);
+        return;
+      }
+
+      // 방법 2: Instagram 페이지의 time 요소들
+      const dateSelectors = [
+        'article header time',
+        'article time',
+        'time[datetime]',
+        'time[title]',
+        'header + div time',
+        'article div time'
+      ];
+
+      for (const selector of dateSelectors) {
+        const timeElement = document.querySelector(selector);
+        if (timeElement) {
+          // datetime 속성 우선
+          if (timeElement.dateTime || timeElement.getAttribute('datetime')) {
+            const datetime = timeElement.dateTime || timeElement.getAttribute('datetime');
+            metadata.uploadDate = new Date(datetime).toISOString();
+            this.log('info', `업로드 날짜 추출 성공 (datetime): ${datetime} -> ${metadata.uploadDate}`);
+            return;
+          }
+          
+          // title 속성 확인
+          if (timeElement.title) {
+            try {
+              const parsedDate = new Date(timeElement.title);
+              if (!isNaN(parsedDate.getTime())) {
+                metadata.uploadDate = parsedDate.toISOString();
+                this.log('info', `업로드 날짜 추출 성공 (title): ${timeElement.title} -> ${metadata.uploadDate}`);
+                return;
+              }
+            } catch (e) {}
+          }
+
+          // innerText에서 상대적 시간 파싱 ("1일 전", "2주 전" 등)
+          const timeText = timeElement.innerText.trim();
+          const parsedDate = this.parseRelativeDate(timeText);
+          if (parsedDate) {
+            metadata.uploadDate = parsedDate.toISOString();
+            this.log('info', `업로드 날짜 추출 성공 (상대시간): ${timeText} -> ${metadata.uploadDate}`);
+            return;
+          }
+        }
+      }
+
+      // 방법 3: 상대적 시간 텍스트를 전체 문서에서 검색
+      const relativeTimeSelectors = [
+        'span', 'div', 'a'
+      ];
+
+      for (const selector of relativeTimeSelectors) {
+        const elements = document.querySelectorAll(selector);
+        for (const element of elements) {
+          const text = element.innerText.trim();
+          // "1일 전", "2주 전", "3개월 전" 패턴 확인
+          if (this.isRelativeTimePattern(text)) {
+            const parsedDate = this.parseRelativeDate(text);
+            if (parsedDate) {
+              metadata.uploadDate = parsedDate.toISOString();
+              this.log('info', `업로드 날짜 추출 성공 (패턴매칭): ${text} -> ${metadata.uploadDate}`);
+              return;
+            }
+          }
+        }
+      }
+
+      this.log('warn', '업로드 날짜를 찾을 수 없음');
+
+    } catch (error) {
+      this.log('error', '업로드 날짜 추출 실패', error);
+    }
+  }
+
+  /**
+   * IG Sorter 데이터에서 업로드 날짜 추출
+   * @param {string} username 계정명
+   * @returns {string|null} ISO 날짜 문자열 또는 null
+   */
+  getIGSorterUploadDate(username) {
+    try {
+      this.log('info', `🔍 IG Sorter에서 "${username}" 계정의 업로드 날짜 검색`);
+      
+      if (!username) {
+        this.log('warn', '계정명이 제공되지 않음');
+        return null;
+      }
+
+      // IG Sorter가 생성한 요소들에서 해당 계정의 블록 찾기
+      const allElements = document.querySelectorAll('*');
+      
+      for (const element of allElements) {
+        const text = element.innerText || element.textContent || '';
+        
+        // IG Sorter 블록이고 해당 계정명을 포함하는 경우
+        if (text.includes('IG Sorter') && text.includes(username)) {
+          this.log('info', `📋 IG Sorter 블록 발견: ${text.substring(0, 200)}...`);
+          
+          // 날짜 패턴 찾기 (YYYY-MM-DD 형식)
+          const dateMatches = text.match(/(\d{4}-\d{2}-\d{2})/g);
+          if (dateMatches && dateMatches.length > 0) {
+            const uploadDate = new Date(dateMatches[0]).toISOString();
+            this.log('info', `✅ IG Sorter에서 업로드 날짜 발견: ${dateMatches[0]} -> ${uploadDate}`);
+            return uploadDate;
+          }
+        }
+
+        // 계정명이 포함된 요소에서 날짜 패턴 찾기 (더 넓은 검색)
+        if (text.includes(username)) {
+          const lines = text.split('\n');
+          for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            // YYYY-MM-DD 패턴 찾기
+            if (line.match(/^\d{4}-\d{2}-\d{2}$/)) {
+              const uploadDate = new Date(line).toISOString();
+              this.log('info', `✅ 계정명 주변에서 업로드 날짜 발견: ${line} -> ${uploadDate}`);
+              return uploadDate;
+            }
+          }
+        }
+      }
+
+      this.log('info', `❌ IG Sorter에서 "${username}"의 업로드 날짜를 찾을 수 없음`);
+      return null;
+
+    } catch (error) {
+      this.log('error', 'IG Sorter 업로드 날짜 추출 실패', error);
+      return null;
+    }
+  }
+
+  /**
+   * 상대적 시간 패턴 확인
+   */
+  isRelativeTimePattern(text) {
+    const patterns = [
+      /^\d+분\s*전$/,
+      /^\d+시간\s*전$/,
+      /^\d+일\s*전$/,
+      /^\d+주\s*전$/,
+      /^\d+개월\s*전$/,
+      /^\d+년\s*전$/,
+      /^\d+\s*minutes?\s*ago$/i,
+      /^\d+\s*hours?\s*ago$/i,
+      /^\d+\s*days?\s*ago$/i,
+      /^\d+\s*weeks?\s*ago$/i,
+      /^\d+\s*months?\s*ago$/i,
+      /^\d+\s*years?\s*ago$/i
+    ];
+    return patterns.some(pattern => pattern.test(text));
+  }
+
+  /**
+   * 상대적 시간 텍스트를 Date 객체로 변환
+   */
+  parseRelativeDate(timeText) {
+    try {
+      const now = new Date();
+      
+      // 한국어 패턴
+      const koreanPatterns = [
+        { pattern: /(\d+)분\s*전/, unit: 'minutes' },
+        { pattern: /(\d+)시간\s*전/, unit: 'hours' },
+        { pattern: /(\d+)일\s*전/, unit: 'days' },
+        { pattern: /(\d+)주\s*전/, unit: 'weeks' },
+        { pattern: /(\d+)개월\s*전/, unit: 'months' },
+        { pattern: /(\d+)년\s*전/, unit: 'years' }
+      ];
+
+      // 영어 패턴
+      const englishPatterns = [
+        { pattern: /(\d+)\s*minutes?\s*ago/i, unit: 'minutes' },
+        { pattern: /(\d+)\s*hours?\s*ago/i, unit: 'hours' },
+        { pattern: /(\d+)\s*days?\s*ago/i, unit: 'days' },
+        { pattern: /(\d+)\s*weeks?\s*ago/i, unit: 'weeks' },
+        { pattern: /(\d+)\s*months?\s*ago/i, unit: 'months' },
+        { pattern: /(\d+)\s*years?\s*ago/i, unit: 'years' }
+      ];
+
+      const allPatterns = [...koreanPatterns, ...englishPatterns];
+
+      for (const { pattern, unit } of allPatterns) {
+        const match = timeText.match(pattern);
+        if (match) {
+          const amount = parseInt(match[1]);
+          const date = new Date(now);
+          
+          switch (unit) {
+            case 'minutes':
+              date.setMinutes(date.getMinutes() - amount);
+              break;
+            case 'hours':
+              date.setHours(date.getHours() - amount);
+              break;
+            case 'days':
+              date.setDate(date.getDate() - amount);
+              break;
+            case 'weeks':
+              date.setDate(date.getDate() - (amount * 7));
+              break;
+            case 'months':
+              date.setMonth(date.getMonth() - amount);
+              break;
+            case 'years':
+              date.setFullYear(date.getFullYear() - amount);
+              break;
+          }
+          
+          return date;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      this.log('error', '상대적 시간 파싱 실패', { timeText, error });
+      return null;
     }
   }
 
@@ -1051,6 +1291,8 @@ export class InstagramHandler extends BasePlatformHandler {
    * @returns {Object} 메타데이터
    */
   extractMetadata(post) {
+    console.log('🔍 extractMetadata 함수 시작!', post);
+    this.log('info', '🔍 extractMetadata 함수 시작', { post: !!post });
     if (!post) {
       return { timestamp: new Date().toISOString() };
     }
@@ -1064,7 +1306,8 @@ export class InstagramHandler extends BasePlatformHandler {
         caption: currentMetadata.caption?.substring(0, 50) + '...',
         likes: currentMetadata.likes,
         comments: currentMetadata.comments,
-        hashtags: currentMetadata.hashtags
+        hashtags: currentMetadata.hashtags,
+        uploadDate: currentMetadata.uploadDate
       });
       
       return {
@@ -1073,6 +1316,7 @@ export class InstagramHandler extends BasePlatformHandler {
         likes: currentMetadata.likes,
         comments: currentMetadata.comments,
         hashtags: currentMetadata.hashtags,
+        uploadDate: currentMetadata.uploadDate,
         timestamp: new Date().toISOString()
       };
     } catch (error) {

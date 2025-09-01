@@ -335,10 +335,22 @@ class SheetsManager {
       const nextRow = (lastRowResponse.data.values?.length || 1) + 1;
       const rowNumber = nextRow - 1; // 헤더 제외
 
+      // 업로드 날짜 결정: metadata.uploadDate가 있으면 사용, 없으면 timestamp 사용
+      let displayDate;
+      if (metadata.uploadDate) {
+        // 업로드 날짜는 시간 없이 날짜만 표시
+        const uploadDateOnly = new Date(metadata.uploadDate).toLocaleDateString('ko-KR');
+        displayDate = uploadDateOnly;
+        ServerLogger.info(`📅 업로드 날짜 사용: ${metadata.uploadDate} -> ${displayDate}`);
+      } else {
+        displayDate = new Date(timestamp).toLocaleString('ko-KR');
+        ServerLogger.info(`📅 처리 날짜 사용 (업로드 날짜 없음): ${timestamp} -> ${displayDate}`);
+      }
+
       // 데이터 행 구성 (댓글수 컬럼 추가)
       const rowData = [
         rowNumber,                                    // 번호
-        new Date(timestamp).toLocaleString('ko-KR'), // 일시
+        displayDate,                                 // 일시 (업로드 날짜 우선)
         platform.toUpperCase(),                      // 플랫폼
         metadata.author || '',                       // 계정 (Instagram URL 형식)
         analysis.mainCategory || '미분류',            // 대카테고리

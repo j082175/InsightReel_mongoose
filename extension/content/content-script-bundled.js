@@ -2422,11 +2422,40 @@ window.INSTAGRAM_UI_SYSTEM = {
         return '계정명 없음';
       }
       
-      // IG Sorter 데이터에서 좋아요 수 찾기
+      // IG Sorter 데이터에서 좋아요 수와 날짜 찾기
       console.log(`📡 IG Sorter에서 "${currentUsername}" 검색 시작`);
       const igSorterData = this.getIGSorterLikesCount(currentUsername);
       if (igSorterData) {
-        console.log('✅ IG Sorter에서 좋아요 수 발견:', igSorterData);
+        console.log('✅ IG Sorter에서 데이터 발견:', igSorterData);
+        
+        // 좋아요 수만 반환 (기존 호환성 유지)
+        if (typeof igSorterData === 'object' && igSorterData.likes) {
+          // 날짜 정보를 전역 변수에 임시 저장 (여러 키로 저장하여 안정성 확보)
+          if (igSorterData.uploadDate) {
+            const keysToStore = [];
+            
+            // 1. currentUsername (IG Sorter에서 추출한 계정명)
+            if (currentUsername) {
+              keysToStore.push(currentUsername);
+            }
+            
+            // 2. 현재 URL에서 추출한 실제 계정명 (API 호출과 매칭)
+            const urlMatch = window.location.href.match(/instagram\.com\/([^\/\?]+)(?:\/|$)/);
+            if (urlMatch && urlMatch[1] !== 'reels') {
+              keysToStore.push(urlMatch[1]);
+            }
+            
+            // 모든 키로 날짜 저장 (중복 제거)
+            const uniqueKeys = [...new Set(keysToStore)];
+            for (const key of uniqueKeys) {
+              window[`uploadDate_${key}`] = igSorterData.uploadDate;
+              console.log(`📅 키 "${key}"로 업로드 날짜 저장: ${igSorterData.uploadDate}`);
+            }
+          }
+          return igSorterData.likes;
+        }
+        
+        // 기존 형식 호환성
         return igSorterData;
       }
       
@@ -2515,9 +2544,19 @@ window.INSTAGRAM_UI_SYSTEM = {
               const numbers = block.match(/\d{1,3}(?:,\d{3})*/g);
               console.log(`🔢 "${username}" 블록의 숫자들: ${numbers ? numbers.join(', ') : '없음'}`);
               
+              // 업로드 날짜 추출 (YYYY-MM-DD 패턴)
+              const dateMatches = block.match(/\d{4}-\d{2}-\d{2}/g);
+              const uploadDate = dateMatches && dateMatches.length > 0 ? dateMatches[0] : null;
+              console.log(`📅 "${username}" 블록의 업로드 날짜: ${uploadDate || '없음'}`);
+              
               if (numbers && numbers.length >= 1) {
-                console.log(`✅ "${username}"의 좋아요 수: ${numbers[0]}`);
-                return numbers[0];
+                console.log(`✅ "${username}"의 데이터 - 좋아요: ${numbers[0]}, 날짜: ${uploadDate || '없음'}`);
+                
+                // 좋아요 수와 날짜를 객체로 반환
+                return {
+                  likes: numbers[0],
+                  uploadDate: uploadDate
+                };
               }
             }
           }
@@ -4432,7 +4471,17 @@ class VideoSaver {
               analysisType: 'multi-frame', // 메타데이터도 multi-frame으로 일관성 맞춤
               isUpdate: true,
               urlSource: 'extracted',
-              originalUrl: realVideoUrl !== cleanVideoUrl ? realVideoUrl : undefined
+              originalUrl: realVideoUrl !== cleanVideoUrl ? realVideoUrl : undefined,
+              uploadDate: (() => {
+                if (!metadata.author) return null;
+                
+                // metadata.author에서 계정명 추출 (성공 방법)
+                const usernameMatch = metadata.author.match(/instagram\.com\/([^\/]+)/);
+                const username = usernameMatch ? usernameMatch[1] : metadata.author;
+                const uploadDate = window[`uploadDate_${username}`] || null;
+                console.log(`📅 계정 "${username}"의 업로드 날짜: ${uploadDate}`);
+                return uploadDate;
+              })()
             }
           });
 
@@ -4460,7 +4509,17 @@ class VideoSaver {
             ...metadata,
             analysisId,
             analysisType: 'multi-frame',
-            isUpdate: true
+            isUpdate: true,
+            uploadDate: (() => {
+              if (!metadata.author) return null;
+              
+              // metadata.author에서 계정명 추출 (성공 방법)
+              const usernameMatch = metadata.author.match(/instagram\.com\/([^\/]+)/);
+              const username = usernameMatch ? usernameMatch[1] : metadata.author;
+              const uploadDate = window[`uploadDate_${username}`] || null;
+              console.log(`📅 계정 "${username}"의 업로드 날짜: ${uploadDate}`);
+              return uploadDate;
+            })()
           }
         });
 
@@ -4498,7 +4557,15 @@ class VideoSaver {
           ...metadata,
           analysisId,
           analysisType: 'quick',
-          captureMethod: 'canvas-frame'
+          captureMethod: 'canvas-frame',
+          uploadDate: (() => {
+            if (!metadata.author) return null;
+            const usernameMatch = metadata.author.match(/instagram\.com\/([^\/]+)/);
+            const username = usernameMatch ? usernameMatch[1] : metadata.author;
+            const uploadDate = window[`uploadDate_${username}`] || null;
+            console.log(`📅 계정 "${username}"의 업로드 날짜: ${uploadDate}`);
+            return uploadDate;
+          })()
         }
       });
 
@@ -5062,7 +5129,17 @@ class VideoSaver {
       platform: CONSTANTS.PLATFORMS.INSTAGRAM,
       videoBlob,
       postUrl,
-      metadata
+      metadata: {
+        ...metadata,
+        uploadDate: (() => {
+          if (!metadata.author) return null;
+          const usernameMatch = metadata.author.match(/instagram\.com\/([^\/]+)/);
+          const username = usernameMatch ? usernameMatch[1] : metadata.author;
+          const uploadDate = window[`uploadDate_${username}`] || null;
+          console.log(`📅 계정 "${username}"의 업로드 날짜: ${uploadDate}`);
+          return uploadDate;
+        })()
+      }
     });
   }
 
