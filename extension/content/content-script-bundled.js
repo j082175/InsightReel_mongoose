@@ -1367,7 +1367,7 @@ window.INSTAGRAM_UI_SYSTEM = {
       
       if (mediaInfo && mediaInfo.videoUrl) {
         console.log('📹 미디어 정보 발견:', mediaInfo);
-        this.processVideoAnalysis(mediaInfo, button);
+        await this.processVideoAnalysis(mediaInfo, button);
       } else {
         console.error('❌ 미디어 정보를 찾을 수 없습니다');
         this.resetButton(button, '❌ 실패');
@@ -3002,7 +3002,7 @@ window.INSTAGRAM_UI_SYSTEM = {
     return urlMatch ? (urlMatch[1] || urlMatch[2]) : 'unknown_' + Date.now();
   },
   
-  processVideoAnalysis(mediaInfo, button) {
+  async processVideoAnalysis(mediaInfo, button) {
     // VideoSaver 인스턴스와 연결
     if (typeof window.videoSaver !== 'undefined' && window.videoSaver) {
       console.log('🔗 VideoSaver 인스턴스와 연결됨');
@@ -3024,7 +3024,7 @@ window.INSTAGRAM_UI_SYSTEM = {
       
       console.log('🚀 VideoSaver에 전달할 enhancedMediaInfo:', enhancedMediaInfo);
       
-      this.analyzeWithVideoSaver(enhancedMediaInfo, button);
+      await this.analyzeWithVideoSaver(enhancedMediaInfo, button);
     } else {
       // fallback - 직접 API 호출
       console.log('📡 VideoSaver 없음, 직접 API 호출');
@@ -3032,7 +3032,7 @@ window.INSTAGRAM_UI_SYSTEM = {
     }
   },
   
-  analyzeWithVideoSaver(mediaInfo, button) {
+  async analyzeWithVideoSaver(mediaInfo, button) {
     try {
       // 실제 video element 사용 (metadata.currentVideo가 있으면 우선 사용)
       const actualVideo = mediaInfo.metadata?.currentVideo;
@@ -3060,10 +3060,12 @@ window.INSTAGRAM_UI_SYSTEM = {
         console.log('🔗 virtualPost에 currentVideo 첨부:', actualVideo);
       }
       
-      // VideoSaver의 분석 메소드 호출
-      window.videoSaver.performHybridAnalysisWithProgress(virtualPost, virtualVideo, (phase, status) => {
+      // VideoSaver의 분석 메소드 호출 (서버 연결 에러 처리 포함)
+      await window.videoSaver.performHybridAnalysisWithProgress(virtualPost, virtualVideo, (phase, status) => {
         console.log(`📊 분석 진행상황: ${phase} - ${status}`);
-        if (phase === 'phase1' && status === 'complete') {
+        if (phase === 'error' && status === 'server_offline') {
+          this.resetButton(button, '❌ 서버 오프라인');
+        } else if (phase === 'phase1' && status === 'complete') {
           this.resetButton(button, '⚡ 1단계 완료');
         } else if (phase === 'phase2' && status === 'complete') {
           this.resetButton(button, '✅ 완료');
@@ -3083,7 +3085,20 @@ window.INSTAGRAM_UI_SYSTEM = {
       })
       .catch(error => {
         console.error('❌ VideoSaver 분석 실패:', error);
-        this.resetButton(button, '❌ 실패');
+        
+        // 서버 연결 에러인지 확인
+        if (error.message.includes('서버 연결 실패') || error.message.includes('Failed to fetch')) {
+          this.resetButton(button, '❌ 서버 오프라인');
+          
+          // UI 알림 표시
+          const uiManager = window.videoSaver?.uiManager;
+          if (uiManager && uiManager.showNotification) {
+            uiManager.showNotification('❌ 서버 연결이 끊어졌습니다', 'error', 4000);
+          }
+        } else {
+          this.resetButton(button, '❌ 실패');
+        }
+        
         setTimeout(() => {
           this.resetButton(button, '🔍 분석');
         }, 3000);
@@ -4064,6 +4079,37 @@ class VideoSaver {
   async performHybridAnalysisWithProgress(post, video, progressCallback = null) {
     Utils.log('info', '🔄 하이브리드 영상 분석 시작');
     
+    // 서버 연결 상태 먼저 확인
+    try {
+      const healthResponse = await fetch(`${CONSTANTS.SERVER_URL}/health`, {
+        method: 'GET',
+        timeout: 2000
+      });
+      
+      if (!healthResponse.ok) {
+        throw new Error('서버 응답 오류');
+      }
+    } catch (error) {
+      Utils.log('error', '❌ 서버에 연결할 수 없습니다. 분석을 중단합니다.', error);
+      
+      // 사용자에게 알림 표시
+      const uiManager = window.videoSaver?.uiManager || this.uiManager;
+      if (uiManager && uiManager.showNotification) {
+        uiManager.showNotification(
+          '❌ 서버가 연결되지 않았습니다. 로컬 서버를 시작해주세요.', 
+          'error',
+          5000
+        );
+      }
+      
+      // 진행 상황 콜백이 있으면 실패 상태 전달
+      if (progressCallback) {
+        progressCallback('error', 'server_offline');
+      }
+      
+      throw new Error('서버 연결 실패');
+    }
+    
     const postUrl = window.location.href;
     const metadata = this.extractInstagramMetadata(post);
     
@@ -4099,7 +4145,7 @@ class VideoSaver {
     
     const analysisId = `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    // 서버 설정 확인 - Gemini 사용 여부
+    // 서버 설정 확인 - Gemini 사용 여부 (서버 연결이 확인된 후)
     let useGemini = false;
     try {
       const healthResponse = await fetch(`${CONSTANTS.SERVER_URL}/health`);
