@@ -155,7 +155,7 @@ app.post('/api/process-video', async (req, res) => {
       var thumbnailPaths = Array.isArray(singleThumbnail) ? singleThumbnail : [singleThumbnail];
     }
     
-    // 3단계: AI 분석
+    // 3단계: AI 분석 (먼저 실행)
     if (thumbnailPaths.length > 1) {
       ServerLogger.info(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
     } else {
@@ -163,8 +163,42 @@ app.post('/api/process-video', async (req, res) => {
     }
     const analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, metadata);
     
-    // 4단계: 구글 시트 저장
-    ServerLogger.info('4. 구글 시트 저장 중...');
+    // AI 분석에서 오류가 발생한 경우 시트 저장 중단
+    if (analysis.aiError && analysis.aiError.occurred) {
+      ServerLogger.error('❌ AI 분석 실패로 인한 처리 중단:', analysis.aiError.message);
+      
+      // 통계는 업데이트하지 않음
+      ServerLogger.info('⚠️ AI 분석 오류로 인해 시트 저장을 건너뜁니다');
+      
+      const responseData = {
+        processing: {
+          platform,
+          analysisType,
+          frameCount: analysis.frameCount || 1,
+          skippedSaving: true
+        },
+        analysis: {
+          category: analysis.category,
+          mainCategory: analysis.mainCategory,
+          middleCategory: analysis.middleCategory,
+          keywords: analysis.keywords,
+          hashtags: analysis.hashtags,
+          confidence: analysis.confidence
+        },
+        files: {
+          videoPath,
+          thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
+          thumbnailPaths: thumbnailPaths
+        },
+        aiError: analysis.aiError
+      };
+
+      ResponseHandler.success(res, responseData, '비디오 처리 완료 (AI 분석 오류로 시트 저장 생략)');
+      return;
+    }
+    
+    // 4단계: 구글 시트 저장 (AI 분석 성공 시에만)
+    ServerLogger.info('4️⃣ 구글 시트 저장 중...');
     await sheetsManager.saveVideoData({
       platform,
       postUrl,
@@ -295,7 +329,7 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
       var thumbnailPaths = Array.isArray(singleThumbnail) ? singleThumbnail : [singleThumbnail];
     }
     
-    // 3단계: AI 분석
+    // 3단계: AI 분석 (먼저 실행)
     if (thumbnailPaths.length > 1) {
       ServerLogger.info(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
     } else {
@@ -303,7 +337,42 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     }
     const analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, metadata);
     
-    // 4단계: 구글 시트 저장
+    // AI 분석에서 오류가 발생한 경우 시트 저장 중단
+    if (analysis.aiError && analysis.aiError.occurred) {
+      ServerLogger.error('❌ AI 분석 실패로 인한 처리 중단:', analysis.aiError.message);
+      
+      // 통계는 업데이트하지 않음
+      ServerLogger.info('⚠️ AI 분석 오류로 인해 시트 저장을 건너뜁니다');
+      
+      const responseData = {
+        processing: {
+          platform,
+          analysisType,
+          frameCount: analysis.frameCount || 1,
+          skippedSaving: true,
+          source: 'blob-upload'
+        },
+        analysis: {
+          category: analysis.category,
+          mainCategory: analysis.mainCategory,
+          middleCategory: analysis.middleCategory,
+          keywords: analysis.keywords,
+          hashtags: analysis.hashtags,
+          confidence: analysis.confidence
+        },
+        files: {
+          videoPath,
+          thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
+          thumbnailPaths: thumbnailPaths
+        },
+        aiError: analysis.aiError
+      };
+
+      ResponseHandler.success(res, responseData, '비디오 처리 완료 (AI 분석 오류로 시트 저장 생략)');
+      return;
+    }
+    
+    // 4단계: 구글 시트 저장 (AI 분석 성공 시에만)
     ServerLogger.info('4️⃣ 구글 시트 저장 중...');
     await sheetsManager.saveVideoData({
       platform,

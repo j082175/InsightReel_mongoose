@@ -332,39 +332,72 @@ class AIAnalyzer {
 
 
   async queryGemini(prompt, imageBase64) {
-    try {
-      ServerLogger.info('AI 요청 시작 - 모델: Gemini');
-      ServerLogger.info('AI 프롬프트 길이:', prompt.length);
-      
-      // base64 이미지를 Gemini 형식으로 변환
-      const imagePart = {
-        inlineData: {
-          data: imageBase64,
-          mimeType: 'image/jpeg'
+    const maxRetries = 3;
+    const retryDelays = [10000, 10000, 10000]; // 10초, 10초, 10초
+    
+    // 🧪 디버깅: 의도적 실패 테스트 (환경변수로 제어)
+    const forceFailure = process.env.DEBUG_FORCE_GEMINI_FAILURE === 'true';
+    if (forceFailure) {
+      ServerLogger.info('🧪 [DEBUG] 의도적 실패 모드 활성화 - 503 Service Unavailable 시뮬레이션');
+    }
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        ServerLogger.info(`AI 요청 시작 - 모델: Gemini (시도 ${attempt + 1}/${maxRetries})`);
+        ServerLogger.info('AI 프롬프트 길이:', prompt.length);
+        
+        // 🧪 디버깅: 의도적 실패 시뮬레이션
+        if (forceFailure) {
+          const error = new Error('[503 Service Unavailable] The model is overloaded. Please try again later. (DEBUG MODE)');
+          error.status = 503;
+          throw error;
         }
-      };
-      
-      const result = await this.geminiModel.generateContent([
-        prompt,
-        imagePart
-      ]);
-      
-      const response = await result.response;
-      const text = response.text();
-      
-      ServerLogger.info('AI 응답 상태: 성공');
-      ServerLogger.info('AI 응답 길이:', text?.length || 0);
-      
-      return text;
-    } catch (error) {
-      ServerLogger.error('Gemini 호출 에러:', error.message);
-      if (error.message.includes('quota')) {
-        throw new Error('Gemini API 할당량 초과');
+        
+        // base64 이미지를 Gemini 형식으로 변환
+        const imagePart = {
+          inlineData: {
+            data: imageBase64,
+            mimeType: 'image/jpeg'
+          }
+        };
+        
+        const result = await this.geminiModel.generateContent([
+          prompt,
+          imagePart
+        ]);
+        
+        const response = await result.response;
+        const text = response.text();
+        
+        ServerLogger.info('AI 응답 상태: 성공');
+        ServerLogger.info('AI 응답 길이:', text?.length || 0);
+        
+        return text;
+        
+      } catch (error) {
+        ServerLogger.error(`Gemini 호출 에러 (시도 ${attempt + 1}/${maxRetries}):`, error.message);
+        
+        // 재시도 불가능한 오류들
+        if (error.message.includes('API key') || 
+            error.message.includes('authentication') ||
+            error.message.includes('permission') ||
+            error.message.includes('quota')) {
+          ServerLogger.error('재시도 불가능한 오류, 즉시 실패 처리');
+          throw error;
+        }
+        
+        // 마지막 시도인 경우 오류 던짐
+        if (attempt === maxRetries - 1) {
+          ServerLogger.error('모든 재시도 실패, 최종 오류 발생');
+          throw error;
+        }
+        
+        // 재시도 가능한 오류 (503 Service Unavailable, 네트워크 오류 등)
+        const delay = retryDelays[attempt];
+        ServerLogger.info(`⏳ ${delay/1000}초 후 재시도... (${attempt + 2}/${maxRetries})`);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
-      if (error.message.includes('API key')) {
-        throw new Error('Gemini API 키 오류');
-      }
-      throw error;
     }
   }
 
@@ -1153,53 +1186,83 @@ JSON 형식으로 답변:
   async analyzeMultipleFramesWithGemini(thumbnailPaths, urlBasedCategory, metadata) {
     ServerLogger.info('🔮 Gemini 다중 프레임 분석 시작:', thumbnailPaths.length + '개');
     
-    try {
-      // 모든 이미지를 Base64로 인코딩
-      const imageContents = [];
-      for (const imagePath of thumbnailPaths) {
-        const imageBase64 = await this.encodeImageToBase64(imagePath);
-        imageContents.push({
-          inlineData: {
-            data: imageBase64,
-            mimeType: "image/jpeg"
-          }
-        });
+    const maxRetries = 3;
+    const retryDelays = [10000, 10000, 10000]; // 10초, 10초, 10초
+    
+    // 모든 이미지를 Base64로 인코딩 (재시도 전에 미리 처리)
+    const imageContents = [];
+    for (const imagePath of thumbnailPaths) {
+      const imageBase64 = await this.encodeImageToBase64(imagePath);
+      imageContents.push({
+        inlineData: {
+          data: imageBase64,
+          mimeType: "image/jpeg"
+        }
+      });
+    }
+    
+    // 다중 프레임 분석 프롬프트 생성
+    const prompt = this.buildGeminiMultiFramePrompt(metadata, thumbnailPaths.length);
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        ServerLogger.info(`🔮 Gemini API 호출 시작... (시도 ${attempt + 1}/${maxRetries})`);
+        
+        // Gemini API 호출
+        const result = await this.geminiModel.generateContent([
+          prompt,
+          ...imageContents
+        ]);
+        
+        const response = await result.response;
+        const aiResponse = response.text();
+        
+        ServerLogger.info('🔮 Gemini AI 원본 응답:', aiResponse);
+        
+        // 응답 파싱 및 결과 생성
+        const analysis = this.parseGeminiResponse(aiResponse, urlBasedCategory, metadata);
+        analysis.frameCount = thumbnailPaths.length;
+        analysis.analysisMethod = 'gemini-multi-frame';
+        
+        ServerLogger.info('✅ Gemini 다중 프레임 분석 완료:', analysis);
+        return analysis;
+        
+      } catch (error) {
+        ServerLogger.error(`Gemini 다중 프레임 분석 에러 (시도 ${attempt + 1}/${maxRetries}):`, error.message);
+        
+        // 재시도 불가능한 오류들
+        if (error.message.includes('API key') || 
+            error.message.includes('authentication') ||
+            error.message.includes('permission') ||
+            error.message.includes('quota')) {
+          ServerLogger.error('재시도 불가능한 오류, 즉시 실패 처리');
+          break; // for 루프 탈출하여 catch 블록으로
+        }
+        
+        // 마지막 시도인 경우 오류 던짐
+        if (attempt === maxRetries - 1) {
+          ServerLogger.error('모든 재시도 실패, 최종 오류 발생');
+          throw error; // catch 블록으로
+        }
+        
+        // 재시도 가능한 오류 (503 Service Unavailable, 네트워크 오류 등)
+        const delay = retryDelays[attempt];
+        ServerLogger.info(`⏳ ${delay/1000}초 후 재시도... (${attempt + 2}/${maxRetries})`);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
-      
-      // 다중 프레임 분석 프롬프트 생성
-      const prompt = this.buildGeminiMultiFramePrompt(metadata, thumbnailPaths.length);
-      
-      ServerLogger.info('🔮 Gemini API 호출 시작...');
-      
-      // Gemini API 호출
-      const result = await this.geminiModel.generateContent([
-        prompt,
-        ...imageContents
-      ]);
-      
-      const response = await result.response;
-      const aiResponse = response.text();
-      
-      ServerLogger.info('🔮 Gemini AI 원본 응답:', aiResponse);
-      
-      // 응답 파싱 및 결과 생성
-      const analysis = this.parseGeminiResponse(aiResponse, urlBasedCategory, metadata);
-      analysis.frameCount = thumbnailPaths.length;
-      analysis.analysisMethod = 'gemini-multi-frame';
-      
-      ServerLogger.info('✅ Gemini 다중 프레임 분석 완료:', analysis);
-      return analysis;
-      
-    } catch (error) {
-      ServerLogger.error('❌ Gemini 다중 프레임 분석 실패:', error);
-      
-      // 상세한 오류 정보 생성
-      const errorDetails = this.generateGeminiErrorDetails(error);
-      
-      // 기본 분석 결과 반환
-      const categoryResult = this.determineFinalCategory('', '', urlBasedCategory, metadata);
-      
-      return {
+    }
+    
+    // 모든 재시도 실패 또는 재시도 불가능한 오류 발생 시
+    ServerLogger.error('❌ Gemini 다중 프레임 분석 최종 실패');
+    
+    // 상세한 오류 정보 생성
+    const errorDetails = this.generateGeminiErrorDetails(new Error('다중 프레임 분석 실패'));
+    
+    // 기본 분석 결과 반환
+    const categoryResult = this.determineFinalCategory('', '', urlBasedCategory, metadata);
+    
+    return {
         category: categoryResult.fullCategory,
         mainCategory: categoryResult.mainCategory,
         middleCategory: categoryResult.middleCategory,
@@ -1221,7 +1284,6 @@ JSON 형식으로 답변:
         }
       };
     }
-  }
 
   buildGeminiMultiFramePrompt(metadata, frameCount) {
     const { caption = '', hashtags = [], author = '' } = metadata;
@@ -1266,6 +1328,7 @@ JSON 형식으로 답변:
   "hashtags": ["#관련", "#해시태그", "#다섯개", "#선택", "#하세요"],
   "confidence": 0.95
 }`;
+
   }
 
   parseGeminiResponse(aiResponse, urlBasedCategory, metadata) {
