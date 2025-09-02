@@ -4,6 +4,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
 const { ServerLogger } = require('../utils/logger');
+const youtubeBatchProcessor = require('./YouTubeBatchProcessor');
 
 // YouTube 카테고리 매핑
 const YOUTUBE_CATEGORIES = {
@@ -475,7 +476,18 @@ class VideoProcessor {
     throw new Error('유효하지 않은 YouTube URL입니다.');
   }
 
-  // YouTube 비디오 정보 수집
+  // YouTube 비디오 정보 수집 (배치 처리)
+  async getYouTubeVideoInfoBatch(videoUrl, options = {}) {
+    try {
+      ServerLogger.info(`📦 배치 처리로 YouTube 정보 요청: ${videoUrl}`);
+      return await youtubeBatchProcessor.addToBatch(videoUrl, options);
+    } catch (error) {
+      ServerLogger.error('배치 처리 YouTube 정보 수집 실패:', error);
+      throw error;
+    }
+  }
+
+  // YouTube 비디오 정보 수집 (기존 즉시 처리)
   async getYouTubeVideoInfo(videoUrl) {
     try {
       if (!this.youtubeApiKey) {
