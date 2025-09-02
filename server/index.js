@@ -235,6 +235,22 @@ app.post('/api/process-video', async (req, res) => {
           if (useAI && analysisType !== 'none') {
             ServerLogger.info('1️⃣ YouTube 썸네일로 AI 분석 중...');
             analysis = await aiAnalyzer.analyzeVideo(youtubeInfo.thumbnailUrl, enrichedMetadata);
+            
+            // YouTube 카테고리와 AI 카테고리 일치율 비교
+            if (youtubeInfo.category && analysis.mainCategory) {
+              const matchResult = videoProcessor.compareCategories(
+                youtubeInfo.category,
+                analysis.mainCategory,
+                analysis.middleCategory,
+                analysis.fullCategoryPath
+              );
+              
+              // 분석 결과에 일치율 정보 추가
+              analysis.categoryMatch = matchResult;
+              
+              ServerLogger.info(`📊 카테고리 일치율: ${matchResult.matchScore}% (${matchResult.matchType})`);
+              ServerLogger.info(`📋 일치 사유: ${matchResult.matchReason}`);
+            }
           } else {
             ServerLogger.info('1️⃣ AI 분석 건너뜀 (사용자 설정)');
             analysis = {
@@ -244,7 +260,8 @@ app.post('/api/process-video', async (req, res) => {
               keywords: [],
               hashtags: [],
               confidence: 0,
-              frameCount: 1
+              frameCount: 1,
+              categoryMatch: null
             };
           }
           

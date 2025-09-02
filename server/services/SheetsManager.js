@@ -212,8 +212,8 @@ class SheetsManager {
       return [
         '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
         '키워드', '분석내용', '좋아요', '댓글수', '조회수', '영상길이',
-        '구독자수', '채널동영상수', '수익화여부', '카테고리ID', '라이센스', '화질', '언어', '태그',
-        'URL', '파일경로', '신뢰도', '분석상태'
+        '구독자수', '채널동영상수', '수익화여부', 'YouTube카테고리', '라이센스', '화질', '언어', '태그',
+        'URL', '파일경로', '신뢰도', '분석상태', '카테고리일치율', '일치유형', '일치사유'
       ];
     } else {
       // Instagram, TikTok 등 - 조회수 제외
@@ -257,7 +257,7 @@ class SheetsManager {
         metadata.subscribers || '0',                // 구독자수
         metadata.channelVideos || '0',             // 채널동영상수
         metadata.monetized || 'N',                 // 수익화여부
-        metadata.categoryId || '',                 // 카테고리ID
+        metadata.category || '',                   // YouTube 카테고리
         metadata.license || 'youtube',             // 라이센스
         metadata.definition || 'sd',               // 화질
         metadata.language || '',                   // 언어
@@ -265,7 +265,10 @@ class SheetsManager {
         postUrl,                                   // URL
         videoPath ? path.basename(videoPath) : 'YouTube URL',  // 파일경로
         (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
-        analysis.aiModel || 'AI'                   // 분석상태 (AI 모델 정보)
+        analysis.aiModel || 'AI',                  // 분석상태 (AI 모델 정보)
+        analysis.categoryMatch ? `${analysis.categoryMatch.matchScore}%` : '', // 카테고리일치율
+        analysis.categoryMatch ? analysis.categoryMatch.matchType : '',        // 일치유형
+        analysis.categoryMatch ? analysis.categoryMatch.matchReason : ''       // 일치사유
       ];
     } else {
       // Instagram, TikTok - 조회수 제외

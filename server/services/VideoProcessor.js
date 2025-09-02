@@ -24,6 +24,25 @@ const YOUTUBE_CATEGORIES = {
   "29": "비영리/사회운동"
 };
 
+// YouTube 카테고리와 AI 카테고리 매핑 (유사도 기반)
+const YOUTUBE_TO_AI_CATEGORY_MAPPING = {
+  "영화/애니메이션": ["엔터테인먼트", "영화", "애니메이션", "영상"],
+  "자동차/교통": ["차량", "자동차", "교통", "운송"],
+  "음악": ["음악", "노래", "뮤직", "가요"],
+  "애완동물/동물": ["자연", "동물", "펫", "애완동물"],
+  "스포츠": ["스포츠", "운동", "체육"],
+  "여행/이벤트": ["라이프스타일", "여행", "문화"],
+  "게임": ["엔터테인먼트", "게임"],
+  "인물/블로그": ["라이프스타일", "일상", "개인"],
+  "코미디": ["엔터테인먼트", "코미디", "재미"],
+  "엔터테인먼트": ["엔터테인먼트", "오락"],
+  "뉴스/정치": ["사회", "뉴스", "정치"],
+  "노하우/스타일": ["뷰티", "패션", "라이프스타일"],
+  "교육": ["문화/교육/기술", "교육", "학습"],
+  "과학기술": ["문화/교육/기술", "기술", "과학"],
+  "비영리/사회운동": ["사회", "공익"]
+};
+
 // ffprobe 경로 설정
 let ffprobePath;
 try {
@@ -711,6 +730,124 @@ class VideoProcessor {
         ServerLogger.info(`🗑️ 삭제됨: ${file}`);
       }
     });
+  }
+
+  /**
+   * YouTube 카테고리와 AI 분석 카테고리 일치율 계산
+   * @param {string} youtubeCategory - YouTube 공식 카테고리
+   * @param {string} aiMainCategory - AI 분석 대카테고리
+   * @param {string} aiMiddleCategory - AI 분석 중카테고리
+   * @param {string} aiFullPath - AI 분석 전체 경로
+   * @returns {Object} 일치율 분석 결과
+   */
+  compareCategories(youtubeCategory, aiMainCategory, aiMiddleCategory, aiFullPath) {
+    try {
+      if (!youtubeCategory || !aiMainCategory) {
+        return {
+          matchScore: 0,
+          matchType: 'no_data',
+          matchReason: '카테고리 정보 부족'
+        };
+      }
+
+      const mappedCategories = YOUTUBE_TO_AI_CATEGORY_MAPPING[youtubeCategory] || [];
+      
+      // 1. 완전 일치 검사 (대카테고리)
+      const exactMatch = mappedCategories.find(mapped => 
+        mapped.toLowerCase() === aiMainCategory.toLowerCase()
+      );
+      
+      if (exactMatch) {
+        ServerLogger.info(`🎯 완전 일치: YouTube "${youtubeCategory}" ↔ AI "${aiMainCategory}"`);
+        return {
+          matchScore: 100,
+          matchType: 'exact',
+          matchReason: `완전 일치: ${youtubeCategory} → ${aiMainCategory}`
+        };
+      }
+
+      // 2. 부분 일치 검사 (중카테고리 포함)
+      const partialMatch = mappedCategories.find(mapped => 
+        mapped.toLowerCase().includes(aiMainCategory.toLowerCase()) ||
+        aiMainCategory.toLowerCase().includes(mapped.toLowerCase()) ||
+        (aiMiddleCategory && (
+          mapped.toLowerCase().includes(aiMiddleCategory.toLowerCase()) ||
+          aiMiddleCategory.toLowerCase().includes(mapped.toLowerCase())
+        ))
+      );
+
+      if (partialMatch) {
+        ServerLogger.info(`🔍 부분 일치: YouTube "${youtubeCategory}" ↔ AI "${aiMainCategory}/${aiMiddleCategory}"`);
+        return {
+          matchScore: 70,
+          matchType: 'partial',
+          matchReason: `부분 일치: ${youtubeCategory} → ${partialMatch} (AI: ${aiMainCategory})`
+        };
+      }
+
+      // 3. 키워드 기반 유사도 검사
+      const fullPath = aiFullPath || `${aiMainCategory} > ${aiMiddleCategory}`;
+      const keywordMatch = this.calculateKeywordSimilarity(youtubeCategory, fullPath);
+      
+      if (keywordMatch.score > 30) {
+        ServerLogger.info(`📝 키워드 일치: YouTube "${youtubeCategory}" ↔ AI "${fullPath}" (${keywordMatch.score}%)`);
+        return {
+          matchScore: keywordMatch.score,
+          matchType: 'keyword',
+          matchReason: `키워드 유사도: ${keywordMatch.matchedWords.join(', ')}`
+        };
+      }
+
+      // 4. 불일치
+      ServerLogger.warn(`❌ 카테고리 불일치: YouTube "${youtubeCategory}" ↔ AI "${aiMainCategory}"`);
+      return {
+        matchScore: 0,
+        matchType: 'mismatch',
+        matchReason: `불일치: YouTube(${youtubeCategory}) vs AI(${aiMainCategory})`
+      };
+
+    } catch (error) {
+      ServerLogger.error('카테고리 비교 실패:', error);
+      return {
+        matchScore: 0,
+        matchType: 'error',
+        matchReason: '비교 중 오류 발생'
+      };
+    }
+  }
+
+  /**
+   * 키워드 기반 유사도 계산
+   * @param {string} youtubeCategory - YouTube 카테고리
+   * @param {string} aiPath - AI 분석 경로
+   * @returns {Object} 유사도 결과
+   */
+  calculateKeywordSimilarity(youtubeCategory, aiPath) {
+    const youtubeWords = youtubeCategory.toLowerCase().split(/[\/\s]+/);
+    const aiWords = aiPath.toLowerCase().split(/[>\s\/]+/);
+    
+    const matchedWords = [];
+    let matchCount = 0;
+    
+    youtubeWords.forEach(ytWord => {
+      if (ytWord.length > 1) { // 1글자 제외
+        aiWords.forEach(aiWord => {
+          if (aiWord.includes(ytWord) || ytWord.includes(aiWord)) {
+            matchedWords.push(ytWord);
+            matchCount++;
+          }
+        });
+      }
+    });
+
+    const totalWords = Math.max(youtubeWords.length, aiWords.length);
+    const score = totalWords > 0 ? Math.round((matchCount / totalWords) * 100) : 0;
+    
+    return {
+      score,
+      matchedWords: [...new Set(matchedWords)],
+      totalWords
+    };
   }
 }
 
