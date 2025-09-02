@@ -1,27 +1,130 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { ServerLogger } = require('./logger');
 
 /**
  * Gemini API 사용량 추적 시스템
  */
 class UsageTracker {
-  constructor() {
+  constructor(apiKey = null) {
     this.usageFilePath = path.join(__dirname, '../../config/gemini-usage.json');
-    this.quotas = {
-      'gemini-2.5-pro': {
-        rpm: 5,
-        tpm: 250000,
-        rpd: 100
-      },
-      'gemini-2.5-flash': {
-        rpm: 10,
-        tpm: 250000,
-        rpd: 250
-      }
-    };
+    this.quotasFilePath = path.join(__dirname, '../../config/api-quotas.json');
+    this.apiKey = apiKey || process.env.GOOGLE_API_KEY;
+    this.currentApiKeyHash = this.apiKey ? this.hashApiKey(this.apiKey) : null;
+    
+    // 현재 API 키 자동 등록
+    this.autoRegisterCurrentApiKey();
+    
+    // API 키 기반 할당량 로드
+    this.quotas = this.loadQuotasForCurrentApiKey();
     
     this.dailyUsage = this.loadTodayUsage();
+  }
+
+  /**
+   * API 키 해시 생성 (보안을 위해)
+   */
+  hashApiKey(apiKey) {
+    if (!apiKey) return null;
+    return crypto.createHash('sha256').update(apiKey).digest('hex').substring(0, 16);
+  }
+
+  /**
+   * 현재 API 키에 맞는 할당량 로드
+   */
+  loadQuotasForCurrentApiKey() {
+    try {
+      // 기본 할당량
+      const defaultQuotas = {
+        'gemini-2.5-pro': { rpm: 5, tpm: 250000, rpd: 50 },
+        'gemini-2.5-flash': { rpm: 10, tpm: 250000, rpd: 250 }
+      };
+
+      // 할당량 파일이 없으면 기본값 반환
+      if (!fs.existsSync(this.quotasFilePath)) {
+        ServerLogger.info('📊 할당량 설정 파일이 없어 기본값 사용', null, 'USAGE');
+        return defaultQuotas;
+      }
+
+      const quotaConfig = JSON.parse(fs.readFileSync(this.quotasFilePath, 'utf8'));
+      
+      // API 키 해시가 있고 해당 설정이 있으면 사용
+      if (this.currentApiKeyHash && quotaConfig.api_keys && quotaConfig.api_keys[this.currentApiKeyHash]) {
+        const customQuotas = quotaConfig.api_keys[this.currentApiKeyHash];
+        ServerLogger.info(`📊 API 키별 할당량 로드: ${customQuotas.name || 'Unknown'}`, null, 'USAGE');
+        return {
+          'gemini-2.5-pro': customQuotas['gemini-2.5-pro'] || defaultQuotas['gemini-2.5-pro'],
+          'gemini-2.5-flash': customQuotas['gemini-2.5-flash'] || defaultQuotas['gemini-2.5-flash']
+        };
+      }
+
+      // 기본 설정이 있으면 사용
+      if (quotaConfig.default) {
+        ServerLogger.info('📊 기본 할당량 설정 사용', null, 'USAGE');
+        return quotaConfig.default;
+      }
+
+      // 모든 경우가 실패하면 하드코드된 기본값
+      ServerLogger.info('📊 하드코드된 기본 할당량 사용', null, 'USAGE');
+      return defaultQuotas;
+
+    } catch (error) {
+      ServerLogger.warn(`할당량 설정 로드 실패: ${error.message}, 기본값 사용`, null, 'USAGE');
+      return {
+        'gemini-2.5-pro': { rpm: 5, tpm: 250000, rpd: 50 },
+        'gemini-2.5-flash': { rpm: 10, tpm: 250000, rpd: 250 }
+      };
+    }
+  }
+
+  /**
+   * 현재 API 키를 할당량 설정에 자동 등록
+   */
+  autoRegisterCurrentApiKey() {
+    if (!this.currentApiKeyHash || !this.apiKey) return;
+
+    try {
+      let quotaConfig = {};
+      
+      // 기존 설정 파일 읽기
+      if (fs.existsSync(this.quotasFilePath)) {
+        quotaConfig = JSON.parse(fs.readFileSync(this.quotasFilePath, 'utf8'));
+      }
+
+      // 기본 구조 초기화
+      if (!quotaConfig.default) {
+        quotaConfig.default = {
+          'gemini-2.5-pro': { rpm: 5, tpm: 250000, rpd: 50 },
+          'gemini-2.5-flash': { rpm: 10, tpm: 250000, rpd: 250 }
+        };
+      }
+      
+      if (!quotaConfig.api_keys) {
+        quotaConfig.api_keys = {};
+      }
+
+      // 현재 API 키가 등록되어 있지 않으면 자동 등록
+      if (!quotaConfig.api_keys[this.currentApiKeyHash]) {
+        quotaConfig.api_keys[this.currentApiKeyHash] = {
+          name: `자동등록 API 키 (${this.currentApiKeyHash})`,
+          'gemini-2.5-pro': { rpm: 5, tpm: 250000, rpd: 50 },
+          'gemini-2.5-flash': { rpm: 10, tpm: 250000, rpd: 250 }
+        };
+
+        // 설정 파일에 저장
+        const configDir = path.dirname(this.quotasFilePath);
+        if (!fs.existsSync(configDir)) {
+          fs.mkdirSync(configDir, { recursive: true });
+        }
+        
+        fs.writeFileSync(this.quotasFilePath, JSON.stringify(quotaConfig, null, 2));
+        ServerLogger.info(`📊 새로운 API 키 자동 등록: ${this.currentApiKeyHash}`, null, 'USAGE');
+      }
+
+    } catch (error) {
+      ServerLogger.error('API 키 자동 등록 실패:', error, 'USAGE');
+    }
   }
 
   /**
@@ -275,6 +378,53 @@ class UsageTracker {
         !recommendedModel ? '🚨 모든 모델 할당량 소진' : null
       ].filter(Boolean)
     };
+  }
+
+  /**
+   * API 키 정보 조회 (디버그용)
+   */
+  getApiKeyInfo() {
+    return {
+      hasApiKey: !!this.apiKey,
+      apiKeyHash: this.currentApiKeyHash,
+      quotasFile: fs.existsSync(this.quotasFilePath),
+      currentQuotas: this.quotas
+    };
+  }
+
+  /**
+   * 특정 API 키의 할당량 업데이트
+   */
+  updateApiKeyQuotas(apiKeyHash, quotas) {
+    try {
+      let quotaConfig = {};
+      
+      if (fs.existsSync(this.quotasFilePath)) {
+        quotaConfig = JSON.parse(fs.readFileSync(this.quotasFilePath, 'utf8'));
+      }
+
+      if (!quotaConfig.api_keys) {
+        quotaConfig.api_keys = {};
+      }
+
+      quotaConfig.api_keys[apiKeyHash] = {
+        ...quotaConfig.api_keys[apiKeyHash],
+        ...quotas
+      };
+
+      fs.writeFileSync(this.quotasFilePath, JSON.stringify(quotaConfig, null, 2));
+      ServerLogger.info(`📊 API 키 할당량 업데이트: ${apiKeyHash}`, null, 'USAGE');
+
+      // 현재 사용 중인 API 키면 할당량 다시 로드
+      if (apiKeyHash === this.currentApiKeyHash) {
+        this.quotas = this.loadQuotasForCurrentApiKey();
+      }
+
+      return true;
+    } catch (error) {
+      ServerLogger.error('API 키 할당량 업데이트 실패:', error, 'USAGE');
+      return false;
+    }
   }
 }
 

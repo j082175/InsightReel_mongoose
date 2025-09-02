@@ -388,7 +388,7 @@ class SheetsManager {
         postUrl,                                     // URL
         path.basename(videoPath),                    // 파일경로
         (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
-        analysis.source || 'AI'                      // 분석상태
+        analysis.aiModel || 'AI'  // 분석상태 (AI 모델 정보)
       ];
 
       // 시트 행 수가 부족하면 확장

@@ -216,7 +216,7 @@ class DynamicCategoryManager {
   /**
    * AI가 생성한 카테고리 응답 처리
    */
-  processDynamicCategoryResponse(aiResponse, metadata) {
+  processDynamicCategoryResponse(aiResponse, metadata, aiModel = null) {
     try {
       let categoryData = null;
 
@@ -254,6 +254,7 @@ class DynamicCategoryManager {
         content: categoryData.content || categoryData.description || '',  // AI 분석 내용 보존
         confidence: categoryData.confidence || 0.8,
         source: 'dynamic-ai-generated',
+        aiModel: aiModel || 'AI',  // AI 모델 정보 보존
         normalized: true
       };
 

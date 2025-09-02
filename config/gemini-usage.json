@@ -1,16 +1,16 @@
 {
   "2025-09-02": {
-    "pro": 101,
-    "flash": 250,
+    "pro": 0,
+    "flash": 0,
     "proErrors": 0,
     "flashErrors": 0,
-    "lastUpdated": "2025-09-02T02:45:42.157Z"
+    "lastUpdated": "2025-09-02T08:00:00.000Z"
   },
   "2025-09-01": {
-    "pro": 902,
-    "flash": 1,
+    "pro": 3,
+    "flash": 131,
     "proErrors": 0,
     "flashErrors": 0,
-    "lastUpdated": "2025-09-02T05:16:51.700Z"
+    "lastUpdated": "2025-09-02T06:01:09.000Z"
   }
 }

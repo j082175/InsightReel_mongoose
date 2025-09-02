@@ -1,0 +1,42 @@
+{
+  "default": {
+    "gemini-2.5-pro": {
+      "rpm": 5,
+      "tpm": 250000,
+      "rpd": 50
+    },
+    "gemini-2.5-flash": {
+      "rpm": 10,
+      "tpm": 250000,
+      "rpd": 250
+    }
+  },
+  "api_keys": {
+    "example_key_hash": {
+      "name": "예시 API 키",
+      "gemini-2.5-pro": {
+        "rpm": 10,
+        "tpm": 500000,
+        "rpd": 100
+      },
+      "gemini-2.5-flash": {
+        "rpm": 20,
+        "tpm": 500000,
+        "rpd": 500
+      }
+    },
+    "c1e202dc1b293fd0": {
+      "name": "자동등록 API 키 (c1e202dc1b293fd0)",
+      "gemini-2.5-pro": {
+        "rpm": 5,
+        "tpm": 250000,
+        "rpd": 50
+      },
+      "gemini-2.5-flash": {
+        "rpm": 10,
+        "tpm": 250000,
+        "rpd": 250
+      }
+    }
+  }
+}

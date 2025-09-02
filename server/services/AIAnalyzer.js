@@ -344,7 +344,7 @@ class AIAnalyzer {
     ServerLogger.info(`⏱️ 참조 AI 분석 소요시간: ${aiDuration}ms (${(aiDuration / 1000).toFixed(2)}초)`, null, 'SelfLearning');
     
     // 응답 처리
-    const result = this.dynamicCategoryManager.processDynamicCategoryResponse(aiResponse, metadata);
+    const result = this.dynamicCategoryManager.processDynamicCategoryResponse(aiResponse, metadata, this.lastUsedModel);
     result.source = 'self-learning-referenced';
     result.referencePattern = similarPattern.signature;
     result.referenceSimilarity = similarPattern.similarity;
@@ -384,7 +384,7 @@ class AIAnalyzer {
               aiResponse = await this.queryGemini(basePrompt, imageBase64);
             }
             
-            return this.dynamicCategoryManager.processDynamicCategoryResponse(aiResponse, metadata);
+            return this.dynamicCategoryManager.processDynamicCategoryResponse(aiResponse, metadata, this.lastUsedModel);
           } catch (error) {
             ServerLogger.warn(`분석 ${i + j + 1}번 실패: ${error.message}`, null, 'SelfLearning');
             return null;
@@ -450,7 +450,7 @@ class AIAnalyzer {
     
     // 동적 카테고리 응답 처리
     const processStartTime = Date.now();
-    const result = this.dynamicCategoryManager.processDynamicCategoryResponse(aiResponse, metadata);
+    const result = this.dynamicCategoryManager.processDynamicCategoryResponse(aiResponse, metadata, this.lastUsedModel);
     const processEndTime = Date.now();
     const processDuration = processEndTime - processStartTime;
     
@@ -476,7 +476,8 @@ class AIAnalyzer {
       hashtags: result.hashtags,
       confidence: result.confidence,
       source: result.source,
-      isDynamicCategory: true
+      isDynamicCategory: true,
+      aiModel: this.lastUsedModel || 'unknown'
     };
   }
 
@@ -879,15 +880,25 @@ class AIAnalyzer {
 
 
   async queryGemini(prompt, imageBase64) {
+    let modelUsed = 'unknown';
+    
     // Enhanced Multi API Manager 사용 여부 확인 (최우선)
     if (this.useEnhancedMultiApi && this.multiApiManager) {
-      return await this._queryWithEnhancedMultiApi(prompt, imageBase64);
+      const apiConfig = this.multiApiManager.getBestApiConfig();
+      modelUsed = apiConfig.model || 'gemini-multi-api';
+      const result = await this._queryWithEnhancedMultiApi(prompt, imageBase64);
+      this.lastUsedModel = modelUsed;
+      return result;
     }
     // 기존 하이브리드 Gemini 사용 여부 확인 (호환성)
     else if (this.useHybridGemini && this.hybridGemini) {
       try {
         ServerLogger.info('🤖 하이브리드 Gemini 시스템 사용', null, 'AI');
         const result = await this.hybridGemini.generateContent(prompt, imageBase64);
+        
+        // 사용된 모델 추적
+        modelUsed = result.modelUsed || 'gemini-hybrid';
+        this.lastUsedModel = modelUsed;
         
         // 사용량 정보 로깅
         const stats = result.usageStats;
@@ -915,9 +926,13 @@ class AIAnalyzer {
       ServerLogger.info('🧪 [DEBUG] 의도적 실패 모드 활성화 - 503 Service Unavailable 시뮬레이션');
     }
     
+    // 단일 모델 사용
+    modelUsed = 'gemini-2.5-pro';
+    this.lastUsedModel = modelUsed;
+    
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        ServerLogger.info(`AI 요청 시작 - 모델: Gemini 단일 모드 (시도 ${attempt + 1}/${maxRetries})`);
+        ServerLogger.info(`AI 요청 시작 - 모델: ${modelUsed} (단일 모드) (시도 ${attempt + 1}/${maxRetries})`);
         ServerLogger.info('AI 프롬프트 길이:', prompt.length);
         
         // 🧪 디버깅: 의도적 실패 시뮬레이션
@@ -1709,7 +1724,8 @@ JSON 형식으로 답변:
         keywords: aiData.keywords.slice(0, 5),
         hashtags: aiData.hashtags.length > 0 ? aiData.hashtags : this.generateHashtagsFromKeywords(aiData.keywords),
         confidence: aiData.main_category ? 0.9 : 0.6, // AI 카테고리 성공시 높은 신뢰도
-        source: 'gemini'
+        source: 'gemini',
+        aiModel: this.lastUsedModel || 'unknown'
       };
 
       // Gemini 오류 정보가 있으면 추가
