@@ -99,6 +99,26 @@ app.get('/api/stats', (req, res) => {
   }
 });
 
+// Gemini 사용량 통계 조회
+app.get('/api/gemini/usage', (req, res) => {
+  try {
+    const usageStats = aiAnalyzer.getGeminiUsageStats();
+    ResponseHandler.success(res, usageStats, 'Gemini 사용량 통계를 성공적으로 조회했습니다.');
+  } catch (error) {
+    ResponseHandler.serverError(res, error, 'Gemini 사용량 통계 조회 중 오류가 발생했습니다.');
+  }
+});
+
+// Gemini 헬스체크 조회
+app.get('/api/gemini/health', (req, res) => {
+  try {
+    const healthCheck = aiAnalyzer.getGeminiHealthCheck();
+    ResponseHandler.success(res, healthCheck, 'Gemini 헬스체크를 성공적으로 조회했습니다.');
+  } catch (error) {
+    ResponseHandler.serverError(res, error, 'Gemini 헬스체크 조회 중 오류가 발생했습니다.');
+  }
+});
+
 // 구글 시트 연결 테스트
 app.get('/api/test-sheets', async (req, res) => {
   try {
