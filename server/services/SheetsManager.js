@@ -257,7 +257,7 @@ class SheetsManager {
         metadata.subscribers || '0',                // 구독자수
         metadata.channelVideos || '0',             // 채널동영상수
         metadata.monetized || 'N',                 // 수익화여부
-        metadata.category || '',                   // YouTube 카테고리
+        metadata.youtubeCategory || metadata.category || '',  // YouTube 카테고리
         metadata.license || 'youtube',             // 라이센스
         metadata.definition || 'sd',               // 화질
         metadata.language || '',                   // 언어
