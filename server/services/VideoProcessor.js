@@ -240,6 +240,9 @@ class VideoProcessor {
     if (duration <= 30) return 10;     // 30초 이하: 10프레임 (기존 5 → 10)
     if (duration <= 60) return 14;     // 60초 이하: 14프레임 (기존 7 → 14)
     return Math.min(20, Math.ceil(duration / 5)); // 5초당 1프레임, 최대 20개 (기존: 10초당 1개, 최대 10개)
+
+    // 1초마다 1프레임씩 추출 (최대 60프레임)
+    //return Math.min(60, Math.ceil(duration));
   }
 
   calculateFrameIntervals(duration, frameCount) {

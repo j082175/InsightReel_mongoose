@@ -295,6 +295,28 @@ app.get('/api/queue/status', async (req, res) => {
   }
 });
 
+// 자가 학습 카테고리 시스템 통계 조회
+app.get('/api/self-learning/stats', async (req, res) => {
+  try {
+    const AIAnalyzer = require('./services/AIAnalyzer');
+    const aiAnalyzer = new AIAnalyzer();
+    const stats = aiAnalyzer.dynamicCategoryManager.getSelfLearningStats();
+    const systemStats = aiAnalyzer.dynamicCategoryManager.getSystemStats();
+    
+    ResponseHandler.success(res, {
+      selfLearning: stats,
+      system: systemStats,
+      timestamp: new Date().toISOString()
+    }, '자가 학습 통계 조회 성공');
+  } catch (error) {
+    ServerLogger.error('자가 학습 통계 조회 실패', error);
+    ResponseHandler.serverError(res, {
+      ...error,
+      code: 'SELF_LEARNING_STATS_FAILED'
+    }, '자가 학습 통계 조회에 실패했습니다.');
+  }
+});
+
 // 파일 업로드 (테스트용)
 app.post('/api/upload', upload.single('video'), async (req, res) => {
   try {

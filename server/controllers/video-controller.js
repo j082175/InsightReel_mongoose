@@ -374,6 +374,31 @@ class VideoController {
   });
 
   /**
+   * 자가 학습 카테고리 시스템 통계 조회
+   */
+  getSelfLearningStats = ErrorHandler.asyncHandler(async (req, res) => {
+    try {
+      const stats = this.aiAnalyzer.dynamicCategoryManager.getSelfLearningStats();
+      const systemStats = this.aiAnalyzer.dynamicCategoryManager.getSystemStats();
+      
+      res.json({
+        success: true,
+        data: {
+          selfLearning: stats,
+          system: systemStats,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      ServerLogger.error('자가 학습 통계 조회 실패', error, 'VIDEO');
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  /**
    * 테스트 파일 업로드
    */
   uploadTest = ErrorHandler.asyncHandler(async (req, res) => {

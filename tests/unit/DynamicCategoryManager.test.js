@@ -122,6 +122,22 @@ describe('DynamicCategoryManager', () => {
       
       expect(result).toBeNull();
     });
+
+    it('Instagram 플랫폼에서 자연 카테고리를 정규화해야 함', () => {
+      const result = manager.normalizeCategoryPath('자연 > 동물 > 생물학적 특징', 'instagram');
+      
+      expect(result).toBeDefined();
+      expect(result.original).toBe('자연 > 동물 > 생물학적 특징');
+      expect(result.normalized).toBe('자연 > 동물 > 생물학적 특징');
+      expect(result.parts).toEqual(['자연', '동물', '생물학적 특징']);
+      expect(result.depth).toBe(3);
+    });
+
+    it('YouTube 플랫폼에서 자연 카테고리는 유효하지 않아야 함', () => {
+      const result = manager.normalizeCategoryPath('자연 > 동물', 'youtube');
+      
+      expect(result).toBeNull();
+    });
   });
 
   describe('getFallbackCategory', () => {
@@ -152,7 +168,8 @@ describe('DynamicCategoryManager', () => {
       expect(result.source).toBe('fallback-metadata');
     });
 
-    it('키워드가 없으면 엔터테인먼트 카테고리를 반환해야 함', () => {
+    it('키워드가 없으면 플랫폼별 기본 카테고리를 반환해야 함', () => {
+      // YouTube (기본값): 첫 번째 카테고리 = "게임"
       const metadata = {
         caption: '',
         hashtags: []
@@ -160,17 +177,34 @@ describe('DynamicCategoryManager', () => {
 
       const result = manager.getFallbackCategory(metadata);
 
-      expect(result.mainCategory).toBe('엔터테인먼트');
+      expect(result.mainCategory).toBe('게임'); // YouTube 첫 번째 카테고리
       expect(result.middleCategory).toBe('일반');
     });
 
-    it('메타데이터가 비어있어도 기본 카테고리를 반환해야 함', () => {
+    it('메타데이터가 비어있어도 플랫폼별 기본 카테고리를 반환해야 함', () => {
+      // YouTube (기본값): 첫 번째 카테고리 = "게임"
       const result = manager.getFallbackCategory({});
 
-      expect(result.mainCategory).toBe('엔터테인먼트');
-      expect(result.fullPath).toBe('엔터테인먼트 > 일반');
+      expect(result.mainCategory).toBe('게임');
+      expect(result.fullPath).toBe('게임 > 일반');
       expect(result.keywords).toEqual(['영상', '콘텐츠']);
       expect(result.hashtags).toEqual(['#영상', '#콘텐츠']);
+    });
+
+    it('Instagram 플랫폼 기본 카테고리를 반환해야 함', () => {
+      const metadata = { platform: 'instagram' };
+      const result = manager.getFallbackCategory(metadata);
+
+      expect(result.mainCategory).toBe('엔터테인먼트'); // Instagram 첫 번째 카테고리
+      expect(result.middleCategory).toBe('일반');
+    });
+
+    it('TikTok 플랫폼 기본 카테고리를 반환해야 함', () => {
+      const metadata = { platform: 'tiktok' };
+      const result = manager.getFallbackCategory(metadata);
+
+      expect(result.mainCategory).toBe('엔터테인먼트'); // TikTok 첫 번째 카테고리
+      expect(result.middleCategory).toBe('일반');
     });
   });
 

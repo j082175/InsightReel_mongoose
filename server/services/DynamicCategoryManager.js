@@ -10,9 +10,11 @@ class DynamicCategoryManager {
   constructor() {
     this.normalizationRulesPath = path.join(__dirname, '../config/normalization-rules.json');
     this.categoryStatsPath = path.join(__dirname, '../config/category-stats.json');
+    this.verifiedCategoriesPath = path.join(__dirname, '../config/verified-categories.json');
     
     this.loadNormalizationRules();
     this.loadCategoryStats();
+    this.loadVerifiedCategories();
     
     // 플랫폼별 대카테고리 설정
     this.PLATFORM_CATEGORIES = {
@@ -73,6 +75,24 @@ class DynamicCategoryManager {
     } catch (error) {
       ServerLogger.error('카테고리 통계 로드 실패', error, 'DynamicCategoryManager');
       this.initializeCategoryStats();
+    }
+  }
+
+  /**
+   * 검증된 카테고리 로드 (자가 학습 시스템)
+   */
+  loadVerifiedCategories() {
+    try {
+      if (fs.existsSync(this.verifiedCategoriesPath)) {
+        const data = fs.readFileSync(this.verifiedCategoriesPath, 'utf8');
+        this.verifiedCategories = JSON.parse(data);
+      } else {
+        this.initializeVerifiedCategories();
+      }
+      ServerLogger.success(`검증된 카테고리 로드 완료: ${Object.keys(this.verifiedCategories.patterns).length}개 패턴`, null, 'DynamicCategoryManager');
+    } catch (error) {
+      ServerLogger.error('검증된 카테고리 로드 실패', error, 'DynamicCategoryManager');
+      this.initializeVerifiedCategories();
     }
   }
 
@@ -142,18 +162,36 @@ class DynamicCategoryManager {
   }
 
   /**
+   * 검증된 카테고리 초기화 (자가 학습 시스템)
+   */
+  initializeVerifiedCategories() {
+    this.verifiedCategories = {
+      patterns: {}, // 컨텐츠 패턴별 검증된 카테고리
+      metadata: {
+        created: new Date().toISOString(),
+        lastUpdated: new Date().toISOString(),
+        totalPatterns: 0,
+        totalVerifications: 0
+      }
+    };
+    this.saveVerifiedCategories();
+    ServerLogger.info('검증된 카테고리 초기화 완료', null, 'DynamicCategoryManager');
+  }
+
+  /**
    * 동적 카테고리 경로 정규화
    */
-  normalizeCategoryPath(rawPath) {
+  normalizeCategoryPath(rawPath, platform = 'youtube') {
     if (!rawPath || typeof rawPath !== 'string') {
       return null;
     }
 
     const parts = rawPath.split(' > ').map(part => part.trim());
     
-    // 대카테고리 검증
-    if (!this.FIXED_MAIN_CATEGORIES.includes(parts[0])) {
-      ServerLogger.warn(`유효하지 않은 대카테고리: ${parts[0]}`, null, 'DynamicCategoryManager');
+    // 플랫폼별 대카테고리 검증
+    const validCategories = this.getMainCategoriesForPlatform(platform);
+    if (!validCategories.includes(parts[0])) {
+      ServerLogger.warn(`유효하지 않은 대카테고리: ${parts[0]} (플랫폼: ${platform})`, null, 'DynamicCategoryManager');
       return null;
     }
 
@@ -197,10 +235,11 @@ class DynamicCategoryManager {
         return this.getFallbackCategory(metadata);
       }
 
-      // 카테고리 경로 정규화
-      const normalized = this.normalizeCategoryPath(categoryData.full_path);
+      // 카테고리 경로 정규화 (플랫폼 정보 포함)
+      const platform = metadata.platform || 'youtube';
+      const normalized = this.normalizeCategoryPath(categoryData.full_path, platform);
       if (!normalized) {
-        ServerLogger.warn(`카테고리 정규화 실패: ${categoryData.full_path}`, null, 'DynamicCategoryManager');
+        ServerLogger.warn(`카테고리 정규화 실패: ${categoryData.full_path} (플랫폼: ${platform})`, null, 'DynamicCategoryManager');
         return this.getFallbackCategory(metadata);
       }
 
@@ -228,14 +267,18 @@ class DynamicCategoryManager {
    * 폴백 카테고리 생성
    */
   getFallbackCategory(metadata) {
+    // 플랫폼별 적절한 기본 카테고리 선택
+    const platform = metadata.platform || 'youtube';
+    const validCategories = this.getMainCategoriesForPlatform(platform);
+    
     // 메타데이터에서 키워드 추출하여 가장 적합한 대카테고리 선택
     const { caption = '', hashtags = [] } = metadata;
     const text = (caption + ' ' + hashtags.join(' ')).toLowerCase();
 
-    let bestMainCategory = '엔터테인먼트'; // 기본값
+    let bestMainCategory = validCategories[0]; // 첫 번째 카테고리를 기본값으로
 
-    // 간단한 키워드 매칭 (우선순위 순서)
-    const keywordMap = {
+    // 플랫폼별 키워드 매핑
+    const youtubeKeywordMap = {
       '게임': ['게임', 'game', '플레이', '실황', '게이밍'],
       '노하우/스타일': ['요리', '뷰티', '메이크업', '패션', 'DIY', '인테리어', '쿡방', '화장'],
       '영화/애니메이션': ['영화', '드라마', '애니', '예고편', '시네마'],
@@ -253,8 +296,25 @@ class DynamicCategoryManager {
       '코미디': ['코미디', '개그', '웃긴', '재미', '유머']
     };
 
+    const tikTokInstagramKeywordMap = {
+      '엔터테인먼트': ['예능', '밈', '챌린지', '트렌드', '재미', '웃긴'],
+      '뷰티 및 스타일': ['뷰티', '메이크업', '화장', '패션', '스타일', '옷'],
+      '퍼포먼스': ['댄스', '노래', '연주', '공연', '쇼'],
+      '스포츠 및 아웃도어': ['운동', '피트니스', '헬스', '스포츠', '경기', '홈트', '캠핑', '등산'],
+      '사회': ['시사', '뉴스', '정치', '이슈', '사회문제'],
+      '라이프스타일': ['일상', '브이로그', '라이프', '데일리', '생활'],
+      '차량 및 교통': ['자동차', '차', '튜닝', '드라이빙', '바이크'],
+      '재능': ['기술', '스킬', '능력', '재주', 'DIY', '만들기'],
+      '자연': ['동물', '펫', '강아지', '고양이', '반려동물', '자연', '식물', '꽃'],
+      '문화, 교육 및 기술': ['교육', '강의', '학습', '공부', '튜토리얼', '기술', '과학', '문화'],
+      '가족 및 연애': ['가족', '연애', '사랑', '육아', '아이', '부모'],
+      '초자연적 현상 및 공포': ['공포', '호러', '무서운', '귀신', '초자연']
+    };
+
+    const keywordMap = platform === 'youtube' ? youtubeKeywordMap : tikTokInstagramKeywordMap;
+
     for (const [category, keywords] of Object.entries(keywordMap)) {
-      if (keywords.some(keyword => text.includes(keyword))) {
+      if (validCategories.includes(category) && keywords.some(keyword => text.includes(keyword))) {
         bestMainCategory = category;
         break;
       }
@@ -406,6 +466,17 @@ class DynamicCategoryManager {
   }
 
   /**
+   * 검증된 카테고리 저장
+   */
+  saveVerifiedCategories() {
+    try {
+      fs.writeFileSync(this.verifiedCategoriesPath, JSON.stringify(this.verifiedCategories, null, 2), 'utf8');
+    } catch (error) {
+      ServerLogger.error('검증된 카테고리 저장 실패', error, 'DynamicCategoryManager');
+    }
+  }
+
+  /**
    * 고정 대카테고리 목록 반환
    */
   getFixedMainCategories() {
@@ -489,7 +560,262 @@ class DynamicCategoryManager {
       averageDepth: Math.round(avgDepth * 100) / 100,
       normalizationRules: Object.keys(this.normalizationRules.preferred).length,
       synonymGroups: Object.keys(this.normalizationRules.synonyms).length,
+      verifiedPatterns: this.verifiedCategories ? Object.keys(this.verifiedCategories.patterns).length : 0,
       lastUpdated: this.categoryStats.lastUpdated
+    };
+  }
+
+  // ====================================
+  // 자가 학습 카테고리 시스템 (Self-Learning Category System)
+  // ====================================
+
+  /**
+   * 콘텐츠 시그니처 생성 (유사 콘텐츠 식별용)
+   * @param {Object} metadata - 콘텐츠 메타데이터
+   * @returns {string} 콘텐츠 시그니처
+   */
+  generateContentSignature(metadata) {
+    const { caption = '', hashtags = [], platform = 'youtube' } = metadata;
+    
+    // 키워드 추출 및 정규화
+    const text = (caption + ' ' + hashtags.join(' ')).toLowerCase();
+    const words = text.match(/[\w가-힣]+/g) || [];
+    
+    // 의미있는 키워드 추출 (길이 2 이상, 특정 단어들)
+    const meaningfulWords = words
+      .filter(word => word.length >= 2)
+      .filter(word => !['the', 'and', 'or', 'but', '그리고', '하지만', '그런데', '그래서'].includes(word))
+      .slice(0, 10); // 상위 10개만
+    
+    // 정렬하여 일관된 시그니처 생성
+    meaningfulWords.sort();
+    
+    const signature = `${platform}:${meaningfulWords.join(',')}`;
+    return signature;
+  }
+
+  /**
+   * 유사한 검증된 패턴 찾기
+   * @param {string} contentSignature - 콘텐츠 시그니처
+   * @returns {Object|null} 유사한 검증된 카테고리 정보
+   */
+  findSimilarVerifiedPattern(contentSignature) {
+    if (!this.verifiedCategories || !this.verifiedCategories.patterns) {
+      return null;
+    }
+
+    const patterns = this.verifiedCategories.patterns;
+    const [platform, keywords] = contentSignature.split(':');
+    const currentKeywords = keywords.split(',').filter(k => k.length > 0);
+    
+    let bestMatch = null;
+    let bestScore = 0;
+    
+    for (const [patternSignature, verifiedData] of Object.entries(patterns)) {
+      const [patternPlatform, patternKeywords] = patternSignature.split(':');
+      
+      // 플랫폼이 다르면 스킵
+      if (patternPlatform !== platform) continue;
+      
+      const patternKeywordList = patternKeywords.split(',').filter(k => k.length > 0);
+      
+      // 키워드 유사도 계산
+      const intersection = currentKeywords.filter(k => patternKeywordList.includes(k));
+      const union = [...new Set([...currentKeywords, ...patternKeywordList])];
+      const similarity = intersection.length / union.length;
+      
+      // 유사도가 0.3 이상이고 현재 최고 점수보다 높으면 업데이트
+      if (similarity >= 0.3 && similarity > bestScore) {
+        bestScore = similarity;
+        bestMatch = {
+          signature: patternSignature,
+          similarity,
+          verifiedCategory: verifiedData.verifiedCategory,
+          analysisCount: verifiedData.analysisCount,
+          confidence: verifiedData.confidence
+        };
+      }
+    }
+    
+    if (bestMatch) {
+      ServerLogger.info(`✅ 유사 패턴 발견: ${bestMatch.signature} (유사도: ${(bestMatch.similarity * 100).toFixed(1)}%)`, null, 'SelfLearning');
+    }
+    
+    return bestMatch;
+  }
+
+  /**
+   * 새로운 검증된 카테고리 저장
+   * @param {string} contentSignature - 콘텐츠 시그니처
+   * @param {Array} analysisResults - 20번 분석 결과들
+   * @returns {Object} 검증된 카테고리 정보
+   */
+  saveVerifiedCategoryFromAnalysis(contentSignature, analysisResults) {
+    // 카테고리별 투표 집계
+    const votes = {};
+    const validResults = analysisResults.filter(result => result && result.fullPath);
+    
+    for (const result of validResults) {
+      const categoryKey = result.fullPath;
+      if (!votes[categoryKey]) {
+        votes[categoryKey] = {
+          count: 0,
+          examples: []
+        };
+      }
+      votes[categoryKey].count++;
+      votes[categoryKey].examples.push({
+        keywords: result.keywords || [],
+        hashtags: result.hashtags || [],
+        content: result.content || '',
+        confidence: result.confidence || 0
+      });
+    }
+    
+    // 가장 많은 표를 받은 카테고리 선택
+    let bestCategory = null;
+    let maxVotes = 0;
+    
+    for (const [category, voteData] of Object.entries(votes)) {
+      if (voteData.count > maxVotes) {
+        maxVotes = voteData.count;
+        bestCategory = {
+          fullPath: category,
+          count: voteData.count,
+          examples: voteData.examples
+        };
+      }
+    }
+    
+    if (!bestCategory) {
+      ServerLogger.error('검증된 카테고리 생성 실패: 유효한 분석 결과 없음', null, 'SelfLearning');
+      return null;
+    }
+    
+    // 신뢰도 계산 (투표 비율 * 평균 confidence)
+    const voteRatio = bestCategory.count / validResults.length;
+    const avgConfidence = bestCategory.examples.reduce((sum, ex) => sum + ex.confidence, 0) / bestCategory.examples.length;
+    const finalConfidence = voteRatio * avgConfidence;
+    
+    // 검증된 카테고리 저장
+    const verifiedData = {
+      verifiedCategory: {
+        fullPath: bestCategory.fullPath,
+        parts: bestCategory.fullPath.split(' > '),
+        mainCategory: bestCategory.fullPath.split(' > ')[0],
+        middleCategory: bestCategory.fullPath.split(' > ')[1] || '일반'
+      },
+      analysisCount: validResults.length,
+      totalVotes: maxVotes,
+      voteRatio: voteRatio,
+      confidence: finalConfidence,
+      examples: bestCategory.examples.slice(0, 5), // 최대 5개 예시만 저장
+      created: new Date().toISOString(),
+      lastUsed: new Date().toISOString()
+    };
+    
+    this.verifiedCategories.patterns[contentSignature] = verifiedData;
+    this.verifiedCategories.metadata.totalPatterns++;
+    this.verifiedCategories.metadata.totalVerifications++;
+    this.verifiedCategories.metadata.lastUpdated = new Date().toISOString();
+    
+    this.saveVerifiedCategories();
+    
+    ServerLogger.success(`🎯 검증된 카테고리 저장: ${bestCategory.fullPath} (${maxVotes}/${validResults.length}표, 신뢰도: ${(finalConfidence * 100).toFixed(1)}%)`, null, 'SelfLearning');
+    
+    return verifiedData;
+  }
+
+  /**
+   * 검증된 카테고리 참조용 프롬프트 생성
+   * @param {Object} similarPattern - 유사한 검증된 패턴
+   * @returns {string} 참조용 프롬프트 텍스트
+   */
+  buildVerifiedCategoryReference(similarPattern) {
+    if (!similarPattern || !similarPattern.verifiedCategory) {
+      return '';
+    }
+    
+    const { verifiedCategory, confidence, analysisCount, similarity } = similarPattern;
+    
+    const referencePrompt = `
+
+**참고할 검증된 카테고리 정보:**
+이와 유사한 콘텐츠(유사도: ${(similarity * 100).toFixed(1)}%)에서 ${analysisCount}번 분석 결과:
+- 검증된 카테고리: "${verifiedCategory.fullPath}"
+- 신뢰도: ${(confidence * 100).toFixed(1)}%
+
+위 검증된 카테고리를 참고하되, 현재 영상의 실제 내용에 더 적합한 카테고리가 있다면 새로운 분류를 사용하세요.`;
+
+    return referencePrompt;
+  }
+
+  /**
+   * 검증된 카테고리 사용 통계 업데이트
+   * @param {string} contentSignature - 사용된 패턴 시그니처
+   */
+  updateVerifiedCategoryUsage(contentSignature) {
+    if (this.verifiedCategories.patterns[contentSignature]) {
+      this.verifiedCategories.patterns[contentSignature].lastUsed = new Date().toISOString();
+      this.saveVerifiedCategories();
+    }
+  }
+
+  /**
+   * 자가 학습 시스템 활성 여부 확인
+   * @returns {boolean} 활성 여부
+   */
+  isSelfLearningEnabled() {
+    return process.env.USE_SELF_LEARNING_CATEGORIES === 'true';
+  }
+
+  /**
+   * 자가 학습 통계 조회
+   * @returns {Object} 통계 정보
+   */
+  getSelfLearningStats() {
+    if (!this.verifiedCategories) {
+      return { enabled: false };
+    }
+
+    const patterns = this.verifiedCategories.patterns || {};
+    const totalPatterns = Object.keys(patterns).length;
+    
+    // 플랫폼별 통계
+    const platformStats = {};
+    for (const [signature, data] of Object.entries(patterns)) {
+      const platform = signature.split(':')[0];
+      if (!platformStats[platform]) {
+        platformStats[platform] = 0;
+      }
+      platformStats[platform]++;
+    }
+    
+    // 신뢰도별 분포
+    const confidenceDistribution = {
+      high: 0, // 0.8 이상
+      medium: 0, // 0.5 이상
+      low: 0 // 0.5 미만
+    };
+    
+    for (const data of Object.values(patterns)) {
+      if (data.confidence >= 0.8) {
+        confidenceDistribution.high++;
+      } else if (data.confidence >= 0.5) {
+        confidenceDistribution.medium++;
+      } else {
+        confidenceDistribution.low++;
+      }
+    }
+
+    return {
+      enabled: this.isSelfLearningEnabled(),
+      totalPatterns,
+      platformStats,
+      confidenceDistribution,
+      totalVerifications: this.verifiedCategories.metadata.totalVerifications || 0,
+      created: this.verifiedCategories.metadata.created,
+      lastUpdated: this.verifiedCategories.metadata.lastUpdated
     };
   }
 }

@@ -11,7 +11,7 @@ class AIAnalyzer {
     this.dynamicCategoryManager = new DynamicCategoryManager();
     this.useDynamicCategories = process.env.USE_DYNAMIC_CATEGORIES === 'true';
     
-    // Gemini 설정
+    // 단일 Gemini API 키 설정
     this.useGemini = process.env.USE_GEMINI === 'true';
     this.geminiApiKey = process.env.GOOGLE_API_KEY;
     
@@ -24,7 +24,7 @@ class AIAnalyzer {
     if (this.useGemini) {
       const { GoogleGenerativeAI } = require('@google/generative-ai');
       this.genAI = new GoogleGenerativeAI(this.geminiApiKey);
-      this.geminiModel = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      this.geminiModel = this.genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
       ServerLogger.success('Gemini API 초기화 완료', null, 'AI');
     } else {
       throw new Error('Gemini API를 사용해야 합니다. USE_GEMINI=true로 설정하세요.');
@@ -149,6 +149,7 @@ class AIAnalyzer {
     ServerLogger.info('📁 썸네일 경로들:', thumbnailPaths);
     ServerLogger.info('📋 메타데이터:', JSON.stringify(metadata, null, 2));
     
+    
     // 동적 카테고리 모드인지 확인
     if (this.useDynamicCategories) {
       ServerLogger.info('🚀 동적 카테고리 모드 사용', null, 'AI');
@@ -183,99 +184,259 @@ class AIAnalyzer {
   }
 
   /**
-   * 동적 카테고리 분석 (새로운 시스템)
+   * 동적 카테고리 분석 (자가 학습 시스템 적용)
    */
   async analyzeDynamicCategories(thumbnailPaths, metadata) {
-    let dynamicStartTime = Date.now(); // let 사용으로 변경하여 스코프 명확화
+    let dynamicStartTime = Date.now();
     ServerLogger.info('🚀 동적 카테고리 분석 시작', null, 'AI');
     
     try {
-      // 동적 프롬프트 생성
-      const dynamicPrompt = this.dynamicCategoryManager.buildDynamicCategoryPrompt(metadata);
-      ServerLogger.info('📝 동적 프롬프트 생성 완료', null, 'AI');
-      
-      let aiResponse = null;
-      
-      // AI 분석 수행
-      const aiStartTime = Date.now();
-      
-      // 프레임 수에 따른 분석 방법 선택
-      if (Array.isArray(thumbnailPaths) && thumbnailPaths.length > 1) {
-        // 다중 프레임 분석
-        ServerLogger.info(`🎬 다중 프레임 동적 분석: ${thumbnailPaths.length}개`);
-        aiResponse = await this.queryDynamicMultiFrame(dynamicPrompt, thumbnailPaths);
-      } else {
-        // 단일 프레임 분석
-        const singlePath = Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths;
-        ServerLogger.info(`📸 단일 프레임 동적 분석: ${singlePath}`);
-        const imageBase64 = await this.encodeImageToBase64(singlePath);
-        aiResponse = await this.queryGemini(dynamicPrompt, imageBase64);
+      // 자가 학습 시스템 활성화 여부 확인
+      if (this.dynamicCategoryManager.isSelfLearningEnabled()) {
+        ServerLogger.info('🧠 자가 학습 카테고리 시스템 활성화됨', null, 'SelfLearning');
+        return await this.analyzeWithSelfLearning(thumbnailPaths, metadata);
       }
       
-      const aiEndTime = Date.now();
-      const aiDuration = aiEndTime - aiStartTime;
-      ServerLogger.info(`⏱️ AI 동적 질의 소요시간: ${aiDuration}ms (${(aiDuration / 1000).toFixed(2)}초)`);
-      
-      if (!aiResponse) {
-        throw new Error('AI 응답을 받지 못했습니다');
-      }
-      
-      // 동적 카테고리 응답 처리
-      const processStartTime = Date.now();
-      const result = this.dynamicCategoryManager.processDynamicCategoryResponse(aiResponse, metadata);
-      const processEndTime = Date.now();
-      const processDuration = processEndTime - processStartTime;
-      
-      const dynamicEndTime = Date.now();
-      const dynamicTotalDuration = dynamicEndTime - dynamicStartTime;
-      
-      ServerLogger.info('✅ 동적 카테고리 분석 완료:', {
-        mainCategory: result.mainCategory,
-        fullPath: result.fullPath,
-        depth: result.depth,
-        confidence: result.confidence
-      });
-      
-      // ServerLogger.info(`⏱️ 분석 세부 소요시간: 프롬프트=${promptDuration}ms, AI질의=${aiDuration}ms, 처리=${processDuration}ms`);
-      ServerLogger.info(`⏱️ 동적 분석 총 소요시간: ${dynamicTotalDuration}ms (${(dynamicTotalDuration / 1000).toFixed(2)}초)`);
-      
-      return {
-        content: result.content || '영상 분석 내용',  // AI 분석 내용 (카테고리 아님!)
-        mainCategory: result.mainCategory,
-        middleCategory: result.middleCategory || result.categoryPath[1] || '일반',
-        fullPath: result.fullPath,             // 동적 카테고리 전체 경로
-        depth: result.depth,                   // 카테고리 깊이
-        keywords: result.keywords,
-        hashtags: result.hashtags,
-        confidence: result.confidence,
-        source: result.source,
-        isDynamicCategory: true
-      };
+      // 기존 동적 카테고리 분석 로직
+      return await this.analyzeWithBasicDynamic(thumbnailPaths, metadata);
       
     } catch (error) {
-      const dynamicEndTime = Date.now();
-      // dynamicStartTime이 undefined일 경우를 대비한 안전장치
-      const dynamicTotalDuration = dynamicStartTime ? (dynamicEndTime - dynamicStartTime) : 0;
       ServerLogger.error('동적 카테고리 분석 실패:', error);
-      ServerLogger.info(`⏱️ 동적 분석 실패 소요시간: ${dynamicTotalDuration}ms`);
-      
       // 폴백: 기본 카테고리 사용
-      const fallback = this.dynamicCategoryManager.getFallbackCategory(metadata);
-      return {
-        content: fallback.fullPath,
-        mainCategory: fallback.mainCategory,
-        middleCategory: fallback.categoryPath[1] || '일반',
-        fullCategoryPath: fallback.fullPath,
-        categoryPath: fallback.categoryPath,
-        categoryDepth: fallback.depth,
-        keywords: fallback.keywords,
-        hashtags: fallback.hashtags,
-        confidence: fallback.confidence,
-        source: 'dynamic-fallback',
-        isDynamicCategory: true,
-        error: error.message
-      };
+      return this.dynamicCategoryManager.getFallbackCategory(metadata);
     }
+  }
+
+  /**
+   * 자가 학습 시스템을 이용한 분석
+   */
+  async analyzeWithSelfLearning(thumbnailPaths, metadata) {
+    const startTime = Date.now();
+    
+    // 1단계: 콘텐츠 시그니처 생성
+    const contentSignature = this.dynamicCategoryManager.generateContentSignature(metadata);
+    ServerLogger.info(`🔍 콘텐츠 시그니처: ${contentSignature}`, null, 'SelfLearning');
+    
+    // 2단계: 유사한 검증된 패턴 찾기
+    const similarPattern = this.dynamicCategoryManager.findSimilarVerifiedPattern(contentSignature);
+    
+    if (similarPattern) {
+      // 기존 검증된 패턴이 있는 경우 - 참조 분석
+      ServerLogger.info(`🎯 기존 검증된 패턴 사용: ${similarPattern.signature}`, null, 'SelfLearning');
+      
+      const result = await this.analyzeWithVerifiedReference(thumbnailPaths, metadata, similarPattern);
+      
+      // 사용 통계 업데이트
+      this.dynamicCategoryManager.updateVerifiedCategoryUsage(similarPattern.signature);
+      
+      const duration = Date.now() - startTime;
+      ServerLogger.info(`⏱️ 참조 분석 총 소요시간: ${duration}ms (${(duration / 1000).toFixed(2)}초)`, null, 'SelfLearning');
+      
+      return result;
+    } else {
+      // 새로운 패턴 - 20번 분석하여 검증된 카테고리 생성
+      ServerLogger.info('🆕 새로운 콘텐츠 패턴 감지 - 20번 분석 시작', null, 'SelfLearning');
+      
+      const analysisResults = await this.performMultipleAnalysis(thumbnailPaths, metadata, 20);
+      
+      // 검증된 카테고리 저장
+      const verifiedCategory = this.dynamicCategoryManager.saveVerifiedCategoryFromAnalysis(
+        contentSignature, 
+        analysisResults
+      );
+      
+      if (verifiedCategory) {
+        const result = {
+          mainCategory: verifiedCategory.verifiedCategory.mainCategory,
+          middleCategory: verifiedCategory.verifiedCategory.middleCategory,
+          fullPath: verifiedCategory.verifiedCategory.fullPath,
+          categoryPath: verifiedCategory.verifiedCategory.parts,
+          depth: verifiedCategory.verifiedCategory.parts.length,
+          keywords: verifiedCategory.examples[0]?.keywords || [],
+          hashtags: verifiedCategory.examples[0]?.hashtags || [],
+          content: verifiedCategory.examples[0]?.content || '',
+          confidence: verifiedCategory.confidence,
+          source: 'self-learning-verified',
+          analysisCount: verifiedCategory.analysisCount,
+          totalVotes: verifiedCategory.totalVotes,
+          voteRatio: verifiedCategory.voteRatio
+        };
+        
+        const duration = Date.now() - startTime;
+        ServerLogger.info(`⏱️ 20번 분석 및 검증 총 소요시간: ${duration}ms (${(duration / 1000).toFixed(2)}초)`, null, 'SelfLearning');
+        
+        return result;
+      } else {
+        // 검증 실패 시 폴백
+        ServerLogger.warn('검증된 카테고리 생성 실패 - 폴백 사용', null, 'SelfLearning');
+        return this.dynamicCategoryManager.getFallbackCategory(metadata);
+      }
+    }
+  }
+
+  /**
+   * 검증된 패턴 참조하여 분석
+   */
+  async analyzeWithVerifiedReference(thumbnailPaths, metadata, similarPattern) {
+    // 기본 동적 프롬프트 생성
+    const basePrompt = this.dynamicCategoryManager.buildDynamicCategoryPrompt(metadata);
+    
+    // 검증된 카테고리 참조 정보 추가
+    const referencePrompt = this.dynamicCategoryManager.buildVerifiedCategoryReference(similarPattern);
+    const fullPrompt = basePrompt + referencePrompt;
+    
+    ServerLogger.info('📝 검증된 패턴 참조 프롬프트 생성 완료', null, 'SelfLearning');
+    
+    // AI 분석 수행 (1번만)
+    const aiStartTime = Date.now();
+    let aiResponse = null;
+    
+    if (Array.isArray(thumbnailPaths) && thumbnailPaths.length > 1) {
+      aiResponse = await this.queryDynamicMultiFrame(fullPrompt, thumbnailPaths);
+    } else {
+      const singlePath = Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths;
+      const imageBase64 = await this.encodeImageToBase64(singlePath);
+      aiResponse = await this.queryGemini(fullPrompt, imageBase64);
+    }
+    
+    const aiDuration = Date.now() - aiStartTime;
+    ServerLogger.info(`⏱️ 참조 AI 분석 소요시간: ${aiDuration}ms (${(aiDuration / 1000).toFixed(2)}초)`, null, 'SelfLearning');
+    
+    // 응답 처리
+    const result = this.dynamicCategoryManager.processDynamicCategoryResponse(aiResponse, metadata);
+    result.source = 'self-learning-referenced';
+    result.referencePattern = similarPattern.signature;
+    result.referenceSimilarity = similarPattern.similarity;
+    
+    return result;
+  }
+
+  /**
+   * 여러 번 분석 수행 (검증용)
+   */
+  async performMultipleAnalysis(thumbnailPaths, metadata, count = 20) {
+    ServerLogger.info(`🔄 ${count}번 병렬 분석 시작`, null, 'SelfLearning');
+    
+    const basePrompt = this.dynamicCategoryManager.buildDynamicCategoryPrompt(metadata);
+    const results = [];
+    const batchSize = 5; // 동시 요청 수 제한
+    
+    // 이미지 인코딩 (한 번만)
+    let imageBase64 = null;
+    if (!Array.isArray(thumbnailPaths) || thumbnailPaths.length === 1) {
+      const singlePath = Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths;
+      imageBase64 = await this.encodeImageToBase64(singlePath);
+    }
+    
+    // 배치로 나누어 처리
+    for (let i = 0; i < count; i += batchSize) {
+      const currentBatch = Math.min(batchSize, count - i);
+      const batchPromises = [];
+      
+      for (let j = 0; j < currentBatch; j++) {
+        const analysisPromise = (async () => {
+          try {
+            let aiResponse = null;
+            if (Array.isArray(thumbnailPaths) && thumbnailPaths.length > 1) {
+              aiResponse = await this.queryDynamicMultiFrame(basePrompt, thumbnailPaths);
+            } else {
+              aiResponse = await this.queryGemini(basePrompt, imageBase64);
+            }
+            
+            return this.dynamicCategoryManager.processDynamicCategoryResponse(aiResponse, metadata);
+          } catch (error) {
+            ServerLogger.warn(`분석 ${i + j + 1}번 실패: ${error.message}`, null, 'SelfLearning');
+            return null;
+          }
+        })();
+        
+        batchPromises.push(analysisPromise);
+      }
+      
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+      
+      ServerLogger.info(`📊 배치 ${Math.floor(i/batchSize) + 1} 완료: ${i + currentBatch}/${count}`, null, 'SelfLearning');
+      
+      // 다음 배치 전 잠시 대기 (API 제한 방지)
+      if (i + batchSize < count) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    
+    const validResults = results.filter(r => r !== null);
+    ServerLogger.success(`✅ ${count}번 분석 완료: ${validResults.length}개 유효 결과`, null, 'SelfLearning');
+    
+    return validResults;
+  }
+
+  /**
+   * 기존 동적 카테고리 분석 (자가 학습 비활성화 시)
+   */
+  async analyzeWithBasicDynamic(thumbnailPaths, metadata) {
+    let dynamicStartTime = Date.now();
+    ServerLogger.info('📊 기본 동적 카테고리 분석 시작', null, 'AI');
+    
+    // 동적 프롬프트 생성
+    const dynamicPrompt = this.dynamicCategoryManager.buildDynamicCategoryPrompt(metadata);
+    ServerLogger.info('📝 동적 프롬프트 생성 완료', null, 'AI');
+    
+    let aiResponse = null;
+    
+    // AI 분석 수행
+    const aiStartTime = Date.now();
+    
+    // 프레임 수에 따른 분석 방법 선택
+    if (Array.isArray(thumbnailPaths) && thumbnailPaths.length > 1) {
+      // 다중 프레임 분석
+      ServerLogger.info(`🎬 다중 프레임 동적 분석: ${thumbnailPaths.length}개`);
+      aiResponse = await this.queryDynamicMultiFrame(dynamicPrompt, thumbnailPaths);
+    } else {
+      // 단일 프레임 분석
+      const singlePath = Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths;
+      ServerLogger.info(`📸 단일 프레임 동적 분석: ${singlePath}`);
+      const imageBase64 = await this.encodeImageToBase64(singlePath);
+      aiResponse = await this.queryGemini(dynamicPrompt, imageBase64);
+    }
+    
+    const aiEndTime = Date.now();
+    const aiDuration = aiEndTime - aiStartTime;
+    ServerLogger.info(`⏱️ AI 동적 질의 소요시간: ${aiDuration}ms (${(aiDuration / 1000).toFixed(2)}초)`);
+    
+    if (!aiResponse) {
+      throw new Error('AI 응답을 받지 못했습니다');
+    }
+    
+    // 동적 카테고리 응답 처리
+    const processStartTime = Date.now();
+    const result = this.dynamicCategoryManager.processDynamicCategoryResponse(aiResponse, metadata);
+    const processEndTime = Date.now();
+    const processDuration = processEndTime - processStartTime;
+    
+    const dynamicEndTime = Date.now();
+    const dynamicTotalDuration = dynamicEndTime - dynamicStartTime;
+    
+    ServerLogger.info('✅ 기본 동적 카테고리 분석 완료:', {
+      mainCategory: result.mainCategory,
+      fullPath: result.fullPath,
+      depth: result.depth,
+      confidence: result.confidence
+    });
+    
+    ServerLogger.info(`⏱️ 기본 동적 분석 총 소요시간: ${dynamicTotalDuration}ms (${(dynamicTotalDuration / 1000).toFixed(2)}초)`);
+    
+    return {
+      content: result.content || '영상 분석 내용',
+      mainCategory: result.mainCategory,
+      middleCategory: result.middleCategory || result.categoryPath?.[1] || '일반',
+      fullPath: result.fullPath,
+      depth: result.depth,
+      keywords: result.keywords,
+      hashtags: result.hashtags,
+      confidence: result.confidence,
+      source: result.source,
+      isDynamicCategory: true
+    };
   }
 
   /**
@@ -1701,6 +1862,13 @@ JSON 형식으로 답변:
       timestamp: new Date().toISOString()
     };
   }
+
+
+
+
+
+
+
 }
 
 module.exports = AIAnalyzer;
