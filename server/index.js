@@ -12,6 +12,7 @@ const config = getConfig(); // 여기서 검증 실행
 const VideoProcessor = require('./services/VideoProcessor');
 const AIAnalyzer = require('./services/AIAnalyzer');
 const SheetsManager = require('./services/SheetsManager');
+const youtubeBatchProcessor = require('./services/YouTubeBatchProcessor');
 const { ServerLogger } = require('./utils/logger');
 const ResponseHandler = require('./utils/response-handler');
 const { API_MESSAGES, ERROR_CODES } = require('./config/api-messages');
@@ -159,7 +160,45 @@ app.get('/api/config/health', (req, res) => {
 // 비디오 처리 메인 엔드포인트
 app.post('/api/process-video', async (req, res) => {
   try {
-    const { platform, videoUrl, postUrl, metadata, analysisType = 'quick', useAI = true } = req.body;
+    const { platform, videoUrl, postUrl, metadata, analysisType = 'quick', useAI = true, mode = 'immediate' } = req.body;
+    
+    // 🆕 YouTube 배치 모드 처리
+    if (platform === 'youtube' && mode === 'batch') {
+      try {
+        const options = {
+          priority: req.body.priority || 'normal',
+          clientInfo: {
+            userAgent: req.get('User-Agent'),
+            requestId: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            timestamp: new Date().toISOString()
+          },
+          metadata: metadata || {}
+        };
+
+        const batchResult = await youtubeBatchProcessor.addToBatch(videoUrl, options);
+        
+        ServerLogger.info(`📦 YouTube 배치 모드: 큐에 추가됨`, {
+          batchId: batchResult.batchId,
+          queuePosition: batchResult.queuePosition,
+          estimatedWaitTime: batchResult.estimatedWaitTime
+        });
+
+        return res.json({
+          success: true,
+          message: '배치 큐에 추가되었습니다',
+          data: {
+            mode: 'batch',
+            ...batchResult,
+            apiSaving: '개별 호출 대비 97% 쿼터 절약',
+            estimatedProcessTime: '최대 60초 또는 50개 모일 때까지 대기'
+          }
+        });
+      } catch (error) {
+        ServerLogger.error('배치 모드 처리 실패:', error);
+        // 배치 실패 시 즉시 처리로 폴백
+        ServerLogger.info('🔄 배치 실패 - 즉시 처리 모드로 전환');
+      }
+    }
     
     // 큐 상태 확인 및 로깅
     const queueStatus = videoQueue.getStatus();
@@ -645,6 +684,93 @@ app.use((err, req, res, next) => {
 // 404 핸들러
 app.use((req, res) => {
   ResponseHandler.notFound(res, `경로 '${req.path}'를 찾을 수 없습니다.`);
+});
+
+// YouTube 배치 처리 API 엔드포인트
+app.post('/api/youtube-batch', async (req, res) => {
+  try {
+    const { videoUrl, mode = 'batch', priority = 'normal' } = req.body;
+
+    if (!videoUrl) {
+      return ResponseHandler.badRequest(res, '비디오 URL이 필요합니다.');
+    }
+
+    const options = {
+      priority,
+      clientInfo: {
+        userAgent: req.get('User-Agent'),
+        requestId: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date().toISOString()
+      },
+      metadata: req.body.metadata || {}
+    };
+
+    if (mode === 'immediate') {
+      // 강제 즉시 처리
+      const result = await youtubeBatchProcessor.forceProcess();
+      return res.json({
+        success: true,
+        message: '배치 강제 처리 완료',
+        data: result
+      });
+    } else {
+      // 배치 큐에 추가
+      const result = await youtubeBatchProcessor.addToBatch(videoUrl, options);
+      return res.json({
+        success: true,
+        message: '배치 큐에 추가됨',
+        data: result
+      });
+    }
+
+  } catch (error) {
+    ServerLogger.error('YouTube 배치 처리 API 오류:', error);
+    return ResponseHandler.error(res, error, 'YouTube 배치 처리 실패');
+  }
+});
+
+// 배치 상태 조회 API
+app.get('/api/youtube-batch/status', (req, res) => {
+  try {
+    const status = youtubeBatchProcessor.getStatus();
+    return res.json({
+      success: true,
+      data: status
+    });
+  } catch (error) {
+    ServerLogger.error('배치 상태 조회 실패:', error);
+    return ResponseHandler.error(res, error, '배치 상태 조회 실패');
+  }
+});
+
+// 배치 강제 처리 API
+app.post('/api/youtube-batch/force-process', async (req, res) => {
+  try {
+    const result = await youtubeBatchProcessor.forceProcess();
+    return res.json({
+      success: true,
+      message: '강제 처리 완료',
+      data: result
+    });
+  } catch (error) {
+    ServerLogger.error('배치 강제 처리 실패:', error);
+    return ResponseHandler.error(res, error, '배치 강제 처리 실패');
+  }
+});
+
+// 배치 큐 비우기 API
+app.delete('/api/youtube-batch/clear', async (req, res) => {
+  try {
+    const result = await youtubeBatchProcessor.clearQueue();
+    return res.json({
+      success: true,
+      message: '배치 큐 비우기 완료',
+      data: result
+    });
+  } catch (error) {
+    ServerLogger.error('배치 큐 비우기 실패:', error);
+    return ResponseHandler.error(res, error, '배치 큐 비우기 실패');
+  }
 });
 
 // 서버 시작

@@ -3435,12 +3435,31 @@ class ApiClient {
     }
   }
 
+  async getSettings() {
+    return new Promise((resolve) => {
+      chrome.storage.sync.get(['videosaverSettings'], (result) => {
+        const settings = result.videosaverSettings || {};
+        resolve(settings);
+      });
+    });
+  }
+
   async processVideo(data) {
     try {
+      // 🆕 설정에서 배치 모드 확인
+      const settings = await this.getSettings();
+      const isBatchMode = settings.batchMode && data.platform === 'youtube';
+      
+      // 배치 모드일 때 mode 파라미터 추가
+      if (isBatchMode) {
+        data.mode = 'batch';
+      }
+      
       Utils.log('info', 'Processing video with URL', { 
         platform: data.platform, 
         url: data.videoUrl,
-        analysisType: data.analysisType || 'quick' 
+        analysisType: data.analysisType || 'quick',
+        mode: data.mode || 'immediate'
       });
       
       const response = await fetch(`${this.serverUrl}/api/process-video`, {

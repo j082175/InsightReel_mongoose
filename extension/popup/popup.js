@@ -90,7 +90,7 @@ class VideoSaverPopup {
     });
 
     // 설정 토글 - 개별 디바운싱 (AI 분석 토글 추가)
-    const toggles = ['useAI', 'autoAnalyze', 'autoSave', 'showNotifications'];
+    const toggles = ['useAI', 'autoAnalyze', 'autoSave', 'batchMode', 'showNotifications'];
     toggles.forEach(id => {
       document.getElementById(id).addEventListener('change', (e) => {
         // 해당 ID의 이전 타이머 취소
@@ -155,9 +155,10 @@ class VideoSaverPopup {
       const useAI = document.getElementById('useAI');
       const autoAnalyze = document.getElementById('autoAnalyze');
       const autoSave = document.getElementById('autoSave');
+      const batchMode = document.getElementById('batchMode');
       const showNotifications = document.getElementById('showNotifications');
       
-      if (!useAI || !autoAnalyze || !autoSave || !showNotifications) {
+      if (!useAI || !autoAnalyze || !autoSave || !batchMode || !showNotifications) {
         console.warn('⚠️ DOM 요소가 아직 준비되지 않음');
         return;
       }
@@ -166,6 +167,7 @@ class VideoSaverPopup {
       useAI.checked = settings.useAI !== undefined ? settings.useAI : true; // AI 분석은 기본적으로 켜짐
       autoAnalyze.checked = settings.autoAnalysis !== undefined ? settings.autoAnalysis : false;
       autoSave.checked = settings.autoSave !== undefined ? settings.autoSave : true;
+      batchMode.checked = settings.batchMode !== undefined ? settings.batchMode : false; // 배치 모드는 기본적으로 꺼짐
       showNotifications.checked = settings.showNotifications !== undefined ? settings.showNotifications : true;
       
       // 설정 로드 완료 후 설정 영역을 부드럽게 표시

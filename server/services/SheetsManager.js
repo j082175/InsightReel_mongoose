@@ -711,6 +711,261 @@ class SheetsManager {
     }
   }
 
+  /**
+   * 배치 비디오 데이터 저장 (50개 영상을 한 번에 저장)
+   * @param {Array} videoDataArray - 비디오 데이터 배열
+   * @param {string} platform - 플랫폼 ('youtube', 'instagram', 'tiktok')
+   * @returns {Promise<Object>} 저장 결과
+   */
+  async saveVideoBatch(videoDataArray, platform = 'youtube') {
+    try {
+      if (!this.sheets) {
+        throw new Error('구글 시트 인증이 완료되지 않았습니다.');
+      }
+
+      if (!videoDataArray || videoDataArray.length === 0) {
+        return { success: true, saved: 0, message: '저장할 데이터가 없습니다.' };
+      }
+
+      if (!this.spreadsheetId) {
+        if (!this.loadSpreadsheetId()) {
+          await this.createSpreadsheet();
+        }
+      }
+
+      const timestamp = new Date().toISOString();
+      ServerLogger.info(`📦 배치 시트 저장 시작: ${videoDataArray.length}개 ${platform} 영상`);
+
+      // 기존 스프레드시트의 헤더 업데이트 확인 및 적용
+      await this.ensureUpdatedHeaders(platform);
+
+      // 플랫폼별 시트 이름 가져오기
+      const sheetName = await this.getSheetNameByPlatform(platform);
+      
+      // 다음 행 번호 조회
+      const lastRowResponse = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: `${sheetName}!A:A`
+      });
+
+      let nextRow = (lastRowResponse.data.values?.length || 1) + 1;
+      const startingRowNumber = nextRow - 1; // 헤더 제외한 실제 행 번호
+
+      // 배치 데이터를 시트 행 형태로 변환
+      const batchRows = [];
+      
+      for (let i = 0; i < videoDataArray.length; i++) {
+        const videoInfo = videoDataArray[i];
+        const rowNumber = startingRowNumber + i;
+        
+        // YouTube API 데이터를 표준 형식으로 변환
+        const standardVideoData = {
+          platform: platform,
+          postUrl: `https://youtube.com/watch?v=${videoInfo.videoId}`,
+          videoPath: null, // YouTube는 URL만
+          thumbnailPath: videoInfo.thumbnailUrl,
+          metadata: {
+            title: videoInfo.title,
+            author: videoInfo.channel,
+            description: videoInfo.description,
+            uploadDate: videoInfo.publishedAt,
+            likes: videoInfo.likes,
+            comments: videoInfo.comments,
+            views: videoInfo.views,
+            duration: videoInfo.duration,
+            durationFormatted: this.formatDuration(videoInfo.duration),
+            subscribers: videoInfo.subscribers,
+            channelVideos: videoInfo.channelVideos,
+            channelViews: videoInfo.channelViews,
+            channelCountry: videoInfo.channelCountry,
+            channelDescription: videoInfo.channelDescription,
+            youtubeCategory: videoInfo.youtubeCategory,
+            categoryId: videoInfo.categoryId,
+            monetized: videoInfo.definition === 'hd' ? 'Y' : 'N',
+            license: 'youtube',
+            definition: videoInfo.definition,
+            language: videoInfo.language,
+            tags: videoInfo.tags,
+            hashtags: videoInfo.tags
+          },
+          analysis: {
+            // YouTube 배치에서는 AI 분석 없이 카테고리만 사용
+            mainCategory: videoInfo.youtubeCategory,
+            middleCategory: '',
+            fullCategoryPath: videoInfo.youtubeCategory,
+            depth: 1,
+            content: `YouTube 채널: ${videoInfo.channel}`,
+            keywords: videoInfo.tags.slice(0, 10), // 처음 10개 태그만
+            confidence: 0.95, // YouTube API는 신뢰도 높음
+            aiModel: 'YouTube API',
+            hashtags: videoInfo.tags
+          },
+          timestamp: timestamp
+        };
+
+        // 기존 buildRowData 로직 사용하여 행 데이터 생성
+        const rowData = this.buildRowData(rowNumber, standardVideoData);
+        batchRows.push(rowData);
+      }
+
+      // 시트 용량 확보 (배치 크기만큼)
+      await this.ensureSheetCapacity(sheetName, nextRow + videoDataArray.length);
+
+      // 배치로 한 번에 데이터 추가
+      const range = `${sheetName}!A${nextRow}:${this.getColumnLetter(batchRows[0].length)}${nextRow + batchRows.length - 1}`;
+      
+      const batchResponse = await this.sheets.spreadsheets.values.update({
+        spreadsheetId: this.spreadsheetId,
+        range: range,
+        valueInputOption: 'RAW',
+        resource: {
+          values: batchRows
+        }
+      });
+
+      const savedCount = batchRows.length;
+      const spreadsheetUrl = `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}`;
+
+      ServerLogger.info(`✅ 배치 저장 완료: ${savedCount}개 영상 저장됨`, {
+        sheetName,
+        range,
+        spreadsheetUrl
+      });
+
+      return {
+        success: true,
+        saved: savedCount,
+        total: videoDataArray.length,
+        spreadsheetUrl: spreadsheetUrl,
+        range: range,
+        message: `${savedCount}개 영상이 ${sheetName} 시트에 일괄 저장되었습니다.`
+      };
+
+    } catch (error) {
+      ServerLogger.error('배치 시트 저장 실패:', error);
+      
+      return {
+        success: false,
+        saved: 0,
+        total: videoDataArray.length,
+        error: `배치 저장 실패: ${error.message}`,
+        spreadsheetUrl: this.spreadsheetId ? `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}` : null
+      };
+    }
+  }
+
+  /**
+   * 기존 buildRowData 메소드를 사용하여 행 데이터 생성
+   */
+  buildRowData(rowNumber, videoData) {
+    const { platform, postUrl, videoPath, metadata, analysis, timestamp } = videoData;
+
+    // 업로드 날짜 결정
+    let displayDate;
+    if (metadata.uploadDate) {
+      if (platform === 'youtube') {
+        displayDate = new Date(metadata.uploadDate).toLocaleString('ko-KR');
+      } else {
+        displayDate = new Date(metadata.uploadDate).toLocaleDateString('ko-KR');
+      }
+    } else {
+      displayDate = new Date(timestamp).toLocaleString('ko-KR');
+    }
+
+    // 동적 카테고리 처리
+    const isDynamicMode = process.env.USE_DYNAMIC_CATEGORIES === 'true';
+    let fullCategoryPath = '';
+    let categoryDepth = 0;
+    
+    if (isDynamicMode && analysis.fullCategoryPath) {
+      fullCategoryPath = analysis.fullCategoryPath;
+      categoryDepth = analysis.depth || 0;
+    } else {
+      const mainCat = analysis.mainCategory || '미분류';
+      const middleCat = analysis.middleCategory || '';
+      if (middleCat && middleCat !== '미분류') {
+        fullCategoryPath = `${mainCat} > ${middleCat}`;
+        categoryDepth = 2;
+      } else {
+        fullCategoryPath = mainCat;
+        categoryDepth = 1;
+      }
+    }
+
+    // 플랫폼별 행 데이터 구성
+    if (platform === 'youtube') {
+      return [
+        rowNumber,                                    // 번호
+        displayDate,                                 // 일시
+        platform.toUpperCase(),                      // 플랫폼
+        metadata.author || '',                       // 계정
+        analysis.mainCategory || '미분류',           // 대카테고리
+        analysis.middleCategory || '',               // 중카테고리
+        fullCategoryPath,                            // 전체카테고리경로
+        categoryDepth,                               // 카테고리깊이
+        analysis.keywords?.join(', ') || '',         // 키워드
+        analysis.content || '',                      // 분석내용
+        metadata.likes || '0',                       // 좋아요
+        metadata.comments || '0',                    // 댓글수
+        metadata.views || '0',                       // 조회수
+        metadata.durationFormatted || '',            // 영상길이
+        metadata.subscribers || '0',                // 구독자수
+        metadata.channelVideos || '0',             // 채널동영상수
+        metadata.monetized || 'N',                 // 수익화여부
+        metadata.youtubeCategory || '',            // YouTube카테고리
+        metadata.license || 'youtube',             // 라이센스
+        metadata.definition || 'sd',               // 화질
+        metadata.language || '',                   // 언어
+        analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 태그
+        postUrl,                                   // URL
+        videoPath ? path.basename(videoPath) : 'YouTube URL',  // 파일경로
+        (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
+        analysis.aiModel || 'AI',                  // 분석상태
+        '', // 카테고리일치율 (배치에서는 비워둠)
+        '', // 일치유형
+        ''  // 일치사유
+      ];
+    } else {
+      // Instagram, TikTok
+      return [
+        rowNumber,                                    // 번호
+        displayDate,                                 // 일시
+        platform.toUpperCase(),                      // 플랫폼
+        metadata.author || '',                       // 계정
+        analysis.mainCategory || '미분류',           // 대카테고리
+        analysis.middleCategory || '',               // 중카테고리
+        fullCategoryPath,                            // 전체카테고리경로
+        categoryDepth,                               // 카테고리깊이
+        analysis.keywords?.join(', ') || '',         // 키워드
+        analysis.content || '',                      // 분석내용
+        metadata.likes || '0',                       // 좋아요
+        metadata.comments || '0',                    // 댓글수
+        analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그
+        postUrl,                                     // URL
+        videoPath ? path.basename(videoPath) : '',  // 파일경로
+        (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
+        analysis.aiModel || 'AI'                     // 분석상태
+      ];
+    }
+  }
+
+  /**
+   * 초를 시:분:초 형식으로 변환
+   */
+  formatDuration(seconds) {
+    if (!seconds || seconds === 0) return '';
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    }
+  }
+
   async updateStatistics() {
     try {
       // 모든 플랫폼 시트에서 데이터 조회
