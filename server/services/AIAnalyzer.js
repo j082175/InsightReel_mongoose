@@ -3,6 +3,9 @@ const fs = require('fs');
 const path = require('path');
 const { ServerLogger } = require('../utils/logger');
 const DynamicCategoryManager = require('./DynamicCategoryManager');
+const HybridGeminiManager = require('../utils/hybrid-gemini-manager');
+const EnhancedMultiApiManager = require('../utils/enhanced-multi-api-manager');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 class AIAnalyzer {
   constructor() {
@@ -11,7 +14,7 @@ class AIAnalyzer {
     this.dynamicCategoryManager = new DynamicCategoryManager();
     this.useDynamicCategories = process.env.USE_DYNAMIC_CATEGORIES === 'true';
     
-    // 단일 Gemini API 키 설정
+    // AI 시스템 설정 (상호 배타적)
     this.useGemini = process.env.USE_GEMINI === 'true';
     this.geminiApiKey = process.env.GOOGLE_API_KEY;
     
@@ -19,13 +22,51 @@ class AIAnalyzer {
       throw new Error('GOOGLE_API_KEY가 설정되지 않았습니다. Gemini API 키가 필요합니다.');
     }
     
-    ServerLogger.info(`AI 설정 - USE_GEMINI: ${process.env.USE_GEMINI}, API_KEY 존재: ${!!this.geminiApiKey}`, null, 'AI');
+    // 시스템 선택 로직 (상호 배타적)
+    const hasMultiApiStrategy = !!process.env.GEMINI_FALLBACK_STRATEGY;
+    const useHybridSetting = process.env.USE_HYBRID_GEMINI !== 'false';
+    
+    if (hasMultiApiStrategy && useHybridSetting) {
+      // 둘 다 설정된 경우 - Multi API 우선, 경고 메시지
+      this.useEnhancedMultiApi = true;
+      this.useHybridGemini = false;
+      ServerLogger.warn('⚠️ GEMINI_FALLBACK_STRATEGY와 USE_HYBRID_GEMINI가 모두 설정됨', null, 'AI');
+      ServerLogger.warn('🚀 Enhanced Multi API 시스템을 우선 사용합니다', null, 'AI');
+      ServerLogger.warn('💡 한 가지만 사용하려면: USE_HYBRID_GEMINI=false 또는 GEMINI_FALLBACK_STRATEGY 제거', null, 'AI');
+    } else if (hasMultiApiStrategy) {
+      // Multi API 시스템만 활성화
+      this.useEnhancedMultiApi = true;
+      this.useHybridGemini = false;
+      ServerLogger.info('🚀 Enhanced Multi API 시스템 선택됨', null, 'AI');
+    } else if (useHybridSetting) {
+      // 기존 하이브리드 시스템만 활성화
+      this.useEnhancedMultiApi = false;
+      this.useHybridGemini = true;
+      ServerLogger.info('🤖 기존 하이브리드 Gemini 시스템 선택됨', null, 'AI');
+    } else {
+      // 둘 다 비활성화 - 단일 모델 방식
+      this.useEnhancedMultiApi = false;
+      this.useHybridGemini = false;
+      ServerLogger.info('⚙️ 단일 Gemini 모델 방식 선택됨', null, 'AI');
+    }
+    
+    ServerLogger.info(`AI 설정 - USE_GEMINI: ${process.env.USE_GEMINI}, API_KEY 존재: ${!!this.geminiApiKey}, HYBRID: ${this.useHybridGemini}, MULTI_API: ${this.useEnhancedMultiApi}`, null, 'AI');
     
     if (this.useGemini) {
-      const { GoogleGenerativeAI } = require('@google/generative-ai');
-      this.genAI = new GoogleGenerativeAI(this.geminiApiKey);
-      this.geminiModel = this.genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
-      ServerLogger.success('Gemini API 초기화 완료', null, 'AI');
+      if (this.useEnhancedMultiApi) {
+        // 향상된 멀티 API 관리자 사용
+        this.multiApiManager = new EnhancedMultiApiManager();
+        ServerLogger.success('🚀 Enhanced Multi API 시스템 초기화 완료', null, 'AI');
+      } else if (this.useHybridGemini) {
+        // 기존 하이브리드 Gemini 관리자 사용
+        this.hybridGemini = new HybridGeminiManager(this.geminiApiKey);
+        ServerLogger.success('🤖 하이브리드 Gemini 시스템 초기화 완료', null, 'AI');
+      } else {
+        // 기존 단일 모델 방식
+        this.genAI = new GoogleGenerativeAI(this.geminiApiKey);
+        this.geminiModel = this.genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+        ServerLogger.success('Gemini API 초기화 완료 (단일 모델)', null, 'AI');
+      }
     } else {
       throw new Error('Gemini API를 사용해야 합니다. USE_GEMINI=true로 설정하세요.');
     }
@@ -659,8 +700,212 @@ class AIAnalyzer {
 - "main_category": "How-to & 라이프스타일", "middle_category": "생활 꿀팁·가전·정리" (✅)`;
   }
 
+  /**
+   * 안전한 Enhanced Multi API 호출 메소드
+   */
+  async _queryWithEnhancedMultiApi(prompt, imageBase64) {
+    const maxRetries = 2;
+    let lastError;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const startTime = Date.now();
+        ServerLogger.info(`🚀 Enhanced Multi API 시스템 사용 (시도: ${attempt}/${maxRetries})`, null, 'AI');
+        
+        // 최적 API 설정 가져오기
+        const apiConfig = this.multiApiManager.getBestApiConfig();
+        
+        // 📋 1. API 설정 검증
+        if (!this._validateApiConfig(apiConfig)) {
+          if (attempt === maxRetries) {
+            // 마지막 시도에서 실패 - fallback 없이 에러 발생
+            throw new Error(`Enhanced Multi API 시스템 ${maxRetries}번 재시도 모두 실패: ${apiConfig.reason}`);
+          }
+          throw new Error(`API 설정 오류: ${apiConfig.reason}`);
+        }
+        
+        ServerLogger.info(`📡 사용 중인 API: ${apiConfig.keyName} - ${apiConfig.model} (${apiConfig.reason})`, null, 'AI');
+        
+        // 📋 2. Google GenerativeAI 인스턴스 생성 (안전한 방식)
+        const genAI = new GoogleGenerativeAI(apiConfig.apiKey);
+        const model = genAI.getGenerativeModel({ model: apiConfig.model });
+        
+        // 📋 3. 안전한 API 호출
+        const result = await this._safeApiCall(model, prompt, imageBase64);
+        
+        // 📋 4. 성공 시 사용량 기록
+        const modelType = this._extractModelType(apiConfig.model);
+        this.multiApiManager.recordUsage(apiConfig.keyIndex, modelType, true);
+        
+        // 📋 5. 응답 텍스트 안전 추출
+        const responseText = this._safeExtractResponseText(result);
+        
+        const duration = Date.now() - startTime;
+        
+        // 성공 로깅 (간소화)
+        if (attempt > 1) {
+          ServerLogger.info(`✅ Multi API 재시도 성공: ${apiConfig.keyName} - ${apiConfig.model} (${duration}ms)`, null, 'AI');
+        } else {
+          ServerLogger.info(`📊 Multi API 응답 완료: ${apiConfig.keyName} - ${apiConfig.model} (${duration}ms)`, null, 'AI');
+        }
+        
+        return responseText;
+        
+      } catch (error) {
+        lastError = error;
+        
+        // 실패 시 사용량 기록 (안전하게)
+        try {
+          const apiConfig = this.multiApiManager.getBestApiConfig();
+          if (apiConfig && apiConfig.keyIndex !== null) {
+            const modelType = this._extractModelType(apiConfig.model);
+            this.multiApiManager.recordUsage(apiConfig.keyIndex, modelType, false);
+          }
+        } catch (recordError) {
+          ServerLogger.warn('사용량 기록 실패:', recordError, 'AI');
+        }
+        
+        ServerLogger.warn(`⚠️ Enhanced Multi API 시도 ${attempt} 실패:`, error.message, 'AI');
+        
+        if (attempt === maxRetries) {
+          // 마지막 시도 실패 - fallback 없이 에러 발생
+          ServerLogger.error('❌ Enhanced Multi API 모든 재시도 실패', null, 'AI');
+          break; // for 루프 종료
+        }
+        
+        // 재시도 전 짧은 대기
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    
+    // 이론적으로 여기에 도달하지 않음
+    throw lastError;
+  }
+
+  /**
+   * API 설정 검증
+   */
+  _validateApiConfig(apiConfig) {
+    if (!apiConfig) {
+      ServerLogger.error('API 설정이 null입니다', null, 'AI');
+      return false;
+    }
+    
+    if (!apiConfig.apiKey || typeof apiConfig.apiKey !== 'string' || apiConfig.apiKey.trim() === '') {
+      ServerLogger.error(`API 키가 유효하지 않습니다: ${apiConfig.reason}`, null, 'AI');
+      return false;
+    }
+    
+    if (!apiConfig.model || typeof apiConfig.model !== 'string') {
+      ServerLogger.error('모델명이 유효하지 않습니다', null, 'AI');
+      return false;
+    }
+    
+    if (apiConfig.keyIndex === null || apiConfig.keyIndex === undefined) {
+      ServerLogger.error('키 인덱스가 유효하지 않습니다', null, 'AI');
+      return false;
+    }
+    
+    return true;
+  }
+
+  /**
+   * 안전한 API 호출
+   */
+  async _safeApiCall(model, prompt, imageBase64) {
+    if (!model || typeof model.generateContent !== 'function') {
+      throw new Error('잘못된 모델 인스턴스');
+    }
+    
+    if (!prompt || typeof prompt !== 'string') {
+      throw new Error('잘못된 프롬프트');
+    }
+    
+    if (imageBase64) {
+      if (typeof imageBase64 !== 'string') {
+        throw new Error('잘못된 이미지 데이터 형식');
+      }
+      
+      return await model.generateContent([
+        prompt,
+        {
+          inlineData: {
+            data: imageBase64,
+            mimeType: "image/jpeg"
+          }
+        }
+      ]);
+    } else {
+      return await model.generateContent(prompt);
+    }
+  }
+
+  /**
+   * 안전한 모델 타입 추출
+   */
+  _extractModelType(modelName) {
+    if (!modelName || typeof modelName !== 'string') {
+      ServerLogger.warn('잘못된 모델명, 기본값 flash 사용', null, 'AI');
+      return 'flash';
+    }
+    
+    return modelName.toLowerCase().includes('pro') ? 'pro' : 'flash';
+  }
+
+  /**
+   * 안전한 응답 텍스트 추출
+   */
+  _safeExtractResponseText(result) {
+    if (!result) {
+      throw new Error('API 응답이 null입니다');
+    }
+    
+    if (!result.response) {
+      throw new Error('API 응답에 response 속성이 없습니다');
+    }
+    
+    if (typeof result.response.text !== 'function') {
+      throw new Error('응답 텍스트 추출 함수를 찾을 수 없습니다');
+    }
+    
+    const responseText = result.response.text();
+    
+    if (!responseText || typeof responseText !== 'string') {
+      throw new Error('응답 텍스트가 유효하지 않습니다');
+    }
+    
+    return responseText;
+  }
+
 
   async queryGemini(prompt, imageBase64) {
+    // Enhanced Multi API Manager 사용 여부 확인 (최우선)
+    if (this.useEnhancedMultiApi && this.multiApiManager) {
+      return await this._queryWithEnhancedMultiApi(prompt, imageBase64);
+    }
+    // 기존 하이브리드 Gemini 사용 여부 확인 (호환성)
+    else if (this.useHybridGemini && this.hybridGemini) {
+      try {
+        ServerLogger.info('🤖 하이브리드 Gemini 시스템 사용', null, 'AI');
+        const result = await this.hybridGemini.generateContent(prompt, imageBase64);
+        
+        // 사용량 정보 로깅
+        const stats = result.usageStats;
+        ServerLogger.info(`📊 모델 사용: ${result.modelUsed} (폴백: ${result.fallbackUsed ? 'O' : 'X'})`, {
+          duration: `${result.duration}ms`,
+          proUsage: `${stats.pro.used}/${stats.pro.quota}`,
+          flashUsage: `${stats.flash.used}/${stats.flash.quota}`
+        }, 'AI');
+        
+        return result.text;
+        
+      } catch (error) {
+        ServerLogger.error('하이브리드 Gemini 호출 실패:', error, 'AI');
+        throw error;
+      }
+    }
+    
+    // 기존 단일 모델 방식 (하이브리드 비활성화시)
     const maxRetries = 3;
     const retryDelays = [10000, 10000, 10000]; // 10초, 10초, 10초
     
@@ -672,7 +917,7 @@ class AIAnalyzer {
     
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        ServerLogger.info(`AI 요청 시작 - 모델: Gemini (시도 ${attempt + 1}/${maxRetries})`);
+        ServerLogger.info(`AI 요청 시작 - 모델: Gemini 단일 모드 (시도 ${attempt + 1}/${maxRetries})`);
         ServerLogger.info('AI 프롬프트 길이:', prompt.length);
         
         // 🧪 디버깅: 의도적 실패 시뮬레이션
@@ -1869,6 +2114,45 @@ JSON 형식으로 답변:
 
 
 
+  /**
+   * Gemini 사용량 통계 조회
+   */
+  getGeminiUsageStats() {
+    if (this.useEnhancedMultiApi && this.multiApiManager) {
+      return this.multiApiManager.getSystemStatus();
+    } else if (this.useHybridGemini && this.hybridGemini) {
+      return this.hybridGemini.getUsageStats();
+    }
+    
+    // 기본 Gemini 사용 시에는 간단한 정보만 반환
+    return {
+      status: 'basic_mode',
+      model: 'gemini-2.5-pro',
+      hybridMode: false,
+      multiApiMode: false,
+      message: '기본 단일 API 키 Gemini 사용 중'
+    };
+  }
+
+  /**
+   * Gemini 헬스체크 조회
+   */
+  getGeminiHealthCheck() {
+    if (this.useEnhancedMultiApi && this.multiApiManager) {
+      return this.multiApiManager.healthCheck();
+    } else if (this.useHybridGemini && this.hybridGemini) {
+      return this.hybridGemini.healthCheck();
+    }
+    
+    // 기본 Gemini 사용 시 헬스체크
+    return {
+      status: 'basic_mode',
+      apiKeyConfigured: !!this.apiKey,
+      model: 'gemini-2.5-pro',
+      hybridMode: false,
+      message: '하이브리드 모드가 아닌 기본 Gemini 사용 중'
+    };
+  }
 }
 
 module.exports = AIAnalyzer;
