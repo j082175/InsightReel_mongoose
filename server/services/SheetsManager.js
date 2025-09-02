@@ -95,15 +95,28 @@ class SheetsManager {
       
       const existingSheets = response.data.sheets.map(sheet => sheet.properties.title);
       
-      // 대상 시트가 없으면 생성
-      if (!existingSheets.includes(targetSheetName)) {
+      // 대소문자 무관 시트 존재 여부 확인
+      const existingSheet = response.data.sheets.find(sheet => 
+        sheet.properties.title?.toLowerCase() === targetSheetName.toLowerCase()
+      );
+      
+      if (!existingSheet) {
         try {
           await this.createSheetForPlatform(targetSheetName);
-          ServerLogger.info(`📄 새로운 시트 생성됨: ${targetSheetName}`, null, 'SHEETS');
+          // createSheetForPlatform 내부에서 로그를 남기므로 여기서는 제거
         } catch (createError) {
           // 시트 생성 실패해도 계속 진행 (시트가 이미 존재할 가능성)
-          ServerLogger.warn(`⚠️ 시트 생성 실패하지만 계속 진행: ${targetSheetName}`, createError.message, 'SHEETS');
+          if (!createError.message?.includes('already exists')) {
+            ServerLogger.warn(`⚠️ 시트 생성 실패: ${targetSheetName}`, createError.message, 'SHEETS');
+          }
         }
+      } else {
+        // 기존 시트가 있으면 실제 시트 이름 반환 (대소문자 정확한 이름)
+        const actualName = existingSheet.properties.title;
+        if (actualName !== targetSheetName) {
+          ServerLogger.info(`📝 시트 이름 대소문자 차이 감지: "${targetSheetName}" → "${actualName}"`, null, 'SHEETS');
+        }
+        return actualName;
       }
       
       return targetSheetName;
@@ -138,10 +151,24 @@ class SheetsManager {
       
       const existingSheets = response.data.sheets.map(sheet => sheet.properties.title);
       
-      if (existingSheets.includes(sheetName)) {
-        ServerLogger.info(`📄 시트가 이미 존재함: ${sheetName}`, null, 'SHEETS');
-        return; // 이미 존재하면 생성하지 않음
+      // 대소문자 무관 시트 존재 여부 확인
+      const existingSheet = response.data.sheets.find(sheet => 
+        sheet.properties.title?.toLowerCase() === sheetName.toLowerCase()
+      );
+      
+      if (existingSheet) {
+        const actualName = existingSheet.properties.title;
+        if (actualName !== sheetName) {
+          ServerLogger.info(`📝 시트 이름 대소문자 차이 감지: "${sheetName}" → "${actualName}"`, null, 'SHEETS');
+        }
+        ServerLogger.info(`📄 시트가 이미 존재함 - 헤더만 업데이트: ${actualName}`, null, 'SHEETS');
+        await this.setHeadersForSheet(actualName); // 실제 시트 이름으로 헤더 업데이트
+        return;
       }
+
+      // 플랫폼별 컬럼 수 결정
+      const headers = this.getPlatformHeaders(sheetName);
+      const columnCount = headers.length + 5; // 여유분 추가
 
       await this.sheets.spreadsheets.batchUpdate({
         spreadsheetId: this.spreadsheetId,
@@ -153,7 +180,7 @@ class SheetsManager {
                   title: sheetName,
                   gridProperties: {
                     rowCount: 1000,
-                    columnCount: 19
+                    columnCount: columnCount
                   }
                 }
               }
@@ -165,11 +192,11 @@ class SheetsManager {
       // 새 시트에 헤더 추가
       await this.setHeadersForSheet(sheetName);
       
-      ServerLogger.info(`✅ 플랫폼별 시트 생성 완료: ${sheetName}`, null, 'SHEETS');
+      ServerLogger.info(`✅ 새로운 ${sheetName} 시트 생성 및 헤더 설정 완료 (${headers.length}개 컬럼)`, null, 'SHEETS');
     } catch (error) {
       // 중복 시트 오류는 무시하고 헤더 업데이트 진행
       if (error.message && error.message.includes('already exists')) {
-        ServerLogger.info(`📄 시트가 이미 존재함 - 헤더 업데이트 시도: ${sheetName}`, null, 'SHEETS');
+        ServerLogger.info(`📄 시트 생성 중 중복 감지 - 헤더 업데이트: ${sheetName}`, null, 'SHEETS');
         await this.setHeadersForSheet(sheetName);
         return;
       }
@@ -281,16 +308,42 @@ class SheetsManager {
       }
     });
     
-    // 헤더 포맷팅은 별도로 시도 (실패해도 계속 진행)
+    // 헤더 포맷팅은 별도로 시도 (재시도 로직 포함)
+    const headerCount = headers.length; // 클로저를 위해 복사
     setTimeout(async () => {
       try {
-        const sheetMetadata = await this.sheets.spreadsheets.get({
-          spreadsheetId: this.spreadsheetId
-        });
-        
-        const targetSheet = sheetMetadata.data.sheets?.find(sheet => 
-          sheet.properties?.title === sheetName
-        );
+        // 시트 생성 직후 타이밍 이슈를 위한 재시도 로직
+        let targetSheet = null;
+        for (let retry = 0; retry < 3; retry++) {
+          try {
+            const sheetMetadata = await this.sheets.spreadsheets.get({
+              spreadsheetId: this.spreadsheetId
+            });
+            
+            // 대소문자 무관 시트 검색
+            targetSheet = sheetMetadata.data.sheets?.find(sheet => 
+              sheet.properties?.title?.toLowerCase() === sheetName.toLowerCase()
+            );
+            
+            if (targetSheet) {
+              const actualName = targetSheet.properties.title;
+              if (actualName !== sheetName) {
+                ServerLogger.info(`📝 시트 이름 대소문자 차이 감지: "${sheetName}" → "${actualName}"`);
+              }
+              break;
+            }
+            
+            if (retry < 2) {
+              await new Promise(resolve => setTimeout(resolve, 500)); // 0.5초 대기
+            }
+          } catch (error) {
+            if (retry < 2) {
+              await new Promise(resolve => setTimeout(resolve, 500));
+            } else {
+              throw error;
+            }
+          }
+        }
         
         if (targetSheet) {
           const sheetId = targetSheet.properties.sheetId;
@@ -307,7 +360,7 @@ class SheetsManager {
                       startRowIndex: 0,
                       endRowIndex: 1,
                       startColumnIndex: 0,
-                      endColumnIndex: 19  // A1:S1까지 헤더 스타일 적용
+                      endColumnIndex: headerCount  // 동적 헤더 스타일 적용
                     },
                     cell: {
                       userEnteredFormat: {
@@ -322,9 +375,9 @@ class SheetsManager {
             }
           });
           
-          ServerLogger.info(`✅ ${sheetName} 헤더 포맷팅 완료 (sheetId: ${sheetId})`);
+          ServerLogger.info(`✅ ${sheetName} 헤더 포맷팅 완료 (${headerCount}개 컬럼, sheetId: ${sheetId})`);
         } else {
-          ServerLogger.warn(`⚠️ ${sheetName} 시트를 찾을 수 없음`);
+          ServerLogger.info(`⚠️ 헤더 포맷팅용 시트 "${sheetName}" 찾을 수 없음 - 포맷팅 건너뜀`);
         }
       } catch (formatError) {
         ServerLogger.warn(`⚠️ ${sheetName} 헤더 포맷팅 실패 (값은 설정됨):`, formatError.message);
@@ -664,7 +717,14 @@ class SheetsManager {
 
       for (const platform of platforms) {
         try {
-          const sheetName = await this.getSheetNameByPlatform(platform);
+          // 통계용으로는 시트 이름만 가져오기 (시트 생성 시도 안함)
+          const sheetNames = {
+            'instagram': 'Instagram',
+            'tiktok': 'TikTok', 
+            'youtube': 'YouTube'
+          };
+          const sheetName = sheetNames[platform] || 'Instagram';
+          
           const response = await this.sheets.spreadsheets.values.get({
             spreadsheetId: this.spreadsheetId,
             range: `${sheetName}!A2:S`  // 헤더 제외 (S까지 확장)
@@ -802,18 +862,44 @@ class SheetsManager {
     return null;
   }
 
-  // 시트 행 수 확장
+  // 시트 행 수 확장 (재시도 로직 포함)
   async ensureSheetCapacity(sheetName, requiredRow) {
     try {
-      // 스프레드시트 메타데이터 조회
-      const spreadsheet = await this.sheets.spreadsheets.get({
-        spreadsheetId: this.spreadsheetId
-      });
-
-      // 해당 시트 찾기
-      const sheet = spreadsheet.data.sheets.find(s => s.properties.title === sheetName);
+      // 시트 생성 직후 타이밍 이슈를 위한 재시도 로직
+      let sheet = null;
+      for (let retry = 0; retry < 3; retry++) {
+        try {
+          const spreadsheet = await this.sheets.spreadsheets.get({
+            spreadsheetId: this.spreadsheetId
+          });
+          
+          // 대소문자 무관 시트 검색
+          sheet = spreadsheet.data.sheets.find(s => 
+            s.properties.title?.toLowerCase() === sheetName.toLowerCase()
+          );
+          
+          if (sheet) {
+            const actualName = sheet.properties.title;
+            if (actualName !== sheetName) {
+              ServerLogger.info(`📝 시트 이름 대소문자 차이 감지: "${sheetName}" → "${actualName}"`);
+            }
+            break;
+          }
+          
+          if (retry < 2) {
+            await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기
+          }
+        } catch (error) {
+          if (retry < 2) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } else {
+            throw error;
+          }
+        }
+      }
+      
       if (!sheet) {
-        ServerLogger.info(`⚠️  시트 "${sheetName}"을 찾을 수 없습니다.`);
+        ServerLogger.warn(`⚠️ 행 확장용 시트 "${sheetName}" 찾을 수 없음 - 행 확장 건너뜀`);
         return;
       }
 
