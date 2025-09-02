@@ -35,6 +35,13 @@ export const CONSTANTS = {
     TIKTOK: {
       BASE: 'https://www.tiktok.com',
       POST_PATTERN: /tiktok\.com\/@[^/]+\/video\/(\d+)/
+    },
+    YOUTUBE: {
+      BASE: 'https://www.youtube.com',
+      VIDEO_PATTERN: /youtube\.com\/watch\?v=([A-Za-z0-9_-]+)/,
+      SHORTS_PATTERN: /youtube\.com\/shorts\/([A-Za-z0-9_-]+)/,
+      EMBED_PATTERN: /youtube\.com\/embed\/([A-Za-z0-9_-]+)/,
+      SHORT_URL_PATTERN: /youtu\.be\/([A-Za-z0-9_-]+)/
     }
   },
 
@@ -110,6 +117,38 @@ export const CONSTANTS = {
       LIKE_COUNT: '[data-e2e="like-count"]',
       COMMENT_COUNT: '[data-e2e="comment-count"]',
       SHARE_COUNT: '[data-e2e="share-count"]'
+    },
+    
+    YOUTUBE: {
+      // 비디오 플레이어
+      VIDEO_PLAYER: '#movie_player',
+      VIDEO_ELEMENT: 'video',
+      
+      // 메타데이터
+      VIDEO_TITLE: '#title h1.ytd-watch-metadata',
+      VIDEO_TITLE_ALT: 'h1.ytd-video-primary-info-renderer',
+      CHANNEL_NAME: '#channel-name a',
+      CHANNEL_NAME_ALT: '.ytd-video-owner-renderer a',
+      
+      // 통계 정보
+      VIEW_COUNT: '#info-text .view-count',
+      VIEW_COUNT_ALT: '.ytd-video-view-count-renderer',
+      LIKE_BUTTON: 'button[aria-label*="like"]',
+      DISLIKE_BUTTON: 'button[aria-label*="dislike"]',
+      
+      // 설명 및 정보
+      DESCRIPTION: '#description',
+      DESCRIPTION_ALT: '.ytd-expandable-video-description-body-renderer',
+      
+      // 액션 버튼들
+      DOWNLOAD_BUTTON: '#download-button',
+      SHARE_BUTTON: 'button[aria-label*="Share"]',
+      SAVE_BUTTON: 'button[aria-label*="Save"]',
+      
+      // Shorts 전용 셀렉터
+      SHORTS_CONTAINER: '#shorts-container',
+      SHORTS_PLAYER: '#shorts-player',
+      SHORTS_INFO: '#info.ytd-shorts'
     }
   },
   

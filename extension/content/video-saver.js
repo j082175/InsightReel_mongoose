@@ -4,6 +4,7 @@ import { ApiClient } from './api-client.js';
 import { UIManager } from './ui-manager.js';
 import { InstagramHandler } from './platforms/instagram-handler.js';
 import { TikTokHandler } from './platforms/tiktok-handler.js';
+import { YouTubeHandler } from './platforms/youtube-handler.js';
 
 /**
  * 메인 VideoSaver 클래스 - 리팩토링된 버전
@@ -17,7 +18,8 @@ export class VideoSaver {
     // 플랫폼별 핸들러
     this.platformHandlers = {
       [CONSTANTS.PLATFORMS.INSTAGRAM]: new InstagramHandler(this.apiClient, this.uiManager),
-      [CONSTANTS.PLATFORMS.TIKTOK]: new TikTokHandler(this.apiClient, this.uiManager)
+      [CONSTANTS.PLATFORMS.TIKTOK]: new TikTokHandler(this.apiClient, this.uiManager),
+      [CONSTANTS.PLATFORMS.YOUTUBE]: new YouTubeHandler(this.apiClient, this.uiManager)
     };
     
     this.currentHandler = null;

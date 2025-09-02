@@ -79,6 +79,7 @@ export class Utils {
     const hostname = window.location.hostname;
     if (hostname.includes('instagram.com')) return 'instagram';
     if (hostname.includes('tiktok.com')) return 'tiktok';
+    if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) return 'youtube';
     return null;
   }
 
