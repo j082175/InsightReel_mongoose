@@ -89,8 +89,8 @@ class VideoSaverPopup {
       await this.testConnection();
     });
 
-    // 설정 토글 - 개별 디바운싱
-    const toggles = ['autoAnalyze', 'autoSave', 'showNotifications'];
+    // 설정 토글 - 개별 디바운싱 (AI 분석 토글 추가)
+    const toggles = ['useAI', 'autoAnalyze', 'autoSave', 'showNotifications'];
     toggles.forEach(id => {
       document.getElementById(id).addEventListener('change', (e) => {
         // 해당 ID의 이전 타이머 취소
@@ -152,16 +152,18 @@ class VideoSaverPopup {
       console.log('📋 로드된 설정:', settings);
       
       // DOM 요소가 준비되었는지 확인
+      const useAI = document.getElementById('useAI');
       const autoAnalyze = document.getElementById('autoAnalyze');
       const autoSave = document.getElementById('autoSave');
       const showNotifications = document.getElementById('showNotifications');
       
-      if (!autoAnalyze || !autoSave || !showNotifications) {
+      if (!useAI || !autoAnalyze || !autoSave || !showNotifications) {
         console.warn('⚠️ DOM 요소가 아직 준비되지 않음');
         return;
       }
       
       // 명시적으로 저장된 값 사용 (undefined인 경우만 기본값)
+      useAI.checked = settings.useAI !== undefined ? settings.useAI : true; // AI 분석은 기본적으로 켜짐
       autoAnalyze.checked = settings.autoAnalysis !== undefined ? settings.autoAnalysis : false;
       autoSave.checked = settings.autoSave !== undefined ? settings.autoSave : true;
       showNotifications.checked = settings.showNotifications !== undefined ? settings.showNotifications : true;
@@ -202,6 +204,7 @@ class VideoSaverPopup {
       if (key === 'autoAnalyze') {
         settingKey = 'autoAnalysis';
       }
+      // useAI는 그대로 useAI로 저장
       
       const updatedSettings = {
         ...currentSettings,
@@ -230,7 +233,11 @@ class VideoSaverPopup {
 
   showQuickFeedback(settingKey) {
     // 토글 옆에 간단한 체크마크 표시 (1초만)
-    const settingElement = document.getElementById(settingKey === 'autoAnalysis' ? 'autoAnalyze' : settingKey);
+    let elementId = settingKey;
+    if (settingKey === 'autoAnalysis') {
+      elementId = 'autoAnalyze';
+    }
+    const settingElement = document.getElementById(elementId);
     if (settingElement && settingElement.parentElement) {
       const feedback = document.createElement('span');
       feedback.textContent = '✓';

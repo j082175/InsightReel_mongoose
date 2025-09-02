@@ -3767,6 +3767,19 @@ class UIManager {
 }
 
 // 기존 VideoSaver 클래스와 동일한 인터페이스 유지
+// AI 설정 확인 함수
+const checkAISettings = async () => {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get(['videosaverSettings'], (result) => {
+      const settings = result.videosaverSettings || {};
+      // useAI가 undefined인 경우 기본값은 true (AI 분석 활성화)
+      const useAI = settings.useAI !== undefined ? settings.useAI : true;
+      console.log('🤖 AI 분석 설정 확인:', useAI ? '활성화됨' : '비활성화됨');
+      resolve(useAI);
+    });
+  });
+};
+
 class VideoSaver {
   constructor(serverUrl = CONSTANTS.SERVER_URL) {
     this.platform = Utils.detectPlatform();
@@ -3961,6 +3974,8 @@ class VideoSaver {
   }
 
   async analyzeYouTubeVideo(videoId, isShorts) {
+    console.log('🎬 YouTube 분석 시작 - videoId:', videoId, 'isShorts:', isShorts);
+    
     const button = document.querySelector('.youtube-analysis-button');
     const originalText = button.textContent;
     
@@ -3976,12 +3991,17 @@ class VideoSaver {
       
       Utils.log('info', 'YouTube 영상 분석 시작', { videoId, videoUrl, isShorts });
 
+      // AI 설정 확인
+      const useAI = await checkAISettings();
+      console.log('🤖 YouTube processVideo - useAI:', useAI);
+      
       const result = await this.apiClient.processVideo({
         platform: 'youtube',
         videoUrl: videoUrl,
         postUrl: window.location.href,
         metadata: metadata,
-        analysisType: 'quick'
+        analysisType: useAI ? 'quick' : 'none',  // AI 비활성화시 분석 없음
+        useAI: useAI  // 백엔드에서 참고하도록 전달
       });
 
       Utils.log('success', 'YouTube 영상 분석 완료', result);
@@ -4374,11 +4394,16 @@ class VideoSaver {
             Utils.log('info', '🧹 부분 다운로드 파라미터 제거됨');
           }
           
+          // AI 설정 확인
+          const useAI = await checkAISettings();
+          console.log('🤖 Instagram processVideo - useAI:', useAI);
+          
           await this.apiClient.processVideo({
             platform: CONSTANTS.PLATFORMS.INSTAGRAM,
             videoUrl: cleanVideoUrl,
             postUrl,
-            analysisType: 'multi-frame', // 다중 프레임 분석으로 변경
+            analysisType: useAI ? 'multi-frame' : 'none', // AI 비활성화시 분석 없음
+            useAI: useAI,  // 백엔드에서 참고하도록 전달
             metadata: {
               ...metadata,
               analysisId,
@@ -4414,11 +4439,15 @@ class VideoSaver {
         
         const multiFrameData = await this.captureMultipleFrames(video, 5); // 5프레임
         
+        // AI 설정 확인
+        const useAI = await checkAISettings();
+        
         await this.apiClient.processVideoBlob({
           platform: CONSTANTS.PLATFORMS.INSTAGRAM,
           videoBlob: multiFrameData,
           postUrl,
-          analysisType: 'multi-frame', // 파라미터로 전달
+          analysisType: useAI ? 'multi-frame' : 'none', // AI 비활성화시 분석 없음
+          useAI: useAI,  // 백엔드에서 참고하도록 전달
           metadata: {
             ...metadata,
             analysisId,
@@ -4462,11 +4491,15 @@ class VideoSaver {
         throw new Error('프레임 캡처 실패');
       }
 
+      // AI 설정 확인
+      const useAI = await checkAISettings();
+
       await this.apiClient.processVideoBlob({
         platform: CONSTANTS.PLATFORMS.INSTAGRAM,
         videoBlob: frameBlob,
         postUrl,
-        analysisType: 'quick', // 파라미터로 전달
+        analysisType: useAI ? 'quick' : 'none', // AI 비활성화시 분석 없음
+        useAI: useAI,  // 백엔드에서 참고하도록 전달
         metadata: {
           ...metadata,
           analysisId,
@@ -5039,10 +5072,15 @@ class VideoSaver {
       }
     }
     
+    // AI 설정 확인
+    const useAI = await checkAISettings();
+    
     await this.apiClient.processVideoBlob({
       platform: CONSTANTS.PLATFORMS.INSTAGRAM,
       videoBlob,
       postUrl,
+      analysisType: useAI ? 'quick' : 'none', // AI 비활성화시 분석 없음
+      useAI: useAI,  // 백엔드에서 참고하도록 전달
       metadata: {
         ...metadata,
         uploadDate: (() => {

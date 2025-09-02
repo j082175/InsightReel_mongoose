@@ -469,7 +469,7 @@ class VideoProcessor {
       const response = await axios.get(
         `https://www.googleapis.com/youtube/v3/videos`, {
           params: {
-            part: 'snippet,statistics,contentDetails',
+            part: 'snippet,statistics,contentDetails,status',
             id: videoId,
             key: this.youtubeApiKey
           }
@@ -484,6 +484,27 @@ class VideoProcessor {
       const snippet = video.snippet;
       const statistics = video.statistics;
       const contentDetails = video.contentDetails;
+      const status = video.status;
+
+      // 채널 정보 추가 수집 (구독자 수)
+      let channelInfo = null;
+      try {
+        const channelResponse = await axios.get(
+          `https://www.googleapis.com/youtube/v3/channels`, {
+            params: {
+              part: 'statistics,snippet',
+              id: snippet.channelId,
+              key: this.youtubeApiKey
+            }
+          }
+        );
+        
+        if (channelResponse.data.items && channelResponse.data.items.length > 0) {
+          channelInfo = channelResponse.data.items[0];
+        }
+      } catch (channelError) {
+        ServerLogger.warn('⚠️ 채널 정보 수집 실패 (무시하고 계속):', channelError.message);
+      }
 
       // 카테고리 변환
       const categoryId = snippet.categoryId;
@@ -513,15 +534,27 @@ class VideoProcessor {
         tags: snippet.tags || [],
         views: statistics.viewCount || '0',
         likes: statistics.likeCount || '0',
-        comments: statistics.commentCount || '0'
+        comments: statistics.commentCount || '0',
+        // 새로 추가되는 정보들
+        subscribers: channelInfo?.statistics?.subscriberCount || '0', // 구독자 수
+        channelVideos: channelInfo?.statistics?.videoCount || '0',    // 채널 동영상 수
+        channelViews: channelInfo?.statistics?.viewCount || '0',      // 채널 총 조회수
+        channelCountry: channelInfo?.snippet?.country || '',          // 채널 국가
+        channelDescription: channelInfo?.snippet?.description || '',  // 채널 설명
+        monetized: status?.madeForKids === false ? 'Y' : 'N',        // 수익화 가능 (키즈 콘텐츠가 아닌 경우)
+        ageRestricted: status?.contentRating ? 'Y' : 'N',            // 연령 제한
+        definition: contentDetails?.definition || 'sd',               // 화질 (hd/sd)
+        language: snippet.defaultLanguage || snippet.defaultAudioLanguage || '', // 언어
+        liveBroadcast: snippet.liveBroadcastContent || 'none'         // 라이브 방송 여부
       };
 
       ServerLogger.info(`✅ YouTube 정보 수집 완료:`);
       ServerLogger.info(`📺 제목: ${videoInfo.title}`);
-      ServerLogger.info(`👤 채널: ${videoInfo.channel}`);
+      ServerLogger.info(`👤 채널: ${videoInfo.channel} (구독자: ${videoInfo.subscribers})`);
       ServerLogger.info(`🏷️ 카테고리: ${videoInfo.category}`);
       ServerLogger.info(`⏱️ 길이: ${videoInfo.durationFormatted} (${contentType})`);
       ServerLogger.info(`👀 조회수: ${videoInfo.views.toLocaleString()}`);
+      ServerLogger.info(`💰 수익화: ${videoInfo.monetized}, 🎞️ 화질: ${videoInfo.definition}`);
       
       return videoInfo;
 

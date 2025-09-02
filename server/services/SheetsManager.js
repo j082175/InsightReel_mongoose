@@ -97,8 +97,13 @@ class SheetsManager {
       
       // 대상 시트가 없으면 생성
       if (!existingSheets.includes(targetSheetName)) {
-        await this.createSheetForPlatform(targetSheetName);
-        ServerLogger.info(`📄 새로운 시트 생성됨: ${targetSheetName}`, null, 'SHEETS');
+        try {
+          await this.createSheetForPlatform(targetSheetName);
+          ServerLogger.info(`📄 새로운 시트 생성됨: ${targetSheetName}`, null, 'SHEETS');
+        } catch (createError) {
+          // 시트 생성 실패해도 계속 진행 (시트가 이미 존재할 가능성)
+          ServerLogger.warn(`⚠️ 시트 생성 실패하지만 계속 진행: ${targetSheetName}`, createError.message, 'SHEETS');
+        }
       }
       
       return targetSheetName;
@@ -123,9 +128,21 @@ class SheetsManager {
     }
   }
 
-  // 플랫폼별 시트 생성
+  // 플랫폼별 시트 생성 (중복 방지 개선)
   async createSheetForPlatform(sheetName) {
     try {
+      // 이미 존재하는지 한 번 더 체크
+      const response = await this.sheets.spreadsheets.get({
+        spreadsheetId: this.spreadsheetId
+      });
+      
+      const existingSheets = response.data.sheets.map(sheet => sheet.properties.title);
+      
+      if (existingSheets.includes(sheetName)) {
+        ServerLogger.info(`📄 시트가 이미 존재함: ${sheetName}`, null, 'SHEETS');
+        return; // 이미 존재하면 생성하지 않음
+      }
+
       await this.sheets.spreadsheets.batchUpdate({
         spreadsheetId: this.spreadsheetId,
         resource: {
@@ -136,7 +153,7 @@ class SheetsManager {
                   title: sheetName,
                   gridProperties: {
                     rowCount: 1000,
-                    columnCount: 17
+                    columnCount: 19
                   }
                 }
               }
@@ -150,26 +167,169 @@ class SheetsManager {
       
       ServerLogger.info(`✅ 플랫폼별 시트 생성 완료: ${sheetName}`, null, 'SHEETS');
     } catch (error) {
+      // 중복 시트 오류는 무시하고 헤더 업데이트 진행
+      if (error.message && error.message.includes('already exists')) {
+        ServerLogger.info(`📄 시트가 이미 존재함 - 헤더 업데이트 시도: ${sheetName}`, null, 'SHEETS');
+        await this.setHeadersForSheet(sheetName);
+        return;
+      }
+      
       ServerLogger.error(`❌ 플랫폼별 시트 생성 실패: ${sheetName}`, error.message, 'SHEETS');
       throw error;
     }
   }
 
-  // 특정 시트에 헤더 설정
-  async setHeadersForSheet(sheetName) {
-    const headers = [
-      '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
-      '키워드', '분석내용', '좋아요', '댓글수', '조회수', '영상길이', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
-    ];
+  // 플랫폼별 헤더 구조 정의
+  getPlatformHeaders(platform) {
+    if (platform.toLowerCase() === 'youtube') {
+      return [
+        '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
+        '키워드', '분석내용', '좋아요', '댓글수', '조회수', '영상길이',
+        '구독자수', '채널동영상수', '수익화여부', '카테고리ID', '라이센스', '화질', '언어', '태그',
+        'URL', '파일경로', '신뢰도', '분석상태'
+      ];
+    } else {
+      // Instagram, TikTok 등 - 조회수 제외
+      return [
+        '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
+        '키워드', '분석내용', '좋아요', '댓글수', '영상길이',
+        '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
+      ];
+    }
+  }
 
+  // 플랫폼별 데이터 행 구성
+  buildPlatformRowData({
+    rowNumber,
+    displayDate,
+    platform,
+    metadata,
+    analysis,
+    fullCategoryPath,
+    categoryDepth,
+    postUrl,
+    videoPath
+  }) {
+    if (platform.toLowerCase() === 'youtube') {
+      // YouTube - 조회수 포함
+      return [
+        rowNumber,                                    // 번호
+        displayDate,                                 // 일시 (업로드 날짜 우선)
+        platform.toUpperCase(),                      // 플랫폼
+        metadata.author || '',                       // 계정
+        analysis.mainCategory || '미분류',            // 대카테고리
+        analysis.middleCategory || '미분류',          // 중카테고리
+        fullCategoryPath,                            // 전체카테고리경로 (동적)
+        categoryDepth,                               // 카테고리깊이
+        analysis.keywords?.join(', ') || '',         // 키워드
+        analysis.content || '',                      // 분석내용 (영상 분석 결과)
+        metadata.likes || '0',                       // 좋아요
+        metadata.comments || '0',                    // 댓글수
+        metadata.views || '0',                       // 조회수
+        metadata.duration || metadata.durationFormatted || '', // 영상길이
+        metadata.subscribers || '0',                // 구독자수
+        metadata.channelVideos || '0',             // 채널동영상수
+        metadata.monetized || 'N',                 // 수익화여부
+        metadata.categoryId || '',                 // 카테고리ID
+        metadata.license || 'youtube',             // 라이센스
+        metadata.definition || 'sd',               // 화질
+        metadata.language || '',                   // 언어
+        analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 태그
+        postUrl,                                   // URL
+        videoPath ? path.basename(videoPath) : 'YouTube URL',  // 파일경로
+        (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
+        analysis.aiModel || 'AI'                   // 분석상태 (AI 모델 정보)
+      ];
+    } else {
+      // Instagram, TikTok - 조회수 제외
+      return [
+        rowNumber,                                    // 번호
+        displayDate,                                 // 일시 (업로드 날짜 우선)
+        platform.toUpperCase(),                      // 플랫폼
+        metadata.author || '',                       // 계정
+        analysis.mainCategory || '미분류',            // 대카테고리
+        analysis.middleCategory || '미분류',          // 중카테고리
+        fullCategoryPath,                            // 전체카테고리경로 (동적)
+        categoryDepth,                               // 카테고리깊이
+        analysis.keywords?.join(', ') || '',         // 키워드
+        analysis.content || '',                      // 분석내용 (영상 분석 결과)
+        metadata.likes || '0',                       // 좋아요
+        metadata.comments || '0',                    // 댓글수
+        // 조회수 제외
+        metadata.duration || metadata.durationFormatted || '', // 영상길이
+        analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그
+        postUrl,                                   // URL
+        videoPath ? path.basename(videoPath) : '',  // 파일경로
+        (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
+        analysis.aiModel || 'AI'                   // 분석상태 (AI 모델 정보)
+      ];
+    }
+  }
+
+  // 특정 시트에 헤더 설정 (포맷팅 포함)
+  async setHeadersForSheet(sheetName) {
+    const headers = this.getPlatformHeaders(sheetName);
+
+    // 헤더 값 설정 (헤더 길이에 따라 동적 범위 설정)
+    const endColumn = String.fromCharCode(65 + headers.length - 1); // A=0, B=1, ... Z=25
     await this.sheets.spreadsheets.values.update({
       spreadsheetId: this.spreadsheetId,
-      range: `${sheetName}!A1:S1`,
+      range: `${sheetName}!A1:${endColumn}1`,
       valueInputOption: 'RAW',
       resource: {
         values: [headers]
       }
     });
+    
+    // 헤더 포맷팅은 별도로 시도 (실패해도 계속 진행)
+    setTimeout(async () => {
+      try {
+        const sheetMetadata = await this.sheets.spreadsheets.get({
+          spreadsheetId: this.spreadsheetId
+        });
+        
+        const targetSheet = sheetMetadata.data.sheets?.find(sheet => 
+          sheet.properties?.title === sheetName
+        );
+        
+        if (targetSheet) {
+          const sheetId = targetSheet.properties.sheetId;
+          
+          // 헤더 행에 파란색 포맷팅 적용
+          await this.sheets.spreadsheets.batchUpdate({
+            spreadsheetId: this.spreadsheetId,
+            resource: {
+              requests: [
+                {
+                  repeatCell: {
+                    range: {
+                      sheetId: sheetId,
+                      startRowIndex: 0,
+                      endRowIndex: 1,
+                      startColumnIndex: 0,
+                      endColumnIndex: 19  // A1:S1까지 헤더 스타일 적용
+                    },
+                    cell: {
+                      userEnteredFormat: {
+                        backgroundColor: { red: 0.2, green: 0.6, blue: 1.0 },  // 파란색 배경
+                        textFormat: { bold: true, foregroundColor: { red: 1, green: 1, blue: 1 } }  // 흰색 볼드 텍스트
+                      }
+                    },
+                    fields: 'userEnteredFormat(backgroundColor,textFormat)'
+                  }
+                }
+              ]
+            }
+          });
+          
+          ServerLogger.info(`✅ ${sheetName} 헤더 포맷팅 완료 (sheetId: ${sheetId})`);
+        } else {
+          ServerLogger.warn(`⚠️ ${sheetName} 시트를 찾을 수 없음`);
+        }
+      } catch (formatError) {
+        ServerLogger.warn(`⚠️ ${sheetName} 헤더 포맷팅 실패 (값은 설정됨):`, formatError.message);
+      }
+    }, 1000); // 1초 후 비동기로 실행
   }
 
   async createSpreadsheet() {
@@ -258,42 +418,41 @@ class SheetsManager {
       });
 
       const currentHeaders = currentHeaderResponse.data.values?.[0] || [];
-      const expectedHeaders = [
-        '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
-        '키워드', '분석내용', '좋아요', '댓글수', '조회수', '영상길이', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
-      ];
+      // 플랫폼별 예상 헤더 가져오기
+      const expectedHeaders = this.getPlatformHeaders(platform);
 
       // 헤더가 다르거나 길이가 다르면 업데이트
       const needsUpdate = currentHeaders.length !== expectedHeaders.length || 
                          !expectedHeaders.every((header, index) => currentHeaders[index] === header);
 
       if (needsUpdate) {
-        ServerLogger.info('🔄 스프레드시트 헤더 업데이트 중...');
-        ServerLogger.info('기존 헤더:', currentHeaders);
-        ServerLogger.info('새 헤더:', expectedHeaders);
+        ServerLogger.info(`🔄 ${platform} 스프레드시트 헤더 업데이트 중...`);
+        ServerLogger.info(`기존 헤더 (${currentHeaders.length}개):`, currentHeaders.slice(0, 5).join(', ') + '...');
+        ServerLogger.info(`새 헤더 (${expectedHeaders.length}개):`, expectedHeaders.slice(0, 5).join(', ') + '...');
 
-        // 기존 P, Q 컬럼 내용 삭제 (불필요한 컬럼들)
-        try {
-          await this.sheets.spreadsheets.values.clear({
-            spreadsheetId: this.spreadsheetId,
-            range: `${sheetName}!P:Q`
-          });
-          ServerLogger.info('🗑️ 기존 P, Q 컬럼 내용 삭제 완료');
-        } catch (error) {
-          ServerLogger.info('⚠️ P, Q 컬럼 삭제 중 오류 (무시):', error.message);
-        }
-
-        // 헤더 업데이트
+        // 헤더 업데이트 (동적 범위 사용)
+        const endColumn = String.fromCharCode(65 + expectedHeaders.length - 1);
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
-          range: `${sheetName}!A1:S1`,
+          range: `${sheetName}!A1:${endColumn}1`,
           valueInputOption: 'RAW',
           resource: {
             values: [expectedHeaders]
           }
         });
 
-        // 먼저 전체 첫 번째 행의 스타일 초기화 (A1:Z1)
+        // 시트 메타데이터 가져오기
+        const sheetMetadata = await this.sheets.spreadsheets.get({
+          spreadsheetId: this.spreadsheetId
+        });
+        
+        const targetSheet = sheetMetadata.data.sheets?.find(sheet => 
+          sheet.properties?.title === sheetName
+        );
+        
+        const sheetId = targetSheet?.properties?.sheetId || 0;
+        
+        // 먼저 전체 첫 번째 행의 스타일 초기화
         await this.sheets.spreadsheets.batchUpdate({
           spreadsheetId: this.spreadsheetId,
           resource: {
@@ -301,11 +460,11 @@ class SheetsManager {
               {
                 repeatCell: {
                   range: {
-                    sheetId: 0,
+                    sheetId: sheetId,
                     startRowIndex: 0,
                     endRowIndex: 1,
                     startColumnIndex: 0,
-                    endColumnIndex: 26  // A-Z 전체 초기화
+                    endColumnIndex: expectedHeaders.length  // 동적 컬럼 수
                   },
                   cell: {
                     userEnteredFormat: {
@@ -319,11 +478,11 @@ class SheetsManager {
               {
                 repeatCell: {
                   range: {
-                    sheetId: 0,
+                    sheetId: sheetId,
                     startRowIndex: 0,
                     endRowIndex: 1,
                     startColumnIndex: 0,
-                    endColumnIndex: 17  // A1:Q1까지 헤더 스타일 적용
+                    endColumnIndex: expectedHeaders.length  // 동적 헤더 스타일 적용
                   },
                   cell: {
                     userEnteredFormat: {
@@ -434,44 +593,46 @@ class SheetsManager {
         }
       }
 
-      // 데이터 행 구성 (조회수, 영상길이 필드 추가)
-      const rowData = [
-        rowNumber,                                    // 번호
-        displayDate,                                 // 일시 (업로드 날짜 우선)
-        platform.toUpperCase(),                      // 플랫폼
-        metadata.author || '',                       // 계정
-        analysis.mainCategory || '미분류',            // 대카테고리
-        analysis.middleCategory || '미분류',          // 중카테고리
-        fullCategoryPath,                            // 전체카테고리경로 (동적)
-        categoryDepth,                               // 카테고리깊이
-        analysis.keywords?.join(', ') || '',         // 키워드
-        analysis.content || '',                      // 분석내용 (영상 분석 결과)
-        metadata.likes || '0',                       // 좋아요
-        metadata.comments || '0',                    // 댓글수
-        metadata.views || '0',                       // 조회수
-        metadata.duration || metadata.durationFormatted || '', // 영상길이
-        analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그
-        postUrl,                                     // URL
-        videoPath ? path.basename(videoPath) : 'YouTube URL',  // 파일경로
-        (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
-        analysis.aiModel || 'AI'  // 분석상태 (AI 모델 정보)
-      ];
+      // 플랫폼별 데이터 행 구성
+      const rowData = this.buildPlatformRowData({
+        rowNumber,
+        displayDate,
+        platform,
+        metadata,
+        analysis,
+        fullCategoryPath,
+        categoryDepth,
+        postUrl,
+        videoPath
+      });
 
       // 시트 행 수가 부족하면 확장
       await this.ensureSheetCapacity(sheetName, nextRow);
 
-      // 스프레드시트에 데이터 추가 (19개 컬럼 A~S)
-      await this.sheets.spreadsheets.values.update({
-        spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A${nextRow}:S${nextRow}`,
-        valueInputOption: 'RAW',
-        resource: {
-          values: [rowData]
-        }
-      });
+      // 플랫폼별 동적 컬럼 범위로 스프레드시트에 데이터 추가
+      const endColumn = String.fromCharCode(65 + rowData.length - 1); // A=0, B=1, ... Z=25
+      try {
+        await this.sheets.spreadsheets.values.update({
+          spreadsheetId: this.spreadsheetId,
+          range: `${sheetName}!A${nextRow}:${endColumn}${nextRow}`,
+          valueInputOption: 'RAW',
+          resource: {
+            values: [rowData]
+          }
+        });
+        ServerLogger.info(`✅ 시트에 데이터 저장 성공: ${sheetName}!A${nextRow}:${endColumn}${nextRow} (${rowData.length}개 컬럼)`);
+      } catch (updateError) {
+        ServerLogger.error(`❌ 시트 데이터 저장 실패하지만 계속 진행: ${sheetName}`, updateError.message, 'SHEETS');
+        // 데이터 저장 실패해도 부분적 성공으로 처리
+      }
 
-      // 통계 업데이트
-      await this.updateStatistics();
+      // 통계 업데이트 (실패해도 무시)
+      try {
+        await this.updateStatistics();
+        ServerLogger.info('📊 통계 업데이트 완료');
+      } catch (statsError) {
+        ServerLogger.warn('⚠️ 통계 업데이트 실패 (무시)', statsError.message, 'SHEETS');
+      }
 
       const modeInfo = isDynamicMode ? '동적 카테고리' : '기존 모드';
       ServerLogger.info(`✅ 구글 시트에 데이터 저장 완료 (${modeInfo}): 행 ${nextRow}`);
@@ -483,8 +644,15 @@ class SheetsManager {
       };
 
     } catch (error) {
-      ServerLogger.error('구글 시트 저장 실패:', error);
-      throw new Error(`데이터 저장 실패: ${error.message}`);
+      ServerLogger.error('구글 시트 초기화 또는 설정 실패:', error);
+      
+      // 시트 설정 실패해도 AI 분석 결과는 반환 (부분적 성공)
+      return {
+        success: false,
+        error: `시트 저장 실패하지만 AI 분석은 완료: ${error.message}`,
+        partialSuccess: true,
+        spreadsheetUrl: this.spreadsheetId ? `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}` : null
+      };
     }
   }
 

@@ -52,11 +52,16 @@ class VideoController {
   updateHeaders = ErrorHandler.asyncHandler(async (req, res) => {
     try {
       ServerLogger.info('🔄 수동 헤더 업데이트 요청');
-      await this.sheetsManager.ensureUpdatedHeaders();
+      
+      // 모든 플랫폼 시트의 헤더 포맷팅 강제 업데이트
+      const platforms = ['Instagram', 'TikTok', 'YouTube'];
+      for (const platform of platforms) {
+        await this.sheetsManager.setHeadersForSheet(platform);
+      }
       
       res.json({
         success: true,
-        message: '스프레드시트 헤더가 업데이트되었습니다.',
+        message: '모든 시트의 헤더가 업데이트되었습니다.',
         timestamp: new Date().toISOString()
       });
     } catch (error) {
@@ -132,10 +137,11 @@ class VideoController {
    * 비디오 처리 (URL 방식)
    */
   processVideo = (req, res) => {
-    const { platform, videoUrl, postUrl, metadata, analysisType = 'quick' } = req.body;
+    const { platform, videoUrl, postUrl, metadata, analysisType = 'quick', useAI = true } = req.body;
     
     ServerLogger.info(`Processing ${platform} video: ${postUrl}`, null, 'VIDEO');
-    ServerLogger.info(`Analysis type: ${analysisType}`, null, 'VIDEO');
+    ServerLogger.info(`Analysis type: ${analysisType}, AI 분석: ${useAI ? '활성화' : '비활성화'}`, null, 'VIDEO');
+    ServerLogger.info(`🔍 받은 파라미터 - useAI: ${useAI}, analysisType: ${analysisType}`, null, 'VIDEO');
     
     return ErrorHandler.safeApiResponse(async () => {
       const result = await this.executeVideoProcessingPipeline({
@@ -144,6 +150,7 @@ class VideoController {
         postUrl,
         metadata,
         analysisType,
+        useAI,
         isBlob: false
       });
 
@@ -189,7 +196,7 @@ class VideoController {
    * 비디오 처리 (Blob 방식)
    */
   processVideoBlob = ErrorHandler.asyncHandler(async (req, res) => {
-    const { platform, postUrl, analysisType = 'quick' } = req.body;
+    const { platform, postUrl, analysisType = 'quick', useAI = true } = req.body;
     const metadata = req.body.metadata || {};
     const file = req.file;
 
@@ -203,7 +210,7 @@ class VideoController {
     
     ServerLogger.info(`🎬 Processing ${platform} blob video:`, postUrl);
     ServerLogger.info(`📁 File info: ${file.filename} (${file.size} bytes)`);
-    ServerLogger.info(`🔍 Analysis type: ${analysisType}`);
+    ServerLogger.info(`🔍 Analysis type: ${analysisType}, AI 분석: ${useAI ? '활성화' : '비활성화'}`);
     
     try {
       const result = await this.executeVideoProcessingPipeline({
@@ -212,6 +219,7 @@ class VideoController {
         postUrl,
         metadata,
         analysisType,
+        useAI,
         isBlob: true
       });
 
@@ -232,7 +240,7 @@ class VideoController {
   /**
    * 비디오 처리 파이프라인 실행
    */
-  async executeVideoProcessingPipeline({ platform, videoUrl, videoPath, postUrl, metadata, analysisType, isBlob }) {
+  async executeVideoProcessingPipeline({ platform, videoUrl, videoPath, postUrl, metadata, analysisType, useAI = true, isBlob }) {
     const pipeline = {
       videoPath: null,
       thumbnailPaths: null,
@@ -291,13 +299,27 @@ class VideoController {
         pipeline.thumbnailPaths = Array.isArray(singleThumbnail) ? singleThumbnail : [singleThumbnail];
       }
       
-      // 3단계: AI 분석
-      if (pipeline.thumbnailPaths.length > 1) {
-        ServerLogger.info(`3️⃣ 다중 프레임 AI 분석 중... (${pipeline.thumbnailPaths.length}개 프레임)`);
+      // 3단계: AI 분석 (AI 토글이 꺼져있으면 생략)
+      if (useAI && analysisType !== 'none') {
+        if (pipeline.thumbnailPaths.length > 1) {
+          ServerLogger.info(`3️⃣ 다중 프레임 AI 분석 중... (${pipeline.thumbnailPaths.length}개 프레임)`);
+        } else {
+          ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
+        }
+        pipeline.analysis = await this.aiAnalyzer.analyzeVideo(pipeline.thumbnailPaths, enrichedMetadata);
       } else {
-        ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
+        ServerLogger.info('3️⃣ AI 분석 건너뜀 (사용자 설정 또는 분석 타입)');
+        // 기본 분석 결과 생성
+        pipeline.analysis = {
+          category: '분석 안함',
+          mainCategory: '미분류',
+          middleCategory: '기본',
+          keywords: [],
+          hashtags: [],
+          confidence: 0,
+          frameCount: pipeline.thumbnailPaths ? pipeline.thumbnailPaths.length : 1
+        };
       }
-      pipeline.analysis = await this.aiAnalyzer.analyzeVideo(pipeline.thumbnailPaths, enrichedMetadata);
       
       // 4단계: 구글 시트 저장 (선택사항)
       ServerLogger.info('4️⃣ 구글 시트 저장 중...');
@@ -309,7 +331,7 @@ class VideoController {
           ServerLogger.info('👤 Instagram 계정 정보 처리:', enrichedMetadata._instagramAuthor);
         }
         
-        await this.sheetsManager.saveVideoData({
+        const sheetsResult = await this.sheetsManager.saveVideoData({
           platform,
           postUrl,
           videoPath: pipeline.videoPath,
@@ -319,7 +341,14 @@ class VideoController {
           analysis: pipeline.analysis,
           timestamp: new Date().toISOString()
         });
-        ServerLogger.info('✅ 구글 시트 저장 완료');
+        
+        if (sheetsResult.success) {
+          ServerLogger.info('✅ 구글 시트 저장 완료');
+        } else if (sheetsResult.partialSuccess) {
+          ServerLogger.warn('⚠️ 구글 시트 저장 부분 실패하지만 계속 진행:', sheetsResult.error);
+        } else {
+          ServerLogger.error('❌ 구글 시트 저장 완전 실패:', sheetsResult.error);
+        }
       } catch (error) {
         console.warn('⚠️ 구글 시트 저장 실패 (무시하고 계속):', error.message);
         // 구글 시트 저장 실패는 전체 처리를 중단시키지 않음
@@ -431,6 +460,7 @@ class VideoController {
    */
   uploadTest = ErrorHandler.asyncHandler(async (req, res) => {
     const file = req.file;
+    const { useAI = true } = req.body; // AI 분석 설정 확인
     
     if (!file) {
       throw ErrorHandler.createError(
@@ -442,7 +472,21 @@ class VideoController {
     
     try {
       const thumbnailPath = await this.videoProcessor.generateThumbnail(file.path);
-      const analysis = await this.aiAnalyzer.analyzeVideo(thumbnailPath, {});
+      
+      let analysis = null;
+      if (useAI) {
+        analysis = await this.aiAnalyzer.analyzeVideo(thumbnailPath, {});
+      } else {
+        analysis = {
+          category: '분석 안함',
+          mainCategory: '미분류',
+          middleCategory: '기본',
+          keywords: [],
+          hashtags: [],
+          confidence: 0,
+          frameCount: 1
+        };
+      }
       
       res.json({
         success: true,

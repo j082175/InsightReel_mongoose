@@ -159,7 +159,7 @@ app.get('/api/config/health', (req, res) => {
 // 비디오 처리 메인 엔드포인트
 app.post('/api/process-video', async (req, res) => {
   try {
-    const { platform, videoUrl, postUrl, metadata, analysisType = 'quick' } = req.body;
+    const { platform, videoUrl, postUrl, metadata, analysisType = 'quick', useAI = true } = req.body;
     
     // 큐 상태 확인 및 로깅
     const queueStatus = videoQueue.getStatus();
@@ -169,12 +169,12 @@ app.post('/api/process-video', async (req, res) => {
     const result = await videoQueue.addToQueue({
       id: `url_${platform}_${Date.now()}`,
       type: 'url',
-      data: { platform, videoUrl, postUrl, metadata, analysisType },
+      data: { platform, videoUrl, postUrl, metadata, analysisType, useAI },
       processor: async (taskData) => {
-        const { platform, videoUrl, postUrl, metadata, analysisType } = taskData;
+        const { platform, videoUrl, postUrl, metadata, analysisType, useAI } = taskData;
         
         ServerLogger.info(`🎬 Processing ${platform} video:`, postUrl || videoUrl);
-        ServerLogger.info(`🔍 Analysis type: ${analysisType}`);
+        ServerLogger.info(`🔍 Analysis type: ${analysisType}, AI 분석: ${useAI ? '활성화' : '비활성화'}`);
         
         let videoPath;
         let youtubeInfo = null;
@@ -199,23 +199,54 @@ app.post('/api/process-video', async (req, res) => {
         let analysis;
         
         if (platform === 'youtube') {
-          // YouTube: 썸네일 URL로 AI 분석
-          ServerLogger.info('1️⃣ YouTube 썸네일로 AI 분석 중...');
-          
-          const enrichedMetadata = { 
-            ...metadata, 
-            platform,
+          // YouTube 정보를 원본 metadata에 병합 (시트 저장용)
+          Object.assign(metadata, {
             title: youtubeInfo.title,
             description: youtubeInfo.description,
             author: youtubeInfo.channel,
+            likes: youtubeInfo.likes || 0,
+            comments: youtubeInfo.comments || 0,
+            views: youtubeInfo.views || 0,
             duration: youtubeInfo.duration,
+            durationFormatted: youtubeInfo.durationFormatted,
+            uploadDate: youtubeInfo.publishedAt,
             contentType: youtubeInfo.contentType,
-            youtubeCategory: youtubeInfo.category
+            youtubeCategory: youtubeInfo.category,
+            // YouTube 추가 정보
+            subscribers: youtubeInfo.subscribers || '0',
+            channelVideos: youtubeInfo.channelVideos || '0',
+            monetized: youtubeInfo.monetized || 'N',
+            categoryId: youtubeInfo.categoryId || '',
+            license: youtubeInfo.license || 'youtube',
+            definition: youtubeInfo.definition || 'sd',
+            language: youtubeInfo.language || '',
+            ageRestricted: youtubeInfo.ageRestricted || 'N',
+            liveBroadcast: youtubeInfo.liveBroadcast || 'none'
+          });
+          
+          const enrichedMetadata = { 
+            ...metadata, 
+            platform
           };
           
-          // YouTube 썸네일 URL을 사용하여 분석
-          analysis = await aiAnalyzer.analyzeVideo(youtubeInfo.thumbnailUrl, enrichedMetadata);
           thumbnailPaths = [youtubeInfo.thumbnailUrl]; // 썸네일 URL 저장
+          
+          // AI 분석 조건부 실행
+          if (useAI && analysisType !== 'none') {
+            ServerLogger.info('1️⃣ YouTube 썸네일로 AI 분석 중...');
+            analysis = await aiAnalyzer.analyzeVideo(youtubeInfo.thumbnailUrl, enrichedMetadata);
+          } else {
+            ServerLogger.info('1️⃣ AI 분석 건너뜀 (사용자 설정)');
+            analysis = {
+              category: '분석 안함',
+              mainCategory: '미분류',
+              middleCategory: '기본',
+              keywords: [],
+              hashtags: [],
+              confidence: 0,
+              frameCount: 1
+            };
+          }
           
         } else {
           // Instagram/TikTok: 기존 방식
@@ -230,15 +261,28 @@ app.post('/api/process-video', async (req, res) => {
             thumbnailPaths = Array.isArray(singleThumbnail) ? singleThumbnail : [singleThumbnail];
           }
           
-          // 3단계: AI 분석
-          if (thumbnailPaths.length > 1) {
-            ServerLogger.info(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
-          } else {
-            ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
-          }
-          
+          // 3단계: AI 분석 (조건부 실행)
           const enrichedMetadata = { ...metadata, platform };
-          analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, enrichedMetadata);
+          
+          if (useAI && analysisType !== 'none') {
+            if (thumbnailPaths.length > 1) {
+              ServerLogger.info(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
+            } else {
+              ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
+            }
+            analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, enrichedMetadata);
+          } else {
+            ServerLogger.info('3️⃣ AI 분석 건너뜀 (사용자 설정)');
+            analysis = {
+              category: '분석 안함',
+              mainCategory: '미분류',
+              middleCategory: '기본',
+              keywords: [],
+              hashtags: [],
+              confidence: 0,
+              frameCount: thumbnailPaths.length
+            };
+          }
         }
         
         // AI 분석에서 오류가 발생한 경우 시트 저장 중단
@@ -416,12 +460,12 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
 // blob 비디오 처리 엔드포인트
 app.post('/api/process-video-blob', upload.single('video'), async (req, res) => {
   try {
-    const { platform, postUrl, analysisType = 'quick' } = req.body;
+    const { platform, postUrl, analysisType = 'quick', useAI = true } = req.body;
     const metadata = JSON.parse(req.body.metadata || '{}');
     
     ServerLogger.info(`🎬 Processing ${platform} blob video from:`, postUrl);
     ServerLogger.info(`📁 Uploaded file: ${req.file ? `${req.file.filename} (${req.file.size} bytes)` : 'None'}`);
-    ServerLogger.info(`🔍 Analysis type: ${analysisType}`);
+    ServerLogger.info(`🔍 Analysis type: ${analysisType}, AI 분석: ${useAI ? '활성화' : '비활성화'}`);
     
     if (!req.file) {
       return ResponseHandler.clientError(res, {
@@ -440,9 +484,9 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     const result = await videoQueue.addToQueue({
       id: `blob_${platform}_${Date.now()}`,
       type: 'blob',
-      data: { platform, postUrl, analysisType, metadata, videoPath },
+      data: { platform, postUrl, analysisType, metadata, videoPath, useAI },
       processor: async (taskData) => {
-        const { platform, postUrl, analysisType, metadata, videoPath } = taskData;
+        const { platform, postUrl, analysisType, metadata, videoPath, useAI } = taskData;
         
         // 2단계: 썸네일/프레임 생성
         if (analysisType === 'multi-frame' || analysisType === 'full') {
@@ -455,15 +499,29 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
           var thumbnailPaths = Array.isArray(singleThumbnail) ? singleThumbnail : [singleThumbnail];
         }
         
-        // 3단계: AI 분석 (먼저 실행)
-        if (thumbnailPaths.length > 1) {
-          ServerLogger.info(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
-        } else {
-          ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
-        }
-        // metadata에 platform 정보 추가
+        // 3단계: AI 분석 (조건부 실행)
         const enrichedMetadata = { ...metadata, platform };
-        const analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, enrichedMetadata);
+        let analysis;
+        
+        if (useAI && analysisType !== 'none') {
+          if (thumbnailPaths.length > 1) {
+            ServerLogger.info(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
+          } else {
+            ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
+          }
+          analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, enrichedMetadata);
+        } else {
+          ServerLogger.info('3️⃣ AI 분석 건너뜀 (사용자 설정)');
+          analysis = {
+            category: '분석 안함',
+            mainCategory: '미분류',
+            middleCategory: '기본',
+            keywords: [],
+            hashtags: [],
+            confidence: 0,
+            frameCount: thumbnailPaths.length
+          };
+        }
         
         // AI 분석에서 오류가 발생한 경우 시트 저장 중단
         if (analysis.aiError && analysis.aiError.occurred) {
