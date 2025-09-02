@@ -1,0 +1,17 @@
+[
+  {
+    "timestamp": "2025-09-02T14:27:55.313Z",
+    "date": "2025. 9. 2.",
+    "totalChannels": 1,
+    "processedChannels": 1,
+    "totalVideos": 8,
+    "trendingVideos": 8,
+    "quotaUsed": 101,
+    "errors": [],
+    "processingTimeMs": 703,
+    "processingTimeSeconds": "0.7",
+    "avgTimePerChannel": "703",
+    "trendingRate": "100.0",
+    "quotaEfficiency": "0.08"
+  }
+]

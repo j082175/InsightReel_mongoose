@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>영상 수집 대시보드 - 프로토타입</title>
+    
+    <!-- Resource Hints - 상용 웹사이트 최적화 기법 -->
+    <link rel="dns-prefetch" href="//localhost:3000">
+    <link rel="preconnect" href="http://localhost:3000">
+    <link rel="dns-prefetch" href="//img.youtube.com">
+    <!-- Critical CSS - 첫 화면 렌더링에 필요한 것만 인라인으로 -->
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;line-height:1.4}
+        .header{background:#fff;box-shadow:0 2px 4px rgba(0,0,0,.1);padding:1rem 2rem;position:sticky;top:0;z-index:100}
+        .header h1{color:#1976d2;font-size:1.5rem;margin-bottom:1rem}
+        .nav-tabs{display:flex;gap:1rem}
+        .tab{padding:.5rem 1rem;border:none;background:#e3f2fd;border-radius:20px;cursor:pointer;font-size:.9rem}
+        .tab.active{background:#1976d2;color:#fff}
+        .main-content{padding:2rem;max-width:1400px;margin:0 auto}
+        .hidden{display:none!important}
+        .stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1rem;margin-bottom:2rem}
+        .stat-card{background:#fff;padding:1.5rem;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1);text-align:center;cursor:pointer}
+        .stat-number{font-size:2rem;font-weight:bold;color:#1976d2;margin-bottom:.5rem}
+        .stat-label{color:#666;font-size:.9rem}
+        /* 썸네일 플레이스홀더 */
+        .thumbnail-placeholder{width:100%;height:180px;background:#f0f0f0!important;display:flex!important;align-items:center;justify-content:center;color:#666!important;font-size:16px!important;font-weight:bold}
+        /* 아바타 스타일 */
+        .channel-avatar{width:24px;height:24px;background:#ddd;border-radius:50%;margin-right:.5rem;display:flex;align-items:center;justify-content:center;font-size:12px}
+    </style>
+    
+    <!-- 나머지 CSS는 비동기로 로드 (렌더링 차단 안함) -->
+    <link rel="preload" href="dashboard-original.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="dashboard-original.css"></noscript>
+</head>
+<body>
+    <div class="header">
+        <h1>🎬 영상 수집 대시보드</h1>
+        <div class="nav-tabs">
+            <button class="tab active" onclick="showTab('videos')">수집된 영상</button>
+            <button class="tab" onclick="showTab('trending')">🔥 YouTube 트렌딩</button>
+            <button class="tab" onclick="showTab('channels')">채널 관리</button>
+            <button class="tab" onclick="showTab('analytics')">분석 리포트</button>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- 통계 바 -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <div class="stat-number">2,847</div>
+                <div class="stat-label">총 영상</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">187</div>
+                <div class="stat-label">채널 수</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">23</div>
+                <div class="stat-label">오늘 수집</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">15</div>
+                <div class="stat-label">카테고리</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="quota-remaining">-</div>
+                <div class="stat-label">남은 Quota</div>
+            </div>
+            <div class="stat-card" onclick="testServerConnection()">
+                <div class="stat-number">🔌</div>
+                <div class="stat-label">서버 연결 테스트</div>
+            </div>
+        </div>
+
+        <!-- 검색 섹션 -->
+        <div class="search-section">
+            <div class="search-grid">
+                <input type="text" class="search-input" placeholder="키워드, 채널명, 제목 검색..." id="searchInput">
+                <select class="filter-select" id="categoryFilter">
+                    <option value="">모든 카테고리</option>
+                    <option value="게임">게임</option>
+                    <option value="뷰티">뷰티</option>
+                    <option value="요리">요리</option>
+                    <option value="기술">기술</option>
+                    <option value="교육">교육</option>
+                </select>
+                <select class="filter-select" id="platformFilter">
+                    <option value="">모든 플랫폼</option>
+                    <option value="youtube">YouTube</option>
+                    <option value="instagram">Instagram</option>
+                    <option value="tiktok">TikTok</option>
+                </select>
+                <button class="search-btn" onclick="searchVideos()">🔍 검색</button>
+            </div>
+        </div>
+
+        <!-- 영상 탭 -->
+        <div id="videos-content">
+            <div class="content-tabs">
+                <div class="content-tab active" onclick="showVideoTab('recent')">최신순</div>
+                <div class="content-tab" onclick="showVideoTab('popular')">인기순</div>
+                <div class="content-tab" onclick="showVideoTab('trending')">트렌딩</div>
+            </div>
+
+            <div class="video-grid" id="video-grid">
+                <!-- 초기 로딩 시에는 최소한의 예시 카드만 -->
+                <div class="video-card">
+                    <div class="thumbnail-container">
+                        <div class="thumbnail-placeholder">📹 예시 썸네일</div>
+                        <span class="platform-badge youtube">YouTube</span>
+                    </div>
+                    <div class="video-info">
+                        <h3 class="video-title">수집된 영상이 여기에 표시됩니다</h3>
+                        <div class="channel-info">
+                            <div class="channel-avatar">👤</div>
+                            <span class="channel-name">예시 채널</span>
+                        </div>
+                        <div class="video-meta">
+                            <span class="category-tag">예시</span>
+                            <span class="date">방금 전</span>
+                        </div>
+                        <div class="video-actions">
+                            <button class="action-btn primary">🔄 실제 데이터 로드</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- YouTube 트렌딩 섹션 -->
+        <div id="trending-content" class="hidden">
+            <div class="section-header">
+                <h2>🔥 YouTube 트렌딩 영상</h2>
+                <p>최근 7일간 조회수 높은 영상들을 실시간으로 수집합니다</p>
+            </div>
+
+            <div class="action-bar">
+                <button onclick="collectTrendingVideos()" class="btn-primary">
+                    📊 최신 트렌드 수집
+                </button>
+                <button onclick="loadTrendingData()" class="btn-secondary">
+                    🔄 트렌딩 데이터 새로고침
+                </button>
+            </div>
+
+            <!-- 트렌딩 영상 그리드 -->
+            <div id="trending-video-grid" class="video-grid">
+                <div class="placeholder-message">
+                    <h3>🔍 트렌딩 영상을 수집해보세요</h3>
+                    <p>위의 "최신 트렌드 수집" 버튼을 클릭하면 YouTube에서 가장 인기 있는 영상들을 가져옵니다</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 채널 탭 -->
+        <div id="channels-content" class="hidden">
+            <div class="content-tabs">
+                <div class="content-tab active" onclick="showChannelTab('all')">전체 채널</div>
+                <div class="content-tab" onclick="showChannelTab('game')">게임 (45)</div>
+                <div class="content-tab" onclick="showChannelTab('beauty')">뷰티 (28)</div>
+                <div class="content-tab" onclick="showChannelTab('cooking')">요리 (31)</div>
+                <div class="content-tab" onclick="showChannelTab('tech')">기술 (22)</div>
+            </div>
+
+            <div class="channel-grid">
+                <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                    <h3 style="color: #1976d2; margin-bottom: 1rem;">📺 채널 관리</h3>
+                    <p style="color: #666;">수집 대상 채널들을 관리하고 트렌딩 영상을 수집합니다</p>
+                    <div style="margin-top: 2rem;">
+                        <button class="action-btn primary" onclick="alert('채널 추가 기능')">➕ 채널 추가</button>
+                        <button class="action-btn" onclick="alert('채널 목록 보기')">📋 채널 목록</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 분석 탭 -->
+        <div id="analytics-content" class="hidden">
+            <div style="text-align: center; padding: 3rem; background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+                <h2 style="color: #1976d2; margin-bottom: 1rem;">📊 분석 리포트</h2>
+                <p style="color: #666;">카테고리별 트렌드, 채널 성장률, 키워드 분석 등이 표시됩니다</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 비동기 로드 (렌더링 차단 안함) -->
+    <script src="dashboard.js" async></script>
+</body>
+</html>

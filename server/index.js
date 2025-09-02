@@ -30,17 +30,10 @@ ServerLogger.info('🔍 VERY EARLY DEBUG: Express 앱 생성 후 즉시 API 등�
 
 // 미들웨어 설정
 app.use(cors({
-  origin: [
-    'chrome-extension://*',
-    'http://localhost:*',
-    'https://www.instagram.com',
-    'https://instagram.com',
-    'https://www.tiktok.com',
-    'https://tiktok.com',
-    'https://www.youtube.com',
-    'https://youtube.com',
-    'https://youtu.be'
-  ],
+  origin: function (origin, callback) {
+    // 모든 origin 허용 (개발 환경)
+    callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
