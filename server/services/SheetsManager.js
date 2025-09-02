@@ -216,10 +216,10 @@ class SheetsManager {
         'URL', '파일경로', '신뢰도', '분석상태', '카테고리일치율', '일치유형', '일치사유'
       ];
     } else {
-      // Instagram, TikTok 등 - 조회수 제외
+      // Instagram, TikTok 등 - 조회수, 영상길이 제외
       return [
         '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
-        '키워드', '분석내용', '좋아요', '댓글수', '영상길이',
+        '키워드', '분석내용', '좋아요', '댓글수',
         '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
       ];
     }
@@ -285,8 +285,7 @@ class SheetsManager {
         analysis.content || '',                      // 분석내용 (영상 분석 결과)
         metadata.likes || '0',                       // 좋아요
         metadata.comments || '0',                    // 댓글수
-        // 조회수 제외
-        metadata.duration || metadata.durationFormatted || '', // 영상길이
+        // 조회수, 영상길이 제외
         analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그
         postUrl,                                   // URL
         videoPath ? path.basename(videoPath) : '',  // 파일경로
