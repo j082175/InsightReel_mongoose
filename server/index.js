@@ -13,6 +13,7 @@ const VideoProcessor = require('./services/VideoProcessor');
 const AIAnalyzer = require('./services/AIAnalyzer');
 const SheetsManager = require('./services/SheetsManager');
 const youtubeBatchProcessor = require('./services/YouTubeBatchProcessor');
+const ChannelTrendingCollector = require('./services/ChannelTrendingCollector');
 const { ServerLogger } = require('./utils/logger');
 const ResponseHandler = require('./utils/response-handler');
 const { API_MESSAGES, ERROR_CODES } = require('./config/api-messages');
@@ -20,6 +21,12 @@ const videoQueue = require('./utils/VideoQueue');
 
 const app = express();
 const PORT = config.get('PORT');
+
+// 매우 초기 디버그 API 추가
+app.get('/api/debug-very-early', (req, res) => {
+  res.json({ success: true, message: '🔍 VERY EARLY DEBUG: 라인 25 실행됨!' });
+});
+ServerLogger.info('🔍 VERY EARLY DEBUG: Express 앱 생성 후 즉시 API 등록');
 
 // 미들웨어 설정
 app.use(cors({
@@ -62,10 +69,22 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+// 서비스 초기화 전 디버그
+app.get('/api/debug-before-services', (req, res) => {
+  res.json({ success: true, message: '🔧 BEFORE SERVICES: 서비스 초기화 전 실행됨!' });
+});
+ServerLogger.info('🔧 BEFORE SERVICES DEBUG: 서비스 초기화 전');
+
 // 서비스 초기화
 const videoProcessor = new VideoProcessor();
 const aiAnalyzer = new AIAnalyzer();
 const sheetsManager = new SheetsManager();
+
+// 서비스 초기화 후 디버그
+app.get('/api/debug-after-services', (req, res) => {
+  res.json({ success: true, message: '✅ AFTER SERVICES: 기본 서비스 초기화 완료!' });
+});
+ServerLogger.info('✅ AFTER SERVICES DEBUG: 기본 서비스 초기화 완료');
 
 // 기본 통계
 let stats = {
@@ -681,10 +700,7 @@ app.use((err, req, res, next) => {
   }, API_MESSAGES.COMMON.INTERNAL_ERROR);
 });
 
-// 404 핸들러
-app.use((req, res) => {
-  ResponseHandler.notFound(res, `경로 '${req.path}'를 찾을 수 없습니다.`);
-});
+// 404 핸들러는 맨 마지막에 이동
 
 // YouTube 배치 처리 API 엔드포인트
 app.post('/api/youtube-batch', async (req, res) => {
@@ -771,6 +787,173 @@ app.delete('/api/youtube-batch/clear', async (req, res) => {
     ServerLogger.error('배치 큐 비우기 실패:', error);
     return ResponseHandler.error(res, error, '배치 큐 비우기 실패');
   }
+});
+
+// 임시 테스트 API - 500번대 라인으로 이동해서 테스트
+app.get('/api/test-early', (req, res) => {
+  res.json({ success: true, message: 'EARLY DEBUG: 500번대 라인 실행됨!' });
+});
+ServerLogger.info('🧪 EARLY DEBUG: 500번대 라인에서 API 등록');
+
+// 임시 테스트 API (먼저 추가해서 여기까지 실행되는지 확인)
+app.get('/api/test-debug', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'DEBUG: 코드가 여기까지 실행됨!',
+    timestamp: new Date().toISOString()
+  });
+});
+
+ServerLogger.info('🧪 DEBUG: /api/test-debug API 등록 완료');
+
+// 채널 트렌딩 수집 API
+let channelTrendingCollector;
+try {
+  channelTrendingCollector = new ChannelTrendingCollector();
+  ServerLogger.info('✅ ChannelTrendingCollector 초기화 성공');
+} catch (error) {
+  ServerLogger.error('❌ ChannelTrendingCollector 초기화 실패:', error);
+  channelTrendingCollector = null;
+}
+
+// ChannelTrendingCollector 초기화 확인 API
+app.get('/api/debug-collector', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'ChannelTrendingCollector 초기화 체크 완료',
+    initialized: !!channelTrendingCollector,
+    timestamp: new Date().toISOString()
+  });
+});
+ServerLogger.info('🧪 DEBUG: ChannelTrendingCollector 초기화 체크 API 등록');
+
+// collect-trending GET API 등록 전 디버그
+app.get('/api/debug-before-collect-get', (req, res) => {
+  res.json({ success: true, message: 'collect-trending GET 등록 직전!' });
+});
+
+// 채널별 트렌딩 영상 수집 시작 (GET은 안내용, POST는 실제 처리)
+app.get('/api/collect-trending', (req, res) => {
+  res.json({
+    success: true,
+    message: 'ChannelTrendingCollector API 정상 작동중',
+    usage: {
+      method: 'POST',
+      endpoint: '/api/collect-trending',
+      body: {
+        channelIds: ['UCChannelId1', 'UCChannelId2'],
+        options: {
+          daysBack: 3,
+          minViewCount: 50000,
+          maxResults: 10
+        }
+      }
+    },
+    initialized: !!channelTrendingCollector
+  });
+});
+
+// collect-trending GET API 등록 후 디버그
+app.get('/api/debug-after-collect-get', (req, res) => {
+  res.json({ success: true, message: 'collect-trending GET 등록 완료!' });
+});
+
+app.post('/api/collect-trending', async (req, res) => {
+  if (!channelTrendingCollector) {
+    return ResponseHandler.serverError(res, 
+      new Error('ChannelTrendingCollector가 초기화되지 않았습니다'), 
+      'ChannelTrendingCollector 초기화 오류');
+  }
+  
+  try {
+    const { channelIds, options = {} } = req.body;
+    
+    if (!channelIds || !Array.isArray(channelIds) || channelIds.length === 0) {
+      return ResponseHandler.badRequest(res, {
+        code: 'MISSING_CHANNELS',
+        message: '채널 ID 배열이 필요합니다.',
+        details: { example: ['UCChannelId1', 'UCChannelId2'] }
+      });
+    }
+
+    ServerLogger.info(`📊 트렌딩 수집 요청: ${channelIds.length}개 채널`, {
+      channels: channelIds.slice(0, 3).map(id => `${id.substring(0, 10)}...`),
+      options
+    });
+
+    const results = await channelTrendingCollector.collectFromChannels(channelIds, options);
+    
+    ResponseHandler.success(res, results, '채널 트렌딩 수집이 완료되었습니다.');
+    
+  } catch (error) {
+    ServerLogger.error('트렌딩 수집 실패:', error);
+    ResponseHandler.serverError(res, error, '트렌딩 수집 중 오류가 발생했습니다.');
+  }
+});
+
+// collect-trending API 등록 확인
+app.get('/api/debug-after-collect', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'collect-trending API 등록 이후 실행됨!',
+    timestamp: new Date().toISOString()
+  });
+});
+ServerLogger.info('🧪 DEBUG: collect-trending API 등록 후 체크');
+
+// API quota 현황 조회
+app.get('/api/quota-status', (req, res) => {
+  if (!channelTrendingCollector) {
+    return ResponseHandler.serverError(res, 
+      new Error('ChannelTrendingCollector가 초기화되지 않았습니다'), 
+      'ChannelTrendingCollector 초기화 오류');
+  }
+  
+  try {
+    const quotaStatus = channelTrendingCollector.getQuotaStatus();
+    
+    ResponseHandler.success(res, {
+      quota: quotaStatus,
+      timestamp: new Date().toISOString(),
+      recommendations: {
+        canProcess: quotaStatus.remaining > 200,
+        estimatedChannels: Math.floor(quotaStatus.remaining / 101),
+        resetTime: '매일 자정 (한국 시간)'
+      }
+    }, 'API quota 현황을 조회했습니다.');
+    
+  } catch (error) {
+    ResponseHandler.serverError(res, error, 'Quota 상태 조회 중 오류가 발생했습니다.');
+  }
+});
+
+// 트렌딩 수집 통계 조회
+app.get('/api/trending-stats', async (req, res) => {
+  try {
+    const stats = await channelTrendingCollector.getStats();
+    
+    const summary = stats.length > 0 ? {
+      totalCollections: stats.length,
+      lastCollection: stats[stats.length - 1],
+      avgTrendingRate: (stats.reduce((sum, s) => sum + parseFloat(s.trendingRate || 0), 0) / stats.length).toFixed(1),
+      totalQuotaUsed: stats.reduce((sum, s) => sum + (s.quotaUsed || 0), 0),
+      totalTrendingVideos: stats.reduce((sum, s) => sum + (s.trendingVideos || 0), 0)
+    } : null;
+    
+    ResponseHandler.success(res, {
+      stats,
+      summary,
+      timestamp: new Date().toISOString()
+    }, '트렌딩 수집 통계를 조회했습니다.');
+    
+  } catch (error) {
+    ResponseHandler.serverError(res, error, '통계 조회 중 오류가 발생했습니다.');
+  }
+});
+
+// 404 핸들러 (모든 라우트 등록 후 마지막에)
+app.use((req, res) => {
+  ResponseHandler.notFound(res, `경로 '${req.path}'를 찾을 수 없습니다.`);
 });
 
 // 서버 시작
