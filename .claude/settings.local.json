@@ -48,7 +48,8 @@
       "Bash(npm test:*)",
       "Bash(npx jest tests/unit/AIAnalyzer.test.js:*)",
       "Bash(npx jest tests/unit/SheetsManager.test.js --testNamePattern=\"최근 비디오 목록을 반환해야 함\":*)",
-      "WebFetch(domain:ai.google.dev)"
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": [],
