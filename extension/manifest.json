@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "영상 자동저장 분석기",
   "version": "1.0.0",
-  "description": "인스타그램과 틱톡 영상을 자동으로 저장하고 AI로 분석하여 구글 스프레드시트에 정리",
+  "description": "인스타그램, 틱톡, 유튜브 영상을 자동으로 저장하고 AI로 분석하여 구글 스프레드시트에 정리",
   
   "permissions": [
     "activeTab",
@@ -17,6 +17,8 @@
   "host_permissions": [
     "https://www.instagram.com/*",
     "https://www.tiktok.com/*",
+    "https://www.youtube.com/*",
+    "https://youtu.be/*",
     "https://sheets.googleapis.com/*",
     "http://localhost:3000/*"
   ],
@@ -29,7 +31,9 @@
     {
       "matches": [
         "https://www.instagram.com/*",
-        "https://www.tiktok.com/*"
+        "https://www.tiktok.com/*",
+        "https://www.youtube.com/*",
+        "https://youtu.be/*"
       ],
       "js": ["content/content-script-bundled.js"],
       "css": ["content/styles.css"],

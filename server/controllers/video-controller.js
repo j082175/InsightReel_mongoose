@@ -240,13 +240,41 @@ class VideoController {
     };
 
     try {
-      // 1단계: 비디오 준비
+      // 1단계: 비디오 준비 및 메타데이터 수집
+      let enrichedMetadata = { ...metadata };
+      
       if (isBlob && videoPath) {
         ServerLogger.info('1️⃣ 업로드된 비디오 사용');
         pipeline.videoPath = videoPath;
       } else if (videoUrl) {
         ServerLogger.info('1️⃣ 비디오 다운로드 중...');
         pipeline.videoPath = await this.videoProcessor.downloadVideo(videoUrl, platform);
+        
+        // YouTube URL인 경우 메타데이터 수집
+        if (platform === 'youtube') {
+          ServerLogger.info('📊 YouTube 메타데이터 수집 중...');
+          try {
+            const youtubeInfo = await this.videoProcessor.getYouTubeVideoInfo(postUrl || videoUrl);
+            enrichedMetadata = {
+              ...enrichedMetadata,
+              author: youtubeInfo.channel,
+              likes: youtubeInfo.likes,
+              comments: youtubeInfo.comments,
+              views: youtubeInfo.views,
+              uploadDate: youtubeInfo.publishedAt,
+              duration: youtubeInfo.duration,
+              durationFormatted: youtubeInfo.durationFormatted,
+              contentType: youtubeInfo.contentType
+            };
+            ServerLogger.info(`✅ YouTube 메타데이터 수집 완료:`);
+            ServerLogger.info(`👤 채널: ${youtubeInfo.channel}`);
+            ServerLogger.info(`👍 좋아요: ${youtubeInfo.likes}, 💬 댓글: ${youtubeInfo.comments}, 👀 조회수: ${youtubeInfo.views}`);
+            ServerLogger.info(`⏱️ 영상길이: ${youtubeInfo.durationFormatted} (${youtubeInfo.duration}초)`);
+            ServerLogger.info(`📅 업로드: ${youtubeInfo.publishedAt}`);
+          } catch (error) {
+            ServerLogger.warn('⚠️ YouTube 메타데이터 수집 실패 (무시하고 계속):', error.message);
+          }
+        }
       } else {
         throw new Error('비디오 URL 또는 파일이 필요합니다');
       }
@@ -269,16 +297,16 @@ class VideoController {
       } else {
         ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
       }
-      pipeline.analysis = await this.aiAnalyzer.analyzeVideo(pipeline.thumbnailPaths, metadata);
+      pipeline.analysis = await this.aiAnalyzer.analyzeVideo(pipeline.thumbnailPaths, enrichedMetadata);
       
       // 4단계: 구글 시트 저장 (선택사항)
       ServerLogger.info('4️⃣ 구글 시트 저장 중...');
       try {
-        // metadata에서 _instagramAuthor를 author로 변환
-        const processedMetadata = { ...metadata };
-        if (metadata._instagramAuthor) {
-          processedMetadata.author = metadata._instagramAuthor;
-          ServerLogger.info('👤 Instagram 계정 정보 처리:', metadata._instagramAuthor);
+        // Instagram과 YouTube 메타데이터 처리
+        const processedMetadata = { ...enrichedMetadata };
+        if (enrichedMetadata._instagramAuthor) {
+          processedMetadata.author = enrichedMetadata._instagramAuthor;
+          ServerLogger.info('👤 Instagram 계정 정보 처리:', enrichedMetadata._instagramAuthor);
         }
         
         await this.sheetsManager.saveVideoData({

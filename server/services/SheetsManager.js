@@ -77,7 +77,38 @@ class SheetsManager {
     }
   }
 
-  // 첫 번째 시트 이름 조회
+  // 플랫폼별 시트 이름 조회 및 생성
+  async getSheetNameByPlatform(platform) {
+    try {
+      const sheetNames = {
+        'instagram': 'Instagram',
+        'tiktok': 'TikTok', 
+        'youtube': 'YouTube'
+      };
+      
+      const targetSheetName = sheetNames[platform] || 'Instagram'; // 기본값
+      
+      // 기존 시트 목록 조회
+      const response = await this.sheets.spreadsheets.get({
+        spreadsheetId: this.spreadsheetId
+      });
+      
+      const existingSheets = response.data.sheets.map(sheet => sheet.properties.title);
+      
+      // 대상 시트가 없으면 생성
+      if (!existingSheets.includes(targetSheetName)) {
+        await this.createSheetForPlatform(targetSheetName);
+        ServerLogger.info(`📄 새로운 시트 생성됨: ${targetSheetName}`, null, 'SHEETS');
+      }
+      
+      return targetSheetName;
+    } catch (error) {
+      ServerLogger.error('플랫폼별 시트 이름 조회 실패', error.message, 'SHEETS');
+      throw error;
+    }
+  }
+
+  // 첫 번째 시트 이름 조회 (기존 호환성)
   async getFirstSheetName() {
     try {
       const response = await this.sheets.spreadsheets.get({
@@ -92,6 +123,55 @@ class SheetsManager {
     }
   }
 
+  // 플랫폼별 시트 생성
+  async createSheetForPlatform(sheetName) {
+    try {
+      await this.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: this.spreadsheetId,
+        resource: {
+          requests: [
+            {
+              addSheet: {
+                properties: {
+                  title: sheetName,
+                  gridProperties: {
+                    rowCount: 1000,
+                    columnCount: 17
+                  }
+                }
+              }
+            }
+          ]
+        }
+      });
+
+      // 새 시트에 헤더 추가
+      await this.setHeadersForSheet(sheetName);
+      
+      ServerLogger.info(`✅ 플랫폼별 시트 생성 완료: ${sheetName}`, null, 'SHEETS');
+    } catch (error) {
+      ServerLogger.error(`❌ 플랫폼별 시트 생성 실패: ${sheetName}`, error.message, 'SHEETS');
+      throw error;
+    }
+  }
+
+  // 특정 시트에 헤더 설정
+  async setHeadersForSheet(sheetName) {
+    const headers = [
+      '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
+      '키워드', '분석내용', '좋아요', '댓글수', '조회수', '영상길이', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
+    ];
+
+    await this.sheets.spreadsheets.values.update({
+      spreadsheetId: this.spreadsheetId,
+      range: `${sheetName}!A1:S1`,
+      valueInputOption: 'RAW',
+      resource: {
+        values: [headers]
+      }
+    });
+  }
+
   async createSpreadsheet() {
     try {
       const response = await this.sheets.spreadsheets.create({
@@ -102,10 +182,28 @@ class SheetsManager {
           sheets: [
             {
               properties: {
-                title: '영상 목록',
+                title: 'Instagram',
                 gridProperties: {
                   rowCount: 1000,
-                  columnCount: 17
+                  columnCount: 19
+                }
+              }
+            },
+            {
+              properties: {
+                title: 'TikTok',
+                gridProperties: {
+                  rowCount: 1000,
+                  columnCount: 19
+                }
+              }
+            },
+            {
+              properties: {
+                title: 'YouTube',
+                gridProperties: {
+                  rowCount: 1000,
+                  columnCount: 19
                 }
               }
             },
@@ -135,8 +233,11 @@ class SheetsManager {
         JSON.stringify({ spreadsheetId: this.spreadsheetId }, null, 2)
       );
 
-      // 헤더 설정
-      await this.setupHeaders();
+      // 각 플랫폼별 시트에 헤더 설정
+      const platforms = ['Instagram', 'TikTok', 'YouTube'];
+      for (const platform of platforms) {
+        await this.setHeadersForSheet(platform);
+      }
 
       ServerLogger.info(`✅ 새 스프레드시트 생성됨: ${this.spreadsheetId}`);
       return response.data;
@@ -145,53 +246,10 @@ class SheetsManager {
     }
   }
 
-  async setupHeaders() {
-    const headers = [
-      '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
-      '키워드', '분석내용', '좋아요', '댓글수', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
-    ];
-
-    await this.sheets.spreadsheets.values.update({
-      spreadsheetId: this.spreadsheetId,
-      range: `${await this.getFirstSheetName()}!A1:Q1`,
-      valueInputOption: 'RAW',
-      resource: {
-        values: [headers]
-      }
-    });
-
-    // 헤더 스타일링
-    await this.sheets.spreadsheets.batchUpdate({
-      spreadsheetId: this.spreadsheetId,
-      resource: {
-        requests: [
-          {
-            repeatCell: {
-              range: {
-                sheetId: 0,
-                startRowIndex: 0,
-                endRowIndex: 1,
-                startColumnIndex: 0,
-                endColumnIndex: 17
-              },
-              cell: {
-                userEnteredFormat: {
-                  backgroundColor: { red: 0.2, green: 0.6, blue: 1.0 },
-                  textFormat: { bold: true, foregroundColor: { red: 1, green: 1, blue: 1 } }
-                }
-              },
-              fields: 'userEnteredFormat(backgroundColor,textFormat)'
-            }
-          }
-        ]
-      }
-    });
-  }
-
   // 기존 스프레드시트의 헤더가 최신 버전인지 확인하고 업데이트
-  async ensureUpdatedHeaders() {
+  async ensureUpdatedHeaders(platform = 'instagram') {
     try {
-      const sheetName = await this.getFirstSheetName();
+      const sheetName = await this.getSheetNameByPlatform(platform);
       
       // 현재 헤더 조회
       const currentHeaderResponse = await this.sheets.spreadsheets.values.get({
@@ -202,7 +260,7 @@ class SheetsManager {
       const currentHeaders = currentHeaderResponse.data.values?.[0] || [];
       const expectedHeaders = [
         '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
-        '키워드', '분석내용', '좋아요', '댓글수', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
+        '키워드', '분석내용', '좋아요', '댓글수', '조회수', '영상길이', '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
       ];
 
       // 헤더가 다르거나 길이가 다르면 업데이트
@@ -228,7 +286,7 @@ class SheetsManager {
         // 헤더 업데이트
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
-          range: `${sheetName}!A1:Q1`,
+          range: `${sheetName}!A1:S1`,
           valueInputOption: 'RAW',
           resource: {
             values: [expectedHeaders]
@@ -318,13 +376,13 @@ class SheetsManager {
         }
       }
 
-      // 기존 스프레드시트의 헤더 업데이트 확인 및 적용
-      await this.ensureUpdatedHeaders();
-
       const { platform, postUrl, videoPath, thumbnailPath, metadata, analysis, timestamp } = videoData;
 
-      // 첫 번째 시트 이름 가져오기
-      const sheetName = await this.getFirstSheetName();
+      // 기존 스프레드시트의 헤더 업데이트 확인 및 적용
+      await this.ensureUpdatedHeaders(platform);
+
+      // 플랫폼별 시트 이름 가져오기
+      const sheetName = await this.getSheetNameByPlatform(platform);
       
       // 다음 행 번호 조회
       const lastRowResponse = await this.sheets.spreadsheets.values.get({
@@ -338,10 +396,16 @@ class SheetsManager {
       // 업로드 날짜 결정: metadata.uploadDate가 있으면 사용, 없으면 timestamp 사용
       let displayDate;
       if (metadata.uploadDate) {
-        // 업로드 날짜는 시간 없이 날짜만 표시
-        const uploadDateOnly = new Date(metadata.uploadDate).toLocaleDateString('ko-KR');
-        displayDate = uploadDateOnly;
-        ServerLogger.info(`📅 업로드 날짜 사용: ${metadata.uploadDate} -> ${displayDate}`);
+        // YouTube의 경우 업로드 날짜와 시간 모두 표시
+        if (platform === 'youtube') {
+          displayDate = new Date(metadata.uploadDate).toLocaleString('ko-KR');
+          ServerLogger.info(`📅 YouTube 업로드 날짜/시간 사용: ${metadata.uploadDate} -> ${displayDate}`);
+        } else {
+          // 다른 플랫폼은 날짜만 표시
+          const uploadDateOnly = new Date(metadata.uploadDate).toLocaleDateString('ko-KR');
+          displayDate = uploadDateOnly;
+          ServerLogger.info(`📅 업로드 날짜 사용: ${metadata.uploadDate} -> ${displayDate}`);
+        }
       } else {
         displayDate = new Date(timestamp).toLocaleString('ko-KR');
         ServerLogger.info(`📅 처리 날짜 사용 (업로드 날짜 없음): ${timestamp} -> ${displayDate}`);
@@ -370,7 +434,7 @@ class SheetsManager {
         }
       }
 
-      // 데이터 행 구성 (올바른 순서로 복구)
+      // 데이터 행 구성 (조회수, 영상길이 필드 추가)
       const rowData = [
         rowNumber,                                    // 번호
         displayDate,                                 // 일시 (업로드 날짜 우선)
@@ -384,9 +448,11 @@ class SheetsManager {
         analysis.content || '',                      // 분석내용 (영상 분석 결과)
         metadata.likes || '0',                       // 좋아요
         metadata.comments || '0',                    // 댓글수
+        metadata.views || '0',                       // 조회수
+        metadata.duration || metadata.durationFormatted || '', // 영상길이
         analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그
         postUrl,                                     // URL
-        path.basename(videoPath),                    // 파일경로
+        videoPath ? path.basename(videoPath) : 'YouTube URL',  // 파일경로
         (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
         analysis.aiModel || 'AI'  // 분석상태 (AI 모델 정보)
       ];
@@ -394,10 +460,10 @@ class SheetsManager {
       // 시트 행 수가 부족하면 확장
       await this.ensureSheetCapacity(sheetName, nextRow);
 
-      // 스프레드시트에 데이터 추가 (동적 카테고리 컬럼 포함 P1까지)
+      // 스프레드시트에 데이터 추가 (19개 컬럼 A~S)
       await this.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A${nextRow}:Q${nextRow}`,
+        range: `${sheetName}!A${nextRow}:S${nextRow}`,
         valueInputOption: 'RAW',
         resource: {
           values: [rowData]
@@ -424,14 +490,26 @@ class SheetsManager {
 
   async updateStatistics() {
     try {
-      // 영상 목록에서 데이터 조회
-      const sheetName = await this.getFirstSheetName();
-      const response = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A2:Q`  // 헤더 제외 (Q까지 확장)
-      });
+      // 모든 플랫폼 시트에서 데이터 조회
+      const platforms = ['instagram', 'tiktok', 'youtube'];
+      let allData = [];
 
-      const data = response.data.values || [];
+      for (const platform of platforms) {
+        try {
+          const sheetName = await this.getSheetNameByPlatform(platform);
+          const response = await this.sheets.spreadsheets.values.get({
+            spreadsheetId: this.spreadsheetId,
+            range: `${sheetName}!A2:S`  // 헤더 제외 (S까지 확장)
+          });
+          
+          const platformData = response.data.values || [];
+          allData = allData.concat(platformData);
+        } catch (error) {
+          ServerLogger.warn(`${platform} 시트 데이터 조회 실패 (시트가 없을 수 있음)`, error.message, 'SHEETS');
+        }
+      }
+
+      const data = allData;
       if (data.length === 0) return;
 
       // 카테고리별 통계 계산
@@ -494,11 +572,33 @@ class SheetsManager {
 
   async getRecentVideos(limit = 10) {
     try {
-      const sheetName = await this.getFirstSheetName();
-      const response = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A2:Q${limit + 1}`
+      // 모든 플랫폼 시트에서 최신 데이터 조회
+      const platforms = ['instagram', 'tiktok', 'youtube'];
+      let allVideos = [];
+
+      for (const platform of platforms) {
+        try {
+          const sheetName = await this.getSheetNameByPlatform(platform);
+          const response = await this.sheets.spreadsheets.values.get({
+            spreadsheetId: this.spreadsheetId,
+            range: `${sheetName}!A2:S`  // 모든 데이터 조회 후 정렬
+          });
+          
+          const platformData = response.data.values || [];
+          allVideos = allVideos.concat(platformData);
+        } catch (error) {
+          ServerLogger.warn(`${platform} 시트 데이터 조회 실패 (시트가 없을 수 있음)`, error.message, 'SHEETS');
+        }
+      }
+
+      // 날짜순으로 정렬하고 limit 적용
+      allVideos.sort((a, b) => {
+        const dateA = new Date(a[1] || 0);  // 일시 컬럼
+        const dateB = new Date(b[1] || 0);
+        return dateB - dateA;  // 최신순
       });
+
+      const response = { data: { values: allVideos.slice(0, limit) } };
 
       const data = response.data.values || [];
       return data.map(row => ({
@@ -514,11 +614,13 @@ class SheetsManager {
         content: row[9],                        // 분석내용
         likes: row[10],                         // 좋아요
         comments: row[11],                      // 댓글수
-        hashtags: row[12]?.split(' ') || [],    // 해시태그
-        url: row[13],                           // URL
-        filename: row[14],                      // 파일경로
-        confidence: row[15],                    // 신뢰도
-        source: row[16]                         // 분석상태
+        views: row[12],                         // 조회수
+        duration: row[13],                      // 영상길이
+        hashtags: row[14]?.split(' ') || [],    // 해시태그
+        url: row[15],                           // URL
+        filename: row[16],                      // 파일경로
+        confidence: row[17],                    // 신뢰도
+        source: row[18]                         // 분석상태
       }));
     } catch (error) {
       throw new Error(`데이터 조회 실패: ${error.message}`);

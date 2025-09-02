@@ -28,7 +28,10 @@ app.use(cors({
     'https://www.instagram.com',
     'https://instagram.com',
     'https://www.tiktok.com',
-    'https://tiktok.com'
+    'https://tiktok.com',
+    'https://www.youtube.com',
+    'https://youtube.com',
+    'https://youtu.be'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -170,33 +173,73 @@ app.post('/api/process-video', async (req, res) => {
       processor: async (taskData) => {
         const { platform, videoUrl, postUrl, metadata, analysisType } = taskData;
         
-        ServerLogger.info(`🎬 Processing ${platform} video:`, postUrl);
+        ServerLogger.info(`🎬 Processing ${platform} video:`, postUrl || videoUrl);
         ServerLogger.info(`🔍 Analysis type: ${analysisType}`);
         
-        // 1단계: 비디오 다운로드
-        ServerLogger.info('1️⃣ 비디오 다운로드 중...');
-        const videoPath = await videoProcessor.downloadVideo(videoUrl, platform);
+        let videoPath;
+        let youtubeInfo = null;
         
-        // 2단계: 썸네일/프레임 생성
-        if (analysisType === 'multi-frame' || analysisType === 'full') {
-          ServerLogger.info('2️⃣ 다중 프레임 추출 중...');
-          var thumbnailPaths = await videoProcessor.generateThumbnail(videoPath, analysisType);
-          ServerLogger.info(`✅ ${thumbnailPaths.length}개 프레임 추출 완료`);
+        // YouTube인 경우 API로 정보 수집
+        if (platform === 'youtube') {
+          ServerLogger.info('0️⃣ YouTube 정보 수집 중...');
+          youtubeInfo = await videoProcessor.getYouTubeVideoInfo(videoUrl);
+          ServerLogger.info(`📺 ${youtubeInfo.contentType} 감지: ${youtubeInfo.title}`);
+          ServerLogger.info(`⏱️ 길이: ${youtubeInfo.durationFormatted}`);
+          
+          // YouTube는 일단 정보 수집만 (다운로드는 후단계에서)
+          // 실제 비디오 다운로드 URL이 필요한 경우 여기서 처리
+          videoPath = null; // 임시로 null 설정
         } else {
-          ServerLogger.info('2️⃣ 단일 썸네일 생성 중...');
-          var singleThumbnail = await videoProcessor.generateThumbnail(videoPath, analysisType);
-          var thumbnailPaths = Array.isArray(singleThumbnail) ? singleThumbnail : [singleThumbnail];
+          // Instagram/TikTok: 기존 방식
+          ServerLogger.info('1️⃣ 비디오 다운로드 중...');
+          videoPath = await videoProcessor.downloadVideo(videoUrl, platform);
         }
         
-        // 3단계: AI 분석 (먼저 실행)
-        if (thumbnailPaths.length > 1) {
-          ServerLogger.info(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
+        let thumbnailPaths;
+        let analysis;
+        
+        if (platform === 'youtube') {
+          // YouTube: 썸네일 URL로 AI 분석
+          ServerLogger.info('1️⃣ YouTube 썸네일로 AI 분석 중...');
+          
+          const enrichedMetadata = { 
+            ...metadata, 
+            platform,
+            title: youtubeInfo.title,
+            description: youtubeInfo.description,
+            author: youtubeInfo.channel,
+            duration: youtubeInfo.duration,
+            contentType: youtubeInfo.contentType,
+            youtubeCategory: youtubeInfo.category
+          };
+          
+          // YouTube 썸네일 URL을 사용하여 분석
+          analysis = await aiAnalyzer.analyzeVideo(youtubeInfo.thumbnailUrl, enrichedMetadata);
+          thumbnailPaths = [youtubeInfo.thumbnailUrl]; // 썸네일 URL 저장
+          
         } else {
-          ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
+          // Instagram/TikTok: 기존 방식
+          // 2단계: 썸네일/프레임 생성
+          if (analysisType === 'multi-frame' || analysisType === 'full') {
+            ServerLogger.info('2️⃣ 다중 프레임 추출 중...');
+            thumbnailPaths = await videoProcessor.generateThumbnail(videoPath, analysisType);
+            ServerLogger.info(`✅ ${thumbnailPaths.length}개 프레임 추출 완료`);
+          } else {
+            ServerLogger.info('2️⃣ 단일 썸네일 생성 중...');
+            var singleThumbnail = await videoProcessor.generateThumbnail(videoPath, analysisType);
+            thumbnailPaths = Array.isArray(singleThumbnail) ? singleThumbnail : [singleThumbnail];
+          }
+          
+          // 3단계: AI 분석
+          if (thumbnailPaths.length > 1) {
+            ServerLogger.info(`3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`);
+          } else {
+            ServerLogger.info('3️⃣ 단일 프레임 AI 분석 중...');
+          }
+          
+          const enrichedMetadata = { ...metadata, platform };
+          analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, enrichedMetadata);
         }
-        // metadata에 platform 정보 추가
-        const enrichedMetadata = { ...metadata, platform };
-        const analysis = await aiAnalyzer.analyzeVideo(thumbnailPaths, enrichedMetadata);
         
         // AI 분석에서 오류가 발생한 경우 시트 저장 중단
         if (analysis.aiError && analysis.aiError.occurred) {

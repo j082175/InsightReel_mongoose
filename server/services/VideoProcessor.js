@@ -5,6 +5,25 @@ const { spawn } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
 const { ServerLogger } = require('../utils/logger');
 
+// YouTube 카테고리 매핑
+const YOUTUBE_CATEGORIES = {
+  "1": "영화/애니메이션",
+  "2": "자동차/교통", 
+  "10": "음악",
+  "15": "애완동물/동물",
+  "17": "스포츠",
+  "19": "여행/이벤트", 
+  "20": "게임",
+  "22": "인물/블로그",
+  "23": "코미디",
+  "24": "엔터테인먼트",
+  "25": "뉴스/정치",
+  "26": "노하우/스타일",
+  "27": "교육",
+  "28": "과학기술",
+  "29": "비영리/사회운동"
+};
+
 // ffprobe 경로 설정
 let ffprobePath;
 try {
@@ -18,6 +37,7 @@ class VideoProcessor {
   constructor() {
     this.downloadDir = path.join(__dirname, '../../downloads');
     this.thumbnailDir = path.join(this.downloadDir, 'thumbnails');
+    this.youtubeApiKey = process.env.YOUTUBE_API_KEY || process.env.GOOGLE_API_KEY;
     
     // 디렉토리 생성
     this.ensureDirectories();
@@ -415,6 +435,125 @@ class VideoProcessor {
     const secs = seconds % 60;
     
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toFixed(3).padStart(6, '0')}`;
+  }
+
+  // YouTube 비디오 ID 추출
+  extractYouTubeId(url) {
+    const patterns = [
+      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([A-Za-z0-9_-]+)/,
+      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([A-Za-z0-9_-]+)/,
+      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([A-Za-z0-9_-]+)/,
+      /(?:https?:\/\/)?youtu\.be\/([A-Za-z0-9_-]+)/
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) {
+        return match[1];
+      }
+    }
+    
+    throw new Error('유효하지 않은 YouTube URL입니다.');
+  }
+
+  // YouTube 비디오 정보 수집
+  async getYouTubeVideoInfo(videoUrl) {
+    try {
+      if (!this.youtubeApiKey) {
+        throw new Error('YouTube API 키가 설정되지 않았습니다.');
+      }
+
+      const videoId = this.extractYouTubeId(videoUrl);
+      ServerLogger.info(`🎬 YouTube 비디오 정보 수집 시작: ${videoId}`);
+
+      const response = await axios.get(
+        `https://www.googleapis.com/youtube/v3/videos`, {
+          params: {
+            part: 'snippet,statistics,contentDetails',
+            id: videoId,
+            key: this.youtubeApiKey
+          }
+        }
+      );
+
+      if (!response.data.items || response.data.items.length === 0) {
+        throw new Error('YouTube 비디오를 찾을 수 없습니다.');
+      }
+
+      const video = response.data.items[0];
+      const snippet = video.snippet;
+      const statistics = video.statistics;
+      const contentDetails = video.contentDetails;
+
+      // 카테고리 변환
+      const categoryId = snippet.categoryId;
+      const categoryName = YOUTUBE_CATEGORIES[categoryId] || '미분류';
+
+      // 비디오 길이를 초 단위로 변환
+      const duration = this.parseYouTubeDuration(contentDetails.duration);
+      
+      // 숏폼/롱폼 구분 (60초 기준)
+      const isShortForm = duration <= 60;
+      const contentType = isShortForm ? 'Shorts' : 'Video';
+
+      const videoInfo = {
+        videoId: videoId,
+        title: snippet.title,
+        description: snippet.description,
+        channel: snippet.channelTitle,
+        channelId: snippet.channelId,
+        publishedAt: snippet.publishedAt,
+        thumbnailUrl: snippet.thumbnails.medium?.url || snippet.thumbnails.default.url,
+        category: categoryName,
+        categoryId: categoryId,
+        duration: duration,
+        durationFormatted: this.formatDuration(duration),
+        contentType: contentType,
+        isShortForm: isShortForm,
+        tags: snippet.tags || [],
+        views: statistics.viewCount || '0',
+        likes: statistics.likeCount || '0',
+        comments: statistics.commentCount || '0'
+      };
+
+      ServerLogger.info(`✅ YouTube 정보 수집 완료:`);
+      ServerLogger.info(`📺 제목: ${videoInfo.title}`);
+      ServerLogger.info(`👤 채널: ${videoInfo.channel}`);
+      ServerLogger.info(`🏷️ 카테고리: ${videoInfo.category}`);
+      ServerLogger.info(`⏱️ 길이: ${videoInfo.durationFormatted} (${contentType})`);
+      ServerLogger.info(`👀 조회수: ${videoInfo.views.toLocaleString()}`);
+      
+      return videoInfo;
+
+    } catch (error) {
+      ServerLogger.error('YouTube 정보 수집 실패:', error);
+      throw new Error(`YouTube 정보 수집 실패: ${error.message}`);
+    }
+  }
+
+  // YouTube duration (PT4M13S 형식) → 초 단위 변환
+  parseYouTubeDuration(duration) {
+    const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+    if (!match) return 0;
+
+    const hours = (match[1] ? parseInt(match[1]) : 0);
+    const minutes = (match[2] ? parseInt(match[2]) : 0);
+    const seconds = (match[3] ? parseInt(match[3]) : 0);
+
+    return hours * 3600 + minutes * 60 + seconds;
+  }
+
+  // 초 단위 → MM:SS 또는 HH:MM:SS 형식 변환
+  formatDuration(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    }
   }
 
   async getVideoInfo(videoPath) {

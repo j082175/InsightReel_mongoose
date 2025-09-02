@@ -3270,7 +3270,8 @@ const CONSTANTS = {
   
   PLATFORMS: {
     INSTAGRAM: 'instagram',
-    TIKTOK: 'tiktok'
+    TIKTOK: 'tiktok',
+    YOUTUBE: 'youtube'
   },
   
   SELECTORS: {
@@ -3329,6 +3330,7 @@ class Utils {
     const hostname = window.location.hostname;
     if (hostname.includes('instagram.com')) return 'instagram';
     if (hostname.includes('tiktok.com')) return 'tiktok';
+    if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) return 'youtube';
     return null;
   }
 
@@ -3856,16 +3858,170 @@ class VideoSaver {
   setup() {
     Utils.log('info', 'setup() 함수 실행 시작 (새로운 UI 시스템 사용)');
     
-    // ⚠️ 기존 저장 버튼 방식 비활성화 - Instagram UI System으로 완전 대체
-    // this.enhanceInstagramSaveButtons(); // 주석 처리
-    
-    // URL 변경 감지
-    this.observeUrlChanges();
-    
-    // 동적 콘텐츠 감지
-    this.observeContentChanges();
+    // 플랫폼별 설정
+    if (this.platform === CONSTANTS.PLATFORMS.YOUTUBE) {
+      this.setupYouTube();
+    } else {
+      // ⚠️ 기존 저장 버튼 방식 비활성화 - Instagram UI System으로 완전 대체
+      // this.enhanceInstagramSaveButtons(); // 주석 처리
+      
+      // URL 변경 감지
+      this.observeUrlChanges();
+      
+      // 동적 콘텐츠 감지
+      this.observeContentChanges();
+    }
     
     Utils.log('success', 'setup() 함수 실행 완료 - Instagram UI System 전용');
+  }
+
+  setupYouTube() {
+    Utils.log('info', 'YouTube 설정 시작');
+    
+    // YouTube SPA 네비게이션 감지
+    this.currentUrl = window.location.href;
+    setInterval(() => {
+      if (window.location.href !== this.currentUrl) {
+        this.currentUrl = window.location.href;
+        setTimeout(() => this.addYouTubeButton(), 1000);
+      }
+    }, 1000);
+    
+    // 초기 버튼 추가
+    setTimeout(() => this.addYouTubeButton(), 2000);
+  }
+
+  addYouTubeButton() {
+    const videoId = this.extractYouTubeId(window.location.href);
+    if (!videoId) return;
+
+    const isShorts = window.location.href.includes('/shorts/');
+    
+    if (isShorts) {
+      this.addShortsButton(videoId);
+    } else {
+      this.addVideoButton(videoId);
+    }
+  }
+
+  extractYouTubeId(url) {
+    const patterns = [
+      /youtube\.com\/watch\?v=([A-Za-z0-9_-]+)/,
+      /youtube\.com\/shorts\/([A-Za-z0-9_-]+)/,
+      /youtu\.be\/([A-Za-z0-9_-]+)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  }
+
+  addVideoButton(videoId) {
+    // 기존 버튼 확인
+    if (document.querySelector('.youtube-analysis-button')) return;
+
+    const actionButtons = document.querySelector('#top-level-buttons-computed') ||
+                         document.querySelector('#menu-container');
+    
+    if (!actionButtons) return;
+
+    const button = document.createElement('button');
+    button.className = 'youtube-analysis-button';
+    button.textContent = '영상 분석';
+    button.title = 'YouTube 영상을 AI로 분석하여 저장합니다';
+    
+    button.addEventListener('click', () => this.analyzeYouTubeVideo(videoId, false));
+    actionButtons.appendChild(button);
+    
+    Utils.log('success', 'YouTube 일반 영상 버튼 추가됨');
+  }
+
+  addShortsButton(videoId) {
+    // 기존 버튼 확인
+    if (document.querySelector('.youtube-analysis-button')) return;
+
+    // 액션 버튼들이 있는 영역을 더 구체적으로 찾기
+    const actionsArea = document.querySelector('#actions') ||
+                       document.querySelector('[data-e2e="video-side-actions"]') ||
+                       document.querySelector('#shorts-container');
+    
+    if (!actionsArea) return;
+
+    const button = document.createElement('button');
+    button.className = 'youtube-analysis-button';
+    button.textContent = 'Shorts 분석';
+    button.title = 'YouTube Shorts를 AI로 분석하여 저장합니다';
+    
+    button.addEventListener('click', () => this.analyzeYouTubeVideo(videoId, true));
+    actionsArea.appendChild(button);
+    
+    Utils.log('success', 'YouTube Shorts 버튼 추가됨');
+  }
+
+  async analyzeYouTubeVideo(videoId, isShorts) {
+    const button = document.querySelector('.youtube-analysis-button');
+    const originalText = button.textContent;
+    
+    button.textContent = '분석 중...';
+    button.disabled = true;
+
+    try {
+      const videoUrl = isShorts ? 
+        `https://www.youtube.com/shorts/${videoId}` :
+        `https://www.youtube.com/watch?v=${videoId}`;
+
+      const metadata = this.extractYouTubeMetadata(isShorts);
+      
+      Utils.log('info', 'YouTube 영상 분석 시작', { videoId, videoUrl, isShorts });
+
+      const result = await this.apiClient.processVideo({
+        platform: 'youtube',
+        videoUrl: videoUrl,
+        postUrl: window.location.href,
+        metadata: metadata,
+        analysisType: 'quick'
+      });
+
+      Utils.log('success', 'YouTube 영상 분석 완료', result);
+      this.uiManager.showNotification(
+        `분석 완료: ${result.analysis?.category || '카테고리 분석됨'}`, 
+        'success'
+      );
+
+    } catch (error) {
+      Utils.log('error', 'YouTube 영상 분석 실패', error);
+      this.uiManager.showNotification('분석 실패: ' + error.message, 'error');
+    } finally {
+      button.textContent = originalText;
+      button.disabled = false;
+    }
+  }
+
+  extractYouTubeMetadata(isShorts) {
+    const metadata = { platform: 'youtube', isShorts };
+
+    try {
+      // 제목
+      const titleEl = document.querySelector('#title h1') || 
+                     document.querySelector('h1.ytd-watch-metadata');
+      if (titleEl) metadata.title = titleEl.textContent?.trim();
+
+      // 채널명
+      const channelEl = document.querySelector('#channel-name a') ||
+                       document.querySelector('#owner-name a');
+      if (channelEl) metadata.author = channelEl.textContent?.trim();
+
+      // 조회수
+      const viewEl = document.querySelector('#info-text .view-count');
+      if (viewEl) metadata.views = viewEl.textContent?.trim();
+
+    } catch (error) {
+      Utils.log('warn', 'YouTube 메타데이터 추출 오류', error);
+    }
+
+    return metadata;
   }
 
   // 기존 메소드들을 그대로 유지하되 내부적으로 새로운 구조 사용
@@ -5057,7 +5213,9 @@ console.log('현재 도메인:', window.location.hostname);
 console.log('현재 URL:', window.location.href);
 
 if (window.location.hostname.includes('instagram.com') || 
-    window.location.hostname.includes('tiktok.com')) {
+    window.location.hostname.includes('tiktok.com') ||
+    window.location.hostname.includes('youtube.com') ||
+    window.location.hostname.includes('youtu.be')) {
   console.log('✅ 지원되는 플랫폼에서 VideoSaver 초기화');
   window.videoSaver = new VideoSaver();
   
