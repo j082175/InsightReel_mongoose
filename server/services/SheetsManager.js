@@ -301,7 +301,7 @@ class SheetsManager {
     const headers = this.getPlatformHeaders(sheetName);
 
     // 헤더 값 설정 (헤더 길이에 따라 동적 범위 설정)
-    const endColumn = String.fromCharCode(65 + headers.length - 1); // A=0, B=1, ... Z=25
+    const endColumn = this.getColumnLetter(headers.length);
     await this.sheets.spreadsheets.values.update({
       spreadsheetId: this.spreadsheetId,
       range: `${sheetName}!A1:${endColumn}1`,
@@ -486,8 +486,8 @@ class SheetsManager {
         ServerLogger.info(`기존 헤더 (${currentHeaders.length}개):`, currentHeaders.slice(0, 5).join(', ') + '...');
         ServerLogger.info(`새 헤더 (${expectedHeaders.length}개):`, expectedHeaders.slice(0, 5).join(', ') + '...');
 
-        // 헤더 업데이트 (동적 범위 사용)
-        const endColumn = String.fromCharCode(65 + expectedHeaders.length - 1);
+        // 헤더 업데이트 (동적 범위 사용) - Z 이후 컬럼 지원
+        const endColumn = this.getColumnLetter(expectedHeaders.length);
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
           range: `${sheetName}!A1:${endColumn}1`,
@@ -666,7 +666,7 @@ class SheetsManager {
       await this.ensureSheetCapacity(sheetName, nextRow);
 
       // 플랫폼별 동적 컬럼 범위로 스프레드시트에 데이터 추가
-      const endColumn = String.fromCharCode(65 + rowData.length - 1); // A=0, B=1, ... Z=25
+      const endColumn = this.getColumnLetter(rowData.length);
       try {
         await this.sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
@@ -938,6 +938,21 @@ class SheetsManager {
       ServerLogger.error('시트 확장 실패:', error);
       // 확장 실패해도 계속 진행 (기존 로직 유지)
     }
+  }
+
+  /**
+   * 숫자를 Excel 컬럼 문자로 변환 (A, B, ... Z, AA, AB, ... AC 등)
+   * @param {number} columnNumber - 컬럼 번호 (1부터 시작)
+   * @returns {string} Excel 컬럼 문자
+   */
+  getColumnLetter(columnNumber) {
+    let result = '';
+    while (columnNumber > 0) {
+      columnNumber--; // 0-based로 변환
+      result = String.fromCharCode(65 + (columnNumber % 26)) + result;
+      columnNumber = Math.floor(columnNumber / 26);
+    }
+    return result;
   }
 }
 
