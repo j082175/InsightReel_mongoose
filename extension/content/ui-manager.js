@@ -384,4 +384,117 @@ export class UIManager {
       this.removeNotification(id);
     });
   }
+
+  /**
+   * 🚨 중복 URL 발견 알림 표시 (특별 UI)
+   * @param {Object} duplicateInfo 중복 정보
+   * @param {string} duplicateInfo.platform 플랫폼
+   * @param {number} duplicateInfo.row 행 번호  
+   * @param {string} duplicateInfo.column 컬럼
+   * @param {string} duplicateInfo.normalized_url 정규화된 URL
+   * @param {number} duration 표시 지속 시간
+   */
+
+  /**
+   * 🎨 중복 알림 전용 UI 요소 생성
+   * @param {Object} duplicateInfo 중복 정보
+   * @returns {HTMLDivElement} 중복 알림 요소
+   */
+  createDuplicateNotificationElement(duplicateInfo) {
+    // 기존 알림 애니메이션 사용
+    this.addNotificationAnimation();
+    
+    const notification = document.createElement('div');
+    
+    // 플랫폼별 색상 및 아이콘
+    const platformStyles = {
+      instagram: { color: '#E4405F', icon: '📷', name: 'Instagram' },
+      youtube: { color: '#FF0000', icon: '🎬', name: 'YouTube' },
+      tiktok: { color: '#000000', icon: '🎵', name: 'TikTok' }
+    };
+    
+    const platform = duplicateInfo.platform.toLowerCase();
+    const style = platformStyles[platform] || { color: '#666666', icon: '📺', name: '알 수 없음' };
+    
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+      color: #333;
+      padding: 20px;
+      border-radius: 12px;
+      border-left: 5px solid ${style.color};
+      z-index: 10000;
+      font-size: 14px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+      max-width: 380px;
+      min-width: 320px;
+      animation: slideInRight 0.4s ease-out;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+    
+    // 닫기 버튼
+    const closeButton = document.createElement('button');
+    closeButton.innerHTML = '×';
+    closeButton.style.cssText = `
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: #999;
+      cursor: pointer;
+      padding: 0;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `;
+    
+    closeButton.addEventListener('click', () => {
+      notification.remove();
+    });
+    
+    // 알림 내용
+    notification.innerHTML = `
+      <div style="display: flex; align-items: flex-start; gap: 12px;">
+        <div style="font-size: 24px; line-height: 1;">${style.icon}</div>
+        <div style="flex: 1;">
+          <div style="font-weight: bold; font-size: 16px; margin-bottom: 8px; color: ${style.color};">
+            ⚠️ 중복된 영상입니다
+          </div>
+          <div style="margin-bottom: 6px; font-size: 13px; color: #666;">
+            이 영상은 이미 <strong>${style.name}</strong> 시트에 저장되어 있습니다.
+          </div>
+          <div style="background: #f0f8ff; padding: 8px 12px; border-radius: 6px; margin-top: 8px;">
+            <div style="font-size: 12px; color: #0066cc; font-weight: 500;">
+              📍 위치: <strong>${duplicateInfo.column}${duplicateInfo.row}행</strong>
+            </div>
+          </div>
+          <div style="margin-top: 8px; font-size: 11px; color: #888; line-height: 1.3;">
+            💡 동일한 영상은 중복으로 저장되지 않습니다.
+          </div>
+        </div>
+      </div>
+    `;
+    
+    notification.appendChild(closeButton);
+    
+    // 호버 효과
+    notification.addEventListener('mouseenter', () => {
+      notification.style.transform = 'translateX(-5px)';
+      notification.style.boxShadow = '0 12px 48px rgba(0,0,0,0.18)';
+    });
+    
+    notification.addEventListener('mouseleave', () => {
+      notification.style.transform = 'translateX(0)';
+      notification.style.boxShadow = '0 8px 32px rgba(0,0,0,0.12)';
+    });
+    
+    return notification;
+  }
+  
 }

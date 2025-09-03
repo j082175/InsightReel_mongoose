@@ -35,7 +35,7 @@
     <noscript><link rel="stylesheet" href="dashboard-original.css"></noscript>
     
     <!-- JavaScript 파일 로드 (캐시 방지용 버전) -->
-    <script src="dashboard.js?v=4.0" async></script>
+    <script src="dashboard.js?v=5.1.fixed" async></script>
 </head>
 <body>
     <div class="header">
@@ -106,6 +106,76 @@
                 <div class="content-tab" onclick="showVideoTab('popular')">인기순</div>
                 <div class="content-tab" onclick="showVideoTab('trending')">트렌딩</div>
             </div>
+            
+            <!-- 플랫폼 빠른 필터 버튼 -->
+            <div class="platform-filters" style="
+                display: flex;
+                gap: 8px;
+                padding: 16px 0;
+                border-bottom: 1px solid #eee;
+                margin-bottom: 16px;
+            ">
+                <button class="platform-filter-btn active" onclick="filterByPlatform('all')" data-platform="all" style="
+                    padding: 8px 16px;
+                    border: 2px solid #1976d2;
+                    background: #1976d2;
+                    color: white;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                ">
+                    📺 전체 (<span id="count-all">0</span>)
+                </button>
+                <button class="platform-filter-btn" onclick="filterByPlatform('youtube')" data-platform="youtube" style="
+                    padding: 8px 16px;
+                    border: 2px solid #FF0000;
+                    background: white;
+                    color: #FF0000;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                ">
+                    🎬 YouTube (<span id="count-youtube">0</span>)
+                </button>
+                <button class="platform-filter-btn" onclick="filterByPlatform('instagram')" data-platform="instagram" style="
+                    padding: 8px 16px;
+                    border: 2px solid #E4405F;
+                    background: white;
+                    color: #E4405F;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                ">
+                    📱 Instagram (<span id="count-instagram">0</span>)
+                </button>
+                <button class="platform-filter-btn" onclick="filterByPlatform('tiktok')" data-platform="tiktok" style="
+                    padding: 8px 16px;
+                    border: 2px solid #000000;
+                    background: white;
+                    color: #000000;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                ">
+                    🎵 TikTok (<span id="count-tiktok">0</span>)
+                </button>
+            </div>
 
             <div class="video-grid" id="video-grid">
                 <!-- 초기 로딩 시에는 최소한의 예시 카드만 -->
@@ -125,7 +195,8 @@
                             <span class="date">방금 전</span>
                         </div>
                         <div class="video-actions">
-                            <button class="action-btn primary">🔄 실제 데이터 로드</button>
+                            <button class="action-btn primary" onclick="searchVideos()">🔄 실제 데이터 로드</button>
+                            <button class="action-btn" onclick="testAPI()">🧪 API 테스트</button>
                         </div>
                     </div>
                 </div>

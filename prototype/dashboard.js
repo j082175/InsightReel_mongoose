@@ -432,9 +432,9 @@ async function loadRealVideos() {
     try {
         const response = await API.getVideos();
         
-        if (response && response.success && response.data) {
-            displayRealVideos(response.data);
-            console.log(`📺 실제 영상 ${response.data.length}개 로드 완료`);
+        if (response && response.success && response.data && response.data.videos) {
+            displayRealVideos(response.data.videos);
+            console.log(`📺 실제 영상 ${response.data.videos.length}개 로드 완료`);
         } else {
             showNoVideosMessage();
         }
@@ -1138,8 +1138,8 @@ async function searchVideos() {
     try {
         const response = await API.getVideos();
         
-        if (response && response.success && response.data) {
-            let filteredVideos = response.data;
+        if (response && response.success && response.data && response.data.videos) {
+            let filteredVideos = response.data.videos;
             
             // 검색어 필터링
             if (searchTerm) {

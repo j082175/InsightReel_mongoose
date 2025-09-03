@@ -44,7 +44,9 @@ class DataMigrator {
     try {
       const [
         id, timestamp, platformCol, account, mainCategory, middleCategory,
-        fullCategoryPath, categoryDepth, views, likes, hashtags, url, filename, confidence, source
+        fullCategoryPath, categoryDepth, keywords, aiDescription, likes, commentsCount, 
+        views, duration, subscribers, channelVideos, monetization, youtubeCategory,
+        license, quality, language, tags, youtubeUrl // W열(23번째) = 실제 YouTube URL
       ] = sheetRow;
 
       // 기본 비디오 객체 생성
@@ -53,26 +55,26 @@ class DataMigrator {
         platform: (platform || platformCol || 'unknown').toLowerCase(),
         timestamp: this.parseKoreanDate(timestamp),
         account: account || 'Unknown',
-        title: categoryDepth || fullCategoryPath || '제목 없음', // categoryDepth가 실제 분석내용
+        title: aiDescription || categoryDepth || fullCategoryPath || '제목 없음', // J열(aiDescription)이 실제 분석내용
         
-        // URL 정보
-        comments: url || '', // 영상 링크
-        videoUrl: filename && filename !== 'YouTube URL' ? filename : '',
+        // URL 정보 - W열에서 실제 YouTube URL 사용
+        comments: youtubeUrl || '', // W열 YouTube URL 사용
+        videoUrl: youtubeUrl || '',
         
         // 성과 지표
         likes: this.parseNumber(likes),
         views: this.parseNumber(views),
         shares: 0, // 기본값
-        comments_count: 0, // 댓글수 데이터가 명확하지 않음
+        comments_count: this.parseNumber(commentsCount),
         
         // AI 분석 결과
         category: mainCategory || '미분류',
-        ai_description: categoryDepth || '', // categoryDepth가 실제 AI 분석 결과
-        keywords: this.parseKeywords(fullCategoryPath), // fullCategoryPath가 키워드
+        ai_description: aiDescription || categoryDepth || '', // J열(분석내용)이 실제 AI 분석 결과
+        keywords: this.parseKeywords(keywords), // I열(키워드)
         
         // 추가 메타데이터  
-        duration: '',
-        hashtags: this.parseHashtags(hashtags),
+        duration: duration || '',
+        hashtags: this.parseHashtags(tags),
         
         // Google Sheets 원본 데이터 보존
         sheets_row_data: {
@@ -81,8 +83,16 @@ class DataMigrator {
           middleCategory, 
           fullCategoryPath,
           categoryDepth,
-          confidence,
-          source
+          keywords,
+          aiDescription,
+          subscribers,
+          channelVideos,
+          monetization,
+          youtubeCategory,
+          license,
+          quality,
+          language,
+          tags
         }
       };
 
@@ -183,7 +193,7 @@ class DataMigrator {
     try {
       // Google Sheets에서 플랫폼 데이터 가져오기
       const sheetName = await this.sheetsManager.getSheetNameByPlatform(platform);
-      const range = `${sheetName}!A2:S`; // 헤더 제외 전체 데이터
+      const range = `${sheetName}!A2:W`; // 헤더 제외, W열까지 (YouTube URL 포함)
       
       const response = await this.sheetsManager.sheets.spreadsheets.values.get({
         spreadsheetId: this.sheetsManager.spreadsheetId,
