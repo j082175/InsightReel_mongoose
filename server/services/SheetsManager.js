@@ -270,7 +270,7 @@ class SheetsManager {
         postUrl,                                   // URL
         videoPath ? path.basename(videoPath) : 'YouTube URL',  // 파일경로
         (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
-        analysis.aiModel || 'AI',                  // 분석상태 (AI 모델 정보)
+        analysis.aiModel || '수동',                  // 분석상태 (AI 모델 정보)
         analysis.categoryMatch ? `${analysis.categoryMatch.matchScore}%` : '', // 카테고리일치율
         analysis.categoryMatch ? analysis.categoryMatch.matchType : '',        // 일치유형
         analysis.categoryMatch ? analysis.categoryMatch.matchReason : ''       // 일치사유
@@ -295,7 +295,7 @@ class SheetsManager {
         postUrl,                                   // URL
         videoPath ? path.basename(videoPath) : '',  // 파일경로
         (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
-        analysis.aiModel || 'AI'                   // 분석상태 (AI 모델 정보)
+        analysis.aiModel || '수동'                   // 분석상태 (AI 모델 정보)
       ];
     }
   }
@@ -1019,7 +1019,7 @@ class SheetsManager {
         postUrl,                                   // URL
         videoPath ? path.basename(videoPath) : 'YouTube URL',  // 파일경로
         (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
-        analysis.aiModel || 'AI',                  // 분석상태
+        analysis.aiModel || '수동',                  // 분석상태
         '', // 카테고리일치율 (배치에서는 비워둠)
         '', // 일치유형
         ''  // 일치사유
@@ -1043,7 +1043,7 @@ class SheetsManager {
         postUrl,                                     // URL
         videoPath ? path.basename(videoPath) : '',  // 파일경로
         (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
-        analysis.aiModel || 'AI'                     // 분석상태
+        analysis.aiModel || '수동'                     // 분석상태
       ];
     }
   }

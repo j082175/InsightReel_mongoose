@@ -725,7 +725,8 @@ app.post('/api/process-video', async (req, res) => {
               hashtags: [],
               confidence: 0,
               frameCount: 1,
-              categoryMatch: null
+              categoryMatch: null,
+              aiModel: '수동'  // AI 비사용 시 '수동'으로 표시
             };
           }
           
@@ -761,7 +762,8 @@ app.post('/api/process-video', async (req, res) => {
               keywords: [],
               hashtags: [],
               confidence: 0,
-              frameCount: thumbnailPaths.length
+              frameCount: thumbnailPaths.length,
+              aiModel: '수동'  // AI 비사용 시 '수동'으로 표시
             };
           }
         }
