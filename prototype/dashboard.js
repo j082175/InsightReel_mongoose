@@ -922,21 +922,42 @@ function viewDetails(videoId) {
 
 // Instagram embed URL 생성
 function getInstagramEmbedUrl(videoUrl) {
-    if (!videoUrl || !videoUrl.includes('instagram.com/reels/')) {
+    if (!videoUrl || (!videoUrl.includes('instagram.com/reels/') && !videoUrl.includes('instagram.com/reel/') && !videoUrl.includes('instagram.com/p/'))) {
+        console.log('❌ Instagram URL이 아니거나 잘못된 형식:', videoUrl);
         return null;
     }
     
     try {
+        // 다양한 Instagram URL 형식 지원
         // https://www.instagram.com/reels/DMxE0_5VZkk/ → https://www.instagram.com/p/DMxE0_5VZkk/embed/
-        const reelId = videoUrl.match(/\/reels\/([^\/]+)/)?.[1];
+        // https://www.instagram.com/reel/C_GiWDdv7Nl/ → https://www.instagram.com/p/C_GiWDdv7Nl/embed/
+        // https://www.instagram.com/p/ABC123/ → https://www.instagram.com/p/ABC123/embed/
+        let reelId;
+        
+        // /reels/ 형식
+        if (videoUrl.includes('/reels/')) {
+            reelId = videoUrl.match(/\/reels\/([^\/\?]+)/)?.[1];
+        }
+        // /reel/ 형식 
+        else if (videoUrl.includes('/reel/')) {
+            reelId = videoUrl.match(/\/reel\/([^\/\?]+)/)?.[1];
+        }
+        // /p/ 형식
+        else if (videoUrl.includes('/p/')) {
+            reelId = videoUrl.match(/\/p\/([^\/\?]+)/)?.[1];
+        }
+        
         if (reelId) {
+            console.log('✅ Instagram embed URL 생성 성공:', reelId);
             return `https://www.instagram.com/p/${reelId}/embed/`;
         }
+        
+        console.log('❌ Instagram reel ID 추출 실패:', videoUrl);
+        return null;
     } catch (error) {
-        console.error('Instagram embed URL 생성 실패:', error);
+        console.error('❌ Instagram embed URL 생성 실패:', error);
+        return null;
     }
-    
-    return null;
 }
 
 // Instagram 썸네일 URL 생성 (로컬 서버를 통한 실제 스크래핑)
