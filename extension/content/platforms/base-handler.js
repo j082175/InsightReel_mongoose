@@ -139,6 +139,45 @@ export class BasePlatformHandler {
   }
 
   /**
+   * 🚨 중복 URL 처리 공통 메소드
+   * @param {Object} result API 응답 결과
+   * @returns {boolean} 중복 여부
+   */
+  handleDuplicateCheck(result) {
+    if (result && result.isDuplicate) {
+      this.log('warn', '중복 URL 발견', result.duplicate_info);
+      
+      return true; // 중복임을 반환
+    }
+    
+    return false; // 중복 아님을 반환
+  }
+
+  /**
+   * 🎯 API 호출 공통 래퍼 (중복 검사 포함)
+   * @param {Function} apiCallFn API 호출 함수
+   * @param {Object} params API 파라미터
+   * @returns {Promise<Object|null>} 처리 결과 (중복일 경우 null)
+   */
+  async callApiWithDuplicateCheck(apiCallFn, params) {
+    try {
+      const result = await apiCallFn.call(this.apiClient, params);
+      
+      // 중복 검사 처리
+      if (this.handleDuplicateCheck(result)) {
+        return null; // 중복일 경우 null 반환
+      }
+      
+      return result;
+      
+    } catch (error) {
+      this.log('error', 'API 호출 실패', error.message);
+      this.uiManager.showNotification(`처리 실패: ${error.message}`, 'error');
+      throw error;
+    }
+  }
+
+  /**
    * 정리 작업 (메모리 해제 등)
    */
   cleanup() {

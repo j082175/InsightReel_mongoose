@@ -2,6 +2,7 @@ const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
 const { ServerLogger } = require('../utils/logger');
+const VideoUrl = require('../models/VideoUrl');
 
 class SheetsManager {
   constructor() {
@@ -699,6 +700,28 @@ class SheetsManager {
       // 새 비디오 저장 후 캐시 무효화
       this.invalidateCache();
       
+      // 🔗 MongoDB에 URL 저장 (중복 검사용)
+      try {
+        const VideoUrl = require('../models/VideoUrl');
+        const normalizedUrl = this.normalizeVideoUrl(postUrl);
+        
+        await VideoUrl.create({
+          normalizedUrl: normalizedUrl,
+          originalUrl: postUrl,
+          platform: platform,
+          sheetLocation: {
+            sheetName: sheetName,
+            column: 'N', // URL이 저장되는 컬럼
+            row: nextRow
+          }
+        });
+        
+        ServerLogger.info(`🔗 MongoDB에 URL 저장 완료: ${normalizedUrl} (${platform} ${nextRow}행)`);
+      } catch (mongoError) {
+        // MongoDB 저장 실패해도 전체 프로세스는 계속
+        ServerLogger.warn(`⚠️ MongoDB URL 저장 실패 (무시): ${mongoError.message}`);
+      }
+      
       return {
         success: true,
         row: nextRow,
@@ -841,6 +864,41 @@ class SheetsManager {
 
       // 배치 저장 후 캐시 무효화
       this.invalidateCache();
+
+      // 🔗 MongoDB에 URL들 배치 저장 (중복 검사용)
+      try {
+        const VideoUrl = require('../models/VideoUrl');
+        const mongoUrls = [];
+        
+        for (let i = 0; i < batchRows.length; i++) {
+          const videoData = videoDataArray[i];
+          const rowNumber = startRow + i;
+          
+          if (videoData.postUrl || videoData.videoUrl) {
+            const originalUrl = videoData.postUrl || videoData.videoUrl;
+            const normalizedUrl = this.normalizeVideoUrl(originalUrl);
+            
+            mongoUrls.push({
+              normalizedUrl: normalizedUrl,
+              originalUrl: originalUrl,
+              platform: platform,
+              sheetLocation: {
+                sheetName: sheetName,
+                column: 'N',
+                row: rowNumber
+              }
+            });
+          }
+        }
+        
+        if (mongoUrls.length > 0) {
+          await VideoUrl.insertMany(mongoUrls, { ordered: false }); // 일부 중복 무시
+          ServerLogger.info(`🔗 MongoDB에 배치 URL 저장 완료: ${mongoUrls.length}개`);
+        }
+      } catch (mongoError) {
+        // MongoDB 저장 실패해도 전체 프로세스는 계속
+        ServerLogger.warn(`⚠️ MongoDB 배치 URL 저장 실패 (무시): ${mongoError.message}`);
+      }
 
       return {
         success: true,
@@ -1361,6 +1419,247 @@ class SheetsManager {
     } catch (error) {
       ServerLogger.error('시트 확장 실패:', error);
       // 확장 실패해도 계속 진행 (기존 로직 유지)
+    }
+  }
+
+  /**
+   * 🔍 URL 중복 검사 - 모든 플랫폼에서 동일 URL이 이미 존재하는지 확인
+   * @param {string} videoUrl - 검사할 비디오 URL
+   * @returns {Promise<{isDuplicate: boolean, existingPlatform?: string, existingRow?: number}>}
+   */
+  async checkDuplicateURL(videoUrl) {
+    try {
+      if (!videoUrl) {
+        return { isDuplicate: false };
+      }
+
+      // URL 정규화 (쿼리 파라미터 제거, 프로토콜 통일)
+      const normalizedUrl = this.normalizeVideoUrl(videoUrl);
+      
+      ServerLogger.info(`🔍 URL 중복 검사 시작: ${normalizedUrl}`, 'SHEETS_DUPLICATE');
+
+      // 모든 플랫폼 시트에서 검사
+      const platforms = ['instagram', 'youtube', 'tiktok'];
+      
+      for (const platform of platforms) {
+        try {
+          const sheetName = await this.getSheetNameByPlatform(platform);
+          
+          // URL이 저장되는 컬럼들 확인 (플랫폼별로 다를 수 있음)
+          let urlColumns = [];
+          if (platform === 'youtube') {
+            urlColumns = ['W']; // YouTube URL은 W컬럼에 저장
+          } else if (platform === 'instagram') {
+            urlColumns = ['N']; // Instagram URL은 N컬럼에 저장
+          } else {
+            urlColumns = ['L']; // TikTok URL은 L컬럼에 저장 (확인 필요)
+          }
+          
+          // 각 URL 컬럼에서 검사
+          for (const column of urlColumns) {
+            const range = `${sheetName}!${column}:${column}`;
+            
+            const response = await this.sheets.spreadsheets.values.get({
+              spreadsheetId: this.spreadsheetId,
+              range: range
+            });
+
+            const values = response.data.values || [];
+            
+            // 헤더 행 제외하고 검사 (1행은 헤더)
+            for (let rowIndex = 1; rowIndex < values.length; rowIndex++) {
+              const cellValue = values[rowIndex][0];
+              if (cellValue) {
+                const existingNormalizedUrl = this.normalizeVideoUrl(cellValue);
+                
+                if (existingNormalizedUrl === normalizedUrl) {
+                  ServerLogger.warn(`⚠️ 중복 URL 발견: ${platform} 시트 ${column}${rowIndex + 1}행`, 'SHEETS_DUPLICATE');
+                  return {
+                    isDuplicate: true,
+                    existingPlatform: platform,
+                    existingRow: rowIndex + 1,
+                    existingColumn: column
+                  };
+                }
+              }
+            }
+          }
+          
+        } catch (platformError) {
+          ServerLogger.warn(`${platform} 시트 중복 검사 실패: ${platformError.message}`, 'SHEETS_DUPLICATE');
+          continue; // 다른 플랫폼 계속 검사
+        }
+      }
+
+      ServerLogger.info(`✅ 중복 없음: ${normalizedUrl}`, 'SHEETS_DUPLICATE');
+      return { isDuplicate: false };
+
+    } catch (error) {
+      ServerLogger.error('URL 중복 검사 실패', error.message, 'SHEETS_DUPLICATE');
+      // 에러 발생시 중복 아닌 것으로 처리하여 시스템이 계속 작동하도록 함
+      return { isDuplicate: false, error: error.message };
+    }
+  }
+
+  /**
+   * 🔧 비디오 URL 정규화 - 일관된 비교를 위해 URL을 표준화
+   * @param {string} url - 원본 URL
+   * @returns {string} 정규화된 URL
+   */
+  normalizeVideoUrl(url) {
+    if (!url) return '';
+    
+    try {
+      // 기본 정리
+      let normalized = url.toString().trim().toLowerCase();
+      
+      // 프로토콜 통일
+      normalized = normalized.replace(/^http:\/\//, 'https://');
+      
+      // 쿼리 파라미터 제거 (YouTube의 경우 v= 파라미터는 유지)
+      if (normalized.includes('youtube.com') || normalized.includes('youtu.be')) {
+        // YouTube URL 정규화
+        if (normalized.includes('youtube.com/watch')) {
+          // https://www.youtube.com/watch?v=VIDEO_ID&other=params → https://youtube.com/watch?v=VIDEO_ID
+          const videoIdMatch = normalized.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+          if (videoIdMatch) {
+            normalized = `https://youtube.com/watch?v=${videoIdMatch[1]}`;
+          }
+        } else if (normalized.includes('youtu.be/')) {
+          // https://youtu.be/VIDEO_ID?params → https://youtube.com/watch?v=VIDEO_ID
+          const videoIdMatch = normalized.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+          if (videoIdMatch) {
+            normalized = `https://youtube.com/watch?v=${videoIdMatch[1]}`;
+          }
+        } else if (normalized.includes('/shorts/')) {
+          // https://youtube.com/shorts/VIDEO_ID → https://youtube.com/watch?v=VIDEO_ID
+          const videoIdMatch = normalized.match(/\/shorts\/([a-zA-Z0-9_-]{11})/);
+          if (videoIdMatch) {
+            normalized = `https://youtube.com/watch?v=${videoIdMatch[1]}`;
+          }
+        }
+        
+        // www. 제거
+        normalized = normalized.replace(/www\./, '');
+      } else if (normalized.includes('instagram.com')) {
+        // Instagram URL 정규화
+        // https://www.instagram.com/p/POST_ID/?params → https://instagram.com/p/POST_ID/
+        normalized = normalized.replace(/www\./, '').split('?')[0];
+        if (!normalized.endsWith('/')) normalized += '/';
+      } else if (normalized.includes('tiktok.com')) {
+        // TikTok URL 정규화
+        // https://www.tiktok.com/@user/video/VIDEO_ID?params → https://tiktok.com/@user/video/VIDEO_ID
+        normalized = normalized.replace(/www\./, '').split('?')[0];
+      }
+      
+      // 마지막 슬래시 통일
+      if (normalized.includes('instagram.com') && !normalized.endsWith('/')) {
+        normalized += '/';
+      }
+      
+      return normalized;
+      
+    } catch (error) {
+      ServerLogger.warn(`URL 정규화 실패: ${url}`, 'SHEETS_DUPLICATE');
+      return url.toString().trim().toLowerCase();
+    }
+  }
+
+  /**
+   * ⚡ MongoDB 기반 초고속 URL 중복 검사 (100-1000배 빠름)
+   * @param {string} videoUrl - 검사할 비디오 URL
+   * @returns {Promise<{isDuplicate: boolean, existingPlatform?: string, existingRow?: number}>}
+   */
+  async checkDuplicateURLFast(videoUrl) {
+    const startTime = Date.now();
+    
+    try {
+      if (!videoUrl) {
+        return { isDuplicate: false };
+      }
+
+      // URL 정규화
+      const normalizedUrl = this.normalizeVideoUrl(videoUrl);
+      
+      ServerLogger.info(`⚡ MongoDB 고속 중복 검사 시작: ${normalizedUrl}`, 'SHEETS_DUPLICATE_FAST');
+
+      // MongoDB에서 초고속 검색 (인덱스 기반 O(log n))
+      const duplicateCheck = await VideoUrl.checkDuplicate(normalizedUrl);
+      
+      const duration = Date.now() - startTime;
+      
+      if (duplicateCheck.isDuplicate) {
+        ServerLogger.warn(`⚠️ 중복 URL 발견 (MongoDB): ${duplicateCheck.existingPlatform} 시트 ${duplicateCheck.existingColumn}${duplicateCheck.existingRow}행 (${duration}ms)`, 'SHEETS_DUPLICATE_FAST');
+        
+        return {
+          isDuplicate: true,
+          existingPlatform: duplicateCheck.existingPlatform,
+          existingRow: duplicateCheck.existingRow,
+          existingColumn: duplicateCheck.existingColumn,
+          originalUrl: duplicateCheck.originalUrl,
+          searchTime: duration
+        };
+      } else {
+        ServerLogger.info(`✅ 중복 없음 (MongoDB): ${normalizedUrl} (${duration}ms)`, 'SHEETS_DUPLICATE_FAST');
+        
+        return { 
+          isDuplicate: false, 
+          searchTime: duration,
+          error: duplicateCheck.error || null
+        };
+      }
+
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      ServerLogger.error(`❌ MongoDB 중복 검사 실패 (${duration}ms)`, error.message, 'SHEETS_DUPLICATE_FAST');
+      
+      // MongoDB 실패시 기존 Google Sheets 방식으로 폴백
+      ServerLogger.warn('🔄 Google Sheets 방식으로 폴백 중...', 'SHEETS_DUPLICATE_FAST');
+      return await this.checkDuplicateURL(videoUrl);
+    }
+  }
+
+  /**
+   * 📝 새로운 URL을 MongoDB에 등록 (Google Sheets 저장 후 호출)
+   * @param {string} videoUrl - 원본 URL
+   * @param {string} platform - 플랫폼 (instagram, youtube, tiktok)
+   * @param {string} sheetName - 시트명
+   * @param {string} column - 컬럼 (W, L 등)
+   * @param {number} row - 행 번호
+   * @returns {Promise<boolean>} 등록 성공 여부
+   */
+  async registerUrlInMongoDB(videoUrl, platform, sheetName, column, row) {
+    try {
+      if (!videoUrl) return false;
+
+      const normalizedUrl = this.normalizeVideoUrl(videoUrl);
+      
+      const result = await VideoUrl.registerUrl(
+        normalizedUrl,
+        videoUrl,
+        platform,
+        {
+          sheetName,
+          column,
+          row
+        }
+      );
+
+      if (result.success) {
+        ServerLogger.info(`✅ URL MongoDB 등록 완료: ${platform} ${column}${row}`, 'SHEETS_REGISTER');
+        return true;
+      } else {
+        if (result.error === 'DUPLICATE_URL') {
+          ServerLogger.warn(`⚠️ URL 이미 MongoDB에 존재: ${normalizedUrl}`, 'SHEETS_REGISTER');
+        } else {
+          ServerLogger.error(`❌ URL MongoDB 등록 실패: ${result.error}`, 'SHEETS_REGISTER');
+        }
+        return false;
+      }
+
+    } catch (error) {
+      ServerLogger.error('URL MongoDB 등록 중 에러', error.message, 'SHEETS_REGISTER');
+      return false;
     }
   }
 

@@ -250,13 +250,22 @@ export class YouTubeHandler extends BasePlatformHandler {
         metadata
       });
 
-      const result = await this.apiClient.processVideo({
-        platform: 'youtube',
-        videoUrl: videoUrl,
-        postUrl: window.location.href,
-        metadata: metadata,
-        analysisType: 'quick'
-      });
+      const result = await this.callApiWithDuplicateCheck(
+        this.apiClient.processVideo,
+        {
+          platform: 'youtube',
+          videoUrl: videoUrl,
+          postUrl: window.location.href,
+          metadata: metadata,
+          analysisType: 'quick'
+        }
+      );
+
+      if (result === null) {
+        // 중복 URL로 인한 처리 중단
+        this.log('info', '중복 URL로 인해 YouTube 처리 중단됨');
+        return;
+      }
 
       this.log('success', 'YouTube 영상 분석 완료', result);
       this.uiManager.showNotification(

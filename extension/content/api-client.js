@@ -43,11 +43,22 @@ export class ApiClient {
         body: JSON.stringify(data)
       });
 
+      const result = await response.json();
+      
+      // 중복 URL 특별 처리 (409 에러)
+      if (response.status === 409 && result.error === 'DUPLICATE_URL') {
+        return {
+          success: false,
+          isDuplicate: true,
+          error: result.error,
+          message: result.message,
+          duplicate_info: result.duplicate_info
+        };
+      }
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      const result = await response.json();
       
       // 새로운 표준 응답 형식 처리
       if (result.success === false) {
@@ -96,11 +107,22 @@ export class ApiClient {
         body: formData
       });
 
+      const result = await response.json();
+      
+      // 중복 URL 특별 처리 (409 에러)
+      if (response.status === 409 && result.error === 'DUPLICATE_URL') {
+        return {
+          success: false,
+          isDuplicate: true,
+          error: result.error,
+          message: result.message,
+          duplicate_info: result.duplicate_info
+        };
+      }
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      const result = await response.json();
       
       // 새로운 표준 응답 형식 처리
       if (result.success === false) {

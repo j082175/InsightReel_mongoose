@@ -1262,12 +1262,23 @@ export class InstagramHandler extends BasePlatformHandler {
       }
     }
     
-    await this.apiClient.processVideoBlob({
-      platform: CONSTANTS.PLATFORMS.INSTAGRAM,
-      videoBlob,
-      postUrl,
-      metadata
-    });
+    const result = await this.callApiWithDuplicateCheck(
+      this.apiClient.processVideoBlob,
+      {
+        platform: CONSTANTS.PLATFORMS.INSTAGRAM,
+        videoBlob,
+        postUrl,
+        metadata
+      }
+    );
+    
+    if (result === null) {
+      // 중복 URL로 인한 처리 중단
+      this.log('info', '중복 URL로 인해 Blob 처리 중단됨');
+      return;
+    }
+    
+    this.log('success', '영상 Blob 처리 완료', result);
   }
 
   /**
@@ -1277,12 +1288,23 @@ export class InstagramHandler extends BasePlatformHandler {
    * @param {Object} metadata 메타데이터
    */
   async processRegularVideo(videoUrl, postUrl, metadata) {
-    await this.apiClient.processVideo({
-      platform: CONSTANTS.PLATFORMS.INSTAGRAM,
-      videoUrl,
-      postUrl,
-      metadata
-    });
+    const result = await this.callApiWithDuplicateCheck(
+      this.apiClient.processVideo,
+      {
+        platform: CONSTANTS.PLATFORMS.INSTAGRAM,
+        videoUrl,
+        postUrl,
+        metadata
+      }
+    );
+    
+    if (result === null) {
+      // 중복 URL로 인한 처리 중단
+      this.log('info', '중복 URL로 인해 처리 중단됨');
+      return;
+    }
+    
+    this.log('success', '영상 처리 완료', result);
   }
 
   /**

@@ -527,6 +527,38 @@ app.post('/api/process-video', async (req, res) => {
   try {
     const { platform, videoUrl, postUrl, metadata, analysisType = 'quick', useAI = true, mode = 'immediate' } = req.body;
     
+    // 🔍 URL 중복 검사 (모든 플랫폼 공통)
+    const checkUrl = videoUrl || postUrl;
+    if (checkUrl) {
+      try {
+        const duplicateCheck = await sheetsManager.checkDuplicateURLFast(checkUrl);
+        
+        if (duplicateCheck.isDuplicate) {
+          const errorMessage = `⚠️ 중복 URL: 이미 ${duplicateCheck.existingPlatform} 시트의 ${duplicateCheck.existingColumn}${duplicateCheck.existingRow}행에 존재합니다`;
+          
+          ServerLogger.warn(errorMessage, 'API_DUPLICATE');
+          
+          return res.status(409).json({
+            success: false,
+            error: 'DUPLICATE_URL',
+            message: errorMessage,
+            duplicate_info: {
+              platform: duplicateCheck.existingPlatform,
+              row: duplicateCheck.existingRow,
+              column: duplicateCheck.existingColumn,
+              normalized_url: sheetsManager.normalizeVideoUrl(checkUrl)
+            }
+          });
+        }
+        
+        ServerLogger.info(`✅ URL 중복 검사 통과: ${checkUrl}`, 'API_DUPLICATE');
+        
+      } catch (duplicateError) {
+        // 중복 검사 실패해도 계속 진행 (시스템 안정성을 위해)
+        ServerLogger.warn(`중복 검사 실패하여 건너뜀: ${duplicateError.message}`, 'API_DUPLICATE');
+      }
+    }
+    
     // 🆕 YouTube 배치 모드 처리
     if (platform === 'youtube' && mode === 'batch') {
       try {
@@ -968,6 +1000,59 @@ app.get('/api/self-learning/stats', async (req, res) => {
   }
 });
 
+// 🔍 URL 중복 검사 API 엔드포인트
+app.post('/api/check-duplicate', async (req, res) => {
+  try {
+    const { url } = req.body;
+    
+    if (!url) {
+      return res.status(400).json({
+        success: false,
+        error: 'URL_REQUIRED',
+        message: 'URL이 필요합니다.'
+      });
+    }
+    
+    ServerLogger.info(`🔍 API 중복 검사 요청: ${url}`, 'API_DUPLICATE_CHECK');
+    
+    const duplicateCheck = await sheetsManager.checkDuplicateURL(url);
+    
+    if (duplicateCheck.isDuplicate) {
+      res.json({
+        success: true,
+        isDuplicate: true,
+        message: `중복 URL 발견: ${duplicateCheck.existingPlatform} 시트의 ${duplicateCheck.existingColumn}${duplicateCheck.existingRow}행에 존재합니다`,
+        data: {
+          platform: duplicateCheck.existingPlatform,
+          row: duplicateCheck.existingRow,
+          column: duplicateCheck.existingColumn,
+          original_url: url,
+          normalized_url: sheetsManager.normalizeVideoUrl(url)
+        }
+      });
+    } else {
+      res.json({
+        success: true,
+        isDuplicate: false,
+        message: '중복 없음 - 새로운 URL입니다',
+        data: {
+          original_url: url,
+          normalized_url: sheetsManager.normalizeVideoUrl(url),
+          error: duplicateCheck.error || null
+        }
+      });
+    }
+    
+  } catch (error) {
+    ServerLogger.error('URL 중복 검사 API 실패', error.message, 'API_DUPLICATE_CHECK');
+    res.status(500).json({
+      success: false,
+      error: 'DUPLICATE_CHECK_FAILED',
+      message: '중복 검사 중 오류가 발생했습니다.'
+    });
+  }
+});
+
 // 파일 업로드 (테스트용)
 app.post('/api/upload', upload.single('video'), async (req, res) => {
   try {
@@ -1010,6 +1095,37 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     ServerLogger.info(`🎬 Processing ${platform} blob video from:`, postUrl);
     ServerLogger.info(`📁 Uploaded file: ${req.file ? `${req.file.filename} (${req.file.size} bytes)` : 'None'}`);
     ServerLogger.info(`🔍 Analysis type: ${analysisType}, AI 분석: ${useAI ? '활성화' : '비활성화'}`);
+    
+    // 🔍 URL 중복 검사 (Blob 처리에서도 공통 적용)
+    if (postUrl) {
+      try {
+        const duplicateCheck = await sheetsManager.checkDuplicateURLFast(postUrl);
+        
+        if (duplicateCheck.isDuplicate) {
+          const errorMessage = `⚠️ 중복 URL: 이미 ${duplicateCheck.existingPlatform} 시트의 ${duplicateCheck.existingColumn}${duplicateCheck.existingRow}행에 존재합니다`;
+          
+          ServerLogger.warn(errorMessage, 'API_DUPLICATE_BLOB');
+          
+          return res.status(409).json({
+            success: false,
+            error: 'DUPLICATE_URL',
+            message: errorMessage,
+            duplicate_info: {
+              platform: duplicateCheck.existingPlatform,
+              row: duplicateCheck.existingRow,
+              column: duplicateCheck.existingColumn,
+              normalized_url: sheetsManager.normalizeVideoUrl(postUrl)
+            }
+          });
+        }
+        
+        ServerLogger.info(`✅ URL 중복 검사 통과 (Blob): ${postUrl}`, 'API_DUPLICATE_BLOB');
+        
+      } catch (duplicateError) {
+        // 중복 검사 실패해도 계속 진행 (시스템 안정성을 위해)
+        ServerLogger.warn(`중복 검사 실패하여 건너뜀 (Blob): ${duplicateError.message}`, 'API_DUPLICATE_BLOB');
+      }
+    }
     
     if (!req.file) {
       return ResponseHandler.clientError(res, {
