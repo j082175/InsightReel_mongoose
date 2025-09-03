@@ -714,7 +714,8 @@ class AIAnalyzer {
    * 안전한 Enhanced Multi API 호출 메소드
    */
   async _queryWithEnhancedMultiApi(prompt, imageBase64) {
-    const maxRetries = 2;
+    const { AI } = require('../config/constants');
+    const maxRetries = AI.RETRY.MAX_RETRIES;
     let lastError;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -783,8 +784,9 @@ class AIAnalyzer {
           break; // for 루프 종료
         }
         
-        // 재시도 전 짧은 대기
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // 재시도 전 대기 (상수로 통일된 설정)
+        const delay = AI.RETRY.RETRY_DELAYS[attempt - 1] || 10000;
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
     
@@ -926,8 +928,9 @@ class AIAnalyzer {
     }
     
     // 기존 단일 모델 방식 (하이브리드 비활성화시)
-    const maxRetries = 3;
-    const retryDelays = [10000, 10000, 10000]; // 10초, 10초, 10초
+    const { AI } = require('../config/constants');
+    const maxRetries = AI.RETRY.MAX_RETRIES;
+    const retryDelays = AI.RETRY.RETRY_DELAYS;
     
     // 🧪 디버깅: 의도적 실패 테스트 (환경변수로 제어)
     const forceFailure = process.env.DEBUG_FORCE_GEMINI_FAILURE === 'true';
@@ -1821,8 +1824,9 @@ JSON 형식으로 답변:
   async analyzeMultipleFramesWithGemini(thumbnailPaths, urlBasedCategory, metadata) {
     ServerLogger.info('🔮 Gemini 다중 프레임 분석 시작:', thumbnailPaths.length + '개');
     
-    const maxRetries = 3;
-    const retryDelays = [10000, 10000, 10000]; // 10초, 10초, 10초
+    const { AI } = require('../config/constants');
+    const maxRetries = AI.RETRY.MAX_RETRIES;
+    const retryDelays = AI.RETRY.RETRY_DELAYS;
     
     // 모든 이미지를 Base64로 인코딩 (재시도 전에 미리 처리)
     const imageContents = [];

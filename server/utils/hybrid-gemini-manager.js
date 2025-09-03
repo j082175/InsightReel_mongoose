@@ -1,6 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { ServerLogger } = require('./logger');
 const UsageTracker = require('./usage-tracker');
+const { AI } = require('../config/constants');
 
 /**
  * 하이브리드 Gemini 관리자
@@ -111,13 +112,17 @@ class HybridGeminiManager {
   }
 
   /**
-   * 특정 모델로 직접 쿼리
+   * 특정 모델로 재시도 로직이 포함된 쿼리
    */
   async queryWithModel(modelName, prompt, imageBase64 = null, options = {}) {
     const model = this.models[modelName];
     if (!model) {
       throw new Error(`지원되지 않는 모델: ${modelName}`);
     }
+
+    const maxRetries = AI.RETRY.MAX_RETRIES;
+    const retryDelays = AI.RETRY.RETRY_DELAYS;
+    let lastError = null;
 
     // 요청 구성
     const parts = [{ text: prompt }];
@@ -131,19 +136,51 @@ class HybridGeminiManager {
       });
     }
 
-    // API 호출
-    const result = await model.generateContent(parts, options);
-    const response = result.response;
-    
-    if (!response) {
-      throw new Error(`${modelName}에서 응답을 받지 못했습니다`);
+    // 재시도 로직
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        ServerLogger.info(`🔄 ${modelName} 모델 호출 (시도 ${attempt + 1}/${maxRetries})`, null, 'HYBRID');
+        
+        const result = await model.generateContent(parts, options);
+        const response = result.response;
+        
+        if (!response) {
+          throw new Error(`${modelName}에서 응답을 받지 못했습니다`);
+        }
+
+        // 성공시 결과 반환
+        ServerLogger.info(`✅ ${modelName} 모델 성공 (시도 ${attempt + 1}/${maxRetries})`, null, 'HYBRID');
+        return {
+          text: response.text(),
+          response: response,
+          modelName: modelName
+        };
+
+      } catch (error) {
+        lastError = error;
+        ServerLogger.warn(`⚠️ ${modelName} 모델 실패 (시도 ${attempt + 1}/${maxRetries}): ${error.message}`, null, 'HYBRID');
+
+        // 재시도 불가능한 에러들 (API 키, 인증, 권한 등)
+        if (error.message.includes('API key') || 
+            error.message.includes('authentication') ||
+            error.message.includes('permission') ||
+            this.usageTracker.isQuotaExceededError(error)) {
+          ServerLogger.info(`❌ ${modelName} 재시도 불가능한 에러: ${error.message}`, null, 'HYBRID');
+          throw error;
+        }
+
+        // 마지막 시도가 아닌 경우 대기
+        if (attempt < maxRetries - 1) {
+          const delay = retryDelays[attempt] || 10000;
+          ServerLogger.info(`⏳ ${delay/1000}초 후 ${modelName} 재시도...`, null, 'HYBRID');
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
     }
 
-    return {
-      text: response.text(),
-      response: response,
-      modelName: modelName
-    };
+    // 모든 재시도 실패
+    ServerLogger.error(`❌ ${modelName} 모델 모든 재시도 실패`, null, 'HYBRID');
+    throw lastError;
   }
 
   /**

@@ -49,6 +49,13 @@ const SERVER_CONSTANTS = {
 
   // 🔍 AI 설정
   AI: {
+    // 재시도 설정 (모든 AI 시스템 공통)
+    RETRY: {
+      MAX_RETRIES: 3,           // 최대 재시도 횟수
+      RETRY_DELAYS: [10000, 10000, 10000], // 재시도 간격 (10초씩)
+      TIMEOUT: 120000           // AI 분석 타임아웃 (2분)
+    },
+    
     MODELS: {
       GEMINI: 'gemini-2.5-flash'
     },
