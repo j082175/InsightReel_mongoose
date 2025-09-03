@@ -33,6 +33,9 @@
     <!-- 나머지 CSS는 비동기로 로드 (렌더링 차단 안함) -->
     <link rel="preload" href="dashboard-original.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="dashboard-original.css"></noscript>
+    
+    <!-- JavaScript 파일 로드 (캐시 방지용 버전) -->
+    <script src="dashboard.js?v=4.0" async></script>
 </head>
 <body>
     <div class="header">
@@ -184,8 +187,5 @@
             </div>
         </div>
     </div>
-
-    <!-- JavaScript 비동기 로드 (렌더링 차단 안함) -->
-    <script src="dashboard.js" async></script>
 </body>
 </html>

@@ -9,6 +9,10 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const { getConfig } = require('./config/config-validator');
 const config = getConfig(); // 여기서 검증 실행
 
+// MongoDB 연결 설정
+const DatabaseManager = require('./config/database');
+const Video = require('./models/Video');
+
 const VideoProcessor = require('./services/VideoProcessor');
 const AIAnalyzer = require('./services/AIAnalyzer');
 const SheetsManager = require('./services/SheetsManager');
@@ -98,11 +102,243 @@ const checkDateReset = () => {
 // API 라우트
 
 // 건강 상태 확인
-app.get('/health', (req, res) => {
-  ResponseHandler.health(res, {
-    useGemini: process.env.USE_GEMINI === 'true',
-    version: '1.0.0'
-  });
+app.get('/health', async (req, res) => {
+  try {
+    const dbStatus = await DatabaseManager.healthCheck();
+    ResponseHandler.health(res, {
+      useGemini: process.env.USE_GEMINI === 'true',
+      useMongoDB: process.env.USE_MONGODB === 'true',
+      database: dbStatus,
+      version: '1.0.0'
+    });
+  } catch (error) {
+    ResponseHandler.health(res, {
+      useGemini: process.env.USE_GEMINI === 'true',
+      useMongoDB: process.env.USE_MONGODB === 'true',
+      database: { status: 'error', message: error.message },
+      version: '1.0.0'
+    });
+  }
+});
+
+// 🗄️ MongoDB 전용 헬스 체크
+app.get('/api/database/health', async (req, res) => {
+  try {
+    const healthCheck = await DatabaseManager.healthCheck();
+    const connectionStatus = DatabaseManager.isConnectedStatus();
+    
+    res.json({
+      success: true,
+      database: {
+        type: 'MongoDB Atlas',
+        ...healthCheck,
+        connection: connectionStatus
+      },
+      message: '데이터베이스 상태 확인 완료'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      database: {
+        type: 'MongoDB Atlas',
+        status: 'error'
+      },
+      message: '데이터베이스 연결 확인 실패'
+    });
+  }
+});
+
+// 🧪 MongoDB 테스트 API들
+app.get('/api/database/test', async (req, res) => {
+  try {
+    // 1. 테스트 비디오 데이터 생성
+    const testVideo = new Video({
+      platform: 'youtube',
+      timestamp: new Date(),
+      account: 'TestChannel',
+      title: 'MongoDB 연결 테스트 비디오',
+      comments: 'https://www.youtube.com/watch?v=test123',
+      likes: 100,
+      views: 1000,
+      category: 'Technology',
+      ai_description: 'MongoDB Atlas 연결 테스트용 비디오입니다'
+    });
+
+    // 2. 데이터베이스에 저장
+    const saved = await testVideo.save();
+    
+    // 3. 저장된 데이터 조회
+    const found = await Video.findById(saved._id);
+    
+    // 4. 테스트 데이터 삭제 (정리)
+    await Video.findByIdAndDelete(saved._id);
+    
+    res.json({
+      success: true,
+      message: 'MongoDB CRUD 테스트 성공!',
+      test_results: {
+        created: !!saved,
+        found: !!found,
+        deleted: true,
+        document_id: saved._id
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: 'MongoDB 테스트 실패'
+    });
+  }
+});
+
+// 📊 컬렉션 상태 확인
+app.get('/api/database/collections', async (req, res) => {
+  try {
+    const db = DatabaseManager.connection.connection.db;
+    const collections = await db.listCollections().toArray();
+    const stats = {};
+    
+    for (const collection of collections) {
+      const collectionStats = await db.collection(collection.name).countDocuments();
+      stats[collection.name] = collectionStats;
+    }
+    
+    res.json({
+      success: true,
+      database: 'videos',
+      collections: stats,
+      message: '컬렉션 상태 조회 완료'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: '컬렉션 상태 조회 실패'
+    });
+  }
+});
+
+// 🚀 Google Sheets → MongoDB 마이그레이션 API
+app.post('/api/database/migrate', async (req, res) => {
+  try {
+    const DataMigrator = require('./scripts/migrate-to-mongodb');
+    const migrator = new DataMigrator();
+    
+    ServerLogger.info('🚀 웹 API를 통한 마이그레이션 시작', 'API');
+    
+    // 마이그레이션 실행
+    const stats = await migrator.migrate();
+    
+    res.json({
+      success: true,
+      message: 'Google Sheets → MongoDB 마이그레이션 완료!',
+      stats: stats,
+      next_steps: [
+        '1. /api/database/collections로 마이그레이션된 데이터 확인',
+        '2. /api/videos-mongo로 MongoDB 데이터 조회 테스트',
+        '3. 기존 /api/videos와 성능 비교'
+      ]
+    });
+    
+  } catch (error) {
+    ServerLogger.error('❌ 마이그레이션 API 실패', error.message, 'API');
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: '마이그레이션 실패'
+    });
+  }
+});
+
+// 🗑️ MongoDB 데이터 초기화 API (재마이그레이션용)
+app.delete('/api/database/reset', async (req, res) => {
+  try {
+    const deleteResult = await Video.deleteMany({});
+    
+    ServerLogger.info(`🗑️ MongoDB 데이터 초기화: ${deleteResult.deletedCount}개 문서 삭제`, 'API');
+    
+    res.json({
+      success: true,
+      message: `MongoDB 데이터 초기화 완료! ${deleteResult.deletedCount}개 문서 삭제`,
+      deleted_count: deleteResult.deletedCount,
+      next_step: 'POST /api/database/migrate로 재마이그레이션 실행 가능'
+    });
+    
+  } catch (error) {
+    ServerLogger.error('❌ 데이터 초기화 실패', error.message, 'API');
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: 'MongoDB 데이터 초기화 실패'
+    });
+  }
+});
+
+// 🔍 MongoDB 데이터 검증 API
+app.get('/api/database/verify', async (req, res) => {
+  try {
+    const verifyData = require('./scripts/verify-data');
+    
+    // 콘솔 출력을 캡처하기 위한 헬퍼
+    const originalLog = console.log;
+    let output = '';
+    console.log = (...args) => {
+      output += args.join(' ') + '\n';
+      originalLog(...args);
+    };
+    
+    const success = await verifyData();
+    
+    // 원래 console.log 복구
+    console.log = originalLog;
+    
+    res.json({
+      success: success,
+      message: success ? 'MongoDB 데이터 검증 완료!' : '데이터 검증 실패',
+      verification_output: output,
+      timestamp: new Date()
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: '데이터 검증 API 실패'
+    });
+  }
+});
+
+// 📊 마이그레이션 진행 상황 조회
+app.get('/api/database/migration-status', async (req, res) => {
+  try {
+    const totalVideos = await Video.countDocuments();
+    const platformStats = await Video.aggregate([
+      { $group: { _id: '$platform', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+    
+    res.json({
+      success: true,
+      migration_status: {
+        total_migrated: totalVideos,
+        by_platform: platformStats.reduce((acc, item) => {
+          acc[item._id] = item.count;
+          return acc;
+        }, {}),
+        last_updated: new Date()
+      },
+      message: '마이그레이션 상태 조회 완료'
+    });
+    
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      message: '마이그레이션 상태 조회 실패'
+    });
+  }
 });
 
 // 통계 조회
@@ -146,6 +382,123 @@ app.get('/api/test-sheets', async (req, res) => {
       code: ERROR_CODES.SHEETS_CONNECTION_FAILED,
       suggestion: '구글 API 키 설정과 인증을 확인해주세요.'
     }, API_MESSAGES.CONNECTION.SHEETS_FAILED);
+  }
+});
+
+// 🔍 개별 YouTube 시트 직접 조회 테스트 API
+app.get('/api/test-youtube-sheet', async (req, res) => {
+  try {
+    const range = 'YouTube!A2:S10';
+    const response = await sheetsManager.sheets.spreadsheets.values.get({
+      spreadsheetId: sheetsManager.spreadsheetId,
+      range: range
+    });
+    
+    const data = response.data.values || [];
+    const sampleData = data.slice(0, 3).map(row => ({
+      id: row[0],
+      timestamp: row[1], 
+      platform: row[2],
+      account: row[3],
+      title: row[9]?.substring(0, 50) + '...' || 'N/A'
+    }));
+    
+    res.json({
+      success: true,
+      range,
+      count: data.length,
+      sampleData,
+      message: `YouTube 시트에서 ${data.length}개 행 직접 조회 성공`
+    });
+  } catch (error) {
+    res.json({ 
+      success: false, 
+      error: error.message,
+      range: 'YouTube!A2:S10'
+    });
+  }
+});
+
+// 🔍 구글 시트 구조 확인 API
+app.get('/api/test-sheet-structure', async (req, res) => {
+  try {
+    const response = await sheetsManager.sheets.spreadsheets.get({
+      spreadsheetId: sheetsManager.spreadsheetId
+    });
+    const sheetInfo = response.data.sheets.map(sheet => ({
+      title: sheet.properties.title,
+      sheetId: sheet.properties.sheetId,
+      rowCount: sheet.properties.gridProperties.rowCount,
+      columnCount: sheet.properties.gridProperties.columnCount
+    }));
+    
+    res.json({ 
+      success: true,
+      spreadsheetTitle: response.data.properties.title,
+      sheetInfo,
+      totalSheets: sheetInfo.length 
+    });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
+
+// 🔍 모든 시트별 데이터 수 확인 API  
+app.get('/api/test-all-sheets-count', async (req, res) => {
+  try {
+    const platforms = ['Instagram', 'YouTube', 'TikTok'];
+    const results = {};
+    
+    for (const sheetName of platforms) {
+      try {
+        const range = `${sheetName}!A:A`;
+        const response = await sheetsManager.sheets.spreadsheets.values.get({
+          spreadsheetId: sheetsManager.spreadsheetId,
+          range: range
+        });
+        const count = (response.data.values?.length || 1) - 1; // 헤더 제외
+        results[sheetName] = { success: true, count, range };
+      } catch (error) {
+        results[sheetName] = { success: false, error: error.message, count: 0 };
+      }
+    }
+    
+    res.json({ success: true, results });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
+
+// 🔍 Instagram 시트 최신 데이터 조사 API
+app.get('/api/test-instagram-latest', async (req, res) => {
+  try {
+    const range = 'Instagram!A2:B50'; // 처음 50개 행의 번호와 날짜만
+    const response = await sheetsManager.sheets.spreadsheets.values.get({
+      spreadsheetId: sheetsManager.spreadsheetId,
+      range: range
+    });
+    
+    const data = response.data.values || [];
+    
+    // 날짜별로 정렬해서 최신 10개 확인
+    const sortedData = data
+      .filter(row => row[1]) // 날짜가 있는 것만
+      .sort((a, b) => {
+        const dateA = new Date(a[1].replace(/\. /g, '/').replace(/\.$/, ''));
+        const dateB = new Date(b[1].replace(/\. /g, '/').replace(/\.$/, ''));
+        return dateB - dateA;
+      })
+      .slice(0, 10);
+    
+    res.json({
+      success: true,
+      range,
+      totalRows: data.length,
+      latestDates: sortedData.map(row => ({ id: row[0], date: row[1] })),
+      message: `Instagram 시트에서 ${data.length}개 행 조회, 최신 10개 날짜 정렬 완료`
+    });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
   }
 });
 
@@ -397,6 +750,35 @@ app.post('/api/process-video', async (req, res) => {
           timestamp: new Date().toISOString()
         });
         
+        // 5단계: MongoDB에도 저장 (빠른 조회용)
+        if (process.env.USE_MONGODB === 'true') {
+          try {
+            ServerLogger.info('5️⃣ MongoDB 저장 중...');
+            const videoDoc = new Video({
+              platform: platform.toLowerCase(),
+              timestamp: new Date(),
+              account: postUrl,
+              title: analysis?.content || analysis?.mainCategory || '제목 없음',
+              likes: 0,
+              views: 0,
+              shares: 0,
+              comments: postUrl,
+              comments_count: 0,
+              category: analysis?.mainCategory || '미분류',
+              ai_description: analysis?.content || '',
+              keywords: analysis?.keywords || [],
+              hashtags: analysis?.hashtags || [],
+              duration: '',
+              videoUrl: videoPath
+            });
+            await videoDoc.save();
+            ServerLogger.info('✅ MongoDB 저장 완료!');
+          } catch (mongoError) {
+            ServerLogger.error('⚠️ MongoDB 저장 실패 (시트는 성공)', mongoError.message);
+            // MongoDB 실패해도 계속 진행
+          }
+        }
+        
         // 통계 업데이트
         stats.total++;
         stats.today++;
@@ -444,16 +826,110 @@ app.post('/api/process-video', async (req, res) => {
   }
 });
 
-// 저장된 비디오 목록 조회
+// 저장된 비디오 목록 조회 (MongoDB 기반)
 app.get('/api/videos', async (req, res) => {
   try {
-    const videos = await sheetsManager.getRecentVideos();
-    ResponseHandler.success(res, videos, API_MESSAGES.DATA.FETCH_SUCCESS);
+    const limit = parseInt(req.query.limit) || 10;
+    const sortBy = req.query.sortBy || 'timestamp'; // timestamp, likes, views
+    const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+    const platform = req.query.platform; // 플랫폼 필터 (선택적)
+    
+    ServerLogger.info(`📡 MongoDB API 요청: /api/videos (limit=${limit}, sortBy=${sortBy}, platform=${platform})`, 'DEBUG');
+    
+    // MongoDB 연결 확인
+    if (!DatabaseManager.isConnectedStatus().connected) {
+      await DatabaseManager.connect();
+    }
+    
+    // 쿼리 조건 구성
+    const query = {};
+    if (platform) {
+      query.platform = platform.toLowerCase();
+    }
+    
+    // 정렬 조건 구성
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder;
+    
+    // MongoDB에서 비디오 조회
+    const videos = await Video.find(query)
+      .sort(sortOptions)
+      .limit(limit)
+      .select('platform account title likes views comments timestamp category keywords hashtags')
+      .lean(); // 성능 최적화
+    
+    // 플랫폼별 비디오 수 분석
+    const platformCounts = {};
+    videos.forEach(v => {
+      const platform = v.platform || 'unknown';
+      platformCounts[platform] = (platformCounts[platform] || 0) + 1;
+    });
+    
+    ServerLogger.info(`📊 MongoDB API 응답: 총 ${videos.length}개 비디오`, 'DEBUG');
+    ServerLogger.info(`📊 플랫폼별 비디오 수: ${JSON.stringify(platformCounts)}`, 'DEBUG');
+    
+    ResponseHandler.success(res, {
+      videos: videos,
+      total: videos.length,
+      query: { limit, sortBy, sortOrder: sortOrder === 1 ? 'asc' : 'desc', platform },
+      platform_stats: platformCounts
+    }, API_MESSAGES.DATA.FETCH_SUCCESS);
+    
   } catch (error) {
+    ServerLogger.error(`❌ MongoDB /api/videos API 실패`, error.message, 'DEBUG');
     ResponseHandler.serverError(res, {
       ...error,
       code: ERROR_CODES.DATA_FETCH_FAILED
     }, API_MESSAGES.DATA.FETCH_FAILED);
+  }
+});
+
+// 🔍 캐시 강제 무효화 API
+app.post('/api/cache/clear', async (req, res) => {
+  try {
+    sheetsManager.invalidateCache();
+    res.json({ 
+      success: true, 
+      message: '캐시가 무효화되었습니다. 다음 조회부터 새로운 데이터를 가져옵니다.' 
+    });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
+
+// 캐시 상태 확인 엔드포인트 (디버깅용)
+app.get('/api/cache/status', async (req, res) => {
+  try {
+    const cacheInfo = {
+      cacheSize: sheetsManager.cache.size,
+      keys: Array.from(sheetsManager.cache.keys()),
+      ttl: sheetsManager.cacheTTL,
+      entries: {}
+    };
+    
+    // 각 캐시 엔트리의 나이 계산
+    for (const [key, value] of sheetsManager.cache.entries()) {
+      const age = Date.now() - value.timestamp;
+      cacheInfo.entries[key] = {
+        age: `${age}ms`,
+        isValid: age < sheetsManager.cacheTTL,
+        dataLength: value.data ? value.data.length : 0
+      };
+    }
+    
+    ResponseHandler.success(res, cacheInfo, '캐시 상태 조회 성공');
+  } catch (error) {
+    ResponseHandler.serverError(res, error, '캐시 상태 조회 실패');
+  }
+});
+
+// 캐시 무효화 엔드포인트 (디버깅용)
+app.post('/api/cache/clear', async (req, res) => {
+  try {
+    sheetsManager.invalidateCache();
+    ResponseHandler.success(res, { cleared: true }, '캐시 무효화 성공');
+  } catch (error) {
+    ResponseHandler.serverError(res, error, '캐시 무효화 실패');
   }
 });
 
@@ -635,6 +1111,35 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
           analysis,
           timestamp: new Date().toISOString()
         });
+        
+        // 5단계: MongoDB에도 저장 (빠른 조회용)
+        if (process.env.USE_MONGODB === 'true') {
+          try {
+            ServerLogger.info('5️⃣ MongoDB 저장 중...');
+            const videoDoc = new Video({
+              platform: platform.toLowerCase(),
+              timestamp: new Date(),
+              account: postUrl,
+              title: analysis?.content || analysis?.mainCategory || '제목 없음',
+              likes: 0,
+              views: 0,
+              shares: 0,
+              comments: postUrl,
+              comments_count: 0,
+              category: analysis?.mainCategory || '미분류',
+              ai_description: analysis?.content || '',
+              keywords: analysis?.keywords || [],
+              hashtags: analysis?.hashtags || [],
+              duration: '',
+              videoUrl: videoPath
+            });
+            await videoDoc.save();
+            ServerLogger.info('✅ MongoDB 저장 완료!');
+          } catch (mongoError) {
+            ServerLogger.error('⚠️ MongoDB 저장 실패 (시트는 성공)', mongoError.message);
+            // MongoDB 실패해도 계속 진행
+          }
+        }
         
         // 통계 업데이트
         stats.total++;
@@ -920,6 +1425,112 @@ app.get('/api/quota-status', (req, res) => {
   }
 });
 
+// 이미지 프록시 API (CORS 우회)
+app.get('/api/proxy-image', async (req, res) => {
+  try {
+    const { url } = req.query;
+    
+    if (!url) {
+      return ResponseHandler.badRequest(res, {
+        field: 'url',
+        message: '이미지 URL이 필요합니다.'
+      });
+    }
+    
+    // Instagram 미디어 URL만 허용
+    if (!url.includes('instagram.com')) {
+      return ResponseHandler.badRequest(res, {
+        field: 'url', 
+        message: 'Instagram URL만 지원됩니다.'
+      });
+    }
+    
+    ServerLogger.info('🖼️ 이미지 프록시 요청:', url);
+    
+    // fetch를 사용하여 이미지 가져오기
+    const fetch = (await import('node-fetch')).default;
+    const imageResponse = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    if (!imageResponse.ok) {
+      throw new Error(`이미지 로드 실패: ${imageResponse.status}`);
+    }
+    
+    // Content-Type 설정
+    const contentType = imageResponse.headers.get('content-type');
+    if (contentType) {
+      res.setHeader('Content-Type', contentType);
+    }
+    
+    // CORS 헤더 설정
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    
+    // 이미지 스트림 전달
+    const buffer = await imageResponse.buffer();
+    res.send(buffer);
+    
+  } catch (error) {
+    ServerLogger.error('이미지 프록시 에러:', error);
+    ResponseHandler.serverError(res, error, '이미지 프록시 처리 중 오류가 발생했습니다.');
+  }
+});
+
+// Instagram 썸네일 추출 API
+app.post('/api/get-instagram-thumbnail', async (req, res) => {
+  try {
+    const { url } = req.body;
+    
+    if (!url || !url.includes('instagram.com')) {
+      return ResponseHandler.badRequest(res, {
+        code: 'INVALID_URL',
+        message: '유효한 Instagram URL이 필요합니다.',
+        details: { provided: url }
+      });
+    }
+    
+    ServerLogger.info('📸 Instagram 썸네일 추출 요청:', { url });
+    
+    // Instagram URL에서 미디어 ID 추출
+    const reelMatch = url.match(/instagram\.com\/reels?\/([A-Za-z0-9_-]+)/);
+    const postMatch = url.match(/instagram\.com\/p\/([A-Za-z0-9_-]+)/);
+    
+    if (!reelMatch && !postMatch) {
+      return ResponseHandler.badRequest(res, {
+        code: 'INVALID_INSTAGRAM_URL',
+        message: 'Instagram 릴스 또는 포스트 URL이 아닙니다.',
+        details: { url }
+      });
+    }
+    
+    const mediaId = reelMatch ? reelMatch[1] : postMatch[1];
+    
+    // Instagram 썸네일 URL 패턴들
+    const thumbnailUrls = [
+      `https://www.instagram.com/p/${mediaId}/media/?size=l`,
+      `https://www.instagram.com/p/${mediaId}/media/?size=m`,
+      `https://instagram.com/p/${mediaId}/media/`
+    ];
+    
+    // 첫 번째 URL로 응답 (클라이언트에서 이미지 로드 시도)
+    ResponseHandler.success(res, {
+      thumbnailUrl: thumbnailUrls[0],
+      mediaId,
+      alternativeUrls: thumbnailUrls.slice(1),
+      originalUrl: url
+    }, 'Instagram 썸네일 URL을 생성했습니다.');
+    
+    ServerLogger.info('✅ Instagram 썸네일 URL 생성 완료:', { mediaId, url: thumbnailUrls[0] });
+    
+  } catch (error) {
+    ServerLogger.error('❌ Instagram 썸네일 추출 실패:', error);
+    ResponseHandler.serverError(res, error, 'Instagram 썸네일 추출 중 오류가 발생했습니다.');
+  }
+});
+
 // 트렌딩 수집 통계 조회
 app.get('/api/trending-stats', async (req, res) => {
   try {
@@ -949,20 +1560,36 @@ app.use((req, res) => {
   ResponseHandler.notFound(res, `경로 '${req.path}'를 찾을 수 없습니다.`);
 });
 
-// 서버 시작
-app.listen(PORT, () => {
-  ServerLogger.info(`
+// 서버 시작 (MongoDB 연결 포함)
+const startServer = async () => {
+  try {
+    // MongoDB 연결 시도
+    await DatabaseManager.connect();
+    
+    app.listen(PORT, () => {
+      ServerLogger.info(`
 🎬 영상 자동저장 분석기 서버 실행중
 📍 포트: ${PORT}
 🌐 URL: http://localhost:${PORT}
 📊 Health Check: http://localhost:${PORT}/health
+🗄️ Database: ${process.env.USE_MONGODB === 'true' ? 'MongoDB Atlas' : 'Google Sheets'}
 
 📋 설정 체크리스트:
 [ ] Gemini API 키 설정 (.env 파일)
+[ ] MongoDB Atlas 연결 (${process.env.USE_MONGODB === 'true' ? '✅' : '❌'})
 [ ] Chrome 확장프로그램 로드
 
 💡 테스트 URL:
 - 구글 시트 테스트: http://localhost:${PORT}/api/test-sheets
+- MongoDB 상태 확인: http://localhost:${PORT}/api/database/health
 - 설정 상태 확인: http://localhost:${PORT}/api/config/health
-  `);
-});
+  `, 'START');
+    });
+  } catch (error) {
+    ServerLogger.error('🚨 서버 시작 실패', error.message, 'START');
+    process.exit(1);
+  }
+};
+
+// 서버 시작
+startServer();

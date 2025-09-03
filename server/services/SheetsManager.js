@@ -1091,26 +1091,54 @@ class SheetsManager {
       // 모든 플랫폼 시트에서 최신 데이터 조회 (성능 최적화)
       const platforms = ['instagram', 'tiktok', 'youtube'];
       
-      // 1단계: 범위 제한 - 각 플랫폼에서 limit*2 만큼만 가져오기 (정렬 여유분)
-      const platformLimit = Math.ceil(limit * 2); // 정렬 후 충분한 데이터 확보
-      ServerLogger.info(`📊 요청 limit=${limit}, 플랫폼당 조회할 행수=${platformLimit}`, 'SHEETS');
+      // 1단계: 범위 확대 - Instagram 9월 데이터 누락 방지를 위해 더 많이 조회
+      const platformLimit = Math.max(50, limit * 5); // 최소 50개, 또는 limit*5 (9월 데이터 포함 위해 확대)
+      ServerLogger.info(`📊 요청 limit=${limit}, 플랫폼당 조회할 행수=${platformLimit} (Instagram 9월 데이터 포함 위해 확대)`, 'SHEETS');
       
-      // 2단계: 병렬 처리 - 모든 플랫폼 동시 조회
-      const platformPromises = platforms.map(async (platform) => {
+      // 2단계: 병렬 처리 - 모든 플랫폼 전체 데이터 조회 후 날짜로 정렬 (수정됨)
+      const platformPromises = platforms.map(async (platform, index) => {
         try {
           const sheetName = await this.getSheetNameByPlatform(platform);
-          const range = `${sheetName}!A2:S${1 + platformLimit}`;
+          const range = `${sheetName}!A2:S`;  // 전체 데이터 조회로 변경
+          
+          ServerLogger.info(`🔍 [${index + 1}/3] ${platform} 시트 전체 조회 시작: ${range}`, 'DEBUG');
+          
           const response = await this.sheets.spreadsheets.values.get({
             spreadsheetId: this.spreadsheetId,
-            range: range  // 헤더 제외하고 platformLimit개만
+            range: range  // 전체 데이터 조회
           });
           
-          const data = response.data.values || [];
-          ServerLogger.info(`📋 ${platform} 시트에서 ${data.length}개 행 조회 (범위: ${range})`, 'SHEETS');
-          return data;
+          let data = response.data.values || [];
+          
+          ServerLogger.info(`📋 [${index + 1}/3] ${platform} 시트에서 ${data.length}개 행 조회 (전체)`, 'DEBUG');
+          
+          if (data.length > 0) {
+            // 🔥 핵심 수정: 각 플랫폼 데이터를 날짜(컬럼 1)로 정렬 후 최신 데이터만 선택
+            data.sort((a, b) => {
+              const dateA = new Date(a[1] || 0);  // 일시 컬럼
+              const dateB = new Date(b[1] || 0);
+              return dateB - dateA;  // 최신순 정렬
+            });
+            
+            // 각 플랫폼에서 최신 platformLimit개만 선택
+            data = data.slice(0, platformLimit);
+            
+            ServerLogger.info(`🎯 [${index + 1}/3] ${platform} 시트에서 날짜순 정렬 후 최신 ${data.length}개 선택`, 'DEBUG');
+            
+            // 선택된 데이터의 날짜 범위 확인
+            if (data.length > 0) {
+              const oldestDate = data[data.length - 1][1];
+              const newestDate = data[0][1];
+              ServerLogger.info(`📅 [${index + 1}/3] ${platform} 선택된 기간: ${newestDate} ~ ${oldestDate}`, 'DEBUG');
+            }
+          } else {
+            ServerLogger.info(`⚠️ [${index + 1}/3] ${platform} 시트가 비어있음`, 'DEBUG');
+          }
+          
+          return { platform, sheetName, data, count: data.length };
         } catch (error) {
-          ServerLogger.warn(`${platform} 시트 데이터 조회 실패 (시트가 없을 수 있음)`, error.message, 'SHEETS');
-          return [];
+          ServerLogger.error(`❌ [${index + 1}/3] ${platform} 시트 데이터 조회 실패`, error.message, 'DEBUG');
+          return { platform, sheetName: 'N/A', data: [], count: 0, error: error.message };
         }
       });
 
@@ -1118,17 +1146,97 @@ class SheetsManager {
       const platformResults = await Promise.all(platformPromises);
       let allVideos = [];
       
-      // 결과 합치기
-      for (const platformData of platformResults) {
-        allVideos = allVideos.concat(platformData);
+      // 🔍 각 플랫폼별 조회 결과 상세 분석
+      ServerLogger.info(`🔍 각 플랫폼별 조회 결과:`, 'DEBUG');
+      let totalRowsFromAllPlatforms = 0;
+      
+      platformResults.forEach((result, index) => {
+        const { platform, sheetName, data, count, error } = result;
+        totalRowsFromAllPlatforms += count;
+        
+        if (error) {
+          ServerLogger.info(`  [${index + 1}] ${platform.toUpperCase()}: ❌ 실패 - ${error}`, 'DEBUG');
+        } else {
+          ServerLogger.info(`  [${index + 1}] ${platform.toUpperCase()}: ✅ ${count}개 행 조회됨 (시트명: ${sheetName})`, 'DEBUG');
+          
+          // 각 플랫폼 데이터의 플랫폼 값 분석
+          if (data.length > 0) {
+            const platformValues = data.map(row => row[2]).filter(p => p);
+            const uniquePlatforms = [...new Set(platformValues)];
+            ServerLogger.info(`    └─ 플랫폼 값 종류: [${uniquePlatforms.join(', ')}] (${platformValues.length}개 중 ${uniquePlatforms.length}개 고유값)`, 'DEBUG');
+          }
+        }
+      });
+      
+      ServerLogger.info(`📊 전체 조회 결과: ${totalRowsFromAllPlatforms}개 행`, 'DEBUG');
+      
+      // 결과 합치기 (데이터만 추출)
+      for (const result of platformResults) {
+        if (result.data && result.data.length > 0) {
+          allVideos = allVideos.concat(result.data);
+          ServerLogger.info(`🔄 ${result.platform} 데이터 ${result.data.length}개 병합 중`, 'DEBUG');
+        }
       }
+      
+      ServerLogger.info(`🎯 최종 병합된 전체 데이터: ${allVideos.length}개 행`, 'DEBUG');
 
-      // 날짜순으로 정렬하고 limit 적용
+      // 정렬 전 플랫폼별 분포 확인
+      const beforeSortPlatforms = {};
+      allVideos.forEach(row => {
+        const platform = row[2] || 'UNKNOWN';
+        beforeSortPlatforms[platform] = (beforeSortPlatforms[platform] || 0) + 1;
+      });
+      ServerLogger.info(`📊 정렬 전 플랫폼 분포: ${JSON.stringify(beforeSortPlatforms)}`, 'DEBUG');
+
+      // 날짜순으로 정렬하고 limit 적용 (한국어 날짜 형식 지원)
       allVideos.sort((a, b) => {
-        const dateA = new Date(a[1] || 0);  // 일시 컬럼
-        const dateB = new Date(b[1] || 0);
+        const dateStrA = a[1] || '';
+        const dateStrB = b[1] || '';
+        
+        // 🔥 한국어 날짜 형식 변환 함수
+        const parseKoreanDate = (dateStr) => {
+          // "2025. 8. 29. 오후 8:17:30" → "2025/8/29 20:17:30"
+          let normalized = dateStr
+            .replace(/\. /g, '/') // "2025. 8. 29." → "2025/8/29"
+            .replace(/\.$/, '') // 마지막 점 제거
+            .replace(/오후 (\d+):/, (match, hour) => ` ${parseInt(hour) + 12}:`) // 오후 8: → 20:
+            .replace(/오전 (\d+):/, ' $1:') // 오전 8: → 8:
+            .replace(/오전 12:/, ' 0:') // 오전 12시는 0시
+            .replace(/오후 12:/, ' 12:'); // 오후 12시는 12시 그대로
+          
+          return new Date(normalized);
+        };
+        
+        const dateA = parseKoreanDate(dateStrA);
+        const dateB = parseKoreanDate(dateStrB);
+        
         return dateB - dateA;  // 최신순
       });
+
+      // 🔥 정렬 후 상위 데이터 확인 (한국어 날짜 파싱 적용)
+      const parseKoreanDate = (dateStr) => {
+        let normalized = dateStr
+          .replace(/\. /g, '/') 
+          .replace(/\.$/, '') 
+          .replace(/오후 (\d+):/, (match, hour) => ` ${parseInt(hour) + 12}:`)
+          .replace(/오전 (\d+):/, ' $1:')
+          .replace(/오전 12:/, ' 0:')
+          .replace(/오후 12:/, ' 12:');
+        return new Date(normalized);
+      };
+      
+      const topVideos = allVideos.slice(0, Math.min(10, allVideos.length));
+      ServerLogger.info(`📅 최종 정렬 후 상위 ${topVideos.length}개 영상 (한국어 날짜 파싱 적용):`, 'DEBUG');
+      topVideos.forEach((row, index) => {
+        const dateObj = parseKoreanDate(row[1]);
+        const timestamp = dateObj.getTime();
+        ServerLogger.info(`  [${index + 1}] ${row[2]} - ${row[1]} (timestamp: ${timestamp})`, 'DEBUG');
+      });
+      
+      // 🔥 한국어 날짜 파싱 테스트
+      ServerLogger.info(`🧪 한국어 날짜 파싱 테스트 (수정됨):`, 'DEBUG');
+      ServerLogger.info(`  "2025. 7. 31." → ${parseKoreanDate("2025. 7. 31.").getTime()}`, 'DEBUG');
+      ServerLogger.info(`  "2025. 8. 29. 오후 8:17:30" → ${parseKoreanDate("2025. 8. 29. 오후 8:17:30").getTime()}`, 'DEBUG');
 
       const response = { data: { values: allVideos.slice(0, limit) } };
 

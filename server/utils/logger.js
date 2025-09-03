@@ -83,6 +83,16 @@ class ServerLogger {
   }
 
   /**
+   * 디버그 로그 (개발용)
+   */
+  static debug(message, data = null, service = 'SERVER') {
+    // 개발 환경에서만 출력
+    if (process.env.NODE_ENV !== 'production') {
+      this.log('info', `🐛 DEBUG: ${message}`, data, service);
+    }
+  }
+
+  /**
    * API 요청 로그 (특별 포맷)
    */
   static apiRequest(method, path, statusCode, processingTime = null) {

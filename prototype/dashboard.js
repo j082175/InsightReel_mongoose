@@ -456,25 +456,59 @@ function displayRealVideos(videos) {
     }
 
     const html = videos.map(video => {
-        // 실제 영상 링크는 comments 필드에 있음
+        // 플랫폼별 처리
+        const platform = video.platform?.toLowerCase() || 'instagram';
         const videoLink = video.comments || video.account || '#';
-        // Instagram embed URL 생성
-        const embedUrl = getInstagramEmbedUrl(videoLink);
         
-        return `
-        <div class="video-card">
-            <div class="video-thumbnail" style="position: relative;">
-                ${embedUrl ? `
+        // 플랫폼별 embed URL 및 썸네일 처리
+        let thumbnailHtml = '';
+        
+        if (platform === 'youtube') {
+            // YouTube 처리
+            const youtubeId = extractYouTubeId(videoLink);
+            const youtubeThumbnail = youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : null;
+            const youtubeEmbedUrl = youtubeId ? `https://www.youtube.com/embed/${youtubeId}` : null;
+            
+            if (youtubeEmbedUrl) {
+                thumbnailHtml = `
+                    <div class="video-preview-container lazy-iframe" 
+                         data-src="${youtubeEmbedUrl}"
+                         style="position: relative; width: 100%; height: 300px; border-radius: 8px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center;">
+                        <div class="lazy-placeholder" style="color: white; font-size: 16px; text-align: center;">
+                            <div style="font-size: 48px; margin-bottom: 10px;">🎬</div>
+                            <div>YouTube 영상 로딩 중...</div>
+                        </div>
+                        ${youtubeThumbnail ? `<img src="${youtubeThumbnail}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.3;" alt="YouTube 썸네일">` : ''}
+                    </div>`;
+            } else {
+                thumbnailHtml = `
+                    <div class="thumbnail-container" onclick="openVideoLink('${videoLink}', 'youtube')" style="
+                        position: relative; width: 100%; height: 180px; 
+                        background: linear-gradient(135deg, #FF0000 0%, #CC0000 100%);
+                        border-radius: 8px; display: flex; flex-direction: column; 
+                        align-items: center; justify-content: center; cursor: pointer;">
+                        <div style="color: white; font-size: 48px; margin-bottom: 10px;">🎬</div>
+                        <div style="color: white; font-size: 14px; font-weight: bold;">YouTube 영상</div>
+                        <div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">외부링크</div>
+                    </div>`;
+            }
+        } else if (platform === 'instagram') {
+            // Instagram 처리 (기존 로직)
+            const embedUrl = getInstagramEmbedUrl(videoLink);
+            
+            if (embedUrl) {
+                thumbnailHtml = `
                     <div class="video-preview-container lazy-iframe" 
                          data-src="${embedUrl}"
                          style="position: relative; width: 100%; height: 300px; border-radius: 8px; overflow: hidden; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
                         <div class="lazy-placeholder" style="color: #666; font-size: 16px; text-align: center;">
                             <div style="font-size: 48px; margin-bottom: 10px;">📹</div>
-                            <div>영상을 불러오는 중...</div>
+                            <div>Instagram 영상 로딩 중...</div>
                         </div>
-                    </div>
-                ` : `
-                    <div class="thumbnail-container" onclick="openInstagramLink('${videoLink}')" style="
+                    </div>`;
+            } else {
+                thumbnailHtml = `
+                    <div class="thumbnail-container" onclick="openVideoLink('${videoLink}', 'instagram')" style="
                         position: relative; 
                         width: 100%; 
                         height: 180px; 
@@ -533,27 +567,72 @@ function displayRealVideos(videos) {
                             ▶️
                         </div>
                     </div>
-                `}
-                <div class="video-duration" style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px;">${video.duration || 'N/A'}</div>
+                        background: linear-gradient(45deg, #E91E63, #9C27B0);
+                        color: white;
+                        font-weight: bold;
+                    ">
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📱</div>
+                        <div>Instagram 영상</div>
+                        <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.25rem;">클릭하여 보기</div>
+                    </div>
+                    <div class="play-overlay" style="
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        width: 60px;
+                        height: 60px;
+                        background: rgba(255, 255, 255, 0.9);
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 1.5rem;
+                        color: #E91E63;
+                        transition: all 0.3s ease;
+                    " onmouseover="this.style.background='white'; this.style.transform='translate(-50%, -50%) scale(1.1)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.9)'; this.style.transform='translate(-50%, -50%) scale(1)'">
+                        ▶️
+                    </div>
+                </div>`;
+            }
+        } else {
+            // 기타 플랫폼 (TikTok 등)
+            thumbnailHtml = `
+                <div class="thumbnail-container" onclick="openVideoLink('${videoLink}', '${platform}')" style="
+                    position: relative; width: 100%; height: 180px; 
+                    background: linear-gradient(135deg, #000000 0%, #434343 100%);
+                    border-radius: 8px; display: flex; flex-direction: column; 
+                    align-items: center; justify-content: center; cursor: pointer;">
+                    <div style="color: white; font-size: 48px; margin-bottom: 10px;">📱</div>
+                    <div style="color: white; font-size: 14px; font-weight: bold;">${platform.toUpperCase()} 영상</div>
+                    <div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">외부링크</div>
+                </div>`;
+        }
+        
+        return `
+        <div class="video-card">
+            <div class="video-thumbnail" style="position: relative;">
+                ${thumbnailHtml}
+                <div class="video-duration" style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px;">${video.duration || video.views || 'N/A'}</div>
             </div>
             <div class="video-info">
                 <h3 class="video-title">${video.mainCategory} - ${video.middleCategory || '일반'}</h3>
                 <div class="channel-info">
-                    <div class="channel-avatar">${video.platform.charAt(0).toUpperCase()}</div>
-                    <span class="channel-name">${extractChannelName(video.account)}</span>
+                    <div class="channel-avatar">${platform.charAt(0).toUpperCase()}</div>
+                    <span class="channel-name">${extractChannelName(video.account, platform)}</span>
                 </div>
                 <div class="video-stats">
-                    <span>👀 ${video.keywords[0] || 'N/A'}</span>
+                    <span>🏷️ ${video.keywords[0] || 'N/A'}</span>
                     <span>💬 ${video.content || '0'}</span>
-                    <span>❤️ ${video.likes || '0'}</span>
+                    <span>❤️ ${video.likes || video.views || '0'}</span>
                 </div>
                 <div class="video-meta">
                     <span class="upload-date">📅 ${video.timestamp}</span>
-                    <span class="platform-tag platform-${video.platform.toLowerCase()}">${video.platform}</span>
+                    <span class="platform-tag platform-${platform}" style="background: ${getPlatformColor(platform)}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;">${platform.toUpperCase()}</span>
                 </div>
                 <div class="video-actions">
                     <button onclick="copyToClipboard('${videoLink}')" class="action-btn">🔗 링크 복사</button>
-                    <button onclick="openInstagramLink('${videoLink}')" class="action-btn">📱 Instagram에서 열기</button>
+                    <button onclick="openVideoLink('${videoLink}', '${platform}')" class="action-btn">${getPlatformEmoji(platform)} ${platform === 'youtube' ? 'YouTube' : platform === 'instagram' ? 'Instagram' : platform.toUpperCase()}에서 열기</button>
                 </div>
             </div>
         </div>
@@ -564,17 +643,77 @@ function displayRealVideos(videos) {
     
     // 🚀 Lazy Loading 구현: Intersection Observer
     initializeLazyLoading();
-    console.log('📺 Instagram Lazy Loading 초기화 완료');
+    console.log('📺 멀티플랫폼 Lazy Loading 초기화 완료 (Instagram, YouTube 등)');
 }
 
-// 채널명 추출 (URL에서)
-function extractChannelName(accountUrl) {
+// YouTube ID 추출
+function extractYouTubeId(url) {
+    if (!url) return null;
+    
+    const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+        /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+    ];
+    
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) return match[1];
+    }
+    return null;
+}
+
+// 플랫폼별 색상
+function getPlatformColor(platform) {
+    const colors = {
+        'youtube': '#FF0000',
+        'instagram': '#E4405F',
+        'tiktok': '#000000',
+        'default': '#666666'
+    };
+    return colors[platform?.toLowerCase()] || colors.default;
+}
+
+// 플랫폼별 이모지
+function getPlatformEmoji(platform) {
+    const emojis = {
+        'youtube': '🎬',
+        'instagram': '📱',
+        'tiktok': '🎵',
+        'default': '📹'
+    };
+    return emojis[platform?.toLowerCase()] || emojis.default;
+}
+
+// 범용 비디오 링크 열기
+function openVideoLink(videoUrl, platform) {
+    if (videoUrl && videoUrl !== '#') {
+        console.log(`📱 ${platform} 영상 열기:`, videoUrl);
+        window.open(videoUrl, '_blank');
+    } else {
+        alert('영상 링크를 찾을 수 없습니다.');
+    }
+}
+
+// 채널명 추출 (URL에서) - 플랫폼별 처리
+function extractChannelName(accountUrl, platform = 'instagram') {
     if (!accountUrl) return 'Unknown';
     
     try {
         const url = new URL(accountUrl);
         const pathParts = url.pathname.split('/');
-        return pathParts[1] || 'Unknown Channel';
+        
+        if (platform === 'youtube') {
+            // YouTube: /channel/UC... 또는 /c/channelname 또는 /@username
+            if (pathParts[1] === 'channel' || pathParts[1] === 'c') {
+                return pathParts[2] || 'Unknown Channel';
+            } else if (pathParts[1].startsWith('@')) {
+                return pathParts[1];
+            }
+            return pathParts[1] || 'Unknown Channel';
+        } else {
+            // Instagram, TikTok: /username
+            return pathParts[1] || 'Unknown Channel';
+        }
     } catch (error) {
         return 'Unknown Channel';
     }
