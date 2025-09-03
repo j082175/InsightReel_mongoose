@@ -686,7 +686,16 @@ app.post('/api/process-video', async (req, res) => {
             definition: youtubeInfo.definition || 'sd',
             language: youtubeInfo.language || '',
             ageRestricted: youtubeInfo.ageRestricted || 'N',
-            liveBroadcast: youtubeInfo.liveBroadcast || 'none'
+            liveBroadcast: youtubeInfo.liveBroadcast || 'none',
+            // YouTube 핸들명과 채널 URL 추가 🎯
+            youtubeHandle: youtubeInfo.youtubeHandle || '',
+            channelUrl: youtubeInfo.channelUrl || '',
+            // 새로운 필드들 추가 🆕
+            description: youtubeInfo.description || '',
+            hashtags: youtubeInfo.hashtags || [],
+            mentions: youtubeInfo.mentions || [],
+            topComments: youtubeInfo.topComments || '',
+            thumbnailUrl: youtubeInfo.thumbnailUrl || ''
           });
           
           const enrichedMetadata = { 
@@ -718,15 +727,23 @@ app.post('/api/process-video', async (req, res) => {
             }
           } else {
             ServerLogger.info('1️⃣ AI 분석 건너뜀 (사용자 설정)');
+            // YouTube 카테고리를 기본 분류로 사용
+            const youtubeMainCategory = youtubeInfo.category || '미분류';
+            ServerLogger.info(`📂 YouTube 카테고리 사용: ${youtubeMainCategory}`);
+            
             analysis = {
               category: '분석 안함',
-              mainCategory: '미분류',
+              mainCategory: youtubeMainCategory,  // YouTube 카테고리 사용 🎯
               middleCategory: '기본',
               keywords: [],
               hashtags: [],
-              confidence: 0,
+              confidence: 100,  // YouTube 공식 카테고리이므로 100% 신뢰도
               frameCount: 1,
-              categoryMatch: null,
+              categoryMatch: {
+                matchScore: 100,
+                matchType: 'youtube_official',
+                matchReason: `YouTube 공식 카테고리: ${youtubeMainCategory}`
+              },
               aiModel: '수동'  // AI 비사용 시 '수동'으로 표시
             };
           }

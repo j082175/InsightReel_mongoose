@@ -37,6 +37,18 @@ const videoSchema = new mongoose.Schema({
     index: true  // 계정별 검색 최적화
   },
   
+  // YouTube 전용 필드
+  youtubeHandle: {
+    type: String,
+    required: false,
+    index: true  // 핸들명 기반 검색 최적화
+  },
+  
+  channelUrl: {
+    type: String,
+    required: false
+  },
+  
   // 영상 메타데이터
   title: {
     type: String,
@@ -81,6 +93,14 @@ const videoSchema = new mongoose.Schema({
   duration: String,
   hashtags: [String],
   mentions: [String],
+  description: String,  // YouTube 설명 또는 Instagram 캡션
+  topComments: String,  // 상위 댓글들
+  
+  // 수집 정보
+  collectedAt: {
+    type: Date,
+    default: Date.now
+  },
   
   // 시스템 정보
   created_at: {
@@ -159,7 +179,16 @@ videoSchema.statics.createOrUpdateFromVideoUrl = async function(videoUrlData, me
     views: metadata.views || 0,
     shares: metadata.shares || 0,
     comments_count: metadata.comments || 0,
-    thumbnailUrl: metadata.thumbnailUrl || metadata.thumbnailPath || null // 썸네일 URL 추가
+    thumbnailUrl: metadata.thumbnailUrl || metadata.thumbnailPath || null, // 썸네일 URL 추가
+    // YouTube 전용 필드 추가
+    youtubeHandle: metadata.youtubeHandle || null,
+    channelUrl: metadata.channelUrl || null,
+    // 새로운 필드들
+    description: metadata.description || null,
+    hashtags: metadata.hashtags || [],
+    mentions: metadata.mentions || [],
+    topComments: metadata.topComments || null,
+    collectedAt: new Date()
   };
   
   // upsert: 있으면 업데이트, 없으면 생성

@@ -214,18 +214,19 @@ class SheetsManager {
   // 플랫폼별 헤더 구조 정의
   getPlatformHeaders(platform) {
     if (platform.toLowerCase() === 'youtube') {
+      // YouTube 시트 헤더 - 번호, 태그, 파일경로 제거, 일시->업로드날짜, 해시태그/멘션/설명/댓글/썸네일URL/수집시간 추가
       return [
-        '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
-        '키워드', '분석내용', '좋아요', '댓글수', '조회수', '영상길이',
-        '구독자수', '채널동영상수', '수익화여부', 'YouTube카테고리', '라이센스', '화질', '언어', '태그',
-        'URL', '파일경로', '신뢰도', '분석상태', '카테고리일치율', '일치유형', '일치사유'
+        '업로드날짜', '플랫폼', '계정', 'YouTube핸들명', '채널URL', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
+        '키워드', '해시태그', '멘션', '설명', '분석내용', '댓글', '좋아요', '댓글수', '조회수', '영상길이',
+        '구독자수', '채널동영상수', '수익화여부', 'YouTube카테고리', '라이센스', '화질', '언어',
+        'URL', '썸네일URL', '신뢰도', '분석상태', '카테고리일치율', '일치유형', '일치사유', '수집시간'
       ];
     } else {
-      // Instagram, TikTok 등 - 조회수, 영상길이 제외
+      // Instagram, TikTok 등 - 번호, 파일경로 제거, 일시->업로드날짜, 계정 분리(계정+채널URL)
       return [
-        '번호', '일시', '플랫폼', '계정', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
-        '키워드', '분석내용', '좋아요', '댓글수',
-        '해시태그', 'URL', '파일경로', '신뢰도', '분석상태'
+        '업로드날짜', '플랫폼', '계정', '채널URL', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
+        '키워드', '해시태그', '멘션', '설명', '분석내용', '좋아요', '댓글수',
+        'URL', '썸네일URL', '신뢰도', '분석상태', '수집시간'
       ];
     }
   }
@@ -243,18 +244,23 @@ class SheetsManager {
     videoPath
   }) {
     if (platform.toLowerCase() === 'youtube') {
-      // YouTube - 조회수 포함
+      // YouTube - 새로운 구조 (번호, 태그, 파일경로 제거, 해시태그/멘션/설명/댓글/썸네일URL/수집시간 추가)
       return [
-        rowNumber,                                    // 번호
-        displayDate,                                 // 일시 (업로드 날짜 우선)
+        displayDate,                                 // 업로드날짜 (업로드 날짜 우선)
         platform.toUpperCase(),                      // 플랫폼
         metadata.author || '',                       // 계정
+        metadata.youtubeHandle || '',                // YouTube핸들명
+        metadata.channelUrl || '',                   // 채널URL
         analysis.mainCategory || '미분류',            // 대카테고리
         analysis.middleCategory || '미분류',          // 중카테고리
         fullCategoryPath,                            // 전체카테고리경로 (동적)
         categoryDepth,                               // 카테고리깊이
         analysis.keywords?.join(', ') || '',         // 키워드
+        analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그 (설명에서 추출)
+        analysis.mentions?.join(' ') || metadata.mentions?.join(' ') || '', // 멘션 (@username)
+        metadata.description || '',                  // 설명 (YouTube description)
         analysis.content || '',                      // 분석내용 (영상 분석 결과)
+        metadata.topComments || '',                  // 댓글 (상위 댓글들)
         metadata.likes || '0',                       // 좋아요
         metadata.comments || '0',                    // 댓글수
         metadata.views || '0',                       // 조회수
@@ -266,36 +272,38 @@ class SheetsManager {
         metadata.license || 'youtube',             // 라이센스
         metadata.definition || 'sd',               // 화질
         metadata.language || '',                   // 언어
-        analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 태그
         postUrl,                                   // URL
-        videoPath ? path.basename(videoPath) : 'YouTube URL',  // 파일경로
+        metadata.thumbnailUrl || '',               // 썸네일URL
         (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
         analysis.aiModel || '수동',                  // 분석상태 (AI 모델 정보)
         analysis.categoryMatch ? `${analysis.categoryMatch.matchScore}%` : '', // 카테고리일치율
         analysis.categoryMatch ? analysis.categoryMatch.matchType : '',        // 일치유형
-        analysis.categoryMatch ? analysis.categoryMatch.matchReason : ''       // 일치사유
+        analysis.categoryMatch ? analysis.categoryMatch.matchReason : '',      // 일치사유
+        new Date().toISOString()                   // 수집시간
       ];
     } else {
-      // Instagram, TikTok - 조회수 제외
+      // Instagram, TikTok - 새로운 구조 (번호, 파일경로 제거, 계정/채널URL 분리, 해시태그/멘션/설명 추가)
       return [
-        rowNumber,                                    // 번호
-        displayDate,                                 // 일시 (업로드 날짜 우선)
+        displayDate,                                 // 업로드날짜 (업로드 날짜 우선)
         platform.toUpperCase(),                      // 플랫폼
-        metadata.author || '',                       // 계정
+        metadata.author || metadata.username || '',  // 계정 (username만)
+        metadata.channelUrl || postUrl || '',        // 채널URL (프로필 링크)
         analysis.mainCategory || '미분류',            // 대카테고리
         analysis.middleCategory || '미분류',          // 중카테고리
         fullCategoryPath,                            // 전체카테고리경로 (동적)
         categoryDepth,                               // 카테고리깊이
         analysis.keywords?.join(', ') || '',         // 키워드
+        analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그 (AI 분석에서 추출)
+        analysis.mentions?.join(' ') || metadata.mentions?.join(' ') || '', // 멘션 (@username)
+        metadata.description || analysis.extractedText || '', // 설명 (캡션 또는 추출된 텍스트)
         analysis.content || '',                      // 분석내용 (영상 분석 결과)
         metadata.likes || '0',                       // 좋아요
         metadata.comments || '0',                    // 댓글수
-        // 조회수, 영상길이 제외
-        analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그
         postUrl,                                   // URL
-        videoPath ? path.basename(videoPath) : '',  // 파일경로
+        metadata.thumbnailUrl || '',               // 썸네일URL
         (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
-        analysis.aiModel || '수동'                   // 분석상태 (AI 모델 정보)
+        analysis.aiModel || '수동',                   // 분석상태 (AI 모델 정보)
+        new Date().toISOString()                   // 수집시간
       ];
     }
   }
@@ -727,7 +735,7 @@ class SheetsManager {
             },
             {
               title: analysisResult.title || metadata.title || '미분류',
-              category: analysisResult.category || '미분류',
+              category: analysisResult.mainCategory || '미분류',  // mainCategory 사용 🎯
               keywords: analysisResult.keywords || [],
               hashtags: analysisResult.keywords ? analysisResult.keywords.map(k => `#${k}`) : [],
               description: analysisResult.description || '',
@@ -1023,6 +1031,8 @@ class SheetsManager {
         displayDate,                                 // 일시
         platform.toUpperCase(),                      // 플랫폼
         metadata.author || '',                       // 계정
+        metadata.youtubeHandle || '',                // YouTube핸들명
+        metadata.channelUrl || '',                   // 채널URL
         analysis.mainCategory || '미분류',           // 대카테고리
         analysis.middleCategory || '',               // 중카테고리
         fullCategoryPath,                            // 전체카테고리경로

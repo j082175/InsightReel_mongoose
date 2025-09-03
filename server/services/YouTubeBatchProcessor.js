@@ -271,6 +271,10 @@ class YouTubeBatchProcessor {
         // 비디오 길이를 초 단위로 변환
         const duration = this.parseYouTubeDuration(contentDetails.duration);
 
+        // 해시태그와 멘션 추출
+        const hashtags = this.extractHashtags(snippet.description);
+        const mentions = this.extractMentions(snippet.description);
+
         return {
           videoId: video.id,
           title: snippet.title,
@@ -292,9 +296,15 @@ class YouTubeBatchProcessor {
           channelViews: channelInfo?.statistics?.viewCount || '0',
           channelCountry: channelInfo?.snippet?.country || '',
           channelDescription: channelInfo?.snippet?.description || '',
+          youtubeHandle: this.extractYouTubeHandle(channelInfo?.snippet?.customUrl),
+          channelUrl: this.buildChannelUrl(channelInfo?.snippet?.customUrl, snippet.channelId),
           definition: contentDetails?.definition || 'sd',
           language: snippet.defaultLanguage || snippet.defaultAudioLanguage || '',
-          liveBroadcast: snippet.liveBroadcastContent || 'none'
+          liveBroadcast: snippet.liveBroadcastContent || 'none',
+          // 새로운 필드들
+          hashtags: hashtags,
+          mentions: mentions,
+          topComments: '' // 배치에서는 댓글 수집 제외 (API 할당량 절약)
         };
       });
 
@@ -461,6 +471,99 @@ class YouTubeBatchProcessor {
 
     ServerLogger.info(`🔥 강제 배치 처리: ${this.batchQueue.length}개 항목`);
     return await this.processBatch();
+  }
+
+  /**
+   * 설명에서 해시태그 추출
+   * @param {string} description - YouTube 설명
+   * @returns {Array<string>} 해시태그 배열
+   */
+  extractHashtags(description) {
+    if (!description) return [];
+    
+    // #으로 시작하는 단어 추출 (한글, 영어, 숫자, 언더스코어 포함)
+    const hashtags = description.match(/#[\w가-힣]+/g) || [];
+    
+    // 중복 제거 (# 기호 유지)
+    const uniqueHashtags = [...new Set(hashtags)];
+    
+    return uniqueHashtags;
+  }
+
+  /**
+   * 설명에서 멘션(@) 추출
+   * @param {string} description - YouTube 설명
+   * @returns {Array<string>} 멘션 배열
+   */
+  extractMentions(description) {
+    if (!description) return [];
+    
+    // @으로 시작하는 계정명 추출
+    const mentions = description.match(/@[\w가-힣._]+/g) || [];
+    
+    // 중복 제거 및 @ 제거
+    const uniqueMentions = [...new Set(mentions)].map(mention => mention.substring(1));
+    
+    return uniqueMentions;
+  }
+
+  /**
+   * YouTube customUrl에서 핸들명 추출 (VideoProcessor와 동일)
+   * @param {string} customUrl - YouTube customUrl
+   * @returns {string} 추출된 핸들명
+   */
+  extractYouTubeHandle(customUrl) {
+    if (!customUrl) return '';
+    
+    try {
+      if (customUrl.startsWith('@')) {
+        return customUrl.substring(1);
+      }
+      
+      if (customUrl.startsWith('/c/')) {
+        return customUrl.substring(3);
+      }
+      
+      if (customUrl.startsWith('/user/')) {
+        return customUrl.substring(6);
+      }
+      
+      return customUrl.replace(/^\/+/, '');
+      
+    } catch (error) {
+      ServerLogger.warn('YouTube 핸들명 추출 실패:', error.message);
+      return '';
+    }
+  }
+
+  /**
+   * YouTube 채널 URL 생성 (VideoProcessor와 동일)
+   * @param {string} customUrl - YouTube customUrl
+   * @param {string} channelId - 채널 ID (백업용)
+   * @returns {string} 채널 URL
+   */
+  buildChannelUrl(customUrl, channelId) {
+    try {
+      if (customUrl) {
+        if (customUrl.startsWith('@')) {
+          return `https://www.youtube.com/${customUrl}`;
+        } else if (customUrl.startsWith('/')) {
+          return `https://www.youtube.com${customUrl}`;
+        } else {
+          return `https://www.youtube.com/@${customUrl}`;
+        }
+      }
+      
+      if (channelId) {
+        return `https://www.youtube.com/channel/${channelId}`;
+      }
+      
+      return '';
+      
+    } catch (error) {
+      ServerLogger.warn('YouTube 채널 URL 생성 실패:', error.message);
+      return channelId ? `https://www.youtube.com/channel/${channelId}` : '';
+    }
   }
 }
 

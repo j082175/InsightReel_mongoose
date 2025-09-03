@@ -457,6 +457,104 @@ class VideoProcessor {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toFixed(3).padStart(6, '0')}`;
   }
 
+  /**
+   * 설명에서 해시태그 추출
+   * @param {string} description - YouTube 설명
+   * @returns {Array<string>} 해시태그 배열
+   */
+  extractHashtags(description) {
+    if (!description) return [];
+    
+    // #으로 시작하는 단어 추출 (한글, 영어, 숫자, 언더스코어 포함)
+    const hashtags = description.match(/#[\w가-힣]+/g) || [];
+    
+    // 중복 제거 (# 기호 유지)
+    const uniqueHashtags = [...new Set(hashtags)];
+    
+    ServerLogger.info(`🏷️ 해시태그 추출: ${uniqueHashtags.length}개 발견`);
+    return uniqueHashtags;
+  }
+
+  /**
+   * 설명에서 멘션(@) 추출
+   * @param {string} description - YouTube 설명
+   * @returns {Array<string>} 멘션 배열
+   */
+  extractMentions(description) {
+    if (!description) return [];
+    
+    // @으로 시작하는 계정명 추출
+    const mentions = description.match(/@[\w가-힣._]+/g) || [];
+    
+    // 중복 제거 및 @ 제거
+    const uniqueMentions = [...new Set(mentions)].map(mention => mention.substring(1));
+    
+    ServerLogger.info(`👤 멘션 추출: ${uniqueMentions.length}개 발견`);
+    return uniqueMentions;
+  }
+
+  /**
+   * YouTube 댓글 수집
+   * @param {string} videoId - YouTube 비디오 ID
+   * @param {number} maxResults - 가져올 댓글 수 (최대 100)
+   * @returns {Object} 댓글 데이터
+   */
+  async fetchYouTubeComments(videoId, maxResults = 100) {
+    try {
+      ServerLogger.info(`💬 YouTube 댓글 수집 시작: ${videoId}`);
+      
+      const response = await axios.get(
+        'https://www.googleapis.com/youtube/v3/commentThreads', {
+          params: {
+            part: 'snippet',
+            videoId: videoId,
+            maxResults: Math.min(maxResults, 100), // 최대 100개
+            order: 'relevance', // relevance(관련성) or time(시간순)
+            key: this.youtubeApiKey
+          }
+        }
+      );
+
+      if (!response.data.items || response.data.items.length === 0) {
+        ServerLogger.info('💬 댓글이 없거나 비활성화된 영상');
+        return { comments: [], topComments: '' };
+      }
+
+      // 댓글 데이터 추출
+      const comments = response.data.items.map(item => {
+        const comment = item.snippet.topLevelComment.snippet;
+        return {
+          text: comment.textDisplay,
+          author: comment.authorDisplayName,
+          likes: comment.likeCount,
+          publishedAt: comment.publishedAt
+        };
+      });
+
+      // 모든 댓글을 텍스트로 저장 (스프레드시트용)
+      const topComments = comments
+        .map((c, i) => `${i+1}. ${c.author}: ${c.text}`)
+        .join(' | ');
+
+      ServerLogger.info(`✅ 댓글 수집 완료: ${comments.length}개`);
+      
+      return {
+        comments: comments,
+        topComments: topComments,
+        totalCount: comments.length
+      };
+
+    } catch (error) {
+      if (error.response?.status === 403 && error.response?.data?.error?.errors?.[0]?.reason === 'commentsDisabled') {
+        ServerLogger.info('💬 댓글이 비활성화된 영상');
+        return { comments: [], topComments: '댓글 비활성화', totalCount: 0 };
+      }
+      
+      ServerLogger.warn(`⚠️ 댓글 수집 실패: ${error.message}`);
+      return { comments: [], topComments: '', totalCount: 0 };
+    }
+  }
+
   // YouTube 비디오 ID 추출
   extractYouTubeId(url) {
     const patterns = [
@@ -548,6 +646,16 @@ class VideoProcessor {
       const isShortForm = duration <= 60;
       const contentType = isShortForm ? 'Shorts' : 'Video';
 
+      // 해시태그와 멘션 추출
+      const hashtags = this.extractHashtags(snippet.description);
+      const mentions = this.extractMentions(snippet.description);
+      
+      // 댓글 수집 (최대 100개)
+      let commentData = { topComments: '', totalCount: 0 };
+      if (statistics.commentCount && statistics.commentCount !== '0') {
+        commentData = await this.fetchYouTubeComments(videoId, 100);
+      }
+
       const videoInfo = {
         videoId: videoId,
         title: snippet.title,
@@ -572,20 +680,29 @@ class VideoProcessor {
         channelViews: channelInfo?.statistics?.viewCount || '0',      // 채널 총 조회수
         channelCountry: channelInfo?.snippet?.country || '',          // 채널 국가
         channelDescription: channelInfo?.snippet?.description || '',  // 채널 설명
+        youtubeHandle: this.extractYouTubeHandle(channelInfo?.snippet?.customUrl), // YouTube 핸들명
+        channelUrl: this.buildChannelUrl(channelInfo?.snippet?.customUrl, snippet.channelId), // 채널 URL
         monetized: status?.madeForKids === false ? 'Y' : 'N',        // 수익화 가능 (키즈 콘텐츠가 아닌 경우)
         ageRestricted: status?.contentRating ? 'Y' : 'N',            // 연령 제한
         definition: contentDetails?.definition || 'sd',               // 화질 (hd/sd)
         language: snippet.defaultLanguage || snippet.defaultAudioLanguage || '', // 언어
+        // 새로운 필드들
+        hashtags: hashtags,                          // 추출된 해시태그
+        mentions: mentions,                          // 추출된 멘션
+        topComments: commentData.topComments,        // 상위 댓글
         liveBroadcast: snippet.liveBroadcastContent || 'none'         // 라이브 방송 여부
       };
 
       ServerLogger.info(`✅ YouTube 정보 수집 완료:`);
       ServerLogger.info(`📺 제목: ${videoInfo.title}`);
-      ServerLogger.info(`👤 채널: ${videoInfo.channel} (구독자: ${videoInfo.subscribers})`);
+      ServerLogger.info(`👤 채널: ${videoInfo.channel}${videoInfo.youtubeHandle ? ` (@${videoInfo.youtubeHandle})` : ''} (구독자: ${videoInfo.subscribers})`);
       ServerLogger.info(`🏷️ 카테고리: ${videoInfo.category}`);
       ServerLogger.info(`⏱️ 길이: ${videoInfo.durationFormatted} (${contentType})`);
       ServerLogger.info(`👀 조회수: ${videoInfo.views.toLocaleString()}`);
       ServerLogger.info(`💰 수익화: ${videoInfo.monetized}, 🎞️ 화질: ${videoInfo.definition}`);
+      if (videoInfo.channelUrl) {
+        ServerLogger.info(`🔗 채널 URL: ${videoInfo.channelUrl}`);
+      }
       
       return videoInfo;
 
@@ -860,6 +977,75 @@ class VideoProcessor {
       matchedWords: [...new Set(matchedWords)],
       totalWords
     };
+  }
+
+  /**
+   * YouTube customUrl에서 핸들명 추출
+   * @param {string} customUrl - YouTube customUrl (예: "@channelhandle" 또는 "/c/ChannelName")
+   * @returns {string} 추출된 핸들명 (@ 제거된 상태)
+   */
+  extractYouTubeHandle(customUrl) {
+    if (!customUrl) return '';
+    
+    try {
+      // @로 시작하는 핸들명인 경우
+      if (customUrl.startsWith('@')) {
+        return customUrl.substring(1); // @ 제거
+      }
+      
+      // /c/ChannelName 형태인 경우
+      if (customUrl.startsWith('/c/')) {
+        return customUrl.substring(3); // /c/ 제거
+      }
+      
+      // /user/UserName 형태인 경우  
+      if (customUrl.startsWith('/user/')) {
+        return customUrl.substring(6); // /user/ 제거
+      }
+      
+      // 기타 형태는 그대로 반환 (슬래시 제거)
+      return customUrl.replace(/^\/+/, '');
+      
+    } catch (error) {
+      ServerLogger.warn('YouTube 핸들명 추출 실패:', error.message);
+      return '';
+    }
+  }
+
+  /**
+   * YouTube 채널 URL 생성
+   * @param {string} customUrl - YouTube customUrl
+   * @param {string} channelId - 채널 ID (백업용)
+   * @returns {string} 채널 URL
+   */
+  buildChannelUrl(customUrl, channelId) {
+    try {
+      // customUrl이 있는 경우 우선 사용
+      if (customUrl) {
+        if (customUrl.startsWith('@')) {
+          // @handle 형태
+          return `https://www.youtube.com/${customUrl}`;
+        } else if (customUrl.startsWith('/')) {
+          // /c/ChannelName 형태
+          return `https://www.youtube.com${customUrl}`;
+        } else {
+          // 기타 형태는 @ 붙여서 처리
+          return `https://www.youtube.com/@${customUrl}`;
+        }
+      }
+      
+      // customUrl이 없는 경우 channelId로 백업
+      if (channelId) {
+        return `https://www.youtube.com/channel/${channelId}`;
+      }
+      
+      return '';
+      
+    } catch (error) {
+      ServerLogger.warn('YouTube 채널 URL 생성 실패:', error.message);
+      // 백업으로 channelId 사용
+      return channelId ? `https://www.youtube.com/channel/${channelId}` : '';
+    }
   }
 }
 
