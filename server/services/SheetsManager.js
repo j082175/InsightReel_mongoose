@@ -10,6 +10,10 @@ class SheetsManager {
     this.credentialsPath = path.join(__dirname, '../../config/credentials.json');
     this.tokenPath = path.join(__dirname, '../../config/token.json');
     
+    // 3단계: 메모리 캐싱 시스템
+    this.cache = new Map();
+    this.cacheTTL = 60000; // 1분 캐시 유지
+    
     this.init();
   }
 
@@ -692,6 +696,9 @@ class SheetsManager {
       const modeInfo = isDynamicMode ? '동적 카테고리' : '기존 모드';
       ServerLogger.info(`✅ 구글 시트에 데이터 저장 완료 (${modeInfo}): 행 ${nextRow}`);
       
+      // 새 비디오 저장 후 캐시 무효화
+      this.invalidateCache();
+      
       return {
         success: true,
         row: nextRow,
@@ -831,6 +838,9 @@ class SheetsManager {
         range,
         spreadsheetUrl
       });
+
+      // 배치 저장 후 캐시 무효화
+      this.invalidateCache();
 
       return {
         success: true,
@@ -1057,23 +1067,60 @@ class SheetsManager {
 
   async getRecentVideos(limit = 10) {
     try {
-      // 모든 플랫폼 시트에서 최신 데이터 조회
-      const platforms = ['instagram', 'tiktok', 'youtube'];
-      let allVideos = [];
+      // 3단계: 캐시 확인 (디버깅 정보 추가)
+      const cacheKey = `recent_videos_${limit}`;
+      const cached = this.cache.get(cacheKey);
+      const now = Date.now();
+      
+      ServerLogger.info(`🔍 캐시 확인: key=${cacheKey}, 캐시존재=${!!cached}, TTL=${this.cacheTTL}ms`, 'SHEETS');
+      
+      if (cached) {
+        const age = now - cached.timestamp;
+        ServerLogger.info(`⏰ 캐시 나이: ${age}ms (TTL: ${this.cacheTTL}ms), 유효=${age < this.cacheTTL}`, 'SHEETS');
+        
+        if (age < this.cacheTTL) {
+          ServerLogger.info(`✅ 캐시 HIT - 영상 목록 반환 (${cached.data.length}개)`, 'SHEETS');
+          return cached.data;
+        } else {
+          ServerLogger.info(`❌ 캐시 EXPIRED - 새로 조회함`, 'SHEETS');
+        }
+      } else {
+        ServerLogger.info(`❌ 캐시 MISS - 첫 번째 조회`, 'SHEETS');
+      }
 
-      for (const platform of platforms) {
+      // 모든 플랫폼 시트에서 최신 데이터 조회 (성능 최적화)
+      const platforms = ['instagram', 'tiktok', 'youtube'];
+      
+      // 1단계: 범위 제한 - 각 플랫폼에서 limit*2 만큼만 가져오기 (정렬 여유분)
+      const platformLimit = Math.ceil(limit * 2); // 정렬 후 충분한 데이터 확보
+      ServerLogger.info(`📊 요청 limit=${limit}, 플랫폼당 조회할 행수=${platformLimit}`, 'SHEETS');
+      
+      // 2단계: 병렬 처리 - 모든 플랫폼 동시 조회
+      const platformPromises = platforms.map(async (platform) => {
         try {
           const sheetName = await this.getSheetNameByPlatform(platform);
+          const range = `${sheetName}!A2:S${1 + platformLimit}`;
           const response = await this.sheets.spreadsheets.values.get({
             spreadsheetId: this.spreadsheetId,
-            range: `${sheetName}!A2:S`  // 모든 데이터 조회 후 정렬
+            range: range  // 헤더 제외하고 platformLimit개만
           });
           
-          const platformData = response.data.values || [];
-          allVideos = allVideos.concat(platformData);
+          const data = response.data.values || [];
+          ServerLogger.info(`📋 ${platform} 시트에서 ${data.length}개 행 조회 (범위: ${range})`, 'SHEETS');
+          return data;
         } catch (error) {
           ServerLogger.warn(`${platform} 시트 데이터 조회 실패 (시트가 없을 수 있음)`, error.message, 'SHEETS');
+          return [];
         }
+      });
+
+      // 모든 플랫폼 데이터 병렬로 가져오기
+      const platformResults = await Promise.all(platformPromises);
+      let allVideos = [];
+      
+      // 결과 합치기
+      for (const platformData of platformResults) {
+        allVideos = allVideos.concat(platformData);
       }
 
       // 날짜순으로 정렬하고 limit 적용
@@ -1086,7 +1133,7 @@ class SheetsManager {
       const response = { data: { values: allVideos.slice(0, limit) } };
 
       const data = response.data.values || [];
-      return data.map(row => ({
+      const result = data.map(row => ({
         id: row[0],
         timestamp: row[1],
         platform: row[2],
@@ -1107,9 +1154,24 @@ class SheetsManager {
         confidence: row[17],                    // 신뢰도
         source: row[18]                         // 분석상태
       }));
+
+      // 3단계: 캐시에 결과 저장
+      this.cache.set(cacheKey, {
+        data: result,
+        timestamp: Date.now()
+      });
+
+      ServerLogger.info(`Sheets API 호출로 영상 목록 조회 완료 (${result.length}개, 캐시에 저장됨)`, 'SHEETS');
+      return result;
     } catch (error) {
       throw new Error(`데이터 조회 실패: ${error.message}`);
     }
+  }
+
+  // 캐시 무효화 메소드 (새 비디오 추가 시 호출)
+  invalidateCache() {
+    this.cache.clear();
+    ServerLogger.info('영상 목록 캐시 무효화 완료', 'SHEETS');
   }
 
   getSpreadsheetUrl() {
