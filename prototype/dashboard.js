@@ -456,9 +456,14 @@ function displayRealVideos(videos) {
     }
 
     const html = videos.map(video => {
-        // 플랫폼별 처리
-        const platform = video.platform?.toLowerCase() || 'instagram';
+        // 플랫폼별 처리 - URL 기반 감지로 개선
+        let platform = video.platform?.toLowerCase() || 'unknown';
         const videoLink = video.comments || video.account || '#';
+        
+        // 플랫폼이 unknown이면 URL에서 감지 시도
+        if (platform === 'unknown') {
+            platform = detectPlatformFromUrl(videoLink);
+        }
         
         // 플랫폼별 embed URL 및 썸네일 처리
         let thumbnailHtml = '';
@@ -466,19 +471,33 @@ function displayRealVideos(videos) {
         if (platform === 'youtube') {
             // YouTube 처리
             const youtubeId = extractYouTubeId(videoLink);
-            const youtubeThumbnail = youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : null;
+            const youtubeThumbnail = video.thumbnailUrl || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : null);
             const youtubeEmbedUrl = youtubeId ? `https://www.youtube.com/embed/${youtubeId}` : null;
             
             if (youtubeEmbedUrl) {
+                const uniqueId = `youtube-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                 thumbnailHtml = `
-                    <div class="video-preview-container lazy-iframe" 
-                         data-src="${youtubeEmbedUrl}"
-                         style="position: relative; width: 100%; height: 300px; border-radius: 8px; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center;">
-                        <div class="lazy-placeholder" style="color: white; font-size: 16px; text-align: center;">
-                            <div style="font-size: 48px; margin-bottom: 10px;">🎬</div>
-                            <div>YouTube 영상 로딩 중...</div>
+                    <div class="youtube-player-container" id="${uniqueId}" style="position: relative; width: 100%; height: 300px; border-radius: 8px; overflow: hidden; background: #000;">
+                        <div class="youtube-thumbnail-overlay" onclick="loadYouTubePlayer('${uniqueId}', '${youtubeEmbedUrl}?autoplay=1')" style="
+                            position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+                            cursor: pointer; display: flex; align-items: center; justify-content: center;
+                            background-image: url('${youtubeThumbnail}'); background-size: cover; background-position: center;">
+                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3);"></div>
+                            <div class="play-button" style="
+                                position: relative; z-index: 2;
+                                width: 80px; height: 80px;
+                                background: rgba(255, 0, 0, 0.9);
+                                border-radius: 50%;
+                                display: flex; align-items: center; justify-content: center;
+                                color: white; font-size: 2rem;
+                                transition: all 0.3s ease;
+                                box-shadow: 0 4px 20px rgba(0,0,0,0.3);"
+                                onmouseover="this.style.background='rgba(255, 0, 0, 1)'; this.style.transform='scale(1.1)'"
+                                onmouseout="this.style.background='rgba(255, 0, 0, 0.9)'; this.style.transform='scale(1)'">
+                                ▶
+                            </div>
+                            <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(255,0,0,0.9); color: white; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold;">YouTube</div>
                         </div>
-                        ${youtubeThumbnail ? `<img src="${youtubeThumbnail}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.3;" alt="YouTube 썸네일">` : ''}
                     </div>`;
             } else {
                 thumbnailHtml = `
@@ -519,6 +538,7 @@ function displayRealVideos(videos) {
                     ">
                         <img 
                             id="thumbnail-${video.id}"
+                            src="${video.thumbnailUrl || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjRTkxRTYzIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyNCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbnN0YWdyYW08L3RleHQ+PC9zdmc+'}"
                             alt="Instagram 썸네일"
                             style="
                                 width: 100%; 
@@ -596,16 +616,32 @@ function displayRealVideos(videos) {
                 </div>`;
             }
         } else {
-            // 기타 플랫폼 (TikTok 등)
+            // 기타 플랫폼 (TikTok, Unknown 등)
+            const platformConfig = {
+                'tiktok': {
+                    emoji: '🎵',
+                    name: 'TikTok',
+                    gradient: 'linear-gradient(135deg, #000000 0%, #ff0050 100%)'
+                },
+                'unknown': {
+                    emoji: '📹',
+                    name: '영상',
+                    gradient: 'linear-gradient(135deg, #666666 0%, #999999 100%)'
+                }
+            };
+            
+            const config = platformConfig[platform] || platformConfig['unknown'];
+            
             thumbnailHtml = `
                 <div class="thumbnail-container" onclick="openVideoLink('${videoLink}', '${platform}')" style="
                     position: relative; width: 100%; height: 180px; 
-                    background: linear-gradient(135deg, #000000 0%, #434343 100%);
+                    background: ${config.gradient};
                     border-radius: 8px; display: flex; flex-direction: column; 
                     align-items: center; justify-content: center; cursor: pointer;">
-                    <div style="color: white; font-size: 48px; margin-bottom: 10px;">📱</div>
-                    <div style="color: white; font-size: 14px; font-weight: bold;">${platform.toUpperCase()} 영상</div>
-                    <div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">외부링크</div>
+                    <div style="color: white; font-size: 48px; margin-bottom: 10px;">${config.emoji}</div>
+                    <div style="color: white; font-size: 14px; font-weight: bold;">${config.name}</div>
+                    <div style="color: white; font-size: 0.8rem; opacity: 0.8; margin-top: 0.25rem;">클릭하여 보기</div>
+                    <div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${platform.toUpperCase()}</div>
                 </div>`;
         }
         
@@ -616,7 +652,7 @@ function displayRealVideos(videos) {
                 <div class="video-duration" style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px;">${video.duration || video.views || 'N/A'}</div>
             </div>
             <div class="video-info">
-                <h3 class="video-title">${video.mainCategory} - ${video.middleCategory || '일반'}</h3>
+                <h3 class="video-title">${formatVideoTitle(video.title, video.account, platform)}</h3>
                 <div class="channel-info">
                     <div class="channel-avatar">${platform.charAt(0).toUpperCase()}</div>
                     <span class="channel-name">${extractChannelName(video.account, platform)}</span>
@@ -652,7 +688,8 @@ function extractYouTubeId(url) {
     
     const patterns = [
         /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
-        /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+        /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
+        /youtube\.com\/shorts\/([^&\n?#]+)/ // YouTube Shorts 지원
     ];
     
     for (const pattern of patterns) {
@@ -668,6 +705,7 @@ function getPlatformColor(platform) {
         'youtube': '#FF0000',
         'instagram': '#E4405F',
         'tiktok': '#000000',
+        'unknown': '#666666',
         'default': '#666666'
     };
     return colors[platform?.toLowerCase()] || colors.default;
@@ -679,6 +717,7 @@ function getPlatformEmoji(platform) {
         'youtube': '🎬',
         'instagram': '📱',
         'tiktok': '🎵',
+        'unknown': '📹',
         'default': '📹'
     };
     return emojis[platform?.toLowerCase()] || emojis.default;
@@ -692,6 +731,50 @@ function openVideoLink(videoUrl, platform) {
     } else {
         alert('영상 링크를 찾을 수 없습니다.');
     }
+}
+
+// URL에서 플랫폼 감지 함수
+function detectPlatformFromUrl(url) {
+    if (!url) return 'unknown';
+    
+    const urlLower = url.toLowerCase();
+    
+    if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
+        return 'youtube';
+    } else if (urlLower.includes('instagram.com')) {
+        return 'instagram';
+    } else if (urlLower.includes('tiktok.com')) {
+        return 'tiktok';
+    }
+    
+    return 'unknown';
+}
+
+// 영상 제목 포맷팅 함수
+function formatVideoTitle(title, accountUrl, platform) {
+    if (!title) {
+        return '제목 없음';
+    }
+    
+    // YouTube의 경우 영상 ID만 있는 경우 더 의미있는 제목으로 변경
+    if (platform === 'youtube') {
+        // 영상 ID가 제목인 경우 (11글자 영문자/숫자 조합)
+        const youtubeIdPattern = /^[a-zA-Z0-9_-]{11}$/;
+        if (youtubeIdPattern.test(title)) {
+            // YouTube 영상 제목으로 변경
+            const videoId = title;
+            if (accountUrl) {
+                if (accountUrl.includes('/shorts/')) {
+                    return `YouTube Shorts 영상 (${videoId})`;
+                } else if (accountUrl.includes('/watch?v=')) {
+                    return `YouTube 영상 (${videoId})`;
+                }
+            }
+            return `YouTube 영상 (${videoId})`;
+        }
+    }
+    
+    return title;
 }
 
 // 채널명 추출 (URL에서) - 플랫폼별 처리
@@ -1328,6 +1411,27 @@ function loadIframe(container) {
     // container에 iframe 추가
     container.appendChild(iframe);
     container.style.background = '#000'; // 로딩 중 배경
+}
+
+// YouTube 플레이어 즉시 로드 함수
+function loadYouTubePlayer(containerId, embedUrl) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    // 썸네일 오버레이 제거하고 iframe 추가
+    container.innerHTML = `
+        <iframe 
+            width="100%" 
+            height="100%" 
+            src="${embedUrl}" 
+            frameborder="0" 
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+            allowfullscreen
+            style="border-radius: 8px;">
+        </iframe>
+    `;
+    
+    console.log(`▶️ YouTube 플레이어 로드: ${embedUrl}`);
 }
 
 // Intersection Observer 미지원 시 모든 iframe 즉시 로드

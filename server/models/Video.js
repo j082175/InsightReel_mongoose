@@ -17,6 +17,19 @@ const videoSchema = new mongoose.Schema({
     index: true  // 날짜순 정렬 최적화
   },
   
+  // 원본 게시일 (실제 영상이 게시된 날짜)
+  originalPublishDate: {
+    type: Date,
+    required: false,
+    index: true  // 원본 게시일순 정렬 최적화
+  },
+  
+  // 처리 완료 시간
+  processedAt: {
+    type: Date,
+    required: false
+  },
+  
   // 계정/채널 정보
   account: {
     type: String,
@@ -123,6 +136,38 @@ videoSchema.methods.updateStats = function(likes, views, shares, comments) {
   this.comments_count = comments || this.comments_count;
   this.updated_at = new Date();
   return this.save();
+};
+
+// 🆕 정적 메서드: VideoUrl 데이터와 동기화하여 Video 레코드 생성/업데이트
+videoSchema.statics.createOrUpdateFromVideoUrl = async function(videoUrlData, metadata = {}) {
+  const { originalUrl, platform, originalPublishDate, processedAt } = videoUrlData;
+  
+  // URL을 account 필드로 사용 (기존 구조 유지)
+  const videoData = {
+    platform: platform,
+    account: originalUrl,
+    title: metadata.title || originalUrl.split('/').pop() || '미분류',
+    comments: originalUrl, // URL 저장
+    timestamp: originalPublishDate || new Date(), // 원본 게시일을 timestamp로 사용
+    originalPublishDate: originalPublishDate,
+    processedAt: processedAt || new Date(),
+    category: metadata.category || '미분류',
+    ai_description: metadata.description || '',
+    keywords: metadata.keywords || [],
+    hashtags: metadata.hashtags || [],
+    likes: metadata.likes || 0,
+    views: metadata.views || 0,
+    shares: metadata.shares || 0,
+    comments_count: metadata.comments || 0,
+    thumbnailUrl: metadata.thumbnailUrl || metadata.thumbnailPath || null // 썸네일 URL 추가
+  };
+  
+  // upsert: 있으면 업데이트, 없으면 생성
+  return this.findOneAndUpdate(
+    { account: originalUrl, platform: platform },
+    { $set: videoData },
+    { upsert: true, new: true }
+  );
 };
 
 module.exports = mongoose.model('Video', videoSchema);

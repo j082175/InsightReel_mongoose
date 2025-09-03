@@ -715,6 +715,29 @@ class SheetsManager {
         
         if (updateResult.success) {
           ServerLogger.info(`🔗 MongoDB URL 상태 업데이트 완료: ${normalizedUrl} -> completed (${platform} ${nextRow}행)`);
+          
+          // 🆕 Video 모델도 함께 업데이트 (원본 게시일 동기화)
+          const Video = require('../models/Video');
+          await Video.createOrUpdateFromVideoUrl(
+            {
+              originalUrl: normalizedUrl,
+              platform: platform.toLowerCase(),
+              originalPublishDate: originalPublishDate,
+              processedAt: new Date()
+            },
+            {
+              title: analysisResult.title || metadata.title || '미분류',
+              category: analysisResult.category || '미분류',
+              keywords: analysisResult.keywords || [],
+              hashtags: analysisResult.keywords ? analysisResult.keywords.map(k => `#${k}`) : [],
+              description: analysisResult.description || '',
+              thumbnailPath: thumbnailPath,
+              thumbnailUrl: thumbnailPath,
+              likes: metadata.likes || 0,
+              views: metadata.views || 0
+            }
+          );
+          ServerLogger.info(`📊 Video 모델 동기화 완료: ${normalizedUrl}`);
         } else {
           // processing 상태 레코드가 없는 경우 - 새로 생성 (fallback)
           await VideoUrl.create({

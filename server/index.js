@@ -925,11 +925,11 @@ app.post('/api/process-video', async (req, res) => {
   }
 });
 
-// 저장된 비디오 목록 조회 (기존 Video 모델 + 원본 게시일 추가)
+// 저장된 비디오 목록 조회 (최적화: 단일 Video 모델 쿼리)
 app.get('/api/videos', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
-    const sortBy = req.query.sortBy || 'timestamp'; // timestamp, likes, views
+    const sortBy = req.query.sortBy || 'timestamp'; // timestamp는 이제 원본 게시일
     const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
     const platform = req.query.platform; // 플랫폼 필터 (선택적)
     
@@ -940,43 +940,35 @@ app.get('/api/videos', async (req, res) => {
       await DatabaseManager.connect();
     }
     
-    // 쿼리 조건 구성
-    const query = {};
+    // 쿼리 조건 구성 - originalPublishDate가 있는 레코드 우선
+    const query = {
+      originalPublishDate: { $exists: true, $ne: null }
+    };
     if (platform) {
       query.platform = platform.toLowerCase();
     }
     
-    // 정렬 조건 구성
+    // 정렬 조건 구성 (timestamp로 요청해도 originalPublishDate로 정렬)
     const sortOptions = {};
-    sortOptions[sortBy] = sortOrder;
+    if (sortBy === 'timestamp') {
+      sortOptions['originalPublishDate'] = sortOrder;
+    } else {
+      sortOptions[sortBy] = sortOrder;
+    }
     
-    // MongoDB에서 비디오 조회
+    // MongoDB에서 비디오 조회 (단일 쿼리!)
     const videos = await Video.find(query)
       .sort(sortOptions)
       .limit(limit)
-      .select('platform account title likes views comments timestamp category keywords hashtags')
+      .select('platform account title likes views comments timestamp originalPublishDate processedAt category keywords hashtags thumbnailUrl')
       .lean(); // 성능 최적화
     
-    // VideoUrl에서 원본 게시일 정보 가져와서 매핑
-    const videoUrls = await VideoUrl.find({
-      originalPublishDate: { $exists: true, $ne: null }
-    }).select('originalUrl originalPublishDate').lean();
-    
-    // URL을 키로 하는 맵 생성
-    const originalDatesMap = {};
-    videoUrls.forEach(v => {
-      // Video 모델의 account 필드와 VideoUrl의 originalUrl 비교
-      originalDatesMap[v.originalUrl] = v.originalPublishDate;
-    });
-    
-    // Video 데이터에 원본 게시일 추가
+    // timestamp 필드가 originalPublishDate와 동일한지 확인하고 보정
     const enhancedVideos = videos.map(video => {
-      const originalDate = originalDatesMap[video.account] || originalDatesMap[video.comments];
       return {
         ...video,
-        originalPublishDate: originalDate,
-        // 원본 게시일이 있으면 timestamp를 원본 게시일로 교체
-        timestamp: originalDate || video.timestamp
+        timestamp: video.originalPublishDate || video.timestamp, // 원본 게시일을 timestamp로 사용
+        originalPublishDate: video.originalPublishDate
       };
     });
     
@@ -987,7 +979,7 @@ app.get('/api/videos', async (req, res) => {
       platformCounts[platform] = (platformCounts[platform] || 0) + 1;
     });
     
-    ServerLogger.info(`📊 MongoDB API 응답: 총 ${enhancedVideos.length}개 비디오 (원본 게시일 매핑: ${Object.keys(originalDatesMap).length}개)`, 'DEBUG');
+    ServerLogger.info(`📊 MongoDB API 응답: 총 ${enhancedVideos.length}개 비디오 (단일 쿼리 최적화)`, 'DEBUG');
     ServerLogger.info(`📊 플랫폼별 비디오 수: ${JSON.stringify(platformCounts)}`, 'DEBUG');
     
     ResponseHandler.success(res, {
