@@ -3,6 +3,37 @@
 // API 서버 기본 URL
 const API_BASE_URL = 'http://localhost:3000';
 
+// 캐싱 시스템
+const VideoCache = {
+    data: null,
+    lastFetch: null,
+    cacheExpiry: 5 * 60 * 1000, // 5분 캐시 유효 시간
+    
+    isValid() {
+        return this.data && this.lastFetch && (Date.now() - this.lastFetch < this.cacheExpiry);
+    },
+    
+    set(data) {
+        this.data = data;
+        this.lastFetch = Date.now();
+        console.log('📦 비디오 데이터 캐시 저장:', data?.length || 0, '개');
+    },
+    
+    get() {
+        if (this.isValid()) {
+            console.log('⚡ 캐시된 데이터 사용:', this.data?.length || 0, '개');
+            return this.data;
+        }
+        return null;
+    },
+    
+    clear() {
+        this.data = null;
+        this.lastFetch = null;
+        console.log('🗑️ 캐시 데이터 삭제');
+    }
+};
+
 // API 헬퍼 함수들
 const API = {
     // 서버 상태 확인
@@ -151,9 +182,17 @@ function showTab(tabName) {
     document.getElementById('channels-content').classList.toggle('hidden', tabName !== 'channels');
     document.getElementById('analytics-content').classList.toggle('hidden', tabName !== 'analytics');
     
-    // videos 탭이 선택되었을 때 실제 데이터 로드
+    // videos 탭이 선택되었을 때 데이터 로드 (캐시 확인)
     if (tabName === 'videos') {
-        loadRealVideos();
+        const cachedData = VideoCache.get();
+        if (cachedData) {
+            // 캐시된 데이터 사용
+            displayVideos(cachedData);
+            updatePlatformCounts(cachedData);
+        } else {
+            // 캐시가 없거나 만료된 경우에만 새로 로드
+            loadRealVideos();
+        }
     }
 }
 
@@ -428,6 +467,17 @@ function getUniqueCategoryCount(videos) {
 // 실제 영상 데이터 로드 및 표시
 async function loadRealVideos() {
     console.log('🔄 loadRealVideos() 함수 시작');
+    
+    // 캐시된 데이터 확인
+    const cachedData = VideoCache.get();
+    if (cachedData) {
+        console.log('⚡ 캐시된 데이터 사용:', cachedData.length, '개');
+        displayRealVideos(cachedData);
+        return;
+    }
+    
+    // 캐시가 없는 경우에만 서버에서 로드
+    console.log('🌐 서버에서 새로운 데이터 로드');
     UI.showLoading('실제 영상 데이터 로드 중...');
     
     try {
@@ -435,6 +485,9 @@ async function loadRealVideos() {
         const response = await API.getVideos();
         
         if (response && response.success && response.data && response.data.videos) {
+            // 데이터를 캐시에 저장
+            VideoCache.set(response.data.videos);
+            
             displayRealVideos(response.data.videos);
             console.log(`📺 실제 영상 ${response.data.videos.length}개 로드 완료`);
         } else {
@@ -487,46 +540,52 @@ function displayRealVideos(videos) {
         let thumbnailHtml = '';
         
         if (platform === 'youtube') {
-            // YouTube 처리
+            // 🎯 YouTube 썸네일 우선 시스템
             const youtubeId = extractYouTubeId(videoLink);
             const youtubeThumbnail = video.thumbnailUrl || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : null);
-            const youtubeEmbedUrl = youtubeId ? `https://www.youtube.com/embed/${youtubeId}` : null;
             
-            if (youtubeEmbedUrl) {
+            if (youtubeId && youtubeThumbnail) {
                 const uniqueId = `youtube-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                
                 thumbnailHtml = `
-                    <div class="youtube-player-container" id="${uniqueId}" style="position: relative; width: 100%; height: 300px; border-radius: 8px; overflow: hidden; background: #000;">
-                        <div class="youtube-thumbnail-overlay" onclick="loadYouTubePlayer('${uniqueId}', '${youtubeEmbedUrl}?autoplay=1')" style="
-                            position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
-                            cursor: pointer; display: flex; align-items: center; justify-content: center;
-                            background-image: url('${youtubeThumbnail}'); background-size: cover; background-position: center;">
-                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3);"></div>
-                            <div class="play-button" style="
-                                position: relative; z-index: 2;
-                                width: 40px; height: 40px;
-                                background: rgba(255, 0, 0, 0.5);
-                                border-radius: 50%;
-                                display: flex; align-items: center; justify-content: center;
-                                color: white; font-size: 1rem;
-                                transition: all 0.3s ease;
-                                box-shadow: 0 2px 10px rgba(0,0,0,0.3);"
-                                onmouseover="this.style.background='rgba(255, 0, 0, 0.8)'; this.style.transform='scale(1.1)'"
-                                onmouseout="this.style.background='rgba(255, 0, 0, 0.5)'; this.style.transform='scale(1)'">
-                                ▶
-                            </div>
-                            <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(255,0,0,0.9); color: white; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold;">YouTube</div>
+                    <div class="youtube-thumbnail-container" id="${uniqueId}" style="position: relative; width: 100%; height: 300px; border-radius: 8px; overflow: hidden; cursor: pointer;" onclick="createYouTubePlayer('${uniqueId}', '${youtubeId}', '${videoLink}')">
+                        <!-- YouTube 썸네일 -->
+                        <img src="${youtubeThumbnail}" alt="YouTube 썸네일" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;" 
+                             onerror="this.src='https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg'">
+                        
+                        <!-- 재생 버튼 오버레이 -->
+                        <div class="play-overlay" style="
+                            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                            width: 80px; height: 80px; background: rgba(255, 0, 0, 0.9); border-radius: 50%;
+                            display: flex; align-items: center; justify-content: center;
+                            transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                        " onmouseover="this.style.transform='translate(-50%, -50%) scale(1.1)'; this.style.background='rgba(255, 0, 0, 1)'" 
+                           onmouseout="this.style.transform='translate(-50%, -50%) scale(1)'; this.style.background='rgba(255, 0, 0, 0.9)'">
+                            <div style="color: white; font-size: 32px; margin-left: 4px;">▶</div>
+                        </div>
+                        
+                        <!-- YouTube 뱃지 -->
+                        <span class="platform-badge youtube">YouTube</span>
+                        
+                        <!-- 로딩 인디케이터 (숨겨진 상태) -->
+                        <div id="${uniqueId}-loading" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); color: white; border-radius: 8px; justify-content: center; align-items: center; flex-direction: column; z-index: 15;">
+                            <div style="font-size: 48px; margin-bottom: 20px; animation: spin 2s linear infinite;">⏳</div>
+                            <div style="font-size: 18px; font-weight: 500; text-align: center; line-height: 1.4;">YouTube 플레이어 로딩 중...</div>
+                            <div style="font-size: 14px; opacity: 0.8; margin-top: 10px;">완료까지 기다리는 중입니다</div>
                         </div>
                     </div>`;
             } else {
+                // YouTube ID를 추출할 수 없는 경우 폴백
                 thumbnailHtml = `
                     <div class="thumbnail-container" onclick="openVideoLink('${videoLink}', 'youtube')" style="
-                        position: relative; width: 100%; height: 180px; 
+                        position: relative; width: 100%; height: 300px; 
                         background: linear-gradient(135deg, #FF0000 0%, #CC0000 100%);
                         border-radius: 8px; display: flex; flex-direction: column; 
                         align-items: center; justify-content: center; cursor: pointer;">
-                        <div style="color: white; font-size: 48px; margin-bottom: 10px;">🎬</div>
-                        <div style="color: white; font-size: 14px; font-weight: bold;">YouTube 영상</div>
-                        <div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">외부링크</div>
+                        <div style="color: white; font-size: 64px; margin-bottom: 15px;">🎬</div>
+                        <div style="color: white; font-size: 18px; font-weight: bold;">YouTube 영상</div>
+                        <div style="color: white; font-size: 14px; opacity: 0.8; margin-top: 8px;">클릭하여 새 탭에서 보기</div>
+                        <div style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.7); color: white; padding: 6px 12px; border-radius: 16px; font-size: 12px; font-weight: bold;">외부링크</div>
                     </div>`;
             }
         } else if (platform === 'instagram') {
@@ -673,7 +732,11 @@ function displayRealVideos(videos) {
     
     // 🚀 Lazy Loading 구현: Intersection Observer
     initializeLazyLoading();
-    console.log(`📺 멀티플랫폼 Lazy Loading 초기화 완료 (${displayVideos.length}개 영상)`);
+    
+    // 🚀 YouTube 플레이어 메모리 최적화 초기화
+    initializeYouTubePlayerMemoryOptimization();
+    
+    console.log(`📺 썸네일 우선 시스템 초기화 완료 (${displayVideos.length}개 영상) 🎯`);
 }
 
 // 플랫폼별 영상 개수 업데이트 함수
@@ -1314,6 +1377,19 @@ function openInstagramLink(videoUrl) {
     }
 }
 
+// 캐시된 데이터로 영상 표시 (필터링 없이)
+function displayVideos(videos) {
+    console.log('⚡ 캐시된 데이터로 영상 표시:', videos.length, '개');
+    displayRealVideos(videos);
+}
+
+// 수동 새로고침 (캐시 무효화 후 재로드)
+function refreshVideoData() {
+    console.log('🔄 수동 새로고침 - 캐시 무효화');
+    VideoCache.clear();
+    searchVideos();
+}
+
 // 검색 기능
 async function searchVideos() {
     const searchInput = document.getElementById('searchInput');
@@ -1328,12 +1404,21 @@ async function searchVideos() {
     
     console.log('🔍 검색 실행:', { searchTerm, category, platform, limit });
     
+    // 필터나 검색어가 있으면 캐시 무효화 (새로운 데이터가 필요)
+    if (searchTerm || category || platform) {
+        console.log('🗑️ 필터 검색으로 인한 캐시 무효화');
+        VideoCache.clear();
+    }
+    
     UI.showLoading('영상 검색 중...');
     
     try {
         const response = await API.getVideos();
         
         if (response && response.success && response.data && response.data.videos) {
+            // 원본 데이터를 캐시에 저장 (필터링 전)
+            VideoCache.set(response.data.videos);
+            
             let filteredVideos = response.data.videos;
             
             // 검색어 필터링
@@ -1527,26 +1612,6 @@ function loadIframe(container) {
     container.style.background = '#000'; // 로딩 중 배경
 }
 
-// YouTube 플레이어 즉시 로드 함수
-function loadYouTubePlayer(containerId, embedUrl) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    
-    // 썸네일 오버레이 제거하고 iframe 추가
-    container.innerHTML = `
-        <iframe 
-            width="100%" 
-            height="100%" 
-            src="${embedUrl}" 
-            frameborder="0" 
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-            allowfullscreen
-            style="border-radius: 8px;">
-        </iframe>
-    `;
-    
-    console.log(`▶️ YouTube 플레이어 로드: ${embedUrl}`);
-}
 
 // Intersection Observer 미지원 시 모든 iframe 즉시 로드
 function loadAllIframes() {
@@ -1556,7 +1621,325 @@ function loadAllIframes() {
     });
 }
 
-console.log('📄 dashboard.js 로드 완료 - UI는 그대로, 성능만 최적화!');
+// 🎯 YouTube 썸네일 → iframe 동적 생성 시스템 (자동 재시도 포함)
+function createYouTubePlayer(containerId, youtubeId, videoUrl, retryCount = 0) {
+    console.log(`🚀 YouTube 플레이어 생성 시작: ${youtubeId} (시도: ${retryCount + 1})`);
+    
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.error('❌ 컨테이너를 찾을 수 없습니다:', containerId);
+        return;
+    }
+    
+    // 중복 생성 방지
+    if (container.classList.contains('player-created')) {
+        console.log('⚠️ 이미 플레이어가 생성되었습니다');
+        return;
+    }
+    
+    // 로딩 상태 표시
+    showYouTubeLoading(containerId, retryCount);
+    
+    try {
+        // YouTube embed URL 생성 (autoplay 포함)
+        const embedUrl = `https://www.youtube-nocookie.com/embed/${youtubeId}?autoplay=1&mute=0&enablejsapi=1&modestbranding=1&rel=0`;
+        
+        // iframe 동적 생성
+        const iframe = document.createElement('iframe');
+        iframe.src = embedUrl;
+        iframe.width = '100%';
+        iframe.height = '100%';
+        iframe.frameBorder = '0';
+        iframe.allowFullscreen = true;
+        iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
+        iframe.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 8px; z-index: 10;';
+        
+        let isLoaded = false;
+        
+        // iframe 로드 성공 시
+        iframe.onload = () => {
+            isLoaded = true;
+            console.log('✅ YouTube iframe 로드 성공:', youtubeId);
+            hideYouTubeLoading(containerId);
+            container.classList.add('player-created');
+        };
+        
+        // iframe 로드 실패 시
+        iframe.onerror = () => {
+            isLoaded = true;
+            console.error('❌ YouTube iframe 로드 실패:', youtubeId);
+            handleYouTubeEmbedError(containerId, videoUrl, youtubeId, retryCount);
+        };
+        
+        // 타임아웃 제거 - 로딩이 성공할 때까지 기다림
+        console.log('⏳ YouTube iframe 로딩 중... (타임아웃 없음)', youtubeId);
+        
+        // container에 iframe 추가
+        container.appendChild(iframe);
+        
+        // 닫기 버튼 추가 (선택적)
+        addYouTubeCloseButton(containerId, videoUrl, youtubeId);
+        
+        // 메모리 최적화를 위한 관찰 시작
+        startObservingYouTubePlayer(containerId);
+        
+    } catch (error) {
+        console.error('❌ YouTube 플레이어 생성 실패:', error);
+        handleYouTubeEmbedError(containerId, videoUrl, youtubeId, retryCount);
+    }
+}
+
+// YouTube 로딩 상태 표시 (로딩 완료까지 지속)
+function showYouTubeLoading(containerId, retryCount = 0) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const loadingDiv = container.querySelector(`#${containerId}-loading`);
+    if (loadingDiv) {
+        loadingDiv.style.display = 'flex';
+        
+        // 로딩 메시지 업데이트 (재시도 횟수 표시)
+        const loadingText = loadingDiv.querySelector('div:last-child');
+        if (loadingText) {
+            if (retryCount > 0) {
+                loadingText.textContent = `YouTube 플레이어 로딩 중... (재시도 ${retryCount + 1}번째)`;
+            } else {
+                loadingText.textContent = 'YouTube 플레이어 로딩 중... (완료까지 기다리는 중)';
+            }
+        }
+    }
+    
+    // 썸네일과 재생 버튼 숨기기
+    const img = container.querySelector('img');
+    const playOverlay = container.querySelector('.play-overlay');
+    
+    if (img) img.style.opacity = '0.2';
+    if (playOverlay) playOverlay.style.display = 'none';
+    
+    console.log(`⏳ 로딩 UI 표시: ${containerId} ${retryCount > 0 ? `(재시도 ${retryCount + 1}번째)` : ''}`);
+}
+
+// YouTube 로딩 상태 숨김 (로딩 완료 시에만 호출)
+function hideYouTubeLoading(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const loadingDiv = container.querySelector(`#${containerId}-loading`);
+    if (loadingDiv) {
+        loadingDiv.style.display = 'none';
+        console.log(`✅ 로딩 UI 숨김 (완료): ${containerId}`);
+    }
+    
+    // 썸네일과 재생 버튼 완전히 숨김 (iframe이 활성화되었으므로)
+    const img = container.querySelector('img');
+    const playOverlay = container.querySelector('.play-overlay');
+    
+    if (img) img.style.opacity = '0';
+    if (playOverlay) playOverlay.style.display = 'none';
+}
+
+// YouTube 닫기 버튼 추가 (썸네일로 복귀)
+function addYouTubeCloseButton(containerId, videoUrl, youtubeId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '✕';
+    closeBtn.className = 'youtube-close-btn';
+    closeBtn.style.cssText = `
+        position: absolute; top: 12px; right: 50px; z-index: 20;
+        width: 32px; height: 32px; border-radius: 50%;
+        background: rgba(0, 0, 0, 0.8); color: white; border: none;
+        font-size: 18px; cursor: pointer; display: flex;
+        align-items: center; justify-content: center;
+        transition: all 0.3s ease;
+    `;
+    
+    closeBtn.onmouseover = () => {
+        closeBtn.style.background = 'rgba(255, 0, 0, 0.9)';
+        closeBtn.style.transform = 'scale(1.1)';
+    };
+    
+    closeBtn.onmouseout = () => {
+        closeBtn.style.background = 'rgba(0, 0, 0, 0.8)';
+        closeBtn.style.transform = 'scale(1)';
+    };
+    
+    closeBtn.onclick = () => revertToYouTubeThumbnail(containerId, videoUrl, youtubeId);
+    
+    container.appendChild(closeBtn);
+}
+
+// YouTube 플레이어를 썸네일로 복귀
+function revertToYouTubeThumbnail(containerId, videoUrl, youtubeId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    console.log('🔄 YouTube 썸네일로 복귀:', youtubeId);
+    
+    // iframe과 닫기 버튼 제거
+    const iframe = container.querySelector('iframe');
+    const closeBtn = container.querySelector('.youtube-close-btn');
+    const loadingDiv = container.querySelector(`#${containerId}-loading`);
+    
+    if (iframe) iframe.remove();
+    if (closeBtn) closeBtn.remove();
+    if (loadingDiv) loadingDiv.style.display = 'none';
+    
+    // 썸네일과 재생 버튼 복원
+    const img = container.querySelector('img');
+    const playOverlay = container.querySelector('.play-overlay');
+    
+    if (img) img.style.opacity = '1';
+    if (playOverlay) playOverlay.style.display = 'flex';
+    
+    // 플레이어 생성 상태 해제
+    container.classList.remove('player-created');
+    
+    // 클릭 이벤트 재설정
+    container.onclick = () => createYouTubePlayer(containerId, youtubeId, videoUrl);
+}
+
+// YouTube embed 에러 처리 (썸네일로 복귀 + 에러 UI)
+function handleYouTubeEmbedError(containerId, videoUrl, youtubeId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    console.error('❌ YouTube embed 에러 처리 시작:', youtubeId);
+    
+    // 로딩 상태 숨김
+    hideYouTubeLoading(containerId);
+    
+    // 썸네일로 복귀
+    revertToYouTubeThumbnail(containerId, videoUrl, youtubeId);
+    
+    // 에러 메시지 오버레이 추가
+    const errorOverlay = document.createElement('div');
+    errorOverlay.className = 'youtube-error-overlay';
+    errorOverlay.style.cssText = `
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(255, 68, 68, 0.95); color: white; border-radius: 8px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        z-index: 15; animation: fadeIn 0.3s ease;
+    `;
+    
+    errorOverlay.innerHTML = `
+        <div style="font-size: 48px; margin-bottom: 15px;">⚠️</div>
+        <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px; text-align: center;">
+            이 영상은 embed로 재생할 수 없습니다
+        </div>
+        <div style="font-size: 14px; opacity: 0.9; margin-bottom: 20px; text-align: center;">
+            YouTube 정책상 외부 사이트에서 재생이 제한됩니다
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="window.open('${videoUrl}', '_blank')" style="
+                padding: 10px 16px; background: white; color: #ff4444; border: none;
+                border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer;
+                transition: all 0.3s ease;
+            " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                🚀 YouTube에서 보기
+            </button>
+            <button onclick="this.parentElement.parentElement.remove()" style="
+                padding: 10px 16px; background: rgba(0,0,0,0.3); color: white; border: none;
+                border-radius: 6px; font-size: 14px; cursor: pointer;
+                transition: all 0.3s ease;
+            " onmouseover="this.style.background='rgba(0,0,0,0.5)'" onmouseout="this.style.background='rgba(0,0,0,0.3)'">
+                닫기
+            </button>
+        </div>
+    `;
+    
+    container.appendChild(errorOverlay);
+    
+    // 5초 후 자동으로 에러 오버레이 제거
+    setTimeout(() => {
+        if (errorOverlay.parentNode) {
+            errorOverlay.remove();
+        }
+    }, 8000);
+}
+
+// 🚀 메모리 최적화: YouTube 플레이어 자동 관리
+let youtubePlayerObserver = null;
+
+function initializeYouTubePlayerMemoryOptimization() {
+    if (!('IntersectionObserver' in window)) {
+        console.warn('⚠️ Intersection Observer 미지원 - 메모리 최적화 비활성화');
+        return;
+    }
+    
+    // 기존 observer가 있으면 정리
+    if (youtubePlayerObserver) {
+        youtubePlayerObserver.disconnect();
+    }
+    
+    // YouTube 플레이어 메모리 관리를 위한 Intersection Observer
+    youtubePlayerObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const container = entry.target;
+            const hasActivePlayer = container.classList.contains('player-created');
+            
+            if (!entry.isIntersecting && hasActivePlayer) {
+                // 화면에서 벗어난 활성 플레이어를 썸네일로 복귀하여 메모리 절약
+                console.log('💾 화면 밖 YouTube 플레이어 메모리 최적화:', container.id);
+                
+                const youtubeId = container.id.includes('youtube-') ? 
+                    container.querySelector('iframe')?.src.match(/embed\/([^?]+)/)?.[1] : null;
+                const videoUrl = container.onclick?.toString().match(/'([^']*youtube[^']*)'/)?.[1];
+                
+                if (youtubeId && videoUrl) {
+                    // 3초 후 썸네일로 복귀 (사용자가 다시 스크롤할 가능성 고려)
+                    setTimeout(() => {
+                        if (!entry.isIntersecting && container.classList.contains('player-created')) {
+                            revertToYouTubeThumbnail(container.id, videoUrl, youtubeId);
+                            console.log('✅ YouTube 플레이어 메모리 정리 완료');
+                        }
+                    }, 3000);
+                }
+            }
+        });
+    }, {
+        root: null,
+        rootMargin: '100px', // 화면 밖으로 100px 벗어나면 트리거
+        threshold: 0
+    });
+    
+    console.log('🔧 YouTube 플레이어 메모리 최적화 활성화');
+}
+
+function startObservingYouTubePlayer(containerId) {
+    if (!youtubePlayerObserver) return;
+    
+    const container = document.getElementById(containerId);
+    if (container) {
+        youtubePlayerObserver.observe(container);
+        console.log('👁️ YouTube 플레이어 관찰 시작:', containerId);
+    }
+}
+
+// CSS 애니메이션 추가
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    @keyframes fadeIn {
+        0% { opacity: 0; }
+        100% { opacity: 1; }
+    }
+    .youtube-thumbnail-container:hover .play-overlay {
+        transform: translate(-50%, -50%) scale(1.1) !important;
+    }
+    /* 성능 최적화를 위한 GPU 가속 */
+    .youtube-thumbnail-container, .play-overlay {
+        will-change: transform;
+        transform: translateZ(0);
+    }
+`;
+document.head.appendChild(style);
+
+console.log('📄 dashboard.js 로드 완료 - 썸네일 우선 시스템 적용! 🚀');
 
 // 표시 개수 제한 기능 초기화 (정리된 버전)
 (function initLimitFilter() {

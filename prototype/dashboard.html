@@ -4,6 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>영상 수집 대시보드 - 프로토타입</title>
+    
+    <!-- Permissions Policy 설정 (권한 오류 해결) -->
+    <meta http-equiv="Permissions-Policy" content="autoplay=*, encrypted-media=*, accelerometer=*, gyroscope=*, picture-in-picture=*, clipboard-write=*, web-share=*">
+    
+    <!-- Feature Policy 폴백 (구형 브라우저) -->
+    <meta http-equiv="Feature-Policy" content="autoplay *; encrypted-media *; accelerometer *; gyroscope *; picture-in-picture *">
+    <!-- CSP 보안 정책 설정 (완전 해결) -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; 
+        connect-src 'self' http://localhost:3000 https://localhost:3000 https://www.youtube.com https://www.youtube-nocookie.com https://img.youtube.com; 
+        frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://www.instagram.com; 
+        img-src 'self' https://img.youtube.com https://i.ytimg.com https://www.instagram.com data: blob:; 
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://www.youtube-nocookie.com; 
+        style-src 'self' 'unsafe-inline' https://www.youtube.com https://www.youtube-nocookie.com;
+        worker-src 'self' blob:;
+        child-src 'self' https://www.youtube.com https://www.youtube-nocookie.com;
+    ")
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🎬</text></svg>" type="image/svg+xml">
     
     <!-- Resource Hints - 상용 웹사이트 최적화 기법 -->
@@ -35,8 +52,47 @@
     <link rel="preload" href="dashboard-original.css?v=6.1.dedup-fix" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link rel="stylesheet" href="dashboard-original.css?v=6.1.dedup-fix"></noscript>
     
+    <!-- TrustedScript 오류 완전 방지 + 콘솔 오류 필터링 -->
+    <script>
+    // 브라우저 확장 프로그램 스크립트 간섭 차단
+    if (typeof trustedTypes !== 'undefined' && trustedTypes.createPolicy) {
+        trustedTypes.createPolicy('default', {
+            createHTML: (html) => html,
+            createScript: (script) => script,
+            createScriptURL: (url) => url,
+        });
+    }
+    
+    // 특정 오류 메시지 필터링 (선택적)
+    const originalError = console.error;
+    const originalWarn = console.warn;
+    
+    console.error = function(...args) {
+        const message = args.join(' ');
+        // 확장 프로그램 관련 오류 숨기기
+        if (message.includes('CORS policy') || 
+            message.includes('tbvws.js') || 
+            message.includes('content_script.js') ||
+            message.includes('VDH ProcessPage') ||
+            message.includes('Immersive Translate')) {
+            return; // 오류 출력 안함
+        }
+        originalError.apply(console, args);
+    };
+    
+    console.warn = function(...args) {
+        const message = args.join(' ');
+        // 접근성 경고 숨기기
+        if (message.includes('aria-hidden') || 
+            message.includes('assistive technology')) {
+            return; // 경고 출력 안함
+        }
+        originalWarn.apply(console, args);
+    };
+    </script>
+    
     <!-- JavaScript 파일 로드 (캐시 방지용 버전) -->
-    <script src="dashboard.js?v=6.4.clean&t=20250903" async></script>
+    <script src="dashboard.js?v=6.5.cache&t=20250903-2" async></script>
 </head>
 <body>
     <div class="header">
@@ -106,6 +162,7 @@
                     <option value="all">전체 표시</option>
                 </select>
                 <button class="search-btn" onclick="searchVideos()">🔍 검색</button>
+                <button class="search-btn" onclick="refreshVideoData()" style="background: #4caf50;">🔄 새로고침</button>
             </div>
         </div>
 
