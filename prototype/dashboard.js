@@ -80,9 +80,9 @@ const API = {
     },
 
     // 수집된 영상 목록 조회
-    async getVideos() {
+    async getVideos(limit = 100) { // 기본값 100개로 증가
         try {
-            const response = await fetch(`${API_BASE_URL}/api/videos`);
+            const response = await fetch(`${API_BASE_URL}/api/videos?limit=${limit}`);
             return await response.json();
         } catch (error) {
             console.error('영상 목록 조회 실패:', error);
@@ -427,9 +427,11 @@ function getUniqueCategoryCount(videos) {
 
 // 실제 영상 데이터 로드 및 표시
 async function loadRealVideos() {
+    console.log('🔄 loadRealVideos() 함수 시작');
     UI.showLoading('실제 영상 데이터 로드 중...');
     
     try {
+        console.log('📡 API.getVideos() 호출');
         const response = await API.getVideos();
         
         if (response && response.success && response.data && response.data.videos) {
@@ -448,14 +450,30 @@ async function loadRealVideos() {
 
 // 실제 영상 데이터 표시
 function displayRealVideos(videos) {
+    console.log('🎨 displayRealVideos() 함수 시작, 받은 영상 수:', videos.length);
     const videoGrid = document.querySelector('.video-grid');
     
     if (!videos || videos.length === 0) {
+        console.log('❌ 영상 데이터가 없습니다');
         showNoVideosMessage();
         return;
     }
 
-    const html = videos.map(video => {
+    // 표시할 영상 개수 제한 적용
+    const limitFilter = document.getElementById('limitFilter');
+    const limit = limitFilter ? limitFilter.value : '20'; // 기본값 20개
+    console.log('🔧 현재 limitFilter 값:', limit);
+    let displayVideos = videos;
+    
+    if (limit !== 'all') {
+        const limitNumber = parseInt(limit);
+        displayVideos = videos.slice(0, limitNumber);
+        console.log(`📊 영상 표시 제한 적용: 전체 ${videos.length}개 중 ${displayVideos.length}개 표시 (${limit}개 제한)`);
+    } else {
+        console.log(`📊 전체 영상 표시: ${videos.length}개`);
+    }
+
+    const html = displayVideos.map(video => {
         // 플랫폼별 처리 - URL 기반 감지로 개선
         let platform = video.platform?.toLowerCase() || 'unknown';
         const videoLink = video.comments || video.account || '#';
@@ -485,15 +503,15 @@ function displayRealVideos(videos) {
                             <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3);"></div>
                             <div class="play-button" style="
                                 position: relative; z-index: 2;
-                                width: 80px; height: 80px;
-                                background: rgba(255, 0, 0, 0.9);
+                                width: 40px; height: 40px;
+                                background: rgba(255, 0, 0, 0.5);
                                 border-radius: 50%;
                                 display: flex; align-items: center; justify-content: center;
-                                color: white; font-size: 2rem;
+                                color: white; font-size: 1rem;
                                 transition: all 0.3s ease;
-                                box-shadow: 0 4px 20px rgba(0,0,0,0.3);"
-                                onmouseover="this.style.background='rgba(255, 0, 0, 1)'; this.style.transform='scale(1.1)'"
-                                onmouseout="this.style.background='rgba(255, 0, 0, 0.9)'; this.style.transform='scale(1)'">
+                                box-shadow: 0 2px 10px rgba(0,0,0,0.3);"
+                                onmouseover="this.style.background='rgba(255, 0, 0, 0.8)'; this.style.transform='scale(1.1)'"
+                                onmouseout="this.style.background='rgba(255, 0, 0, 0.5)'; this.style.transform='scale(1)'">
                                 ▶
                             </div>
                             <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(255,0,0,0.9); color: white; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold;">YouTube</div>
@@ -586,34 +604,7 @@ function displayRealVideos(videos) {
                         " onmouseover="this.style.background='white'; this.style.transform='translate(-50%, -50%) scale(1.1)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.9)'; this.style.transform='translate(-50%, -50%) scale(1)'">
                             ▶️
                         </div>
-                    </div>
-                        background: linear-gradient(45deg, #E91E63, #9C27B0);
-                        color: white;
-                        font-weight: bold;
-                    ">
-                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📱</div>
-                        <div>Instagram 영상</div>
-                        <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.25rem;">클릭하여 보기</div>
-                    </div>
-                    <div class="play-overlay" style="
-                        position: absolute;
-                        top: 50%;
-                        left: 50%;
-                        transform: translate(-50%, -50%);
-                        width: 60px;
-                        height: 60px;
-                        background: rgba(255, 255, 255, 0.9);
-                        border-radius: 50%;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 1.5rem;
-                        color: #E91E63;
-                        transition: all 0.3s ease;
-                    " onmouseover="this.style.background='white'; this.style.transform='translate(-50%, -50%) scale(1.1)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.9)'; this.style.transform='translate(-50%, -50%) scale(1)'">
-                        ▶️
-                    </div>
-                </div>`;
+                    </div>`;
             }
         } else {
             // 기타 플랫폼 (TikTok, Unknown 등)
@@ -677,9 +668,107 @@ function displayRealVideos(videos) {
     
     videoGrid.innerHTML = html;
     
+    // 플랫폼별 영상 개수 업데이트
+    updatePlatformCounts(displayVideos);
+    
     // 🚀 Lazy Loading 구현: Intersection Observer
     initializeLazyLoading();
-    console.log('📺 멀티플랫폼 Lazy Loading 초기화 완료 (Instagram, YouTube 등)');
+    console.log(`📺 멀티플랫폼 Lazy Loading 초기화 완료 (${displayVideos.length}개 영상)`);
+}
+
+// 플랫폼별 영상 개수 업데이트 함수
+function updatePlatformCounts(videos) {
+    console.log('📊 플랫폼별 개수 업데이트 시작');
+    
+    const counts = {
+        all: videos.length,
+        youtube: 0,
+        instagram: 0,
+        tiktok: 0
+    };
+    
+    // 각 영상의 플랫폼 확인하여 개수 카운트
+    videos.forEach(video => {
+        let platform = video.platform?.toLowerCase() || 'unknown';
+        const videoLink = video.comments || video.account || '#';
+        
+        // 플랫폼이 unknown이면 URL에서 감지 시도
+        if (platform === 'unknown') {
+            platform = detectPlatformFromUrl(videoLink);
+        }
+        
+        if (platform === 'youtube') counts.youtube++;
+        else if (platform === 'instagram') counts.instagram++;
+        else if (platform === 'tiktok') counts.tiktok++;
+    });
+    
+    // HTML 업데이트
+    const countAll = document.getElementById('count-all');
+    const countYoutube = document.getElementById('count-youtube');
+    const countInstagram = document.getElementById('count-instagram');
+    const countTiktok = document.getElementById('count-tiktok');
+    
+    if (countAll) countAll.textContent = counts.all;
+    if (countYoutube) countYoutube.textContent = counts.youtube;
+    if (countInstagram) countInstagram.textContent = counts.instagram;
+    if (countTiktok) countTiktok.textContent = counts.tiktok;
+    
+    console.log(`📊 플랫폼별 개수 업데이트 완료: 전체 ${counts.all}, YouTube ${counts.youtube}, Instagram ${counts.instagram}, TikTok ${counts.tiktok}`);
+}
+
+
+// 플랫폼별 필터링 함수
+function filterByPlatform(targetPlatform) {
+    console.log('🔍 플랫폼 필터링 시작:', targetPlatform);
+    
+    const videoCards = document.querySelectorAll('.video-card');
+    let visibleCount = 0;
+    
+    // 필터 버튼 활성화 상태 업데이트
+    document.querySelectorAll('.platform-filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.getAttribute('data-platform') === targetPlatform) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // 영상 카드 표시/숨김
+    videoCards.forEach(card => {
+        let shouldShow = true;
+        
+        if (targetPlatform !== 'all') {
+            // 카드에서 플랫폼 정보 추출 (플랫폼 배지에서)
+            const platformBadge = card.querySelector('.platform-badge');
+            let cardPlatform = '';
+            
+            if (platformBadge) {
+                const badgeText = platformBadge.textContent.toLowerCase();
+                if (badgeText.includes('youtube')) cardPlatform = 'youtube';
+                else if (badgeText.includes('instagram')) cardPlatform = 'instagram';
+                else if (badgeText.includes('tiktok')) cardPlatform = 'tiktok';
+            } else {
+                // 플랫폼 배지가 없으면 다른 방법으로 감지
+                const videoLink = card.querySelector('a, [onclick*="openVideoLink"]');
+                if (videoLink) {
+                    const href = videoLink.href || videoLink.getAttribute('onclick') || '';
+                    if (href.includes('youtube.com') || href.includes('youtu.be')) cardPlatform = 'youtube';
+                    else if (href.includes('instagram.com')) cardPlatform = 'instagram';
+                    else if (href.includes('tiktok.com')) cardPlatform = 'tiktok';
+                }
+            }
+            
+            shouldShow = cardPlatform === targetPlatform;
+        }
+        
+        if (shouldShow) {
+            card.style.display = 'block';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    console.log(`🔍 플랫폼 필터링 완료: ${targetPlatform} → ${visibleCount}개 영상 표시`);
 }
 
 // YouTube ID 추출
@@ -1209,12 +1298,14 @@ async function searchVideos() {
     const searchInput = document.getElementById('searchInput');
     const categoryFilter = document.getElementById('categoryFilter');
     const platformFilter = document.getElementById('platformFilter');
+    const limitFilter = document.getElementById('limitFilter');
     
     const searchTerm = searchInput?.value || '';
     const category = categoryFilter?.value || '';
     const platform = platformFilter?.value || '';
+    const limit = limitFilter?.value || 'all';
     
-    console.log('🔍 검색 실행:', { searchTerm, category, platform });
+    console.log('🔍 검색 실행:', { searchTerm, category, platform, limit });
     
     UI.showLoading('영상 검색 중...');
     
@@ -1325,6 +1416,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
         console.error('할당량 정보 로드 실패:', error);
     }
+    
+    // 표시 개수 필터는 전역에서 이미 초기화됨
     
     console.log('💡 트렌딩 탭에서 "최신 트렌드 수집"을 시작하세요.');
 });
@@ -1443,3 +1536,34 @@ function loadAllIframes() {
 }
 
 console.log('📄 dashboard.js 로드 완료 - UI는 그대로, 성능만 최적화!');
+
+// 표시 개수 제한 기능 초기화 (정리된 버전)
+(function initLimitFilter() {
+    let isSetup = false; // 중복 설정 방지
+    
+    function handleLimitChange(event) {
+        console.log('📊 표시 개수 변경:', event.target.value);
+        loadRealVideos();
+    }
+    
+    function setupLimitFilter() {
+        if (isSetup) return; // 이미 설정된 경우 중단
+        
+        const limitFilter = document.getElementById('limitFilter');
+        if (limitFilter) {
+            console.log('✅ 표시 개수 필터 설정 완료');
+            limitFilter.addEventListener('change', handleLimitChange);
+            isSetup = true;
+        }
+    }
+    
+    // 페이지 상태에 따른 초기화
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(setupLimitFilter, 100);
+        });
+    } else {
+        setupLimitFilter();
+        if (!isSetup) setTimeout(setupLimitFilter, 100);
+    }
+})();

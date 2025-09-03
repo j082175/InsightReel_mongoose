@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>영상 수집 대시보드 - 프로토타입</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🎬</text></svg>" type="image/svg+xml">
     
     <!-- Resource Hints - 상용 웹사이트 최적화 기법 -->
     <link rel="dns-prefetch" href="//localhost:3000">
@@ -31,11 +32,11 @@
     </style>
     
     <!-- 나머지 CSS는 비동기로 로드 (렌더링 차단 안함) -->
-    <link rel="preload" href="dashboard-original.css?v=layout-fix" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="dashboard-original.css?v=layout-fix"></noscript>
+    <link rel="preload" href="dashboard-original.css?v=6.1.dedup-fix" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="dashboard-original.css?v=6.1.dedup-fix"></noscript>
     
     <!-- JavaScript 파일 로드 (캐시 방지용 버전) -->
-    <script src="dashboard.js?v=5.1.fixed" async></script>
+    <script src="dashboard.js?v=6.4.clean&t=20250903" async></script>
 </head>
 <body>
     <div class="header">
@@ -94,6 +95,15 @@
                     <option value="youtube">YouTube</option>
                     <option value="instagram">Instagram</option>
                     <option value="tiktok">TikTok</option>
+                </select>
+                <select class="filter-select" id="limitFilter">
+                    <option value="3">3개 표시</option>
+                    <option value="5">5개 표시</option>
+                    <option value="10">10개 표시</option>
+                    <option value="20" selected>20개 표시</option>
+                    <option value="50">50개 표시</option>
+                    <option value="100">100개 표시</option>
+                    <option value="all">전체 표시</option>
                 </select>
                 <button class="search-btn" onclick="searchVideos()">🔍 검색</button>
             </div>

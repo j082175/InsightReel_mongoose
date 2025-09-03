@@ -71,7 +71,7 @@ body {
 
 .search-grid {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
     gap: 1rem;
     align-items: end;
 }
@@ -160,7 +160,9 @@ body {
 .video-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
+    gap: 1.2rem;
+    align-items: start;
+    justify-items: stretch;
 }
 
 .video-card {
@@ -168,6 +170,15 @@ body {
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.video-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
 .thumbnail-container {
@@ -213,6 +224,10 @@ body {
 
 .video-info {
     padding: 1rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .video-title {
@@ -436,4 +451,19 @@ body {
 
 .placeholder-message p {
     font-size: 0.9rem;
+}
+
+/* 플랫폼 필터 버튼 개선 */
+.platform-filter-btn {
+    transition: all 0.3s ease;
+}
+
+.platform-filter-btn.active {
+    transform: scale(1.05);
+    font-weight: bold;
+}
+
+.platform-filter-btn:not(.active):hover {
+    transform: scale(1.02);
+    opacity: 0.8;
 }
