@@ -147,7 +147,13 @@ export class BasePlatformHandler {
     const originalHTML = button.innerHTML;
     const originalPointerEvents = button.style.pointerEvents;
     
-    button.innerHTML = '<div style="font-size: 10px;">⏳</div>';
+    // innerHTML 대신 안전한 DOM 조작 사용
+    button.textContent = '';
+    const div = document.createElement('div');
+    div.style.fontSize = '10px';
+    div.textContent = '⏳';
+    button.appendChild(div);
+    
     button.style.pointerEvents = 'none';
     button.style.opacity = '0.7';
     button.disabled = true;
@@ -166,7 +172,13 @@ export class BasePlatformHandler {
    * @param {number} restoreDelay - 원래 상태로 복원할 지연시간 (ms)
    */
   setButtonToSuccess(button, restoreDelay = 3000) {
-    button.innerHTML = '<div style="font-size: 10px;">✅</div>';
+    // innerHTML 대신 안전한 DOM 조작 사용
+    button.textContent = '';
+    const div = document.createElement('div');
+    div.style.fontSize = '10px';
+    div.textContent = '✅';
+    button.appendChild(div);
+    
     button.title = '처리 완료!';
     
     setTimeout(() => {
@@ -180,7 +192,13 @@ export class BasePlatformHandler {
    * @param {number} restoreDelay - 원래 상태로 복원할 지연시간 (ms)
    */
   setButtonToError(button, restoreDelay = 3000) {
-    button.innerHTML = '<div style="font-size: 10px;">❌</div>';
+    // innerHTML 대신 안전한 DOM 조작 사용
+    button.textContent = '';
+    const div = document.createElement('div');
+    div.style.fontSize = '10px';
+    div.textContent = '❌';
+    button.appendChild(div);
+    
     button.title = '처리 실패';
     
     setTimeout(() => {
@@ -193,7 +211,12 @@ export class BasePlatformHandler {
    * @param {HTMLButtonElement} button - 대상 버튼
    */
   restoreButtonState(button) {
-    button.innerHTML = button._originalHTML || '🔍';
+    // innerHTML 복원은 안전하므로 유지 (원본 HTML 복원)
+    if (button._originalHTML) {
+      button.innerHTML = button._originalHTML;
+    } else {
+      button.textContent = '🔍';
+    }
     button.style.pointerEvents = button._originalPointerEvents || 'auto';
     button.style.opacity = '1';
     button.disabled = false;

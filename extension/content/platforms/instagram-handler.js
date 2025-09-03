@@ -1619,7 +1619,7 @@ export class InstagramHandler extends BasePlatformHandler {
       transition: all 0.2s ease !important;
     `;
     
-    button.innerHTML = `🔍`;
+    button.textContent = '🔍';
     button.title = '영상 AI 분석하기';
     
     // 호버 효과

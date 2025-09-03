@@ -12,6 +12,7 @@ const config = getConfig(); // 여기서 검증 실행
 // MongoDB 연결 설정
 const DatabaseManager = require('./config/database');
 const Video = require('./models/Video');
+const VideoUrl = require('./models/VideoUrl');
 
 const VideoProcessor = require('./services/VideoProcessor');
 const AIAnalyzer = require('./services/AIAnalyzer');
@@ -924,7 +925,7 @@ app.post('/api/process-video', async (req, res) => {
   }
 });
 
-// 저장된 비디오 목록 조회 (MongoDB 기반)
+// 저장된 비디오 목록 조회 (기존 Video 모델 + 원본 게시일 추가)
 app.get('/api/videos', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
@@ -956,19 +957,42 @@ app.get('/api/videos', async (req, res) => {
       .select('platform account title likes views comments timestamp category keywords hashtags')
       .lean(); // 성능 최적화
     
+    // VideoUrl에서 원본 게시일 정보 가져와서 매핑
+    const videoUrls = await VideoUrl.find({
+      originalPublishDate: { $exists: true, $ne: null }
+    }).select('originalUrl originalPublishDate').lean();
+    
+    // URL을 키로 하는 맵 생성
+    const originalDatesMap = {};
+    videoUrls.forEach(v => {
+      // Video 모델의 account 필드와 VideoUrl의 originalUrl 비교
+      originalDatesMap[v.originalUrl] = v.originalPublishDate;
+    });
+    
+    // Video 데이터에 원본 게시일 추가
+    const enhancedVideos = videos.map(video => {
+      const originalDate = originalDatesMap[video.account] || originalDatesMap[video.comments];
+      return {
+        ...video,
+        originalPublishDate: originalDate,
+        // 원본 게시일이 있으면 timestamp를 원본 게시일로 교체
+        timestamp: originalDate || video.timestamp
+      };
+    });
+    
     // 플랫폼별 비디오 수 분석
     const platformCounts = {};
-    videos.forEach(v => {
+    enhancedVideos.forEach(v => {
       const platform = v.platform || 'unknown';
       platformCounts[platform] = (platformCounts[platform] || 0) + 1;
     });
     
-    ServerLogger.info(`📊 MongoDB API 응답: 총 ${videos.length}개 비디오`, 'DEBUG');
+    ServerLogger.info(`📊 MongoDB API 응답: 총 ${enhancedVideos.length}개 비디오 (원본 게시일 매핑: ${Object.keys(originalDatesMap).length}개)`, 'DEBUG');
     ServerLogger.info(`📊 플랫폼별 비디오 수: ${JSON.stringify(platformCounts)}`, 'DEBUG');
     
     ResponseHandler.success(res, {
-      videos: videos,
-      total: videos.length,
+      videos: enhancedVideos,
+      total: enhancedVideos.length,
       query: { limit, sortBy, sortOrder: sortOrder === 1 ? 'asc' : 'desc', platform },
       platform_stats: platformCounts
     }, API_MESSAGES.DATA.FETCH_SUCCESS);

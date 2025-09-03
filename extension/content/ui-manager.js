@@ -37,7 +37,7 @@ export class UIManager {
       white-space: nowrap !important;
     `;
     
-    button.innerHTML = '💾 저장 & 분석';
+    button.textContent = '💾 저장 & 분석';
     
     // 호버 효과
     this.addButtonHoverEffects(button);
@@ -249,7 +249,7 @@ export class UIManager {
       z-index: 1000 !important;
       box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
     `;
-    indicator.innerHTML = '🤖';
+    indicator.textContent = '🤖';
     indicator.title = 'AI 분석 기능이 추가된 저장 버튼';
     
     // 부모 요소에 relative position 추가
@@ -436,7 +436,7 @@ export class UIManager {
     
     // 닫기 버튼
     const closeButton = document.createElement('button');
-    closeButton.innerHTML = '×';
+    closeButton.textContent = '×';
     closeButton.style.cssText = `
       position: absolute;
       top: 8px;

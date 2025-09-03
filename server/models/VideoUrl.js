@@ -40,7 +40,20 @@ const videoUrlSchema = new mongoose.Schema({
     row: Number        // 행 번호
   },
   
-  // 생성 시간 (관리용)
+  // 원본 콘텐츠 게시일 (시트에 저장되는 실제 게시 날짜)
+  originalPublishDate: {
+    type: Date,
+    required: false,  // 추출 실패 시에도 처리 가능하도록
+    index: true      // 게시일순 조회 최적화
+  },
+  
+  // 처리 완료 시간 (실제 데이터 처리된 시점)
+  processedAt: {
+    type: Date,
+    required: false  // completed 상태일 때만 설정
+  },
+  
+  // 레코드 생성 시간 (관리용 - processing 시작 시점)
   createdAt: {
     type: Date,
     default: Date.now,
@@ -53,9 +66,11 @@ const videoUrlSchema = new mongoose.Schema({
 });
 
 // 🚀 복합 인덱스 생성 (추가 성능 최적화)
-videoUrlSchema.index({ platform: 1, createdAt: -1 });  // 플랫폼별 최신순
-videoUrlSchema.index({ status: 1, createdAt: 1 });     // 상태별 처리 순서
-videoUrlSchema.index({ normalizedUrl: 1, status: 1 }); // URL + 상태 조합 검색
+videoUrlSchema.index({ platform: 1, originalPublishDate: -1 }); // 플랫폼별 게시일순
+videoUrlSchema.index({ platform: 1, createdAt: -1 });           // 플랫폼별 처리순
+videoUrlSchema.index({ status: 1, createdAt: 1 });              // 상태별 처리 순서
+videoUrlSchema.index({ normalizedUrl: 1, status: 1 });          // URL + 상태 조합 검색
+videoUrlSchema.index({ originalPublishDate: -1 });              // 전체 게시일순 조회
 
 // 🔍 정적 메서드: URL 중복 검사 (초고속) - 처리 중인 것도 중복으로 처리
 videoUrlSchema.statics.checkDuplicate = async function(normalizedUrl) {
@@ -88,19 +103,23 @@ videoUrlSchema.statics.checkDuplicate = async function(normalizedUrl) {
 };
 
 // 📝 정적 메서드: URL 등록 (새로운 URL 저장) - processing 상태로 시작
-videoUrlSchema.statics.registerUrl = async function(normalizedUrl, originalUrl, platform, sheetLocation) {
+videoUrlSchema.statics.registerUrl = async function(normalizedUrl, originalUrl, platform, sheetLocation, originalPublishDate = null) {
   try {
     const urlDoc = new this({
       normalizedUrl,
       originalUrl,
       platform,
       sheetLocation,
+      originalPublishDate,  // 원본 게시일 (추출 가능한 경우)
       status: 'processing'  // 처리 중 상태로 등록
     });
     
     await urlDoc.save();
     
     console.log(`✅ URL 등록 완료 (processing): ${platform} - ${normalizedUrl}`);
+    if (originalPublishDate) {
+      console.log(`📅 원본 게시일: ${originalPublishDate.toLocaleString()}`);
+    }
     return { success: true, document: urlDoc };
     
   } catch (error) {
@@ -116,13 +135,23 @@ videoUrlSchema.statics.registerUrl = async function(normalizedUrl, originalUrl, 
 };
 
 // 🔄 정적 메서드: 상태 업데이트
-videoUrlSchema.statics.updateStatus = async function(normalizedUrl, status, sheetLocation = null) {
+videoUrlSchema.statics.updateStatus = async function(normalizedUrl, status, sheetLocation = null, originalPublishDate = null) {
   try {
     const updateData = { status };
     
     // sheetLocation이 제공되면 업데이트
     if (sheetLocation) {
       updateData.sheetLocation = sheetLocation;
+    }
+    
+    // 원본 게시일이 제공되면 업데이트
+    if (originalPublishDate) {
+      updateData.originalPublishDate = originalPublishDate;
+    }
+    
+    // completed 상태일 때 processedAt 시간 기록
+    if (status === 'completed') {
+      updateData.processedAt = new Date();
     }
     
     const result = await this.updateOne(

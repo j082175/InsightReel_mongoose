@@ -160,10 +160,18 @@ export class TikTokHandler extends BasePlatformHandler {
       margin: 12px 0 !important;
     `;
     
-    button.innerHTML = `
-      <div style="font-size: 16px;">💾</div>
-      <div style="font-size: 8px; margin-top: 2px;">분석</div>
-    `;
+    // innerHTML 대신 안전한 DOM 조작 사용
+    const iconDiv = document.createElement('div');
+    iconDiv.style.fontSize = '16px';
+    iconDiv.textContent = '💾';
+    
+    const textDiv = document.createElement('div');
+    textDiv.style.fontSize = '8px';
+    textDiv.style.marginTop = '2px';
+    textDiv.textContent = '분석';
+    
+    button.appendChild(iconDiv);
+    button.appendChild(textDiv);
     
     // TikTok 스타일 호버 효과
     button.addEventListener('mouseenter', () => {

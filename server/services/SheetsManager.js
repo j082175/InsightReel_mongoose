@@ -705,12 +705,13 @@ class SheetsManager {
         const VideoUrl = require('../models/VideoUrl');
         const normalizedUrl = this.normalizeVideoUrl(postUrl);
         
-        // processing 상태인 URL을 completed로 업데이트
+        // processing 상태인 URL을 completed로 업데이트 (원본 게시일 포함)
+        const originalPublishDate = metadata.uploadDate ? new Date(metadata.uploadDate) : null;
         const updateResult = await VideoUrl.updateStatus(normalizedUrl, 'completed', {
           sheetName: sheetName,
           column: 'N', // URL이 저장되는 컬럼
           row: nextRow
-        });
+        }, originalPublishDate);
         
         if (updateResult.success) {
           ServerLogger.info(`🔗 MongoDB URL 상태 업데이트 완료: ${normalizedUrl} -> completed (${platform} ${nextRow}행)`);
@@ -894,12 +895,13 @@ class SheetsManager {
             const normalizedUrl = this.normalizeVideoUrl(originalUrl);
             
             try {
-              // processing 상태인 URL을 completed로 업데이트 시도
+              // processing 상태인 URL을 completed로 업데이트 시도 (원본 게시일 포함)
+              const originalPublishDate = videoData.metadata?.uploadDate ? new Date(videoData.metadata.uploadDate) : null;
               const updateResult = await VideoUrl.updateStatus(normalizedUrl, 'completed', {
                 sheetName: sheetName,
                 column: 'N',
                 row: rowNumber
-              });
+              }, originalPublishDate);
               
               if (updateResult.success) {
                 updatedCount++;
