@@ -139,6 +139,109 @@ export class BasePlatformHandler {
   }
 
   /**
+   * 🎯 버튼 상태를 처리 중으로 설정 (중복 클릭 방지)
+   * @param {HTMLButtonElement} button - 대상 버튼
+   * @returns {string} 원본 HTML (복원용)
+   */
+  setButtonToProcessing(button) {
+    const originalHTML = button.innerHTML;
+    const originalPointerEvents = button.style.pointerEvents;
+    
+    button.innerHTML = '<div style="font-size: 10px;">⏳</div>';
+    button.style.pointerEvents = 'none';
+    button.style.opacity = '0.7';
+    button.disabled = true;
+    button.title = '처리 중... 잠시만 기다려주세요';
+    
+    // 원본 상태 저장
+    button._originalHTML = originalHTML;
+    button._originalPointerEvents = originalPointerEvents;
+    
+    return originalHTML;
+  }
+
+  /**
+   * 🎯 버튼 상태를 성공으로 설정
+   * @param {HTMLButtonElement} button - 대상 버튼
+   * @param {number} restoreDelay - 원래 상태로 복원할 지연시간 (ms)
+   */
+  setButtonToSuccess(button, restoreDelay = 3000) {
+    button.innerHTML = '<div style="font-size: 10px;">✅</div>';
+    button.title = '처리 완료!';
+    
+    setTimeout(() => {
+      this.restoreButtonState(button);
+    }, restoreDelay);
+  }
+
+  /**
+   * 🎯 버튼 상태를 실패로 설정
+   * @param {HTMLButtonElement} button - 대상 버튼
+   * @param {number} restoreDelay - 원래 상태로 복원할 지연시간 (ms)
+   */
+  setButtonToError(button, restoreDelay = 3000) {
+    button.innerHTML = '<div style="font-size: 10px;">❌</div>';
+    button.title = '처리 실패';
+    
+    setTimeout(() => {
+      this.restoreButtonState(button);
+    }, restoreDelay);
+  }
+
+  /**
+   * 🎯 버튼을 원래 상태로 복원
+   * @param {HTMLButtonElement} button - 대상 버튼
+   */
+  restoreButtonState(button) {
+    button.innerHTML = button._originalHTML || '🔍';
+    button.style.pointerEvents = button._originalPointerEvents || 'auto';
+    button.style.opacity = '1';
+    button.disabled = false;
+    button.title = '영상 AI 분석하기';
+  }
+
+  /**
+   * 🎯 안전한 버튼 클릭 처리 래퍼
+   * @param {HTMLButtonElement} button - 처리할 버튼
+   * @param {Function} processingFunction - 실제 처리 함수
+   * @param {Object} params - 처리 함수 파라미터
+   * @returns {Promise<boolean>} 성공 여부
+   */
+  async safeButtonProcessing(button, processingFunction, params = {}) {
+    // 이미 처리 중이면 무시
+    if (this.isProcessing || button.disabled) {
+      this.log('warn', '이미 처리 중이거나 버튼이 비활성화됨');
+      return false;
+    }
+
+    // 처리 시작
+    this.startProcessing();
+    this.setButtonToProcessing(button);
+
+    try {
+      const result = await processingFunction.call(this, params);
+      
+      if (result) {
+        this.setButtonToSuccess(button);
+        this.uiManager.showNotification('✅ 처리가 완료되었습니다!', 'success');
+        return true;
+      } else {
+        this.setButtonToError(button);
+        return false;
+      }
+      
+    } catch (error) {
+      this.log('error', '버튼 처리 실패', error.message);
+      this.setButtonToError(button);
+      this.uiManager.showNotification(`처리 실패: ${error.message}`, 'error');
+      return false;
+      
+    } finally {
+      this.endProcessing();
+    }
+  }
+
+  /**
    * 🚨 중복 URL 처리 공통 메소드
    * @param {Object} result API 응답 결과
    * @returns {boolean} 중복 여부

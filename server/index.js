@@ -529,12 +529,20 @@ app.post('/api/process-video', async (req, res) => {
     
     // 🔍 URL 중복 검사 (모든 플랫폼 공통)
     const checkUrl = videoUrl || postUrl;
+    let videoUrlDoc = null;  // MongoDB 문서 참조용
+    
     if (checkUrl) {
       try {
         const duplicateCheck = await sheetsManager.checkDuplicateURLFast(checkUrl);
         
         if (duplicateCheck.isDuplicate) {
-          const errorMessage = `⚠️ 중복 URL: 이미 ${duplicateCheck.existingPlatform} 시트의 ${duplicateCheck.existingColumn}${duplicateCheck.existingRow}행에 존재합니다`;
+          let errorMessage;
+          
+          if (duplicateCheck.isProcessing) {
+            errorMessage = `🔄 처리 중인 URL: 같은 URL이 현재 처리되고 있습니다 (${duplicateCheck.existingPlatform})`;
+          } else {
+            errorMessage = `⚠️ 중복 URL: 이미 ${duplicateCheck.existingPlatform} 시트의 ${duplicateCheck.existingColumn}${duplicateCheck.existingRow}행에 존재합니다`;
+          }
           
           ServerLogger.warn(errorMessage, 'API_DUPLICATE');
           
@@ -546,9 +554,29 @@ app.post('/api/process-video', async (req, res) => {
               platform: duplicateCheck.existingPlatform,
               row: duplicateCheck.existingRow,
               column: duplicateCheck.existingColumn,
-              normalized_url: sheetsManager.normalizeVideoUrl(checkUrl)
+              normalized_url: sheetsManager.normalizeVideoUrl(checkUrl),
+              isProcessing: duplicateCheck.isProcessing || false,
+              status: duplicateCheck.status
             }
           });
+        }
+        
+        // ✅ 중복이 아닌 경우 - 즉시 processing 상태로 MongoDB에 등록
+        const normalizedUrl = sheetsManager.normalizeVideoUrl(checkUrl);
+        const VideoUrl = require('./models/VideoUrl');
+        
+        const registerResult = await VideoUrl.registerUrl(
+          normalizedUrl,
+          checkUrl,
+          platform,
+          null  // sheetLocation은 나중에 업데이트
+        );
+        
+        if (registerResult.success) {
+          videoUrlDoc = registerResult.document;
+          ServerLogger.info(`✅ URL processing 상태 등록: ${normalizedUrl} (${platform})`);
+        } else {
+          ServerLogger.warn(`⚠️ URL processing 상태 등록 실패: ${registerResult.error}`);
         }
         
         ServerLogger.info(`✅ URL 중복 검사 통과: ${checkUrl}`, 'API_DUPLICATE');
@@ -817,6 +845,27 @@ app.post('/api/process-video', async (req, res) => {
         
         ServerLogger.info('✅ 비디오 처리 완료');
         
+        // ✅ 성공적으로 처리 완료 시 MongoDB 상태를 'completed'로 업데이트
+        if (videoUrlDoc && checkUrl) {
+          try {
+            const VideoUrl = require('./models/VideoUrl');
+            const normalizedUrl = sheetsManager.normalizeVideoUrl(checkUrl);
+            
+            // sheetInfo가 있으면 사용, 없으면 null로 업데이트
+            const sheetLocation = result.sheets ? {
+              sheetName: result.sheets.sheetName,
+              column: 'N', // URL 저장 컬럼
+              row: result.sheets.nextRow
+            } : null;
+            
+            await VideoUrl.updateStatus(normalizedUrl, 'completed', sheetLocation);
+            
+            ServerLogger.info(`✅ URL 상태 업데이트: ${normalizedUrl} -> completed`);
+          } catch (statusError) {
+            ServerLogger.warn(`⚠️ URL 상태 업데이트 실패: ${statusError.message}`);
+          }
+        }
+        
         const responseData = {
           processing: {
             platform,
@@ -851,6 +900,21 @@ app.post('/api/process-video', async (req, res) => {
     
   } catch (error) {
     ServerLogger.error('비디오 처리 실패:', error);
+    
+    // ❌ 처리 실패 시 MongoDB에서 해당 URL 레코드 삭제 (재시도 가능하도록)
+    if (videoUrlDoc && checkUrl) {
+      try {
+        const VideoUrl = require('./models/VideoUrl');
+        const normalizedUrl = sheetsManager.normalizeVideoUrl(checkUrl);
+        
+        await VideoUrl.deleteOne({ normalizedUrl });
+        
+        ServerLogger.info(`🗑️ 처리 실패로 인한 URL 레코드 삭제: ${normalizedUrl}`);
+      } catch (deleteError) {
+        ServerLogger.warn(`⚠️ 처리 실패 URL 레코드 삭제 실패: ${deleteError.message}`);
+      }
+    }
+    
     ResponseHandler.serverError(res, {
       ...error,
       code: ERROR_CODES.VIDEO_PROCESSING_FAILED
@@ -1097,12 +1161,20 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     ServerLogger.info(`🔍 Analysis type: ${analysisType}, AI 분석: ${useAI ? '활성화' : '비활성화'}`);
     
     // 🔍 URL 중복 검사 (Blob 처리에서도 공통 적용)
+    let videoUrlDoc = null;  // MongoDB 문서 참조용
+    
     if (postUrl) {
       try {
         const duplicateCheck = await sheetsManager.checkDuplicateURLFast(postUrl);
         
         if (duplicateCheck.isDuplicate) {
-          const errorMessage = `⚠️ 중복 URL: 이미 ${duplicateCheck.existingPlatform} 시트의 ${duplicateCheck.existingColumn}${duplicateCheck.existingRow}행에 존재합니다`;
+          let errorMessage;
+          
+          if (duplicateCheck.isProcessing) {
+            errorMessage = `🔄 처리 중인 URL: 같은 URL이 현재 처리되고 있습니다 (${duplicateCheck.existingPlatform})`;
+          } else {
+            errorMessage = `⚠️ 중복 URL: 이미 ${duplicateCheck.existingPlatform} 시트의 ${duplicateCheck.existingColumn}${duplicateCheck.existingRow}행에 존재합니다`;
+          }
           
           ServerLogger.warn(errorMessage, 'API_DUPLICATE_BLOB');
           
@@ -1114,9 +1186,29 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
               platform: duplicateCheck.existingPlatform,
               row: duplicateCheck.existingRow,
               column: duplicateCheck.existingColumn,
-              normalized_url: sheetsManager.normalizeVideoUrl(postUrl)
+              normalized_url: sheetsManager.normalizeVideoUrl(postUrl),
+              isProcessing: duplicateCheck.isProcessing || false,
+              status: duplicateCheck.status
             }
           });
+        }
+        
+        // ✅ 중복이 아닌 경우 - 즉시 processing 상태로 MongoDB에 등록
+        const normalizedUrl = sheetsManager.normalizeVideoUrl(postUrl);
+        const VideoUrl = require('./models/VideoUrl');
+        
+        const registerResult = await VideoUrl.registerUrl(
+          normalizedUrl,
+          postUrl,
+          platform,
+          null  // sheetLocation은 나중에 업데이트
+        );
+        
+        if (registerResult.success) {
+          videoUrlDoc = registerResult.document;
+          ServerLogger.info(`✅ URL processing 상태 등록 (Blob): ${normalizedUrl} (${platform})`);
+        } else {
+          ServerLogger.warn(`⚠️ URL processing 상태 등록 실패 (Blob): ${registerResult.error}`);
         }
         
         ServerLogger.info(`✅ URL 중복 검사 통과 (Blob): ${postUrl}`, 'API_DUPLICATE_BLOB');
@@ -1263,6 +1355,27 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
         
         ServerLogger.info('✅ blob 비디오 처리 완료');
         
+        // ✅ 성공적으로 처리 완료 시 MongoDB 상태를 'completed'로 업데이트
+        if (videoUrlDoc && postUrl) {
+          try {
+            const VideoUrl = require('./models/VideoUrl');
+            const normalizedUrl = sheetsManager.normalizeVideoUrl(postUrl);
+            
+            // sheetInfo가 있으면 사용, 없으면 null로 업데이트
+            const sheetLocation = result.sheets ? {
+              sheetName: result.sheets.sheetName,
+              column: 'N', // URL 저장 컬럼
+              row: result.sheets.nextRow
+            } : null;
+            
+            await VideoUrl.updateStatus(normalizedUrl, 'completed', sheetLocation);
+            
+            ServerLogger.info(`✅ URL 상태 업데이트 (Blob): ${normalizedUrl} -> completed`);
+          } catch (statusError) {
+            ServerLogger.warn(`⚠️ URL 상태 업데이트 실패 (Blob): ${statusError.message}`);
+          }
+        }
+        
         const responseData = {
           processing: {
             platform,
@@ -1298,6 +1411,21 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     
   } catch (error) {
     ServerLogger.error('blob 비디오 처리 실패:', error);
+    
+    // ❌ 처리 실패 시 MongoDB에서 해당 URL 레코드 삭제 (재시도 가능하도록)
+    if (videoUrlDoc && postUrl) {
+      try {
+        const VideoUrl = require('./models/VideoUrl');
+        const normalizedUrl = sheetsManager.normalizeVideoUrl(postUrl);
+        
+        await VideoUrl.deleteOne({ normalizedUrl });
+        
+        ServerLogger.info(`🗑️ 처리 실패로 인한 URL 레코드 삭제 (Blob): ${normalizedUrl}`);
+      } catch (deleteError) {
+        ServerLogger.warn(`⚠️ 처리 실패 URL 레코드 삭제 실패 (Blob): ${deleteError.message}`);
+      }
+    }
+    
     ResponseHandler.serverError(res, {
       ...error,
       code: ERROR_CODES.VIDEO_PROCESSING_FAILED
@@ -1647,6 +1775,64 @@ app.post('/api/get-instagram-thumbnail', async (req, res) => {
   }
 });
 
+// MongoDB URL 상태 통계 및 정리 상태 조회
+app.get('/api/mongodb/url-stats', async (req, res) => {
+  try {
+    const VideoUrl = require('./models/VideoUrl');
+    
+    const stats = await VideoUrl.getStats();
+    
+    if (stats.error) {
+      return ResponseHandler.serverError(res, {
+        code: 'STATS_QUERY_FAILED',
+        message: stats.error
+      }, 'MongoDB URL 통계 조회 실패');
+    }
+    
+    ResponseHandler.success(res, {
+      ...stats,
+      cleanupInfo: {
+        staleThresholdMinutes: 10,
+        description: '10분 이상 processing 상태인 레코드는 자동 정리됩니다',
+        nextCleanup: '매 10분마다 자동 실행'
+      }
+    }, 'MongoDB URL 상태 통계 조회 성공');
+    
+  } catch (error) {
+    ServerLogger.error('MongoDB URL 통계 조회 실패:', error);
+    ResponseHandler.serverError(res, error, 'URL 통계 조회 중 오류가 발생했습니다.');
+  }
+});
+
+// 수동으로 오래된 processing 레코드 정리
+app.post('/api/mongodb/cleanup', async (req, res) => {
+  try {
+    const VideoUrl = require('./models/VideoUrl');
+    
+    const result = await VideoUrl.cleanupStaleProcessing();
+    
+    if (result.success) {
+      ServerLogger.info(`🧹 수동 정리 완료: ${result.deletedCount}개 레코드 삭제`);
+      
+      ResponseHandler.success(res, {
+        deletedCount: result.deletedCount,
+        message: result.deletedCount > 0 
+          ? `${result.deletedCount}개의 오래된 processing 레코드를 정리했습니다.`
+          : '정리할 오래된 레코드가 없습니다.'
+      }, '수동 정리 완료');
+    } else {
+      ResponseHandler.serverError(res, {
+        code: 'CLEANUP_FAILED',
+        message: result.error
+      }, '정리 작업 실패');
+    }
+    
+  } catch (error) {
+    ServerLogger.error('수동 정리 실패:', error);
+    ResponseHandler.serverError(res, error, '정리 작업 중 오류가 발생했습니다.');
+  }
+});
+
 // 트렌딩 수집 통계 조회
 app.get('/api/trending-stats', async (req, res) => {
   try {
@@ -1681,6 +1867,31 @@ const startServer = async () => {
   try {
     // MongoDB 연결 시도
     await DatabaseManager.connect();
+    
+    // 🧹 서버 시작 시 오래된 processing 레코드 정리
+    try {
+      const VideoUrl = require('./models/VideoUrl');
+      const cleanupResult = await VideoUrl.cleanupStaleProcessing();
+      
+      if (cleanupResult.success && cleanupResult.deletedCount > 0) {
+        ServerLogger.info(`🧹 서버 시작 시 오래된 processing 레코드 정리: ${cleanupResult.deletedCount}개`);
+      }
+      
+      // ⏰ 10분마다 정리 작업 스케줄링
+      setInterval(async () => {
+        try {
+          const result = await VideoUrl.cleanupStaleProcessing();
+          if (result.success && result.deletedCount > 0) {
+            ServerLogger.info(`🧹 정기 정리: 오래된 processing 레코드 ${result.deletedCount}개 삭제`);
+          }
+        } catch (intervalError) {
+          ServerLogger.warn(`⚠️ 정기 정리 실패: ${intervalError.message}`);
+        }
+      }, 10 * 60 * 1000); // 10분마다
+      
+    } catch (cleanupError) {
+      ServerLogger.warn(`⚠️ 초기 정리 실패 (무시): ${cleanupError.message}`);
+    }
     
     app.listen(PORT, () => {
       ServerLogger.info(`

@@ -700,26 +700,40 @@ class SheetsManager {
       // 새 비디오 저장 후 캐시 무효화
       this.invalidateCache();
       
-      // 🔗 MongoDB에 URL 저장 (중복 검사용)
+      // 🔗 MongoDB URL 상태 업데이트 (processing -> completed)
       try {
         const VideoUrl = require('../models/VideoUrl');
         const normalizedUrl = this.normalizeVideoUrl(postUrl);
         
-        await VideoUrl.create({
-          normalizedUrl: normalizedUrl,
-          originalUrl: postUrl,
-          platform: platform,
-          sheetLocation: {
-            sheetName: sheetName,
-            column: 'N', // URL이 저장되는 컬럼
-            row: nextRow
-          }
+        // processing 상태인 URL을 completed로 업데이트
+        const updateResult = await VideoUrl.updateStatus(normalizedUrl, 'completed', {
+          sheetName: sheetName,
+          column: 'N', // URL이 저장되는 컬럼
+          row: nextRow
         });
         
-        ServerLogger.info(`🔗 MongoDB에 URL 저장 완료: ${normalizedUrl} (${platform} ${nextRow}행)`);
+        if (updateResult.success) {
+          ServerLogger.info(`🔗 MongoDB URL 상태 업데이트 완료: ${normalizedUrl} -> completed (${platform} ${nextRow}행)`);
+        } else {
+          // processing 상태 레코드가 없는 경우 - 새로 생성 (fallback)
+          await VideoUrl.create({
+            normalizedUrl: normalizedUrl,
+            originalUrl: postUrl,
+            platform: platform,
+            status: 'completed',
+            sheetLocation: {
+              sheetName: sheetName,
+              column: 'N',
+              row: nextRow
+            }
+          });
+          
+          ServerLogger.info(`🔗 MongoDB URL 새로 생성 (completed): ${normalizedUrl} (${platform} ${nextRow}행)`);
+        }
+        
       } catch (mongoError) {
         // MongoDB 저장 실패해도 전체 프로세스는 계속
-        ServerLogger.warn(`⚠️ MongoDB URL 저장 실패 (무시): ${mongoError.message}`);
+        ServerLogger.warn(`⚠️ MongoDB URL 상태 업데이트 실패 (무시): ${mongoError.message}`);
       }
       
       return {
@@ -865,10 +879,11 @@ class SheetsManager {
       // 배치 저장 후 캐시 무효화
       this.invalidateCache();
 
-      // 🔗 MongoDB에 URL들 배치 저장 (중복 검사용)
+      // 🔗 MongoDB URL들 상태 업데이트 (processing -> completed)
       try {
         const VideoUrl = require('../models/VideoUrl');
-        const mongoUrls = [];
+        let updatedCount = 0;
+        let createdCount = 0;
         
         for (let i = 0; i < batchRows.length; i++) {
           const videoData = videoDataArray[i];
@@ -878,23 +893,39 @@ class SheetsManager {
             const originalUrl = videoData.postUrl || videoData.videoUrl;
             const normalizedUrl = this.normalizeVideoUrl(originalUrl);
             
-            mongoUrls.push({
-              normalizedUrl: normalizedUrl,
-              originalUrl: originalUrl,
-              platform: platform,
-              sheetLocation: {
+            try {
+              // processing 상태인 URL을 completed로 업데이트 시도
+              const updateResult = await VideoUrl.updateStatus(normalizedUrl, 'completed', {
                 sheetName: sheetName,
                 column: 'N',
                 row: rowNumber
+              });
+              
+              if (updateResult.success) {
+                updatedCount++;
+              } else {
+                // processing 상태 레코드가 없는 경우 - 새로 생성 (fallback)
+                await VideoUrl.create({
+                  normalizedUrl: normalizedUrl,
+                  originalUrl: originalUrl,
+                  platform: platform,
+                  status: 'completed',
+                  sheetLocation: {
+                    sheetName: sheetName,
+                    column: 'N',
+                    row: rowNumber
+                  }
+                });
+                createdCount++;
               }
-            });
+              
+            } catch (urlError) {
+              ServerLogger.warn(`⚠️ URL 상태 처리 실패 (${normalizedUrl}): ${urlError.message}`);
+            }
           }
         }
         
-        if (mongoUrls.length > 0) {
-          await VideoUrl.insertMany(mongoUrls, { ordered: false }); // 일부 중복 무시
-          ServerLogger.info(`🔗 MongoDB에 배치 URL 저장 완료: ${mongoUrls.length}개`);
-        }
+        ServerLogger.info(`🔗 MongoDB 배치 URL 상태 처리 완료: 업데이트 ${updatedCount}개, 새로 생성 ${createdCount}개`);
       } catch (mongoError) {
         // MongoDB 저장 실패해도 전체 프로세스는 계속
         ServerLogger.warn(`⚠️ MongoDB 배치 URL 저장 실패 (무시): ${mongoError.message}`);

@@ -235,10 +235,25 @@ export class YouTubeHandler extends BasePlatformHandler {
       return;
     }
 
-    const originalText = button.textContent;
-    button.textContent = '분석 중...';
-    button.disabled = true;
+    this.log('info', 'YouTube 분석 버튼 클릭됨');
+    
+    // 🎯 새로운 안전한 버튼 처리 사용
+    const success = await this.safeButtonProcessing(
+      button,
+      this.processYouTubeVideoSafe,
+      {}
+    );
 
+    if (success) {
+      this.log('info', 'YouTube 분석 완료');
+    }
+  }
+
+  /**
+   * 안전한 YouTube 비디오 분석 처리
+   * @returns {Promise<boolean>} 성공 여부
+   */
+  async processYouTubeVideoSafe() {
     try {
       const metadata = this.extractMetadata();
       const videoUrl = this.getCurrentVideoUrl();
@@ -264,21 +279,15 @@ export class YouTubeHandler extends BasePlatformHandler {
       if (result === null) {
         // 중복 URL로 인한 처리 중단
         this.log('info', '중복 URL로 인해 YouTube 처리 중단됨');
-        return;
+        throw new Error('🔄 이미 처리 중인 영상이거나 중복된 URL입니다');
       }
 
       this.log('success', 'YouTube 영상 분석 완료', result);
-      this.uiManager.showNotification(
-        `분석 완료: ${result.analysis?.category || '카테고리 분석됨'}`, 
-        'success'
-      );
+      return true;
 
     } catch (error) {
       this.log('error', 'YouTube 영상 분석 실패', error);
-      this.uiManager.showNotification('분석 실패: ' + error.message, 'error');
-    } finally {
-      button.textContent = originalText;
-      button.disabled = false;
+      throw error;
     }
   }
 

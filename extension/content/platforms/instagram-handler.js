@@ -1692,42 +1692,47 @@ export class InstagramHandler extends BasePlatformHandler {
    * @param {Element} button 클릭된 버튼
    */
   async handleAnalysisButtonClick(post, video, button) {
-    // 버튼 상태를 로딩으로 변경
-    const originalHTML = button.innerHTML;
-    button.innerHTML = '<div style="font-size: 10px;">⏳</div>';
-    button.style.pointerEvents = 'none';
+    this.log('info', '수동 분석 버튼 클릭됨');
+    
+    // 🎯 새로운 안전한 버튼 처리 사용
+    const success = await this.safeButtonProcessing(
+      button,
+      this.processVideoFromSaveActionSafe,
+      { post, video }
+    );
 
-    try {
-      this.log('info', '수동 분석 버튼 클릭됨');
-      
-      // 동일한 분석 로직 사용
-      await this.processVideoFromSaveAction(post, video);
-      
-      // 성공 상태로 변경
-      button.innerHTML = '<div style="font-size: 10px;">✅</div>';
-      
-      this.uiManager.showNotification(
-        '✅ 영상 AI 분석이 완료되었습니다!', 
-        CONSTANTS.NOTIFICATION_TYPES.SUCCESS
-      );
-      
-    } catch (error) {
-      this.log('error', '수동 분석 실패', error);
-      
-      // 에러 상태로 변경
-      button.innerHTML = '<div style="font-size: 10px;">❌</div>';
-      
-      this.uiManager.showNotification(
-        `영상 분석에 실패했습니다: ${error.message}`, 
-        CONSTANTS.NOTIFICATION_TYPES.ERROR
-      );
+    if (success) {
+      this.log('info', '수동 분석 완료');
     }
+  }
 
-    // 3초 후 원래 상태로 복원
-    setTimeout(() => {
-      button.innerHTML = originalHTML;
-      button.style.pointerEvents = 'auto';
-    }, 3000);
+  /**
+   * 안전한 비디오 분석 처리 (에러 처리 포함)
+   * @param {Object} params - { post, video }
+   * @returns {Promise<boolean>} 성공 여부
+   */
+  async processVideoFromSaveActionSafe({ post, video }) {
+    try {
+      await this.processVideoFromSaveAction(post, video);
+      return true;
+    } catch (error) {
+      this.log('error', '비디오 분석 실패', error);
+      
+      // 중복 URL인 경우 특별 처리
+      if (error.message && (error.message.includes('중복') || error.message.includes('처리 중'))) {
+        this.uiManager.showNotification(
+          `⚠️ ${error.message}`, 
+          CONSTANTS.NOTIFICATION_TYPES.WARNING
+        );
+      } else {
+        this.uiManager.showNotification(
+          `영상 분석에 실패했습니다: ${error.message}`, 
+          CONSTANTS.NOTIFICATION_TYPES.ERROR
+        );
+      }
+      
+      return false;
+    }
   }
 
   /**
