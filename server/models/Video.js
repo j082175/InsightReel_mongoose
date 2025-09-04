@@ -33,7 +33,7 @@ const videoSchema = new mongoose.Schema({
   // 계정/채널 정보
   account: {
     type: String,
-    required: true,
+    required: false, // 🆕 required를 false로 변경
     index: true  // 계정별 검색 최적화
   },
   

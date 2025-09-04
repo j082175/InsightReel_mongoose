@@ -17,6 +17,7 @@ const VideoUrl = require('./models/VideoUrl');
 const VideoProcessor = require('./services/VideoProcessor');
 const AIAnalyzer = require('./services/AIAnalyzer');
 const SheetsManager = require('./services/SheetsManager');
+const UnifiedVideoSaver = require('./services/UnifiedVideoSaver'); // 🆕 통합 저장 서비스
 const youtubeBatchProcessor = require('./services/YouTubeBatchProcessor');
 const ChannelTrendingCollector = require('./services/ChannelTrendingCollector');
 const { ServerLogger } = require('./utils/logger');
@@ -77,6 +78,7 @@ ServerLogger.info('🔧 BEFORE SERVICES DEBUG: 서비스 초기화 전');
 const videoProcessor = new VideoProcessor();
 const aiAnalyzer = new AIAnalyzer();
 const sheetsManager = new SheetsManager();
+const unifiedVideoSaver = new UnifiedVideoSaver(); // 🆕 통합 저장 서비스 인스턴스
 
 // 서비스 초기화 후 디버그
 app.get('/api/debug-after-services', (req, res) => {
@@ -526,10 +528,20 @@ app.get('/api/config/health', (req, res) => {
 // 비디오 처리 메인 엔드포인트
 app.post('/api/process-video', async (req, res) => {
   try {
-    const { platform, videoUrl, postUrl, metadata, analysisType = 'quick', useAI = true, mode = 'immediate' } = req.body;
+    const { platform, videoUrl, postUrl, url, metadata, analysisType = 'quick', useAI = true, mode = 'immediate' } = req.body;
+    
+    // 🆕 URL 필드 통합 처리 (url 필드도 지원)
+    const finalVideoUrl = videoUrl || url;
+    const finalPostUrl = postUrl;
+    
+    // 🆕 플랫폼 자동 감지 (platform이 없는 경우)
+    const finalPlatform = platform || (finalVideoUrl ? 
+      (finalVideoUrl.includes('youtube.com') || finalVideoUrl.includes('youtu.be') ? 'youtube' : 
+       finalVideoUrl.includes('instagram.com') ? 'instagram' : 
+       finalVideoUrl.includes('tiktok.com') ? 'tiktok' : 'unknown') : 'unknown');
     
     // 🔍 URL 중복 검사 (모든 플랫폼 공통)
-    const checkUrl = videoUrl || postUrl;
+    const checkUrl = finalVideoUrl || finalPostUrl;
     let videoUrlDoc = null;  // MongoDB 문서 참조용
     
     if (checkUrl) {
@@ -589,7 +601,7 @@ app.post('/api/process-video', async (req, res) => {
     }
     
     // 🆕 YouTube 배치 모드 처리
-    if (platform === 'youtube' && mode === 'batch') {
+    if (finalPlatform === 'youtube' && mode === 'batch') {
       try {
         const options = {
           priority: req.body.priority || 'normal',
@@ -601,7 +613,7 @@ app.post('/api/process-video', async (req, res) => {
           metadata: metadata || {}
         };
 
-        const batchResult = await youtubeBatchProcessor.addToBatch(videoUrl, options);
+        const batchResult = await youtubeBatchProcessor.addToBatch(finalVideoUrl, options);
         
         ServerLogger.info(`📦 YouTube 배치 모드: 큐에 추가됨`, {
           batchId: batchResult.batchId,
@@ -632,11 +644,12 @@ app.post('/api/process-video', async (req, res) => {
     
     // 큐에 작업 추가
     const result = await videoQueue.addToQueue({
-      id: `url_${platform}_${Date.now()}`,
+      id: `url_${finalPlatform}_${Date.now()}`,
       type: 'url',
-      data: { platform, videoUrl, postUrl, metadata, analysisType, useAI },
+      data: { platform: finalPlatform, videoUrl: finalVideoUrl, postUrl: finalPostUrl, metadata, analysisType, useAI },
       processor: async (taskData) => {
-        const { platform, videoUrl, postUrl, metadata, analysisType, useAI } = taskData;
+        const { platform, videoUrl, postUrl, analysisType, useAI } = taskData;
+        let metadata = taskData.metadata; // 🆕 재할당 가능하도록 let으로 선언
         
         ServerLogger.info(`🎬 Processing ${platform} video:`, postUrl || videoUrl);
         ServerLogger.info(`🔍 Analysis type: ${analysisType}, AI 분석: ${useAI ? '활성화' : '비활성화'}`);
@@ -665,6 +678,10 @@ app.post('/api/process-video', async (req, res) => {
         
         if (platform === 'youtube') {
           // YouTube 정보를 원본 metadata에 병합 (시트 저장용)
+          // 🆕 metadata가 null/undefined인 경우 빈 객체로 초기화
+          if (!metadata || typeof metadata !== 'object') {
+            metadata = {};
+          }
           Object.assign(metadata, {
             title: youtubeInfo.title,
             description: youtubeInfo.description,
@@ -817,9 +834,9 @@ app.post('/api/process-video', async (req, res) => {
           };
         }
         
-        // 4단계: 구글 시트 저장 (AI 분석 성공 시에만)
-        ServerLogger.info('4️⃣ 구글 시트 저장 중...');
-        await sheetsManager.saveVideoData({
+        // 4-5단계: 통합 저장 (Google Sheets + MongoDB 동시 저장) 🆕
+        ServerLogger.info('4-5️⃣ 통합 저장 시작 (Google Sheets + MongoDB)');
+        const result = await unifiedVideoSaver.saveVideoData(platform, {
           platform,
           postUrl,
           videoPath,
@@ -830,40 +847,22 @@ app.post('/api/process-video', async (req, res) => {
           timestamp: new Date().toISOString()
         });
         
-        // 5단계: MongoDB에도 저장 (빠른 조회용)
-        if (process.env.USE_MONGODB === 'true') {
-          try {
-            ServerLogger.info('5️⃣ MongoDB 저장 중...');
-            const videoDoc = new Video({
-              platform: platform.toLowerCase(),
-              timestamp: new Date(),
-              account: postUrl,
-              title: analysis?.content || analysis?.mainCategory || '제목 없음',
-              likes: 0,
-              views: 0,
-              shares: 0,
-              comments: postUrl,
-              comments_count: 0,
-              category: analysis?.mainCategory || '미분류',
-              ai_description: analysis?.content || '',
-              keywords: analysis?.keywords || [],
-              hashtags: analysis?.hashtags || [],
-              duration: '',
-              videoUrl: videoPath
-            });
-            await videoDoc.save();
-            ServerLogger.info('✅ MongoDB 저장 완료!');
-          } catch (mongoError) {
-            ServerLogger.error('⚠️ MongoDB 저장 실패 (시트는 성공)', mongoError.message);
-            // MongoDB 실패해도 계속 진행
-          }
+        // 통합 저장 결과 확인
+        if (!result.success) {
+          throw new Error(`통합 저장 실패: ${result.error}`);
         }
+        
+        ServerLogger.info('✅ 통합 저장 완료!', {
+          sheetsTime: `${result.performance.sheetsTime}ms`,
+          mongoTime: `${result.performance.mongoTime}ms`,
+          totalTime: `${result.performance.totalTime}ms`
+        });
         
         // 통계 업데이트
         stats.total++;
         stats.today++;
         
-        ServerLogger.info('✅ 비디오 처리 완료');
+        ServerLogger.info('✅ 비디오 처리 완료 (통합 저장)');
         
         // ✅ 성공적으로 처리 완료 시 MongoDB 상태를 'completed'로 업데이트
         if (videoUrlDoc && checkUrl) {
@@ -878,7 +877,7 @@ app.post('/api/process-video', async (req, res) => {
               row: result.sheets.nextRow
             } : null;
             
-            await VideoUrl.updateStatus(normalizedUrl, 'completed', sheetLocation);
+            // await VideoUrl.updateStatus(normalizedUrl, 'completed', sheetLocation); // 🆕 비활성화
             
             ServerLogger.info(`✅ URL 상태 업데이트: ${normalizedUrl} -> completed`);
           } catch (statusError) {
@@ -922,7 +921,9 @@ app.post('/api/process-video', async (req, res) => {
     ServerLogger.error('비디오 처리 실패:', error);
     
     // ❌ 처리 실패 시 MongoDB에서 해당 URL 레코드 삭제 (재시도 가능하도록)
-    if (videoUrlDoc && checkUrl) {
+    const { videoUrl: errorVideoUrl, postUrl: errorPostUrl } = req.body; // 🆕 req.body에서 직접 추출
+    const checkUrl = errorVideoUrl || errorPostUrl;
+    if (checkUrl) {
       try {
         const VideoUrl = require('./models/VideoUrl');
         const normalizedUrl = sheetsManager.normalizeVideoUrl(checkUrl);
@@ -1342,9 +1343,9 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
           };
         }
         
-        // 4단계: 구글 시트 저장 (AI 분석 성공 시에만)
-        ServerLogger.info('4️⃣ 구글 시트 저장 중...');
-        await sheetsManager.saveVideoData({
+        // 4-5단계: 통합 저장 (Google Sheets + MongoDB 동시 저장) 🆕
+        ServerLogger.info('4-5️⃣ 통합 저장 시작 (Google Sheets + MongoDB)');
+        const result = await unifiedVideoSaver.saveVideoData(platform, {
           platform,
           postUrl,
           videoPath,
@@ -1355,40 +1356,22 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
           timestamp: new Date().toISOString()
         });
         
-        // 5단계: MongoDB에도 저장 (빠른 조회용)
-        if (process.env.USE_MONGODB === 'true') {
-          try {
-            ServerLogger.info('5️⃣ MongoDB 저장 중...');
-            const videoDoc = new Video({
-              platform: platform.toLowerCase(),
-              timestamp: new Date(),
-              account: postUrl,
-              title: analysis?.content || analysis?.mainCategory || '제목 없음',
-              likes: 0,
-              views: 0,
-              shares: 0,
-              comments: postUrl,
-              comments_count: 0,
-              category: analysis?.mainCategory || '미분류',
-              ai_description: analysis?.content || '',
-              keywords: analysis?.keywords || [],
-              hashtags: analysis?.hashtags || [],
-              duration: '',
-              videoUrl: videoPath
-            });
-            await videoDoc.save();
-            ServerLogger.info('✅ MongoDB 저장 완료!');
-          } catch (mongoError) {
-            ServerLogger.error('⚠️ MongoDB 저장 실패 (시트는 성공)', mongoError.message);
-            // MongoDB 실패해도 계속 진행
-          }
+        // 통합 저장 결과 확인
+        if (!result.success) {
+          throw new Error(`통합 저장 실패: ${result.error}`);
         }
+        
+        ServerLogger.info('✅ 통합 저장 완료!', {
+          sheetsTime: `${result.performance.sheetsTime}ms`,
+          mongoTime: `${result.performance.mongoTime}ms`,
+          totalTime: `${result.performance.totalTime}ms`
+        });
         
         // 통계 업데이트
         stats.total++;
         stats.today++;
         
-        ServerLogger.info('✅ blob 비디오 처리 완료');
+        ServerLogger.info('✅ blob 비디오 처리 완료 (통합 저장)');
         
         // ✅ 성공적으로 처리 완료 시 MongoDB 상태를 'completed'로 업데이트
         if (videoUrlDoc && postUrl) {
@@ -1403,7 +1386,7 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
               row: result.sheets.nextRow
             } : null;
             
-            await VideoUrl.updateStatus(normalizedUrl, 'completed', sheetLocation);
+            // await VideoUrl.updateStatus(normalizedUrl, 'completed', sheetLocation); // 🆕 비활성화
             
             ServerLogger.info(`✅ URL 상태 업데이트 (Blob): ${normalizedUrl} -> completed`);
           } catch (statusError) {
@@ -1889,6 +1872,81 @@ app.get('/api/trending-stats', async (req, res) => {
     
   } catch (error) {
     ResponseHandler.serverError(res, error, '통계 조회 중 오류가 발생했습니다.');
+  }
+});
+
+// 🔗 통합 저장 시스템 테스트 API 🆕
+app.get('/api/unified-saver/stats', async (req, res) => {
+  try {
+    const { platform } = req.query;
+    const stats = await unifiedVideoSaver.getSaveStatistics(platform);
+    
+    ResponseHandler.success(res, stats, '통합 저장 통계 조회 성공');
+  } catch (error) {
+    ServerLogger.error('통합 저장 통계 조회 실패', error.message, 'UNIFIED_SAVER_API');
+    ResponseHandler.serverError(res, error, '통합 저장 통계 조회 실패');
+  }
+});
+
+// 🔍 데이터 일관성 검증 API 🆕
+app.get('/api/unified-saver/validate/:platform', async (req, res) => {
+  try {
+    const { platform } = req.params;
+    const { limit = 100 } = req.query;
+    
+    const validationResult = await unifiedVideoSaver.validateDataConsistency(platform, parseInt(limit));
+    
+    ResponseHandler.success(res, validationResult, `${platform} 데이터 일관성 검증 완료`);
+  } catch (error) {
+    ServerLogger.error(`데이터 일관성 검증 실패: ${req.params.platform}`, error.message, 'UNIFIED_SAVER_API');
+    ResponseHandler.serverError(res, error, '데이터 일관성 검증 실패');
+  }
+});
+
+// 🗑️ MongoDB 데이터 전체 삭제 API (개발/테스트용)
+app.post('/api/clear-database', async (req, res) => {
+  try {
+    ServerLogger.info('🗑️ MongoDB 데이터 전체 삭제 요청 시작', 'DATABASE_CLEAR');
+    
+    // MongoDB 연결 확인
+    if (!DatabaseManager.isConnectedStatus().connected) {
+      await DatabaseManager.connect();
+    }
+    
+    // 현재 개수 확인
+    const beforeCount = await Video.countDocuments();
+    ServerLogger.info(`📊 삭제 전 비디오 개수: ${beforeCount}개`, 'DATABASE_CLEAR');
+    
+    // 모든 비디오 삭제
+    const result = await Video.deleteMany({});
+    ServerLogger.info(`🗑️ 삭제된 비디오 개수: ${result.deletedCount}개`, 'DATABASE_CLEAR');
+    
+    // 삭제 후 개수 확인
+    const afterCount = await Video.countDocuments();
+    ServerLogger.info(`📊 삭제 후 비디오 개수: ${afterCount}개`, 'DATABASE_CLEAR');
+    
+    // VideoUrl 컬렉션도 있으면 삭제
+    try {
+      const VideoUrl = require('./models/VideoUrl');
+      const beforeUrlCount = await VideoUrl.countDocuments();
+      const urlResult = await VideoUrl.deleteMany({});
+      ServerLogger.info(`🗑️ 삭제된 VideoUrl 개수: ${urlResult.deletedCount}개 (삭제 전: ${beforeUrlCount}개)`, 'DATABASE_CLEAR');
+    } catch (urlError) {
+      ServerLogger.warn(`⚠️ VideoUrl 삭제 중 오류 (무시): ${urlError.message}`, 'DATABASE_CLEAR');
+    }
+    
+    ResponseHandler.success(res, {
+      deletedCount: result.deletedCount,
+      beforeCount: beforeCount,
+      afterCount: afterCount,
+      message: `✅ MongoDB 데이터 삭제 완료! (${result.deletedCount}개 삭제)`
+    }, 'MongoDB 데이터가 성공적으로 삭제되었습니다.');
+    
+    ServerLogger.info('✅ MongoDB 데이터 전체 삭제 완료!', 'DATABASE_CLEAR');
+    
+  } catch (error) {
+    ServerLogger.error('❌ MongoDB 데이터 삭제 실패:', error, 'DATABASE_CLEAR');
+    ResponseHandler.serverError(res, error, 'MongoDB 데이터 삭제 중 오류가 발생했습니다.');
   }
 });
 

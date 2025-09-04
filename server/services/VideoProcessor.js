@@ -77,6 +77,12 @@ class VideoProcessor {
     try {
       ServerLogger.info(`🔗 다운로드 시작 - Platform: ${platform}`);
       ServerLogger.info(`🔗 Video URL: ${videoUrl}`);
+      
+      // URL 유효성 검사 추가 🆕
+      if (!videoUrl || typeof videoUrl !== 'string') {
+        throw new Error(`잘못된 URL 형식: ${videoUrl}`);
+      }
+      
       ServerLogger.info(`🔗 URL 첫 100자: ${videoUrl.substring(0, 100)}...`);
       
       // blob URL 체크

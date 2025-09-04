@@ -1,5 +1,29 @@
 // dashboard.html의 원래 JavaScript 코드 (외부 파일로 분리)
 
+// 🔥 강제 캐시 클리어 (페이지 로드 시 한 번만 실행)
+if (!window.cacheClearedFlag) {
+    console.log('🗑️ 브라우저 캐시 강제 클리어 중...');
+    
+    // SessionStorage와 LocalStorage의 비디오 관련 캐시 클리어
+    const keys = Object.keys(sessionStorage);
+    keys.forEach(key => {
+        if (key.includes('video') || key.includes('cache')) {
+            sessionStorage.removeItem(key);
+        }
+    });
+    
+    const lsKeys = Object.keys(localStorage);
+    lsKeys.forEach(key => {
+        if (key.includes('video') || key.includes('cache')) {
+            localStorage.removeItem(key);
+        }
+    });
+    
+    // 플래그 설정 (페이지 세션 동안 한 번만 실행)
+    window.cacheClearedFlag = true;
+    console.log('✅ 브라우저 캐시 클리어 완료');
+}
+
 // API 서버 기본 URL
 const API_BASE_URL = 'http://localhost:3000';
 
@@ -33,6 +57,10 @@ const VideoCache = {
         console.log('🗑️ 캐시 데이터 삭제');
     }
 };
+
+// 페이지 로드 시 캐시 즉시 클리어
+VideoCache.clear();
+console.log('🔥 VideoCache 초기화 시 클리어됨');
 
 // API 헬퍼 함수들
 const API = {
@@ -353,7 +381,24 @@ function updateVideoGridWithTrending(stats) {
 // 기타 함수들
 async function loadRecentVideos() {
     UI.showLoading('최신 영상 로드 중...');
-    console.log('최신 영상 로드 (구현 예정)');
+    
+    try {
+        // 캐시 클리어해서 최신 데이터 가져오기
+        VideoCache.clear();
+        
+        const videos = await API.getVideos();
+        if (videos && videos.success && videos.data.videos) {
+            console.log('🎬 최신 영상 데이터:', videos.data.videos.length, '개');
+            updateVideoGridWithRecent(videos.data.videos);
+            UI.showSuccess(`최신 영상 ${videos.data.videos.length}개를 불러왔습니다!`);
+        } else {
+            showNoVideosMessage();
+        }
+    } catch (error) {
+        console.error('최신 영상 로드 실패:', error);
+        UI.showError('최신 영상을 불러올 수 없습니다.');
+        showNoVideosMessage();
+    }
 }
 
 async function loadPopularVideos() {
@@ -1970,4 +2015,100 @@ console.log('📄 dashboard.js 로드 완료 - 썸네일 우선 시스템 적용
         setupLimitFilter();
         if (!isSetup) setTimeout(setupLimitFilter, 100);
     }
-})();
+})();// 최신 비디오 그리드 업데이트 함수
+function updateVideoGridWithRecent(videos) {
+    const videoGrid = document.querySelector('.video-grid');
+    
+    if (!videos || videos.length === 0) {
+        showNoVideosMessage();
+        return;
+    }
+    
+    const html = videos.map(video => {
+        const platform = video.platform || 'unknown';
+        const videoLink = video.account || video.url || '#';
+        let thumbnailHtml = '';
+        
+        // 플랫폼별 설정
+        const platformConfig = {
+            'youtube': {
+                name: 'YouTube',
+                emoji: '📺',
+                gradient: 'linear-gradient(135deg, #FF0000, #CC0000)'
+            },
+            'instagram': {
+                name: 'Instagram',
+                emoji: '📸',
+                gradient: 'linear-gradient(135deg, #E91E63, #C2185B)'
+            },
+            'tiktok': {
+                name: 'TikTok',
+                emoji: '🎵',
+                gradient: 'linear-gradient(135deg, #000000, #333333)'
+            },
+            'unknown': {
+                name: 'Unknown',
+                emoji: '❓',
+                gradient: 'linear-gradient(135deg, #757575, #616161)'
+            }
+        };
+        
+        // 썸네일 처리
+        if (video.thumbnailUrl && video.thumbnailUrl.startsWith('http')) {
+            thumbnailHtml = `
+                <img src="${video.thumbnailUrl}" 
+                     alt="${video.title}" 
+                     onclick="openVideoLink('${videoLink}', '${platform}')"
+                     style="width: 100%; height: 180px; object-fit: cover; border-radius: 8px; cursor: pointer;">`;
+        } else {
+            const config = platformConfig[platform] || platformConfig['unknown'];
+            
+            thumbnailHtml = `
+                <div class="thumbnail-container" onclick="openVideoLink('${videoLink}', '${platform}')" style="
+                    position: relative; width: 100%; height: 180px; 
+                    background: ${config.gradient};
+                    border-radius: 8px; display: flex; flex-direction: column; 
+                    align-items: center; justify-content: center; cursor: pointer;">
+                    <div style="color: white; font-size: 48px; margin-bottom: 10px;">${config.emoji}</div>
+                    <div style="color: white; font-size: 14px; font-weight: bold;">${config.name}</div>
+                    <div style="color: white; font-size: 0.8rem; opacity: 0.8; margin-top: 0.25rem;">클릭하여 보기</div>
+                    <div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${platform.toUpperCase()}</div>
+                </div>`;
+        }
+        
+        return `
+        <div class="video-card">
+            <div class="video-thumbnail" style="position: relative;">
+                ${thumbnailHtml}
+            </div>
+            <div class="video-info">
+                <h3 class="video-title">${video.title || 'Untitled Video'}</h3>
+                <div class="channel-info">
+                    <div class="channel-avatar">${platform.charAt(0).toUpperCase()}</div>
+                    <span class="channel-name">${extractChannelName(video.account, platform)}</span>
+                </div>
+                <div class="video-stats">
+                    <span>🏷️ ${video.category || 'N/A'}</span>
+                    <span>💬 ${video.comments ? '댓글 있음' : '0'}</span>
+                    <span>❤️ ${video.likes || video.views || '0'}</span>
+                </div>
+                <div class="video-meta">
+                    <span class="upload-date">📅 ${formatDateTime(video.timestamp || video.originalPublishDate)}</span>
+                    <span class="platform-tag platform-${platform}" style="background: ${getPlatformColor(platform)}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;">${platform.toUpperCase()}</span>
+                </div>
+                <div class="video-actions">
+                    <button onclick="copyToClipboard('${videoLink}')" class="action-btn">🔗 링크 복사</button>
+                    <button onclick="openVideoLink('${videoLink}', '${platform}')" class="action-btn">${getPlatformEmoji(platform)} ${platform === 'youtube' ? 'YouTube' : platform === 'instagram' ? 'Instagram' : platform.toUpperCase()}에서 열기</button>
+                </div>
+            </div>
+        </div>
+        `;
+    }).join('');
+    
+    videoGrid.innerHTML = html;
+    
+    // 플랫폼별 영상 개수 업데이트 
+    if (typeof updatePlatformCounts === 'function') {
+        updatePlatformCounts(videos);
+    }
+}

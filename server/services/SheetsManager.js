@@ -734,11 +734,11 @@ class SheetsManager {
               processedAt: new Date()
             },
             {
-              title: analysisResult.title || metadata.title || '미분류',
-              category: analysisResult.mainCategory || '미분류',  // mainCategory 사용 🎯
-              keywords: analysisResult.keywords || [],
-              hashtags: analysisResult.keywords ? analysisResult.keywords.map(k => `#${k}`) : [],
-              description: analysisResult.description || '',
+              title: analysis.title || metadata.title || '미분류',
+              category: analysis.mainCategory || '미분류',  // mainCategory 사용 🎯
+              keywords: analysis.keywords || [],
+              hashtags: analysis.keywords ? analysis.keywords.map(k => `#${k}`) : [],
+              description: analysis.content || analysis.description || '',
               thumbnailPath: thumbnailPath,
               thumbnailUrl: thumbnailPath,
               likes: metadata.likes || 0,
