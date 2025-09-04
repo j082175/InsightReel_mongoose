@@ -1,0 +1,16 @@
+/* Dashboard specific styles */
+.text-primary {
+  color: #1976d2;
+}
+
+.bg-primary {
+  background-color: #1976d2;
+}
+
+.bg-primary-50 {
+  background-color: #e3f2fd;
+}
+
+.hover\:bg-primary:hover {
+  background-color: #1976d2;
+}

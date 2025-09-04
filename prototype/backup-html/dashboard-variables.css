@@ -1,0 +1,113 @@
+/* Dashboard Variables - CSS 변수 시스템 */
+:root {
+  /* 브랜드 색상 */
+  --primary-color: #1976d2;
+  --primary-hover: #1565c0;
+  --secondary-color: #ff4081;
+  --success-color: #4caf50;
+  --error-color: #e53e3e;
+  --warning-color: #ff9800;
+  
+  /* 그레이 스케일 */
+  --gray-50: #f9f9f9;
+  --gray-100: #f5f5f5;
+  --gray-200: #eeeeee;
+  --gray-300: #e0e0e0;
+  --gray-500: #666666;
+  --gray-600: #999999;
+  --gray-700: #333333;
+  --gray-900: #000000;
+  
+  /* 배경 색상 */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-accent: #e3f2fd;
+  
+  /* 텍스트 색상 */
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --text-white: #ffffff;
+  
+  /* 레이아웃 */
+  --border-radius: 8px;
+  --border-radius-large: 12px;
+  --border-radius-pill: 20px;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  
+  /* 테두리 */
+  --border-width: 2px;
+  --border-color: #e0e0e0;
+  --border-color-focus: var(--primary-color);
+  
+  /* 그림자 */
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.15);
+  --shadow-hover: 0 6px 16px rgba(0,0,0,0.12);
+  
+  /* 폰트 크기 */
+  --font-xs: 0.7rem;
+  --font-sm: 0.8rem;
+  --font-md: 0.9rem;
+  --font-base: 1rem;
+  --font-lg: 1.1rem;
+  --font-xl: 1.5rem;
+  --font-2xl: 2rem;
+  
+  /* 폰트 두께 */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  
+  /* 애니메이션 */
+  --transition-fast: 0.1s;
+  --transition-normal: 0.2s;
+  --transition-slow: 0.3s;
+  
+  /* Z-index 레벨 */
+  --z-dropdown: 10;
+  --z-modal: 50;
+  --z-header: 100;
+  --z-tooltip: 1000;
+  
+  /* 반응형 브레이크포인트 */
+  --bp-mobile: 768px;
+  --bp-tablet: 1024px;
+  --bp-desktop: 1400px;
+}
+
+/* 다크 모드 지원 (향후 확장용) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: #1a1a1a;
+    --bg-secondary: #2a2a2a;
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --text-muted: #999999;
+    --border-color: #444444;
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
+  }
+}
+
+/* 플랫폼별 색상 변수 */
+:root {
+  --youtube-color: #ff0000;
+  --instagram-color: #e4405f;
+  --tiktok-color: #000000;
+  --platform-badge-text: var(--text-white);
+}
+
+/* 상태별 색상 */
+:root {
+  --status-active: var(--success-color);
+  --status-inactive: var(--gray-500);
+  --status-error: var(--error-color);
+  --status-warning: var(--warning-color);
+}
