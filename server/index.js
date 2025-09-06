@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const multer = require('multer');
+// 간단한 채널 분석에서는 파일 업로드를 사용하지 않으므로 주석 처리
+// const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
@@ -9,21 +10,24 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const { getConfig } = require('./config/config-validator');
 const config = getConfig(); // 여기서 검증 실행
 
-// MongoDB 연결 설정
+// DatabaseManager는 다른 API에서 사용되므로 일단 유지
 const DatabaseManager = require('./config/database');
-const Video = require('./models/Video');
-const VideoUrl = require('./models/VideoUrl');
+// 간단한 채널 분석에서는 직접 사용하지 않지만 다른 API에서 필요
+// const Video = require('./models/Video');
+// const VideoUrl = require('./models/VideoUrl');
 
-const VideoProcessor = require('./services/VideoProcessor');
-const AIAnalyzer = require('./services/AIAnalyzer');
+// VideoProcessor와 AIAnalyzer는 간단한 채널 분석에서 사용하지 않으므로 주석 처리
 const SheetsManager = require('./services/SheetsManager');
-const UnifiedVideoSaver = require('./services/UnifiedVideoSaver'); // 🆕 통합 저장 서비스
-const youtubeBatchProcessor = require('./services/YouTubeBatchProcessor');
+// 간단한 채널 분석에서는 사용하지 않으므로 주석 처리
+// const UnifiedVideoSaver = require('./services/UnifiedVideoSaver');
+// const youtubeBatchProcessor = require('./services/YouTubeBatchProcessor');
 const ChannelTrendingCollector = require('./services/ChannelTrendingCollector');
+const YouTubeChannelDataCollector = require('./services/YouTubeChannelDataCollector');
 const { ServerLogger } = require('./utils/logger');
 const ResponseHandler = require('./utils/response-handler');
-const { API_MESSAGES, ERROR_CODES } = require('./config/api-messages');
-const videoQueue = require('./utils/VideoQueue');
+// 간단한 채널 분석에서는 사용하지 않으므로 주석 처리
+// const { API_MESSAGES, ERROR_CODES } = require('./config/api-messages');
+// const videoQueue = require('./utils/VideoQueue');
 
 const app = express();
 const PORT = config.get('PORT');
@@ -56,17 +60,17 @@ if (!fs.existsSync(downloadDir)) {
   fs.mkdirSync(downloadDir, { recursive: true });
 }
 
-// multer 설정
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, downloadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-const upload = multer({ storage });
+// 간단한 채널 분석에서는 파일 업로드를 사용하지 않으므로 주석 처리
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     cb(null, downloadDir);
+//   },
+//   filename: (req, file, cb) => {
+//     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+//     cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+//   }
+// });
+// const upload = multer({ storage });
 
 // 서비스 초기화 전 디버그
 app.get('/api/debug-before-services', (req, res) => {
@@ -74,11 +78,9 @@ app.get('/api/debug-before-services', (req, res) => {
 });
 ServerLogger.info('🔧 BEFORE SERVICES DEBUG: 서비스 초기화 전');
 
-// 서비스 초기화
-const videoProcessor = new VideoProcessor();
-const aiAnalyzer = new AIAnalyzer();
+// 간단한 채널 분석에 필요한 서비스만 초기화
 const sheetsManager = new SheetsManager();
-const unifiedVideoSaver = new UnifiedVideoSaver(); // 🆕 통합 저장 서비스 인스턴스
+// videoProcessor, aiAnalyzer, unifiedVideoSaver는 현재 사용하지 않으므로 주석 처리
 
 // 서비스 초기화 후 디버그
 app.get('/api/debug-after-services', (req, res) => {
@@ -1153,7 +1155,8 @@ app.post('/api/check-duplicate', async (req, res) => {
   }
 });
 
-// 파일 업로드 (테스트용)
+// 간단한 채널 분석에서는 사용하지 않으므로 주석 처리
+/*
 app.post('/api/upload', upload.single('video'), async (req, res) => {
   try {
     if (!req.file) {
@@ -1185,8 +1188,10 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
     }, API_MESSAGES.FILE.UPLOAD_FAILED);
   }
 });
+*/
 
-// blob 비디오 처리 엔드포인트
+// 간단한 채널 분석에서는 사용하지 않으므로 주석 처리
+/*
 app.post('/api/process-video-blob', upload.single('video'), async (req, res) => {
   try {
     const { platform, postUrl, analysisType = 'quick', useAI = true } = req.body;
@@ -1450,6 +1455,7 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     }, API_MESSAGES.VIDEO.PROCESSING_FAILED);
   }
 });
+*/
 
 // 에러 핸들러
 app.use((err, req, res, next) => {
@@ -1950,6 +1956,110 @@ app.post('/api/clear-database', async (req, res) => {
   }
 });
 
+// 🎬 YouTube 채널 분석 API (간단 버전)
+app.post('/api/analyze-channel', async (req, res) => {
+  try {
+    ServerLogger.info('🤖 채널 분석 요청 받음:', req.body);
+
+    const { type, platform, channelInfo, analysisLevel } = req.body;
+
+    // 입력 검증
+    if (type !== 'channel' || platform !== 'youtube') {
+      return ResponseHandler.clientError(res, '지원되지 않는 분석 유형입니다', 400);
+    }
+
+    if (!channelInfo || (!channelInfo.channelId && !channelInfo.channelHandle && !channelInfo.customUrl && !channelInfo.username)) {
+      return ResponseHandler.clientError(res, '채널 정보가 필요합니다', 400);
+    }
+
+    // YouTubeChannelDataCollector require
+    const YouTubeChannelDataCollector = require('./services/YouTubeChannelDataCollector');
+
+    // 1단계: YouTube 데이터 수집
+    const dataCollector = new YouTubeChannelDataCollector();
+    ServerLogger.info('📊 YouTube 채널 데이터 수집 시작');
+    
+    const channelData = await dataCollector.collectChannelData(channelInfo);
+
+    ServerLogger.info('📊 채널 데이터 수집 완료:', {
+      channelName: channelData.channelInfo.title,
+      subscriberCount: channelData.channelInfo.statistics.subscriberCount,
+      videoCount: channelData.videos.length
+    });
+
+    // 2단계: 주요 태그 추출 (AI 없이)
+    const tagCount = {};
+    channelData.videos.forEach(video => {
+      if (video.tags) {
+        video.tags.forEach(tag => {
+          tagCount[tag] = (tagCount[tag] || 0) + 1;
+        });
+      }
+    });
+    const topTags = Object.entries(tagCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([tag]) => tag);
+
+    // 3단계: 간단한 채널 데이터 저장 (AI 분석 없이)
+    const channelRecord = {
+      channelId: channelData.channelInfo.id,
+      channelName: channelData.channelInfo.title,
+      channelUrl: `https://www.youtube.com/channel/${channelData.channelInfo.id}`,
+      subscriberCount: channelData.channelInfo.statistics.subscriberCount,
+      videoCount: channelData.channelInfo.statistics.videoCount,
+      totalViews: channelData.channelInfo.statistics.viewCount,
+      
+      // 간단한 분석 결과 (AI 없이)
+      category: '분석 중',
+      keywords: topTags,
+      
+      // 통계 정보
+      averageViews: channelData.analysis.videos.averageViews,
+      uploadFrequency: channelData.analysis.uploadPattern.dailyAverage,
+      shortFormRatio: channelData.analysis.durationAnalysis.shortFormRatio,
+      
+      // 메타 정보
+      analyzedAt: new Date().toISOString(),
+      analysisLevel: analysisLevel || 1,
+      platform: 'youtube'
+    };
+
+    // 채널 전용 스프레드시트에 저장
+    ServerLogger.info('💾 채널 데이터 저장 시작');
+    const sheetsManager = new SheetsManager();
+    await sheetsManager.saveChannelData(channelRecord);
+
+    ServerLogger.info('✅ 채널 분석 완료 (간단 버전):', {
+      channelName: channelData.channelInfo.title,
+      subscriberCount: channelData.channelInfo.statistics.subscriberCount,
+      keywordsCount: topTags.length
+    });
+
+    ResponseHandler.success(res, '채널 분석이 완료되었습니다', {
+      channelInfo: {
+        name: channelData.channelInfo.title,
+        subscriberCount: channelData.channelInfo.statistics.subscriberCount,
+        videoCount: channelData.channelInfo.statistics.videoCount
+      },
+      analysis: {
+        category: '분석 중',
+        keywords: topTags,
+        uploadFrequency: channelData.analysis.uploadPattern.dailyAverage,
+        shortFormRatio: channelData.analysis.durationAnalysis.shortFormRatio
+      },
+      performance: {
+        videosAnalyzed: channelData.videos.length,
+        analysisLevel: analysisLevel || 1
+      }
+    });
+
+  } catch (error) {
+    ServerLogger.error('❌ 채널 분석 실패:', error);
+    ResponseHandler.serverError(res, error, '채널 분석 중 오류가 발생했습니다');
+  }
+});
+
 // 404 핸들러 (모든 라우트 등록 후 마지막에)
 app.use((req, res) => {
   ResponseHandler.notFound(res, `경로 '${req.path}'를 찾을 수 없습니다.`);
@@ -1985,6 +2095,7 @@ const startServer = async () => {
     } catch (cleanupError) {
       ServerLogger.warn(`⚠️ 초기 정리 실패 (무시): ${cleanupError.message}`);
     }
+
     
     app.listen(PORT, () => {
       ServerLogger.info(`

@@ -1743,6 +1743,150 @@ class SheetsManager {
     }
     return result;
   }
+
+  // 🎬 YouTube 채널 데이터 저장 메소드
+  async saveChannelData(channelData) {
+    try {
+      // 채널 전용 스프레드시트 ID (메인 스프레드시트를 기본값으로 사용)
+      const channelSpreadsheetId = process.env.GOOGLE_CHANNEL_SPREADSHEET_ID || this.spreadsheetId;
+      
+      if (!channelSpreadsheetId) {
+        throw new Error('채널 전용 스프레드시트 ID가 설정되지 않았습니다 (GOOGLE_CHANNEL_SPREADSHEET_ID)');
+      }
+
+      if (!this.sheets) {
+        throw new Error('Google Sheets API가 초기화되지 않았습니다');
+      }
+
+      ServerLogger.info('📊 채널 데이터 스프레드시트 저장 시작', {
+        channelName: channelData.channelName,
+        category: channelData.category
+      });
+
+      // 헤더 확인 및 생성
+      await this.ensureChannelSheetHeaders(channelSpreadsheetId);
+
+      // 데이터 행 준비
+      const rowData = [
+        channelData.channelId,
+        channelData.channelName,
+        channelData.channelUrl,
+        channelData.subscriberCount?.toLocaleString() || '0',
+        channelData.videoCount?.toLocaleString() || '0',
+        channelData.totalViews?.toLocaleString() || '0',
+        channelData.category || '기타',
+        Array.isArray(channelData.keywords) ? channelData.keywords.join(', ') : (channelData.keywords || ''),
+        channelData.averageViews?.toLocaleString() || '0',
+        channelData.uploadFrequency || '0',
+        channelData.shortFormRatio || '0',
+        channelData.analyzedAt || new Date().toISOString(),
+        channelData.analysisLevel || '2',
+        channelData.platform || 'youtube'
+      ];
+
+      // 스프레드시트에 데이터 추가
+      const range = 'Channels!A:N'; // 채널 데이터 열 (A~N)
+      
+      const response = await this.sheets.spreadsheets.values.append({
+        spreadsheetId: channelSpreadsheetId,
+        range: range,
+        valueInputOption: 'RAW',
+        insertDataOption: 'INSERT_ROWS',
+        resource: {
+          values: [rowData]
+        }
+      });
+
+      ServerLogger.info('✅ 채널 데이터 스프레드시트 저장 완료', {
+        channelName: channelData.channelName,
+        updatedRows: response.data.updates.updatedRows,
+        updatedRange: response.data.updates.updatedRange
+      });
+
+      return {
+        success: true,
+        updatedRows: response.data.updates.updatedRows,
+        updatedRange: response.data.updates.updatedRange
+      };
+
+    } catch (error) {
+      ServerLogger.error('❌ 채널 데이터 스프레드시트 저장 실패:', error);
+      throw error;
+    }
+  }
+
+  // 채널 시트 헤더 확인 및 생성
+  async ensureChannelSheetHeaders(spreadsheetId) {
+    try {
+      // Channels 시트가 없으면 첫 번째 시트 사용 (권한 문제 회피)
+      let targetSheet = 'Channels';
+      
+      try {
+        // Channels 시트 존재 확인
+        await this.sheets.spreadsheets.values.get({
+          spreadsheetId: spreadsheetId,
+          range: 'Channels!1:1'
+        });
+        ServerLogger.info('📝 Channels 시트 사용');
+      } catch (error) {
+        if (error.message.includes('Unable to parse range') || error.message.includes('not found')) {
+          ServerLogger.info('📝 Channels 시트가 없음. 첫 번째 시트에 채널 데이터를 저장합니다');
+          // 스프레드시트의 첫 번째 시트 이름 가져오기
+          const spreadsheet = await this.sheets.spreadsheets.get({
+            spreadsheetId: spreadsheetId
+          });
+          targetSheet = spreadsheet.data.sheets[0].properties.title;
+          ServerLogger.info(`📋 대상 시트: ${targetSheet}`);
+        } else {
+          throw error;
+        }
+      }
+      
+      // 대상 시트의 첫 번째 행 확인
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: spreadsheetId,
+        range: `${targetSheet}!1:1`
+      });
+
+      const headers = [
+        '채널 ID',
+        '채널명',
+        '채널 URL',
+        '구독자 수',
+        '영상 수',
+        '총 조회수',
+        '카테고리',
+        '키워드',
+        '평균 조회수',
+        '업로드 빈도',
+        '숏폼 비율(%)',
+        '분석일시',
+        '분석 레벨',
+        '플랫폼'
+      ];
+
+      // 헤더가 없거나 불완전한 경우 추가
+      if (!response.data.values || response.data.values.length === 0 || 
+          response.data.values[0].length < headers.length) {
+        
+        await this.sheets.spreadsheets.values.update({
+          spreadsheetId: spreadsheetId,
+          range: 'Channels!A1:N1',
+          valueInputOption: 'RAW',
+          resource: {
+            values: [headers]
+          }
+        });
+
+        ServerLogger.info('📋 채널 스프레드시트 헤더 생성/업데이트 완료');
+      }
+
+    } catch (error) {
+      ServerLogger.error('❌ 채널 시트 헤더 설정 실패:', error);
+      throw error;
+    }
+  }
+
 }
 
 module.exports = SheetsManager;

@@ -38,6 +38,14 @@
       "js": ["content/content-script-bundled.js"],
       "css": ["content/styles.css"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.youtube.com/*",
+        "https://youtu.be/*"
+      ],
+      "js": ["content/youtube-content.js"],
+      "run_at": "document_idle"
     }
   ],
   
