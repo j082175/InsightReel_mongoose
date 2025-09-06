@@ -1,4 +1,5 @@
 const { ServerLogger } = require('../utils/logger');
+const YouTubeDataProcessor = require('../utils/youtube-data-processor');
 
 /**
  * 🔄 하이브리드 YouTube 데이터를 기존 VideoProcessor 포맷으로 변환
@@ -10,24 +11,7 @@ class HybridDataConverter {
    */
   static convertToLegacyFormat(hybridData, videoId) {
     try {
-      // YouTube 카테고리 매핑 (VideoProcessor와 동일)
-      const YOUTUBE_CATEGORIES = {
-        "1": "영화/애니메이션",
-        "2": "자동차/교통", 
-        "10": "음악",
-        "15": "애완동물/동물",
-        "17": "스포츠",
-        "19": "여행/이벤트", 
-        "20": "게임",
-        "22": "인물/블로그",
-        "23": "코미디",
-        "24": "엔터테인먼트",
-        "25": "뉴스/정치",
-        "26": "노하우/스타일",
-        "27": "교육",
-        "28": "과학기술",
-        "29": "비영리/사회운동"
-      };
+      // 통합된 YouTube 유틸리티 사용
 
       // 기본 변환
       const converted = {
@@ -41,15 +25,15 @@ class HybridDataConverter {
         publishedAt: hybridData.publishedAt || hybridData.uploadDate || new Date().toISOString(),
         
         // 썸네일 처리
-        thumbnailUrl: this.extractThumbnailUrl(hybridData, videoId),
+        thumbnailUrl: YouTubeDataProcessor.buildThumbnailUrl(videoId),
         
         // 카테고리 처리
-        category: this.convertCategory(hybridData, YOUTUBE_CATEGORIES),
+        category: this.convertCategory(hybridData),
         categoryId: hybridData.youtubeCategoryId || hybridData.categoryId || '0',
         
         // 길이 및 콘텐츠 타입
         duration: hybridData.duration || 0,
-        durationFormatted: this.formatDuration(hybridData.duration || 0),
+        durationFormatted: YouTubeDataProcessor.formatDuration(hybridData.duration || 0),
         contentType: (hybridData.duration <= 60) ? 'Shorts' : 'Video',
         isShortForm: (hybridData.duration <= 60),
         
@@ -69,8 +53,8 @@ class HybridDataConverter {
         channelDescription: '',
         
         // 해시태그 및 멘션 (설명에서 추출)
-        hashtags: this.extractHashtags(hybridData.description || ''),
-        mentions: this.extractMentions(hybridData.description || ''),
+        hashtags: YouTubeDataProcessor.extractHashtags(hybridData.description || ''),
+        mentions: YouTubeDataProcessor.extractMentions(hybridData.description || ''),
         
         // 댓글 (기본값)
         topComments: '',
@@ -128,7 +112,7 @@ class HybridDataConverter {
   }
 
   /**
-   * 썸네일 URL 추출
+   * 썸네일 URL 추출 (커스텀 로직 유지)
    */
   static extractThumbnailUrl(data, videoId) {
     // ytdl-core 썸네일 배열에서 최고 화질 선택
@@ -142,27 +126,17 @@ class HybridDataConverter {
       return data.thumbnail.url;
     }
     
-    // 기본 YouTube 썸네일 생성 (videoId 매개변수 사용)
-    if (videoId) {
-      return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-    }
-    
-    // URL에서 비디오 ID 추출 시도
-    const urlVideoId = data.url?.match(/[?&]v=([^&]+)/)?.[1] || '';
-    if (urlVideoId) {
-      return `https://img.youtube.com/vi/${urlVideoId}/maxresdefault.jpg`;
-    }
-    
-    return '';
+    // YouTubeDataProcessor 사용
+    return YouTubeDataProcessor.buildThumbnailUrl(videoId);
   }
 
   /**
-   * 카테고리 변환
+   * 카테고리 변환 (YouTubeDataProcessor 사용)
    */
-  static convertCategory(data, categoryMap) {
+  static convertCategory(data) {
     // API에서 categoryId가 있는 경우
-    if (data.youtubeCategoryId && categoryMap[data.youtubeCategoryId]) {
-      return categoryMap[data.youtubeCategoryId];
+    if (data.youtubeCategoryId) {
+      return YouTubeDataProcessor.getCategoryName(data.youtubeCategoryId);
     }
     
     // ytdl-core의 category 문자열
@@ -173,42 +147,7 @@ class HybridDataConverter {
     return '미분류';
   }
 
-  /**
-   * 시간 포맷팅 (초 → MM:SS 또는 HH:MM:SS)
-   */
-  static formatDuration(seconds) {
-    if (!seconds || seconds <= 0) return '00:00';
-    
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    
-    if (hours > 0) {
-      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    } else {
-      return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
-  }
-
-  /**
-   * 해시태그 추출
-   */
-  static extractHashtags(description) {
-    if (!description) return [];
-    
-    const hashtags = description.match(/#[\w가-힣]+/g) || [];
-    return hashtags.slice(0, 10); // 최대 10개
-  }
-
-  /**
-   * 멘션 추출  
-   */
-  static extractMentions(description) {
-    if (!description) return [];
-    
-    const mentions = description.match(/@[\w가-힣.]+/g) || [];
-    return mentions.slice(0, 5); // 최대 5개
-  }
+  // 중복 메소드들은 YouTubeDataProcessor로 통합됨
 }
 
 module.exports = HybridDataConverter;

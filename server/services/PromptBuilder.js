@@ -1,5 +1,5 @@
 const { ServerLogger } = require('../utils/logger');
-const DynamicCategoryManager = require('./DynamicCategoryManager');
+const UnifiedCategoryManager = require('./UnifiedCategoryManager');
 
 /**
  * AI 프롬프트 동적 생성 클래스
@@ -7,7 +7,7 @@ const DynamicCategoryManager = require('./DynamicCategoryManager');
 class PromptBuilder {
   constructor(categoryManager) {
     this.categoryManager = categoryManager;
-    this.dynamicCategoryManager = new DynamicCategoryManager();
+    this.dynamicCategoryManager = new UnifiedCategoryManager({ mode: 'dynamic' });
     this.useDynamicCategories = process.env.USE_DYNAMIC_CATEGORIES === 'true';
   }
 

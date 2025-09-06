@@ -435,8 +435,8 @@ class VideoController {
    */
   getSelfLearningStats = ErrorHandler.asyncHandler(async (req, res) => {
     try {
-      const stats = this.aiAnalyzer.dynamicCategoryManager.getSelfLearningStats();
-      const systemStats = this.aiAnalyzer.dynamicCategoryManager.getSystemStats();
+      const stats = this.aiAnalyzer.categoryManager.getSelfLearningStats();
+      const systemStats = this.aiAnalyzer.categoryManager.getSystemStats();
       
       res.json({
         success: true,

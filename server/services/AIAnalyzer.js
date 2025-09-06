@@ -2,17 +2,19 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { ServerLogger } = require('../utils/logger');
-const DynamicCategoryManager = require('./DynamicCategoryManager');
-const HybridGeminiManager = require('../utils/hybrid-gemini-manager');
-const EnhancedMultiApiManager = require('../utils/enhanced-multi-api-manager');
+const UnifiedCategoryManager = require('./UnifiedCategoryManager');
+const UnifiedGeminiManager = require('../utils/unified-gemini-manager');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 class AIAnalyzer {
   constructor() {
     
-    // 동적 카테고리 시스템 초기화
-    this.dynamicCategoryManager = new DynamicCategoryManager();
-    this.useDynamicCategories = process.env.USE_DYNAMIC_CATEGORIES === 'true';
+    // 통합 카테고리 시스템 초기화
+    const categoryMode = process.env.USE_DYNAMIC_CATEGORIES === 'true' ? 'dynamic' : 
+                        process.env.USE_FLEXIBLE_CATEGORIES === 'true' ? 'flexible' : 'basic';
+    
+    this.categoryManager = new UnifiedCategoryManager({ mode: categoryMode });
+    this.useDynamicCategories = categoryMode !== 'basic';
     
     // AI 시스템 설정 (상호 배타적)
     this.useGemini = process.env.USE_GEMINI === 'true';
@@ -22,51 +24,18 @@ class AIAnalyzer {
       throw new Error('GOOGLE_API_KEY가 설정되지 않았습니다. Gemini API 키가 필요합니다.');
     }
     
-    // 시스템 선택 로직 (상호 배타적)
-    const hasMultiApiStrategy = !!process.env.GEMINI_FALLBACK_STRATEGY;
-    const useHybridSetting = process.env.USE_HYBRID_GEMINI !== 'false';
-    
-    if (hasMultiApiStrategy && useHybridSetting) {
-      // 둘 다 설정된 경우 - Multi API 우선, 경고 메시지
-      this.useEnhancedMultiApi = true;
-      this.useHybridGemini = false;
-      ServerLogger.warn('⚠️ GEMINI_FALLBACK_STRATEGY와 USE_HYBRID_GEMINI가 모두 설정됨', null, 'AI');
-      ServerLogger.warn('🚀 Enhanced Multi API 시스템을 우선 사용합니다', null, 'AI');
-      ServerLogger.warn('💡 한 가지만 사용하려면: USE_HYBRID_GEMINI=false 또는 GEMINI_FALLBACK_STRATEGY 제거', null, 'AI');
-    } else if (hasMultiApiStrategy) {
-      // Multi API 시스템만 활성화
-      this.useEnhancedMultiApi = true;
-      this.useHybridGemini = false;
-      ServerLogger.info('🚀 Enhanced Multi API 시스템 선택됨', null, 'AI');
-    } else if (useHybridSetting) {
-      // 기존 하이브리드 시스템만 활성화
-      this.useEnhancedMultiApi = false;
-      this.useHybridGemini = true;
-      ServerLogger.info('🤖 기존 하이브리드 Gemini 시스템 선택됨', null, 'AI');
-    } else {
-      // 둘 다 비활성화 - 단일 모델 방식
-      this.useEnhancedMultiApi = false;
-      this.useHybridGemini = false;
-      ServerLogger.info('⚙️ 단일 Gemini 모델 방식 선택됨', null, 'AI');
-    }
-    
-    ServerLogger.info(`AI 설정 - USE_GEMINI: ${process.env.USE_GEMINI}, API_KEY 존재: ${!!this.geminiApiKey}, HYBRID: ${this.useHybridGemini}, MULTI_API: ${this.useEnhancedMultiApi}`, null, 'AI');
-    
+    // 통합 Gemini 관리자 사용
     if (this.useGemini) {
-      if (this.useEnhancedMultiApi) {
-        // 향상된 멀티 API 관리자 사용
-        this.multiApiManager = new EnhancedMultiApiManager();
-        ServerLogger.success('🚀 Enhanced Multi API 시스템 초기화 완료', null, 'AI');
-      } else if (this.useHybridGemini) {
-        // 기존 하이브리드 Gemini 관리자 사용
-        this.hybridGemini = new HybridGeminiManager(this.geminiApiKey);
-        ServerLogger.success('🤖 하이브리드 Gemini 시스템 초기화 완료', null, 'AI');
-      } else {
-        // 기존 단일 모델 방식
-        this.genAI = new GoogleGenerativeAI(this.geminiApiKey);
-        this.geminiModel = this.genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
-        ServerLogger.success('Gemini API 초기화 완료 (단일 모델)', null, 'AI');
-      }
+      // 환경 설정에 따른 전략 자동 선택
+      const strategy = process.env.GEMINI_FALLBACK_STRATEGY || 'flash';
+      
+      this.geminiManager = new UnifiedGeminiManager({
+        strategy: strategy,
+        retryAttempts: 3,
+        retryDelay: 2000
+      });
+      
+      ServerLogger.success(`🤖 통합 Gemini 관리자 초기화 완료 (전략: ${strategy})`, null, 'AI');
     } else {
       throw new Error('Gemini API를 사용해야 합니다. USE_GEMINI=true로 설정하세요.');
     }
@@ -169,17 +138,17 @@ class AIAnalyzer {
    */
   async testConnection() {
     try {
-      const { GoogleGenerativeAI } = require('@google/generative-ai');
-      const genAI = new GoogleGenerativeAI(this.geminiApiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-      
-      const result = await model.generateContent('Hello');
-      return {
-        status: 'success',
-        service: 'Gemini',
-        model: 'gemini-pro',
-        response: result.response.text()
-      };
+      if (this.geminiManager) {
+        const result = await this.geminiManager.generateContent('Hello');
+        return {
+          status: 'success',
+          service: 'UnifiedGemini',
+          model: result.model,
+          response: result.text
+        };
+      } else {
+        throw new Error('Gemini 관리자가 초기화되지 않았습니다.');
+      }
     } catch (error) {
       throw new Error(`Gemini 연결 실패: ${error.message}`);
     }
@@ -233,7 +202,7 @@ class AIAnalyzer {
     
     try {
       // 자가 학습 시스템 활성화 여부 확인
-      if (this.dynamicCategoryManager.isSelfLearningEnabled()) {
+      if (this.categoryManager.isSelfLearningEnabled()) {
         ServerLogger.info('🧠 자가 학습 카테고리 시스템 활성화됨', null, 'SelfLearning');
         return await this.analyzeWithSelfLearning(thumbnailPaths, metadata);
       }
@@ -244,7 +213,7 @@ class AIAnalyzer {
     } catch (error) {
       ServerLogger.error('동적 카테고리 분석 실패:', error);
       // 폴백: 기본 카테고리 사용
-      return this.dynamicCategoryManager.getFallbackCategory(metadata);
+      return this.categoryManager.getFallbackCategory(metadata);
     }
   }
 
@@ -255,11 +224,11 @@ class AIAnalyzer {
     const startTime = Date.now();
     
     // 1단계: 콘텐츠 시그니처 생성
-    const contentSignature = this.dynamicCategoryManager.generateContentSignature(metadata);
+    const contentSignature = this.categoryManager.generateContentSignature(metadata);
     ServerLogger.info(`🔍 콘텐츠 시그니처: ${contentSignature}`, null, 'SelfLearning');
     
     // 2단계: 유사한 검증된 패턴 찾기
-    const similarPattern = this.dynamicCategoryManager.findSimilarVerifiedPattern(contentSignature);
+    const similarPattern = this.categoryManager.findSimilarVerifiedPattern(contentSignature);
     
     if (similarPattern) {
       // 기존 검증된 패턴이 있는 경우 - 참조 분석
@@ -268,7 +237,7 @@ class AIAnalyzer {
       const result = await this.analyzeWithVerifiedReference(thumbnailPaths, metadata, similarPattern);
       
       // 사용 통계 업데이트
-      this.dynamicCategoryManager.updateVerifiedCategoryUsage(similarPattern.signature);
+      this.categoryManager.updateVerifiedCategoryUsage(similarPattern.signature);
       
       const duration = Date.now() - startTime;
       ServerLogger.info(`⏱️ 참조 분석 총 소요시간: ${duration}ms (${(duration / 1000).toFixed(2)}초)`, null, 'SelfLearning');
@@ -281,7 +250,7 @@ class AIAnalyzer {
       const analysisResults = await this.performMultipleAnalysis(thumbnailPaths, metadata, 20);
       
       // 검증된 카테고리 저장
-      const verifiedCategory = this.dynamicCategoryManager.saveVerifiedCategoryFromAnalysis(
+      const verifiedCategory = this.categoryManager.saveVerifiedCategoryFromAnalysis(
         contentSignature, 
         analysisResults
       );
@@ -310,7 +279,7 @@ class AIAnalyzer {
       } else {
         // 검증 실패 시 폴백
         ServerLogger.warn('검증된 카테고리 생성 실패 - 폴백 사용', null, 'SelfLearning');
-        return this.dynamicCategoryManager.getFallbackCategory(metadata);
+        return this.categoryManager.getFallbackCategory(metadata);
       }
     }
   }
@@ -320,10 +289,10 @@ class AIAnalyzer {
    */
   async analyzeWithVerifiedReference(thumbnailPaths, metadata, similarPattern) {
     // 기본 동적 프롬프트 생성
-    const basePrompt = this.dynamicCategoryManager.buildDynamicCategoryPrompt(metadata);
+    const basePrompt = this.categoryManager.buildDynamicCategoryPrompt(metadata.platform);
     
     // 검증된 카테고리 참조 정보 추가
-    const referencePrompt = this.dynamicCategoryManager.buildVerifiedCategoryReference(similarPattern);
+    const referencePrompt = this.categoryManager.buildVerifiedCategoryReference(similarPattern);
     const fullPrompt = basePrompt + referencePrompt;
     
     ServerLogger.info('📝 검증된 패턴 참조 프롬프트 생성 완료', null, 'SelfLearning');
@@ -344,7 +313,7 @@ class AIAnalyzer {
     ServerLogger.info(`⏱️ 참조 AI 분석 소요시간: ${aiDuration}ms (${(aiDuration / 1000).toFixed(2)}초)`, null, 'SelfLearning');
     
     // 응답 처리
-    const result = this.dynamicCategoryManager.processDynamicCategoryResponse(aiResponse, metadata, this.lastUsedModel);
+    const result = this.categoryManager.processDynamicCategoryResponse(aiResponse, metadata, this.lastUsedModel);
     result.source = 'self-learning-referenced';
     result.referencePattern = similarPattern.signature;
     result.referenceSimilarity = similarPattern.similarity;
@@ -358,7 +327,7 @@ class AIAnalyzer {
   async performMultipleAnalysis(thumbnailPaths, metadata, count = 20) {
     ServerLogger.info(`🔄 ${count}번 병렬 분석 시작`, null, 'SelfLearning');
     
-    const basePrompt = this.dynamicCategoryManager.buildDynamicCategoryPrompt(metadata);
+    const basePrompt = this.categoryManager.buildDynamicCategoryPrompt(metadata.platform);
     const results = [];
     const batchSize = 5; // 동시 요청 수 제한
     
@@ -384,7 +353,7 @@ class AIAnalyzer {
               aiResponse = await this.queryGemini(basePrompt, imageBase64);
             }
             
-            return this.dynamicCategoryManager.processDynamicCategoryResponse(aiResponse, metadata, this.lastUsedModel);
+            return this.categoryManager.processDynamicCategoryResponse(aiResponse, metadata, this.lastUsedModel);
           } catch (error) {
             ServerLogger.warn(`분석 ${i + j + 1}번 실패: ${error.message}`, null, 'SelfLearning');
             return null;
@@ -419,7 +388,7 @@ class AIAnalyzer {
     ServerLogger.info('📊 기본 동적 카테고리 분석 시작', null, 'AI');
     
     // 동적 프롬프트 생성
-    const dynamicPrompt = this.dynamicCategoryManager.buildDynamicCategoryPrompt(metadata);
+    const dynamicPrompt = this.categoryManager.buildDynamicCategoryPrompt(metadata.platform);
     ServerLogger.info('📝 동적 프롬프트 생성 완료', null, 'AI');
     
     let aiResponse = null;
@@ -450,7 +419,7 @@ class AIAnalyzer {
     
     // 동적 카테고리 응답 처리
     const processStartTime = Date.now();
-    const result = this.dynamicCategoryManager.processDynamicCategoryResponse(aiResponse, metadata, this.lastUsedModel);
+    const result = this.categoryManager.processDynamicCategoryResponse(aiResponse, metadata, this.lastUsedModel);
     const processEndTime = Date.now();
     const processDuration = processEndTime - processStartTime;
     
@@ -896,114 +865,20 @@ class AIAnalyzer {
 
 
   async queryGemini(prompt, imageBase64) {
-    let modelUsed = 'unknown';
-    
-    // Enhanced Multi API Manager 사용 여부 확인 (최우선)
-    if (this.useEnhancedMultiApi && this.multiApiManager) {
-      const apiConfig = this.multiApiManager.getBestApiConfig();
-      modelUsed = apiConfig.model || 'gemini-multi-api';
-      const result = await this._queryWithEnhancedMultiApi(prompt, imageBase64);
-      this.lastUsedModel = modelUsed;
-      return result;
-    }
-    // 기존 하이브리드 Gemini 사용 여부 확인 (호환성)
-    else if (this.useHybridGemini && this.hybridGemini) {
-      try {
-        ServerLogger.info('🤖 하이브리드 Gemini 시스템 사용', null, 'AI');
-        const result = await this.hybridGemini.generateContent(prompt, imageBase64);
-        
-        // 사용된 모델 추적
-        modelUsed = result.modelUsed || 'gemini-hybrid';
-        this.lastUsedModel = modelUsed;
-        
-        // 사용량 정보 로깅
-        const stats = result.usageStats;
-        ServerLogger.info(`📊 모델 사용: ${result.modelUsed} (폴백: ${result.fallbackUsed ? 'O' : 'X'})`, {
-          duration: `${result.duration}ms`,
-          proUsage: `${stats.pro.used}/${stats.pro.quota}`,
-          flashUsage: `${stats.flash.used}/${stats.flash.quota}`
-        }, 'AI');
-        
-        return result.text;
-        
-      } catch (error) {
-        ServerLogger.error('하이브리드 Gemini 호출 실패:', error, 'AI');
-        throw error;
-      }
-    }
-    
-    // 기존 단일 모델 방식 (하이브리드 비활성화시)
-    const { AI } = require('../config/constants');
-    const maxRetries = AI.RETRY.MAX_RETRIES;
-    const retryDelays = AI.RETRY.RETRY_DELAYS;
-    
-    // 🧪 디버깅: 의도적 실패 테스트 (환경변수로 제어)
-    const forceFailure = process.env.DEBUG_FORCE_GEMINI_FAILURE === 'true';
-    if (forceFailure) {
-      ServerLogger.info('🧪 [DEBUG] 의도적 실패 모드 활성화 - 503 Service Unavailable 시뮬레이션');
-    }
-    
-    // 단일 모델 사용
-    modelUsed = 'gemini-2.5-pro';
-    this.lastUsedModel = modelUsed;
-    
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        ServerLogger.info(`AI 요청 시작 - 모델: ${modelUsed} (단일 모드) (시도 ${attempt + 1}/${maxRetries})`);
-        ServerLogger.info('AI 프롬프트 길이:', prompt.length);
-        
-        // 🧪 디버깅: 의도적 실패 시뮬레이션
-        if (forceFailure) {
-          const error = new Error('[503 Service Unavailable] The model is overloaded. Please try again later. (DEBUG MODE)');
-          error.status = 503;
-          throw error;
-        }
-        
-        // base64 이미지를 Gemini 형식으로 변환
-        const imagePart = {
-          inlineData: {
-            data: imageBase64,
-            mimeType: 'image/jpeg'
-          }
-        };
-        
-        const result = await this.geminiModel.generateContent([
-          prompt,
-          imagePart
-        ]);
-        
-        const response = await result.response;
-        const text = response.text();
-        
-        ServerLogger.info('AI 응답 상태: 성공');
-        ServerLogger.info('AI 응답 길이:', text?.length || 0);
-        
-        return text;
-        
-      } catch (error) {
-        ServerLogger.error(`Gemini 호출 에러 (시도 ${attempt + 1}/${maxRetries}):`, error.message);
-        
-        // 재시도 불가능한 오류들
-        if (error.message.includes('API key') || 
-            error.message.includes('authentication') ||
-            error.message.includes('permission') ||
-            error.message.includes('quota')) {
-          ServerLogger.error('재시도 불가능한 오류, 즉시 실패 처리');
-          throw error;
-        }
-        
-        // 마지막 시도인 경우 오류 던짐
-        if (attempt === maxRetries - 1) {
-          ServerLogger.error('모든 재시도 실패, 최종 오류 발생');
-          throw error;
-        }
-        
-        // 재시도 가능한 오류 (503 Service Unavailable, 네트워크 오류 등)
-        const delay = retryDelays[attempt];
-        ServerLogger.info(`⏳ ${delay/1000}초 후 재시도... (${attempt + 2}/${maxRetries})`);
-        
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
+    try {
+      ServerLogger.info('🤖 통합 Gemini 관리자 사용', null, 'AI');
+      const result = await this.geminiManager.generateContent(prompt, imageBase64);
+      
+      // 사용된 모델 추적
+      this.lastUsedModel = result.model || 'unified-gemini';
+      
+      ServerLogger.info(`📊 모델 사용: ${result.model}`, null, 'AI');
+      
+      return result.text;
+      
+    } catch (error) {
+      ServerLogger.error('통합 Gemini 호출 실패:', error, 'AI');
+      throw error;
     }
   }
 
@@ -2152,39 +2027,27 @@ JSON 형식으로 답변:
    * Gemini 사용량 통계 조회
    */
   getGeminiUsageStats() {
-    if (this.useEnhancedMultiApi && this.multiApiManager) {
-      return this.multiApiManager.getSystemStatus();
-    } else if (this.useHybridGemini && this.hybridGemini) {
-      return this.hybridGemini.getUsageStats();
+    if (this.geminiManager) {
+      return this.geminiManager.getUsageStats();
     }
     
-    // 기본 Gemini 사용 시에는 간단한 정보만 반환
     return {
-      status: 'basic_mode',
-      model: 'gemini-2.5-pro',
-      hybridMode: false,
-      multiApiMode: false,
-      message: '기본 단일 API 키 Gemini 사용 중'
+      status: 'no_manager',
+      message: 'Gemini 관리자가 초기화되지 않았습니다.'
     };
   }
 
   /**
    * Gemini 헬스체크 조회
    */
-  getGeminiHealthCheck() {
-    if (this.useEnhancedMultiApi && this.multiApiManager) {
-      return this.multiApiManager.healthCheck();
-    } else if (this.useHybridGemini && this.hybridGemini) {
-      return this.hybridGemini.healthCheck();
+  async getGeminiHealthCheck() {
+    if (this.geminiManager) {
+      return await this.geminiManager.healthCheck();
     }
     
-    // 기본 Gemini 사용 시 헬스체크
     return {
-      status: 'basic_mode',
-      apiKeyConfigured: !!this.apiKey,
-      model: 'gemini-2.5-pro',
-      hybridMode: false,
-      message: '하이브리드 모드가 아닌 기본 Gemini 사용 중'
+      status: 'no_manager',
+      message: 'Gemini 관리자가 초기화되지 않았습니다.'
     };
   }
 }
