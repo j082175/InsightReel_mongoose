@@ -324,9 +324,9 @@ class DynamicCategoryManager {
     return {
       mainCategory: bestMainCategory,
       middleCategory: '일반',  // 중카테고리 추가 (호환성)
-      fullPath: `${bestMainCategory} > 일반`,
-      categoryPath: [bestMainCategory, '일반'],
-      depth: 2,
+      fullPath: `${bestMainCategory} > 일반 > 기본`,  // 최소 3단계로 수정
+      categoryPath: [bestMainCategory, '일반', '기본'],
+      depth: 3,
       keywords: ['영상', '콘텐츠'],
       hashtags: ['#영상', '#콘텐츠'],
       content: `${bestMainCategory} 관련 콘텐츠`,  // 기본 분석 내용

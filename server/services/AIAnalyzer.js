@@ -4,7 +4,7 @@ const path = require('path');
 const { ServerLogger } = require('../utils/logger');
 const UnifiedCategoryManager = require('./UnifiedCategoryManager');
 const UnifiedGeminiManager = require('../utils/unified-gemini-manager');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+// GoogleGenerativeAI는 UnifiedGeminiManager에서 처리하므로 제거
 
 class AIAnalyzer {
   constructor() {
@@ -473,13 +473,10 @@ class AIAnalyzer {
       try {
         ServerLogger.info(`🔮 동적 다중 프레임 Gemini 호출 (시도 ${attempt + 1}/${maxRetries})`);
         
-        const result = await this.geminiModel.generateContent([
-          prompt,
-          ...imageContents
-        ]);
+        // 🔄 통합 관리자 사용으로 변경 - 다중 이미지 지원
+        const result = await this.geminiManager.generateContentWithImages(prompt, imageContents);
         
-        const response = await result.response;
-        const text = response.text();
+        const text = result.text;
         
         ServerLogger.info('✅ 동적 다중 프레임 응답 성공');
         return text;
@@ -685,158 +682,23 @@ class AIAnalyzer {
   }
 
   /**
-   * 안전한 Enhanced Multi API 호출 메소드
+   * 🔄 통합 관리자로 단순화된 API 호출 메소드
    */
   async _queryWithEnhancedMultiApi(prompt, imageBase64) {
-    const { AI } = require('../config/constants');
-    const maxRetries = AI.RETRY.MAX_RETRIES;
-    let lastError;
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const startTime = Date.now();
-        ServerLogger.info(`🚀 Enhanced Multi API 시스템 사용 (시도: ${attempt}/${maxRetries})`, null, 'AI');
-        
-        // 최적 API 설정 가져오기
-        const apiConfig = this.multiApiManager.getBestApiConfig();
-        
-        // 📋 1. API 설정 검증
-        if (!this._validateApiConfig(apiConfig)) {
-          if (attempt === maxRetries) {
-            // 마지막 시도에서 실패 - fallback 없이 에러 발생
-            throw new Error(`Enhanced Multi API 시스템 ${maxRetries}번 재시도 모두 실패: ${apiConfig.reason}`);
-          }
-          throw new Error(`API 설정 오류: ${apiConfig.reason}`);
-        }
-        
-        ServerLogger.info(`📡 사용 중인 API: ${apiConfig.keyName} - ${apiConfig.model} (${apiConfig.reason})`, null, 'AI');
-        
-        // 📋 2. Google GenerativeAI 인스턴스 생성 (안전한 방식)
-        const genAI = new GoogleGenerativeAI(apiConfig.apiKey);
-        const model = genAI.getGenerativeModel({ model: apiConfig.model });
-        
-        // 📋 3. 안전한 API 호출
-        const result = await this._safeApiCall(model, prompt, imageBase64);
-        
-        // 📋 4. 성공 시 사용량 기록
-        const modelType = this._extractModelType(apiConfig.model);
-        this.multiApiManager.recordUsage(apiConfig.keyIndex, modelType, true);
-        
-        // 📋 5. 응답 텍스트 안전 추출
-        const responseText = this._safeExtractResponseText(result);
-        
-        const duration = Date.now() - startTime;
-        
-        // 성공 로깅 (간소화)
-        if (attempt > 1) {
-          ServerLogger.info(`✅ Multi API 재시도 성공: ${apiConfig.keyName} - ${apiConfig.model} (${duration}ms)`, null, 'AI');
-        } else {
-          ServerLogger.info(`📊 Multi API 응답 완료: ${apiConfig.keyName} - ${apiConfig.model} (${duration}ms)`, null, 'AI');
-        }
-        
-        return responseText;
-        
-      } catch (error) {
-        lastError = error;
-        
-        // 실패 시 사용량 기록 (안전하게)
-        try {
-          const apiConfig = this.multiApiManager.getBestApiConfig();
-          if (apiConfig && apiConfig.keyIndex !== null) {
-            const modelType = this._extractModelType(apiConfig.model);
-            this.multiApiManager.recordUsage(apiConfig.keyIndex, modelType, false);
-          }
-        } catch (recordError) {
-          ServerLogger.warn('사용량 기록 실패:', recordError, 'AI');
-        }
-        
-        ServerLogger.warn(`⚠️ Enhanced Multi API 시도 ${attempt} 실패:`, error.message, 'AI');
-        
-        if (attempt === maxRetries) {
-          // 마지막 시도 실패 - fallback 없이 에러 발생
-          ServerLogger.error('❌ Enhanced Multi API 모든 재시도 실패', null, 'AI');
-          break; // for 루프 종료
-        }
-        
-        // 재시도 전 대기 (상수로 통일된 설정)
-        const delay = AI.RETRY.RETRY_DELAYS[attempt - 1] || 10000;
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-    
-    // 이론적으로 여기에 도달하지 않음
-    throw lastError;
-  }
-
-  /**
-   * API 설정 검증
-   */
-  _validateApiConfig(apiConfig) {
-    if (!apiConfig) {
-      ServerLogger.error('API 설정이 null입니다', null, 'AI');
-      return false;
-    }
-    
-    if (!apiConfig.apiKey || typeof apiConfig.apiKey !== 'string' || apiConfig.apiKey.trim() === '') {
-      ServerLogger.error(`API 키가 유효하지 않습니다: ${apiConfig.reason}`, null, 'AI');
-      return false;
-    }
-    
-    if (!apiConfig.model || typeof apiConfig.model !== 'string') {
-      ServerLogger.error('모델명이 유효하지 않습니다', null, 'AI');
-      return false;
-    }
-    
-    if (apiConfig.keyIndex === null || apiConfig.keyIndex === undefined) {
-      ServerLogger.error('키 인덱스가 유효하지 않습니다', null, 'AI');
-      return false;
-    }
-    
-    return true;
-  }
-
-  /**
-   * 안전한 API 호출
-   */
-  async _safeApiCall(model, prompt, imageBase64) {
-    if (!model || typeof model.generateContent !== 'function') {
-      throw new Error('잘못된 모델 인스턴스');
-    }
-    
-    if (!prompt || typeof prompt !== 'string') {
-      throw new Error('잘못된 프롬프트');
-    }
-    
-    if (imageBase64) {
-      if (typeof imageBase64 !== 'string') {
-        throw new Error('잘못된 이미지 데이터 형식');
-      }
+    try {
+      ServerLogger.info('🚀 통합 Gemini 관리자 사용', null, 'AI');
       
-      return await model.generateContent([
-        prompt,
-        {
-          inlineData: {
-            data: imageBase64,
-            mimeType: "image/jpeg"
-          }
-        }
-      ]);
-    } else {
-      return await model.generateContent(prompt);
+      // 통합 관리자로 단순화된 호출
+      const result = await this.geminiManager.generateContent(prompt, imageBase64);
+      
+      return result.text;
+    } catch (error) {
+      ServerLogger.error('통합 Gemini 관리자 호출 실패', error, 'AI');
+      throw error;
     }
   }
 
-  /**
-   * 안전한 모델 타입 추출
-   */
-  _extractModelType(modelName) {
-    if (!modelName || typeof modelName !== 'string') {
-      ServerLogger.warn('잘못된 모델명, 기본값 flash 사용', null, 'AI');
-      return 'flash';
-    }
-    
-    return modelName.toLowerCase().includes('pro') ? 'pro' : 'flash';
-  }
+  // 🗑️ 레거시 헬퍼 메서드들 제거됨 - UnifiedGeminiManager에서 모든 기능 제공
 
   /**
    * 안전한 응답 텍스트 추출
@@ -1118,14 +980,10 @@ class AIAnalyzer {
       
       ServerLogger.info('🔮 Gemini 다중 프레임 재분석 API 호출...');
       
-      // Gemini API 호출
-      const result = await this.geminiModel.generateContent([
-        retryPrompt,
-        ...imageContents
-      ]);
+      // 🔄 통합 관리자 사용으로 변경 - 다중 이미지 재분석
+      const result = await this.geminiManager.generateContentWithImages(retryPrompt, imageContents);
       
-      const response = await result.response;
-      const aiResponse = response.text();
+      const aiResponse = result.text;
       
       ServerLogger.info('✅ Gemini 다중 프레임 재분석 응답 수신');
       
@@ -1727,14 +1585,10 @@ JSON 형식으로 답변:
       try {
         ServerLogger.info(`🔮 Gemini API 호출 시작... (시도 ${attempt + 1}/${maxRetries})`);
         
-        // Gemini API 호출
-        const result = await this.geminiModel.generateContent([
-          prompt,
-          ...imageContents
-        ]);
+        // 🔄 통합 관리자 사용으로 변경 - 최종 다중 이미지 분석
+        const result = await this.geminiManager.generateContentWithImages(prompt, imageContents);
         
-        const response = await result.response;
-        const aiResponse = response.text();
+        const aiResponse = result.text;
         
         ServerLogger.info('🔮 Gemini AI 원본 응답:', aiResponse);
         

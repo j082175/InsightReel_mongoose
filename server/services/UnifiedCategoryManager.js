@@ -373,19 +373,29 @@ ${categoryStructure}
     
     return `당신은 ${platformStr} 플랫폼의 비디오 콘텐츠를 분석하는 전문가입니다.
 
-다음 ${categories.length}개의 대카테고리 중에서 가장 적절한 카테고리를 선택하고, 필요시 하위 카테고리를 자유롭게 생성하세요:
+다음 ${categories.length}개의 대카테고리 중에서 가장 적절한 카테고리를 선택하고, 하위 카테고리를 생성하세요:
 
 📂 사용 가능한 대카테고리:
 ${categories.map((cat, index) => `${index + 1}. ${cat}`).join('\n')}
 
-카테고리 형식:
-- 단일: "게임"
-- 계층형: "게임 > RPG > 액션 RPG"
+🎯 카테고리 깊이 규칙:
+- **최소 깊이**: 3단계 (대카테고리 > 중카테고리 > 소카테고리)
+- **최대 깊이**: 6단계까지 허용
+- **권장 깊이**: 콘텐츠에 적합한 만큼 자연스럽게 (4-5단계 선호)
+
+⚠️ **중요**: 의미 있고 구체적인 분류가 가능할 때만 깊게 만드세요. 억지로 단계를 늘리지 마세요.
+
+카테고리 예시:
+- 3단계: "음악 > K-POP > 댄스" (충분히 구체적인 경우)
+- 4단계: "게임 > RPG > 액션 RPG > 모바일" (플랫폼 구분이 의미 있는 경우)
+- 5단계: "교육 > 언어 > 영어 > 회화 > 초급" (세분화가 자연스러운 경우)
+- 6단계: "스포츠 > 축구 > 리그 > 프리미어리그 > 맨유 > 하이라이트" (매우 구체적인 경우)
 
 응답 형식 (JSON):
 {
-  "category": "선택된 카테고리 (계층형 포함)",
+  "full_path": "대카테고리 > 중카테고리 > 소카테고리 [> 추가 단계들...]",
   "main_category": "대카테고리",
+  "depth": 4,
   "confidence": 0.85,
   "keywords": ["키워드1", "키워드2", "키워드3"],
   "hashtags": ["#태그1", "#태그2"],
@@ -529,15 +539,20 @@ ${categories.map((cat, index) => `${index + 1}. ${cat}`).join('\n')}
   getFallbackCategory(metadata) {
     const platform = metadata.platform || 'youtube';
     const categories = this.getMainCategoriesForPlatform(platform);
+    const mainCategory = categories[0] || '엔터테인먼트';
+    const fullPath = `${mainCategory} > 일반 > 기본`; // 최소 3단계 보장
     
     return {
       category: '미분류',
-      mainCategory: categories[0] || '엔터테인먼트',
+      mainCategory: mainCategory,
       middleCategory: '기본',
+      fullPath: fullPath,
+      depth: 3,
       confidence: 0.3,
       keywords: [],
       hashtags: [],
-      source: 'fallback'
+      source: 'fallback',
+      platform: platform
     };
   }
 
@@ -709,20 +724,48 @@ ${categories.map((cat, index) => `${index + 1}. ${cat}`).join('\n')}
       
       // 카테고리 정규화
       let finalCategory = parsedResponse.category || parsedResponse.main_category || '미분류';
-      let mainCategory = finalCategory.split(' > ')[0] || finalCategory;
-      let middleCategory = finalCategory.split(' > ')[1] || '일반';
+      let fullPath = parsedResponse.full_path || finalCategory;
+      let mainCategory = fullPath.split(' > ')[0] || fullPath;
+      let middleCategory = fullPath.split(' > ')[1] || '일반';
+      
+      // fullPath에서 depth 계산
+      let depth = parsedResponse.depth;
+      if (!depth && fullPath) {
+        depth = fullPath.split(' > ').length;
+      }
       
       // 대카테고리가 플랫폼에서 지원되지 않으면 수정
       if (!availableCategories.includes(mainCategory)) {
         mainCategory = availableCategories[0];
         finalCategory = mainCategory;
         middleCategory = '일반';
+        fullPath = mainCategory; // fullPath도 업데이트
+        depth = 1;
+      }
+      
+      // 최소/최대 깊이 검증 (3-6단계)
+      if (depth < 3) {
+        // 최소 3단계로 확장
+        if (depth === 1) {
+          fullPath = `${mainCategory} > 일반 > 기본`;
+          depth = 3;
+        } else if (depth === 2) {
+          fullPath = `${fullPath} > 기본`;
+          depth = 3;
+        }
+      } else if (depth > 6) {
+        // 최대 6단계로 제한
+        const parts = fullPath.split(' > ').slice(0, 6);
+        fullPath = parts.join(' > ');
+        depth = 6;
       }
       
       return {
         category: finalCategory,
         mainCategory: mainCategory,
         middleCategory: middleCategory,
+        fullPath: fullPath,
+        depth: depth,
         keywords: Array.isArray(parsedResponse.keywords) ? parsedResponse.keywords : [],
         hashtags: Array.isArray(parsedResponse.hashtags) ? parsedResponse.hashtags : [],
         content: parsedResponse.content || '내용 분석 완료',
