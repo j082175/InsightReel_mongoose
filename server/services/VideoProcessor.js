@@ -602,6 +602,12 @@ class VideoProcessor {
       const videoId = this.extractYouTubeId(videoUrl);
       ServerLogger.info(`🎬 하이브리드 YouTube 정보 수집 시작: ${videoId}`);
 
+      // USE_YTDL_FIRST가 false면 바로 기존 API 방식 사용
+      if (process.env.USE_YTDL_FIRST === 'false') {
+        ServerLogger.info('🚫 ytdl-core 비활성화, 기존 API 방식 사용');
+        return this.getYouTubeVideoInfoLegacy(videoUrl);
+      }
+
       // 하이브리드 추출기 사용
       const result = await this.hybridExtractor.extractVideoData(videoUrl);
       
@@ -705,8 +711,10 @@ class VideoProcessor {
         channel: snippet.channelTitle,
         channelId: snippet.channelId,
         publishedAt: snippet.publishedAt,
+        uploadDate: snippet.publishedAt,  // uploadDate 매핑 추가
         thumbnailUrl: snippet.thumbnails.medium?.url || snippet.thumbnails.default.url,
         category: categoryName,
+        youtubeCategory: categoryName,    // youtubeCategory 매핑 추가
         categoryId: categoryId,
         duration: duration,
         durationFormatted: this.formatDuration(duration),

@@ -638,18 +638,23 @@ class AIAnalyzer {
 
   async encodeImageToBase64(imagePath) {
     try {
+      ServerLogger.info(`📸 이미지 인코딩 시작: ${imagePath}`);
+      
       // URL인지 파일 경로인지 확인
       if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
         // URL인 경우 다운로드
         const axios = require('axios');
+        ServerLogger.info(`🌐 URL 이미지 다운로드 시도: ${imagePath}`);
         const response = await axios.get(imagePath, { responseType: 'arraybuffer' });
         return Buffer.from(response.data).toString('base64');
       } else {
         // 로컬 파일인 경우
+        ServerLogger.info(`📁 로컬 파일 읽기 시도: ${imagePath}`);
         const imageBuffer = fs.readFileSync(imagePath);
         return imageBuffer.toString('base64');
       }
     } catch (error) {
+      ServerLogger.error(`❌ 이미지 인코딩 실패 - 경로: ${imagePath}, 오류: ${error.message}`);
       throw new Error(`이미지 인코딩 실패: ${error.message}`);
     }
   }

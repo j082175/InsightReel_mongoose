@@ -60,14 +60,19 @@ class HybridYouTubeExtractor {
       const results = {};
       
       // 1단계: ytdl-core로 기본 데이터 추출 (빠르고 상세함)
-      try {
-        const ytdlData = await this.extractWithYtdl(url);
-        results.ytdl = ytdlData;
-        ServerLogger.info('✅ ytdl-core 데이터 추출 완료', { 
-          title: ytdlData.title?.substring(0, 50) 
-        });
-      } catch (error) {
-        ServerLogger.warn('⚠️ ytdl-core 추출 실패', error.message);
+      if (this.useYtdlFirst) {
+        try {
+          const ytdlData = await this.extractWithYtdl(url);
+          results.ytdl = ytdlData;
+          ServerLogger.info('✅ ytdl-core 데이터 추출 완료', { 
+            title: ytdlData.title?.substring(0, 50) 
+          });
+        } catch (error) {
+          ServerLogger.warn('⚠️ ytdl-core 추출 실패', error.message);
+          results.ytdl = null;
+        }
+      } else {
+        ServerLogger.info('🚫 ytdl-core 비활성화됨 (USE_YTDL_FIRST=false)');
         results.ytdl = null;
       }
 
@@ -176,11 +181,12 @@ class HybridYouTubeExtractor {
       throw new Error('YouTube API 키가 없습니다');
     }
 
-    const response = await axios.get(
+    // 1. 비디오 정보 가져오기
+    const videoResponse = await axios.get(
       'https://www.googleapis.com/youtube/v3/videos',
       {
         params: {
-          part: 'statistics,snippet,contentDetails',
+          part: 'statistics,snippet,contentDetails,status,localizations',
           id: videoId,
           key: this.youtubeApiKey
         },
@@ -188,29 +194,196 @@ class HybridYouTubeExtractor {
       }
     );
 
-    if (!response.data.items || response.data.items.length === 0) {
+    if (!videoResponse.data.items || videoResponse.data.items.length === 0) {
       throw new Error('비디오를 찾을 수 없습니다');
     }
 
-    const item = response.data.items[0];
+    const item = videoResponse.data.items[0];
     const snippet = item.snippet;
     const statistics = item.statistics;
+    const contentDetails = item.contentDetails;
+    const status = item.status;
+    
+    // 2. 채널 정보 가져오기 (구독자수, 채널 비디오수 등)
+    let channelData = {};
+    try {
+      const channelResponse = await axios.get(
+        'https://www.googleapis.com/youtube/v3/channels',
+        {
+          params: {
+            part: 'statistics,snippet,contentDetails',
+            id: snippet.channelId,
+            key: this.youtubeApiKey
+          },
+          timeout: 8000
+        }
+      );
+      
+      if (channelResponse.data.items && channelResponse.data.items.length > 0) {
+        const channel = channelResponse.data.items[0];
+        channelData = {
+          subscriberCount: parseInt(channel.statistics.subscriberCount) || 0,
+          channelVideoCount: parseInt(channel.statistics.videoCount) || 0,
+          channelViewCount: parseInt(channel.statistics.viewCount) || 0,
+          channelCountry: channel.snippet.country || '',
+          channelDescription: channel.snippet.description || '',
+          channelCustomUrl: channel.snippet.customUrl || '',
+          channelPublishedAt: channel.snippet.publishedAt
+        };
+        
+        ServerLogger.info('📺 채널 정보 추출 완료', {
+          channelTitle: snippet.channelTitle,
+          subscribers: channelData.subscriberCount,
+          videos: channelData.channelVideoCount
+        });
+      }
+    } catch (error) {
+      ServerLogger.warn('⚠️ 채널 정보 추출 실패', error.message);
+    }
+    
+    // 3. 댓글 가져오기 (상위 3개)
+    let topComments = [];
+    try {
+      const commentsResponse = await axios.get(
+        'https://www.googleapis.com/youtube/v3/commentThreads',
+        {
+          params: {
+            part: 'snippet',
+            videoId: videoId,
+            order: 'relevance',
+            maxResults: 3,
+            key: this.youtubeApiKey
+          },
+          timeout: 8000
+        }
+      );
+      
+      if (commentsResponse.data.items) {
+        topComments = commentsResponse.data.items.map(item => ({
+          author: item.snippet.topLevelComment.snippet.authorDisplayName,
+          text: item.snippet.topLevelComment.snippet.textDisplay,
+          likeCount: item.snippet.topLevelComment.snippet.likeCount
+        }));
+        
+        ServerLogger.info('💬 댓글 추출 완료', { count: topComments.length });
+      }
+    } catch (error) {
+      ServerLogger.warn('⚠️ 댓글 추출 실패 (비활성화된 댓글일 수 있음)', error.message);
+    }
+    
+    // 4. 해시태그와 멘션 추출 (설명에서)
+    const hashtags = this.extractHashtags(snippet.description || '');
+    const mentions = this.extractMentions(snippet.description || '');
+    
+    // API 응답 디버깅
+    ServerLogger.info('📊 YouTube API 전체 데이터 디버그', {
+      title: snippet.title,
+      hasDescription: !!snippet.description,
+      descriptionLength: snippet.description?.length || 0,
+      subscribers: channelData.subscriberCount || 0,
+      channelVideos: channelData.channelVideoCount || 0,
+      topCommentsCount: topComments.length,
+      hashtagsCount: hashtags.length,
+      mentionsCount: mentions.length
+    });
     
     return {
-      // API 전용 통계 (API 강점)
+      // 기본 정보 (ytdl-core 대체)
+      title: snippet.title || '',
+      description: snippet.description || '',
+      channelName: snippet.channelTitle || '',
+      channelId: snippet.channelId || '',
+      
+      // 영상 메타데이터
+      duration: this.parseDuration(contentDetails.duration) || 0,
+      category: snippet.categoryId || '',
+      keywords: snippet.tags || [],
+      tags: snippet.tags || [],
+      
+      // 통계 정보 (API 강점)
+      viewCount: parseInt(statistics.viewCount) || 0,
       likeCount: parseInt(statistics.likeCount) || 0,
       commentCount: parseInt(statistics.commentCount) || 0,
       
-      // API 메타데이터 (API 강점)
+      // 날짜 정보
       publishedAt: snippet.publishedAt,
-      categoryId: snippet.categoryId,
+      uploadDate: snippet.publishedAt,
       
-      // 채널 추가 정보 (API 강점) 
+      // 썸네일 정보
+      thumbnails: snippet.thumbnails ? Object.values(snippet.thumbnails) : [],
+      
+      // 카테고리 및 메타데이터
+      categoryId: snippet.categoryId,
+      youtubeCategoryId: snippet.categoryId,
+      
+      // 채널 정보
       channelTitle: snippet.channelTitle,
+      channelUrl: `https://www.youtube.com/channel/${snippet.channelId}`,
+      subscriberCount: channelData.subscriberCount || 0,
+      channelVideoCount: channelData.channelVideoCount || 0,
+      channelViewCount: channelData.channelViewCount || 0,
+      channelCountry: channelData.channelCountry || '',
+      channelDescription: channelData.channelDescription || '',
+      channelCustomUrl: channelData.channelCustomUrl || '',
+      youtubeHandle: channelData.channelCustomUrl || '',
+      
+      // 해시태그와 멘션
+      hashtags: hashtags,
+      mentions: mentions,
+      
+      // 댓글
+      topComments: topComments,
+      
+      // 언어 및 추가 정보
+      defaultLanguage: snippet.defaultLanguage || snippet.defaultAudioLanguage || '',
+      language: snippet.defaultLanguage || snippet.defaultAudioLanguage || '',
+      
+      // 라이브 스트림 정보
+      isLiveContent: contentDetails.contentRating?.ytRating === 'ytAgeRestricted' || false,
+      isLive: snippet.liveBroadcastContent === 'live',
+      liveBroadcast: snippet.liveBroadcastContent || 'none',
+      
+      // 상태 정보
+      privacyStatus: status?.privacyStatus || 'public',
+      embeddable: status?.embeddable || true,
       
       // 소스 표시
       source: 'youtube-api'
     };
+  }
+
+  /**
+   * 해시태그 추출
+   */
+  extractHashtags(description) {
+    if (!description) return [];
+    const hashtags = description.match(/#[\w가-힣]+/g) || [];
+    return [...new Set(hashtags)]; // 중복 제거
+  }
+
+  /**
+   * 멘션 추출
+   */
+  extractMentions(description) {
+    if (!description) return [];
+    const mentions = description.match(/@[\w가-힣.-]+/g) || [];
+    return [...new Set(mentions)]; // 중복 제거
+  }
+
+  /**
+   * ISO 8601 duration을 초로 변환 (PT15M33S -> 933초)
+   */
+  parseDuration(isoDuration) {
+    if (!isoDuration) return 0;
+    
+    const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return 0;
+    
+    const hours = parseInt(match[1]) || 0;
+    const minutes = parseInt(match[2]) || 0;
+    const seconds = parseInt(match[3]) || 0;
+    
+    return hours * 3600 + minutes * 60 + seconds;
   }
 
   /**
@@ -235,36 +408,55 @@ class HybridYouTubeExtractor {
     // 기본값: 빈 객체
     const merged = {};
     
+    ServerLogger.info('🔄 데이터 병합 시작', {
+      hasYtdl: !!ytdlData,
+      hasApi: !!apiData,
+      ytdlTitle: ytdlData?.title,
+      apiTitle: apiData?.title
+    });
+    
     // 1단계: ytdl-core 데이터를 기반으로 (더 상세함)
     if (ytdlData) {
       Object.assign(merged, ytdlData);
+      ServerLogger.info('✅ ytdl 데이터 병합 완료', { title: merged.title });
     }
     
-    // 2단계: API 데이터로 보강/덮어쓰기 (더 정확한 통계)
+    // 2단계: API 데이터로 보강/덮어쓰기
     if (apiData) {
-      // API가 더 정확한 데이터들
-      if (apiData.likeCount !== undefined) {
-        merged.likeCount = apiData.likeCount;
-        merged.likes = apiData.likeCount; // 별칭
-      }
-      
-      if (apiData.commentCount !== undefined) {
-        merged.commentCount = apiData.commentCount;
-        merged.comments_count = apiData.commentCount; // 별칭
-      }
-      
-      if (apiData.publishedAt) {
-        merged.publishedAt = apiData.publishedAt;
-        merged.originalPublishDate = new Date(apiData.publishedAt);
-      }
-      
-      if (apiData.categoryId) {
-        merged.youtubeCategoryId = apiData.categoryId;
-      }
-      
-      // 채널명 일치 확인
-      if (apiData.channelTitle && !merged.channelName) {
-        merged.channelName = apiData.channelTitle;
+      // ytdl 데이터가 없으면 API 데이터를 기본 데이터로 사용
+      if (!ytdlData) {
+        ServerLogger.info('📊 API 전용 모드: 모든 API 데이터 사용');
+        Object.assign(merged, apiData);
+        ServerLogger.info('✅ API 데이터 병합 완료', { 
+          title: merged.title,
+          views: merged.viewCount,
+          duration: merged.duration 
+        });
+      } else {
+        // 하이브리드 모드: API가 더 정확한 데이터들만 덮어쓰기
+        if (apiData.likeCount !== undefined) {
+          merged.likeCount = apiData.likeCount;
+          merged.likes = apiData.likeCount; // 별칭
+        }
+        
+        if (apiData.commentCount !== undefined) {
+          merged.commentCount = apiData.commentCount;
+          merged.comments_count = apiData.commentCount; // 별칭
+        }
+        
+        if (apiData.publishedAt) {
+          merged.publishedAt = apiData.publishedAt;
+          merged.originalPublishDate = new Date(apiData.publishedAt);
+        }
+        
+        if (apiData.categoryId) {
+          merged.youtubeCategoryId = apiData.categoryId;
+        }
+        
+        // 채널명 일치 확인
+        if (apiData.channelTitle && !merged.channelName) {
+          merged.channelName = apiData.channelTitle;
+        }
       }
     }
     

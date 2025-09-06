@@ -41,7 +41,7 @@ class HybridDataConverter {
         publishedAt: hybridData.publishedAt || hybridData.uploadDate || new Date().toISOString(),
         
         // 썸네일 처리
-        thumbnailUrl: this.extractThumbnailUrl(hybridData),
+        thumbnailUrl: this.extractThumbnailUrl(hybridData, videoId),
         
         // 카테고리 처리
         category: this.convertCategory(hybridData, YOUTUBE_CATEGORIES),
@@ -130,7 +130,7 @@ class HybridDataConverter {
   /**
    * 썸네일 URL 추출
    */
-  static extractThumbnailUrl(data) {
+  static extractThumbnailUrl(data, videoId) {
     // ytdl-core 썸네일 배열에서 최고 화질 선택
     if (data.thumbnails && Array.isArray(data.thumbnails) && data.thumbnails.length > 0) {
       const best = data.thumbnails[data.thumbnails.length - 1];
@@ -142,10 +142,15 @@ class HybridDataConverter {
       return data.thumbnail.url;
     }
     
-    // 기본 YouTube 썸네일 생성
-    const videoId = data.url?.match(/[?&]v=([^&]+)/)?.[1] || '';
+    // 기본 YouTube 썸네일 생성 (videoId 매개변수 사용)
     if (videoId) {
       return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+    }
+    
+    // URL에서 비디오 ID 추출 시도
+    const urlVideoId = data.url?.match(/[?&]v=([^&]+)/)?.[1] || '';
+    if (urlVideoId) {
+      return `https://img.youtube.com/vi/${urlVideoId}/maxresdefault.jpg`;
     }
     
     return '';
