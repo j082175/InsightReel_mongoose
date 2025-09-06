@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <!-- Chrome Extension CSP 준수 -->
+  <meta http-equiv="Content-Security-Policy" 
+        content="script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline';">
+  
+  <title>영상 자동저장 분석기</title>
+  
+  <!-- 프리로드할 CSS (빠른 로딩) -->
+  <style>
+    /* 초기 로딩 스타일 (FOUC 방지) */
+    body {
+      margin: 0;
+      padding: 0;
+      width: 350px;
+      min-height: 500px;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #ffffff;
+      overflow-x: hidden;
+    }
+    
+    /* 로딩 스피너 */
+    .loading-spinner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .loading-spinner::before {
+      content: '';
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #1976d2;
+      border-radius: 50%;
+      margin-right: 8px;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* React 앱이 로드되면 숨김 */
+    .loading-spinner.hidden {
+      display: none;
+    }
+  </style>
+  <script type="module" crossorigin src="./popup.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/popup.css">
+</head>
+<body>
+  <!-- React 앱 마운트 포인트 -->
+  <div id="root">
+    <!-- 초기 로딩 표시 -->
+    <div class="loading-spinner">
+      React 앱 로딩 중...
+    </div>
+  </div>
+
+  <!-- React 앱 진입점 -->
+</body>
+</html>

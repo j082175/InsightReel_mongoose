@@ -5,6 +5,8 @@ const { spawn } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
 const { ServerLogger } = require('../utils/logger');
 const youtubeBatchProcessor = require('./YouTubeBatchProcessor');
+const HybridYouTubeExtractor = require('./HybridYouTubeExtractor');
+const HybridDataConverter = require('./HybridDataConverter');
 
 // YouTube 카테고리 매핑
 const YOUTUBE_CATEGORIES = {
@@ -58,6 +60,9 @@ class VideoProcessor {
     this.downloadDir = path.join(__dirname, '../../downloads');
     this.thumbnailDir = path.join(this.downloadDir, 'thumbnails');
     this.youtubeApiKey = process.env.YOUTUBE_API_KEY || process.env.GOOGLE_API_KEY;
+    
+    // 🚀 하이브리드 YouTube 추출기 초기화
+    this.hybridExtractor = new HybridYouTubeExtractor();
     
     // 디렉토리 생성
     this.ensureDirectories();
@@ -591,15 +596,46 @@ class VideoProcessor {
     }
   }
 
-  // YouTube 비디오 정보 수집 (기존 즉시 처리)
+  // 🚀 하이브리드 YouTube 비디오 정보 수집 (ytdl-core + API)
   async getYouTubeVideoInfo(videoUrl) {
+    try {
+      const videoId = this.extractYouTubeId(videoUrl);
+      ServerLogger.info(`🎬 하이브리드 YouTube 정보 수집 시작: ${videoId}`);
+
+      // 하이브리드 추출기 사용
+      const result = await this.hybridExtractor.extractVideoData(videoUrl);
+      
+      if (!result.success) {
+        throw new Error(`하이브리드 추출 실패: ${result.error}`);
+      }
+
+      const data = result.data;
+      ServerLogger.info(`✅ 하이브리드 추출 성공`, {
+        sources: result.sources,
+        time: `${result.extractionTime}ms`
+      });
+
+      // 기존 포맷에 맞게 변환
+      return HybridDataConverter.convertToLegacyFormat(data, videoId);
+
+    } catch (error) {
+      ServerLogger.error('하이브리드 YouTube 정보 수집 실패:', error.message);
+      
+      // 폴백: 기존 API 방식으로 시도
+      ServerLogger.info('🔄 기존 API 방식으로 폴백 시도...');
+      return this.getYouTubeVideoInfoLegacy(videoUrl);
+    }
+  }
+
+  // 🔄 기존 API 전용 메서드 (폴백용)
+  async getYouTubeVideoInfoLegacy(videoUrl) {
     try {
       if (!this.youtubeApiKey) {
         throw new Error('YouTube API 키가 설정되지 않았습니다.');
       }
 
       const videoId = this.extractYouTubeId(videoUrl);
-      ServerLogger.info(`🎬 YouTube 비디오 정보 수집 시작: ${videoId}`);
+      ServerLogger.info(`🎬 기존 API 방식 정보 수집: ${videoId}`);
 
       const response = await axios.get(
         `https://www.googleapis.com/youtube/v3/videos`, {
