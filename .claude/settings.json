@@ -1,0 +1,27 @@
+{
+    "hooks": {
+      "Stop": [
+        {
+          "matcher": "",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "powershell.exe -c \"[System.Media.SystemSounds]::Beep.Play()\""
+            }
+          ]
+        }
+      ],
+      "Notification": [
+        {
+          "matcher": "",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "powershell.exe -c \"[System.Media.SystemSounds]::Beep.Play()\""
+            }
+          ]
+        }
+      ]
+    }
+  }
+  
