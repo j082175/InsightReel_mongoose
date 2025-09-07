@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Extension 동작 테스트</title>
+</head>
+<body>
+    <h1>Chrome Extension 동작 테스트</h1>
+    
+    <h2>📋 테스트 단계</h2>
+    <ol>
+        <li>Chrome에서 <code>chrome://extensions/</code> 열기</li>
+        <li>개발자 모드 활성화</li>
+        <li><strong>압축해제된 확장 프로그램을 로드합니다</strong> 클릭</li>
+        <li><code>C:\Users\j0821\Documents\___JUNSOOCHO___\영상자동저장분석기\extension</code> 폴더 선택</li>
+    </ol>
+    
+    <h2>✅ 성공 확인 방법</h2>
+    <ul>
+        <li>Extension이 에러 없이 로드됨</li>
+        <li>Instagram/TikTok/YouTube 페이지에서 개발자 도구 콘솔에서:</li>
+        <ul>
+            <li><code>🚀 Content Script 시작 - 디버깅용</code> 메시지 표시</li>
+            <li><code>📡 서버 URL: http://localhost:3000</code> 표시</li>
+            <li><code>🔧 개발 모드: true</code> 표시</li>
+        </ul>
+    </ul>
+    
+    <h2>🔧 확인할 환경변수</h2>
+    <div id="config-check">
+        <script>
+            // 설정 확인용 스크립트
+            document.write('<pre>');
+            document.write('EXTENSION_CONFIG 존재여부: ' + (typeof window.EXTENSION_CONFIG !== 'undefined') + '\n');
+            if (typeof window.EXTENSION_CONFIG !== 'undefined') {
+                document.write('서버 URL: ' + window.EXTENSION_CONFIG.SERVER_URL + '\n');
+                document.write('개발 모드: ' + window.EXTENSION_CONFIG.IS_DEVELOPMENT + '\n');
+            }
+            document.write('</pre>');
+        </script>
+    </div>
+    
+    <h2>🌐 테스트 페이지 링크</h2>
+    <ul>
+        <li><a href="https://www.instagram.com" target="_blank">Instagram</a></li>
+        <li><a href="https://www.tiktok.com" target="_blank">TikTok</a></li>  
+        <li><a href="https://www.youtube.com" target="_blank">YouTube</a></li>
+    </ul>
+    
+    <h2>🔧 서버 시작</h2>
+    <p>Extension 테스트 전에 서버를 시작해야 합니다:</p>
+    <code>
+        cd C:\Users\j0821\Documents\___JUNSOOCHO___\영상자동저장분석기<br>
+        npm run dev
+    </code>
+    
+</body>
+</html>

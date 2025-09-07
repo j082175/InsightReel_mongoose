@@ -1,6 +1,7 @@
 const ytdl = require('ytdl-core');
 const axios = require('axios');
 const { ServerLogger } = require('../utils/logger');
+const MultiKeyManager = require('../utils/multi-key-manager');
 
 /**
  * 🚀 하이브리드 YouTube 데이터 추출기
@@ -12,15 +13,31 @@ const { ServerLogger } = require('../utils/logger');
  */
 class HybridYouTubeExtractor {
   constructor() {
-    this.youtubeApiKey = process.env.YOUTUBE_API_KEY || process.env.GOOGLE_API_KEY;
     this.useYtdlFirst = process.env.USE_YTDL_FIRST !== 'false'; // 기본값: true
     this.ytdlTimeout = 10000; // 10초 타임아웃
     
+    // 멀티 키 매니저 초기화
+    this.multiKeyManager = new MultiKeyManager();
+    
     ServerLogger.info('🔧 하이브리드 YouTube 추출기 초기화', {
-      hasApiKey: !!this.youtubeApiKey,
+      keyCount: this.multiKeyManager.keys.length,
       ytdlFirst: this.useYtdlFirst,
       timeout: this.ytdlTimeout
     });
+  }
+
+  /**
+   * 모든 API 키의 사용량 현황 조회
+   */
+  getUsageStatus() {
+    return this.multiKeyManager.getAllUsageStatus();
+  }
+
+  /**
+   * 사용량 현황 로그 출력
+   */
+  logUsageStatus() {
+    this.multiKeyManager.logUsageStatus();
   }
 
   /**
@@ -177,10 +194,9 @@ class HybridYouTubeExtractor {
    * 📊 YouTube Data API를 이용한 추가 데이터 추출
    */
   async extractWithYouTubeAPI(videoId) {
-    if (!this.youtubeApiKey) {
-      throw new Error('YouTube API 키가 없습니다');
-    }
-
+    // 사용 가능한 키 찾기
+    const availableKey = this.multiKeyManager.getAvailableKey();
+    
     // 1. 비디오 정보 가져오기
     const videoResponse = await axios.get(
       'https://www.googleapis.com/youtube/v3/videos',
@@ -188,11 +204,14 @@ class HybridYouTubeExtractor {
         params: {
           part: 'statistics,snippet,contentDetails,status,localizations',
           id: videoId,
-          key: this.youtubeApiKey
+          key: availableKey.key
         },
         timeout: 8000
       }
     );
+    
+    // YouTube Videos API 사용량 추적 (멀티키 방식)
+    this.multiKeyManager.trackAPI(availableKey.key, 'youtube-videos', true);
 
     if (!videoResponse.data.items || videoResponse.data.items.length === 0) {
       throw new Error('비디오를 찾을 수 없습니다');
@@ -213,11 +232,14 @@ class HybridYouTubeExtractor {
           params: {
             part: 'statistics,snippet,contentDetails',
             id: snippet.channelId,
-            key: this.youtubeApiKey
+            key: availableKey.key
           },
           timeout: 8000
         }
       );
+      
+      // YouTube Channels API 사용량 추적 (멀티키 방식)
+      this.multiKeyManager.trackAPI(availableKey.key, 'youtube-channels', true);
       
       if (channelResponse.data.items && channelResponse.data.items.length > 0) {
         const channel = channelResponse.data.items[0];
@@ -239,6 +261,8 @@ class HybridYouTubeExtractor {
       }
     } catch (error) {
       ServerLogger.warn('⚠️ 채널 정보 추출 실패', error.message);
+      // 채널 API 에러 추적 (멀티키 방식)
+      this.multiKeyManager.trackAPI(availableKey.key, 'youtube-channels', false);
     }
     
     // 3. 댓글 가져오기 (상위 3개)
@@ -252,11 +276,14 @@ class HybridYouTubeExtractor {
             videoId: videoId,
             order: 'relevance',
             maxResults: 3,
-            key: this.youtubeApiKey
+            key: availableKey.key
           },
           timeout: 8000
         }
       );
+      
+      // YouTube CommentThreads API 사용량 추적 (멀티키 방식)
+      this.multiKeyManager.trackAPI(availableKey.key, 'youtube-comments', true);
       
       if (commentsResponse.data.items) {
         topComments = commentsResponse.data.items.map(item => ({
@@ -269,6 +296,8 @@ class HybridYouTubeExtractor {
       }
     } catch (error) {
       ServerLogger.warn('⚠️ 댓글 추출 실패 (비활성화된 댓글일 수 있음)', error.message);
+      // 댓글 API 에러 추적 (멀티키 방식)
+      this.multiKeyManager.trackAPI(availableKey.key, 'youtube-comments', false);
     }
     
     // 4. 해시태그와 멘션 추출 (설명에서)

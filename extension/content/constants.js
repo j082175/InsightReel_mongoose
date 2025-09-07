@@ -3,10 +3,10 @@
  * 모든 하드코딩된 값들을 중앙화하여 관리
  */
 export const CONSTANTS = {
-  // 🌐 서버 & API 설정
+  // 🌐 서버 & API 설정 (환경변수 기반)
   SERVER: {
-    BASE_URL: process.env.NODE_ENV === 'production' ? 'https://your-domain.com' : 'http://localhost:3000',
-    PORT: 3000,
+    BASE_URL: process.env.SERVER_URL || (process.env.NODE_ENV === 'production' ? 'https://your-domain.com' : 'http://localhost:3000'),
+    PORT: process.env.PORT || 3000,
     ENDPOINTS: {
       ANALYZE: '/api/analyze',
       PROCESS_VIDEO: '/api/process-video', 

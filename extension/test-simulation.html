@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Extension 동작 시뮬레이션 테스트</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .log { background: #f5f5f5; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; border: 1px solid #ffeaa7; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Chrome Extension 동작 시뮬레이션</h1>
+    
+    <div id="test-results"></div>
+    
+    <script src="config/settings.js"></script>
+    <script>
+        const results = document.getElementById('test-results');
+        
+        function addResult(message, type = 'log') {
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+        
+        // 1. settings.js 로드 테스트
+        try {
+            addResult('✅ settings.js 로드 성공', 'success');
+            addResult(`📡 서버 URL: ${window.EXTENSION_CONFIG.SERVER_URL}`, 'log');
+            addResult(`🔧 개발 모드: ${window.EXTENSION_CONFIG.IS_DEVELOPMENT}`, 'log');
+        } catch (e) {
+            addResult(`❌ settings.js 로드 실패: ${e.message}`, 'error');
+        }
+        
+        // 2. 환경변수 사용 시뮬레이션
+        try {
+            const serverUrl = (window.EXTENSION_CONFIG && window.EXTENSION_CONFIG.SERVER_URL) || 'http://localhost:3000';
+            addResult(`✅ 서버 URL 동적 처리 성공: ${serverUrl}`, 'success');
+        } catch (e) {
+            addResult(`❌ 서버 URL 처리 실패: ${e.message}`, 'error');
+        }
+        
+        // 3. API 호출 시뮬레이션 (실제 호출하지 않고 URL만 확인)
+        try {
+            const analyzeUrl = `${(window.EXTENSION_CONFIG && window.EXTENSION_CONFIG.SERVER_URL) || 'http://localhost:3000'}/api/analyze`;
+            const channelUrl = `${(window.EXTENSION_CONFIG && window.EXTENSION_CONFIG.SERVER_URL) || 'http://localhost:3000'}/api/analyze-channel`;
+            
+            addResult(`✅ Analyze API URL: ${analyzeUrl}`, 'success');
+            addResult(`✅ Channel API URL: ${channelUrl}`, 'success');
+        } catch (e) {
+            addResult(`❌ API URL 생성 실패: ${e.message}`, 'error');
+        }
+        
+        // 4. 서버 연결 테스트
+        addResult('🔄 서버 연결 테스트 중...', 'warning');
+        
+        fetch(`${window.EXTENSION_CONFIG.SERVER_URL}/health`)
+            .then(response => {
+                if (response.ok) {
+                    addResult(`✅ 서버 연결 성공! (${response.status})`, 'success');
+                } else {
+                    addResult(`⚠️ 서버 응답 오류: ${response.status}`, 'warning');
+                }
+            })
+            .catch(error => {
+                addResult(`❌ 서버 연결 실패: ${error.message}`, 'error');
+                addResult(`💡 서버가 실행 중인지 확인해주세요: npm run dev`, 'warning');
+            });
+        
+        // 5. Chrome Extension 특수 API 호출 시뮬레이션
+        if (typeof chrome !== 'undefined' && chrome.runtime) {
+            try {
+                addResult('✅ Chrome Extension 환경 감지됨', 'success');
+                addResult(`📋 Extension ID: ${chrome.runtime.id}`, 'log');
+            } catch (e) {
+                addResult(`⚠️ Chrome Extension API 접근 제한: ${e.message}`, 'warning');
+            }
+        } else {
+            addResult('ℹ️ 일반 웹페이지에서 실행 중 (Chrome Extension 환경 아님)', 'log');
+        }
+    </script>
+</body>
+</html>

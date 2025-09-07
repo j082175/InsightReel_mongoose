@@ -1,9 +1,22 @@
 // Service Worker - 백그라운드 작업 처리
-// CONSTANTS 모듈은 ES6 모듈이므로 동적 import 사용
+// 환경별 서버 URL 설정
 class BackgroundService {
   constructor() {
-    this.serverUrl = 'http://localhost:3000'; // 일단 하드코딩 유지 (Service Worker 제한)
+    // 환경별 서버 URL (실제 배포 시 수정 가능)
+    this.serverUrl = this.getServerUrl();
     this.init();
+  }
+
+  /**
+   * 환경별 서버 URL 결정
+   */
+  getServerUrl() {
+    // Chrome Extension에서는 location을 직접 사용할 수 없으므로
+    // chrome.management API를 통해 개발 모드 확인
+    return chrome.runtime.getManifest().version.includes('dev') || 
+           chrome.runtime.getManifest().name.includes('개발') ? 
+           'http://localhost:3000' : 
+           'https://api.yourdomain.com'; // 프로덕션 URL로 변경
   }
 
   init() {

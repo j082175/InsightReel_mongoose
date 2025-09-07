@@ -3,6 +3,8 @@
 'use strict';
 
 console.log('🚀 Content Script 시작 - 디버깅용');
+console.log('📡 서버 URL:', window.EXTENSION_CONFIG && window.EXTENSION_CONFIG.SERVER_URL);
+console.log('🔧 개발 모드:', window.EXTENSION_CONFIG && window.EXTENSION_CONFIG.IS_DEVELOPMENT);
 
 // 먼저 간단한 테스트
 try {
@@ -3178,7 +3180,7 @@ window.INSTAGRAM_UI_SYSTEM = {
   
   callAnalysisAPI(mediaInfo, button) {
     // 기존 API 로직과 동일
-    fetch('http://localhost:3000/api/analyze', {
+    fetch(`${(window.EXTENSION_CONFIG && window.EXTENSION_CONFIG.SERVER_URL) || 'http://localhost:3000'}/api/analyze`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -3266,7 +3268,7 @@ if (window.location.hostname.includes('instagram.com')) {
 
 // Constants
 const CONSTANTS = {
-  SERVER_URL: 'http://localhost:3000',
+  SERVER_URL: (window.EXTENSION_CONFIG && window.EXTENSION_CONFIG.SERVER_URL) || 'http://localhost:3000',
   
   PLATFORMS: {
     INSTAGRAM: 'instagram',
@@ -5560,7 +5562,7 @@ if (window.location.hostname.includes('instagram.com') ||
 
         // 서버에 분석 요청 전송
         async sendAnalysisRequest(data) {
-            const response = await fetch('http://localhost:3000/api/analyze-channel', {
+            const response = await fetch(`${(window.EXTENSION_CONFIG && window.EXTENSION_CONFIG.SERVER_URL) || 'http://localhost:3000'}/api/analyze-channel`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
