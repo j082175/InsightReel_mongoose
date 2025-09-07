@@ -5,10 +5,10 @@ const fs = require('fs').promises;
 const path = require('path');
 
 /**
- * YouTube 채널별 최신 트렌딩 영상 수집기
+ * YouTube 채널별 고조회수 영상 수집기
  * 최근 2-3일 내의 조회수 높은 영상들만 효율적으로 수집
  */
-class ChannelTrendingCollector {
+class HighViewCollector {
   constructor() {
     this.youtubeApiKey = process.env.GOOGLE_API_KEY;
     this.queueFilePath = path.join(__dirname, '../config/trending_channels_queue.json');
@@ -30,7 +30,7 @@ class ChannelTrendingCollector {
       batchSize: 50
     };
 
-    ServerLogger.info('📊 ChannelTrendingCollector 초기화 완료');
+    ServerLogger.info('📊 HighViewCollector 초기화 완료');
   }
 
   /**
@@ -46,7 +46,7 @@ class ChannelTrendingCollector {
     const config = { ...this.defaultConfig, ...options };
     const startTime = Date.now();
     
-    ServerLogger.info(`🚀 채널별 트렌딩 수집 시작 - ${channelIds.length}개 채널`);
+    ServerLogger.info(`🚀 채널별 고조회수 영상 수집 시작 - ${channelIds.length}개 채널`);
     
     const results = {
       totalChannels: channelIds.length,
@@ -102,7 +102,7 @@ class ChannelTrendingCollector {
         results.trendingVideos += channelResult.trendingVideos;
         results.quotaUsed = this.quotaUsed;
 
-        ServerLogger.info(`✅ ${channelId}: ${channelResult.trendingVideos}/${channelResult.totalVideos}개 트렌딩`);
+        ServerLogger.info(`✅ ${channelId}: ${channelResult.trendingVideos}/${channelResult.totalVideos}개 고조회수`);
 
       } catch (error) {
         ServerLogger.error(`❌ ${channelId} 수집 실패:`, error.message);
@@ -114,7 +114,7 @@ class ChannelTrendingCollector {
     }
 
     const totalTime = Date.now() - startTime;
-    ServerLogger.info(`🏁 트렌딩 수집 완료: ${results.trendingVideos}개 영상 (${(totalTime/1000).toFixed(1)}초)`);
+    ServerLogger.info(`🏁 고조회수 영상 수집 완료: ${results.trendingVideos}개 영상 (${(totalTime/1000).toFixed(1)}초)`);
     ServerLogger.info(`📊 API quota 사용: ${results.quotaUsed}/${this.quotaLimit} units`);
 
     // 통계 저장
@@ -124,7 +124,7 @@ class ChannelTrendingCollector {
   }
 
   /**
-   * 개별 채널에서 트렌딩 영상 수집
+   * 개별 채널에서 고조회수 영상 수집
    */
   async collectChannelTrending(channelId, publishedAfter, publishedBefore, config) {
     const quotaStart = this.quotaUsed;
@@ -152,7 +152,7 @@ class ChannelTrendingCollector {
 
     const quotaUsed = this.quotaUsed - quotaStart;
     
-    ServerLogger.info(`📈 ${channelId}: ${trendingVideos.length}/${videosWithStats.length}개 트렌딩 (quota: ${quotaUsed})`);
+    ServerLogger.info(`📈 ${channelId}: ${trendingVideos.length}/${videosWithStats.length}개 고조회수 (quota: ${quotaUsed})`);
 
     return {
       channelId,
@@ -269,7 +269,7 @@ class ChannelTrendingCollector {
       }
 
       await fs.writeFile(this.statsFilePath, JSON.stringify(allStats, null, 2));
-      ServerLogger.info(`💾 수집 통계 저장: ${stats.trendingRate}% 트렌딩율, quota 효율성: ${stats.quotaEfficiency}`);
+      ServerLogger.info(`💾 수집 통계 저장: ${stats.trendingRate}% 고조회수율, quota 효율성: ${stats.quotaEfficiency}`);
 
     } catch (error) {
       ServerLogger.error('통계 저장 실패:', error);
@@ -328,4 +328,4 @@ class ChannelTrendingCollector {
   }
 }
 
-module.exports = ChannelTrendingCollector;
+module.exports = HighViewCollector;

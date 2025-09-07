@@ -6,7 +6,7 @@ const { ServerLogger } = require('./logger');
  * - VideoProcessor.js
  * - HybridYouTubeExtractor.js  
  * - YouTubeBatchProcessor.js
- * - ChannelTrendingCollector.js
+ * - HighViewCollector.js
  */
 class YouTubeDataProcessor {
   

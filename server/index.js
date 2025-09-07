@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-// 간단한 채널 분석에서는 파일 업로드를 사용하지 않으므로 주석 처리
-// const multer = require('multer');
+const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
@@ -16,18 +15,17 @@ const DatabaseManager = require('./config/database');
 // const Video = require('./models/Video');
 // const VideoUrl = require('./models/VideoUrl');
 
-// VideoProcessor와 AIAnalyzer는 간단한 채널 분석에서 사용하지 않으므로 주석 처리
+const VideoProcessor = require('./services/VideoProcessor');
+const AIAnalyzer = require('./services/AIAnalyzer');
 const SheetsManager = require('./services/SheetsManager');
-// 간단한 채널 분석에서는 사용하지 않으므로 주석 처리
-// const UnifiedVideoSaver = require('./services/UnifiedVideoSaver');
+const UnifiedVideoSaver = require('./services/UnifiedVideoSaver');
 // const youtubeBatchProcessor = require('./services/YouTubeBatchProcessor');
-const ChannelTrendingCollector = require('./services/ChannelTrendingCollector');
+const HighViewCollector = require('./services/HighViewCollector');
 const YouTubeChannelDataCollector = require('./services/YouTubeChannelDataCollector');
 const { ServerLogger } = require('./utils/logger');
 const ResponseHandler = require('./utils/response-handler');
-// 간단한 채널 분석에서는 사용하지 않으므로 주석 처리
-// const { API_MESSAGES, ERROR_CODES } = require('./config/api-messages');
-// const videoQueue = require('./utils/VideoQueue');
+const { API_MESSAGES, ERROR_CODES } = require('./config/api-messages');
+const videoQueue = require('./utils/VideoQueue');
 
 const app = express();
 const PORT = config.get('PORT');
@@ -60,17 +58,16 @@ if (!fs.existsSync(downloadDir)) {
   fs.mkdirSync(downloadDir, { recursive: true });
 }
 
-// 간단한 채널 분석에서는 파일 업로드를 사용하지 않으므로 주석 처리
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => {
-//     cb(null, downloadDir);
-//   },
-//   filename: (req, file, cb) => {
-//     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-//     cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-//   }
-// });
-// const upload = multer({ storage });
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, downloadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage });
 
 // 서비스 초기화 전 디버그
 app.get('/api/debug-before-services', (req, res) => {
@@ -80,7 +77,10 @@ ServerLogger.info('🔧 BEFORE SERVICES DEBUG: 서비스 초기화 전');
 
 // 간단한 채널 분석에 필요한 서비스만 초기화
 const sheetsManager = new SheetsManager();
-// videoProcessor, aiAnalyzer, unifiedVideoSaver는 현재 사용하지 않으므로 주석 처리
+// Blob 처리 API를 위해 필요한 서비스들 추가
+const videoProcessor = new VideoProcessor();
+const aiAnalyzer = new AIAnalyzer();
+const unifiedVideoSaver = new UnifiedVideoSaver(sheetsManager, aiAnalyzer);
 
 // 서비스 초기화 후 디버그
 app.get('/api/debug-after-services', (req, res) => {
@@ -1190,9 +1190,9 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
 });
 */
 
-// 간단한 채널 분석에서는 사용하지 않으므로 주석 처리
-/*
 app.post('/api/process-video-blob', upload.single('video'), async (req, res) => {
+  let videoUrlDoc = null;  // MongoDB 문서 참조용
+  
   try {
     const { platform, postUrl, analysisType = 'quick', useAI = true } = req.body;
     const metadata = JSON.parse(req.body.metadata || '{}');
@@ -1202,7 +1202,6 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     ServerLogger.info(`🔍 Analysis type: ${analysisType}, AI 분석: ${useAI ? '활성화' : '비활성화'}`);
     
     // 🔍 URL 중복 검사 (Blob 처리에서도 공통 적용)
-    let videoUrlDoc = null;  // MongoDB 문서 참조용
     
     if (postUrl) {
       try {
@@ -1455,7 +1454,6 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     }, API_MESSAGES.VIDEO.PROCESSING_FAILED);
   }
 });
-*/
 
 // 에러 핸들러
 app.use((err, req, res, next) => {
@@ -1573,25 +1571,25 @@ app.get('/api/test-debug', (req, res) => {
 ServerLogger.info('🧪 DEBUG: /api/test-debug API 등록 완료');
 
 // 채널 트렌딩 수집 API
-let channelTrendingCollector;
+let highViewCollector;
 try {
-  channelTrendingCollector = new ChannelTrendingCollector();
-  ServerLogger.info('✅ ChannelTrendingCollector 초기화 성공');
+  highViewCollector = new HighViewCollector();
+  ServerLogger.info('✅ HighViewCollector 초기화 성공');
 } catch (error) {
-  ServerLogger.error('❌ ChannelTrendingCollector 초기화 실패:', error);
-  channelTrendingCollector = null;
+  ServerLogger.error('❌ HighViewCollector 초기화 실패:', error);
+  highViewCollector = null;
 }
 
-// ChannelTrendingCollector 초기화 확인 API
+// HighViewCollector 초기화 확인 API
 app.get('/api/debug-collector', (req, res) => {
   res.json({ 
     success: true, 
-    message: 'ChannelTrendingCollector 초기화 체크 완료',
-    initialized: !!channelTrendingCollector,
+    message: 'HighViewCollector 초기화 체크 완료',
+    initialized: !!highViewCollector,
     timestamp: new Date().toISOString()
   });
 });
-ServerLogger.info('🧪 DEBUG: ChannelTrendingCollector 초기화 체크 API 등록');
+ServerLogger.info('🧪 DEBUG: HighViewCollector 초기화 체크 API 등록');
 
 // collect-trending GET API 등록 전 디버그
 app.get('/api/debug-before-collect-get', (req, res) => {
@@ -1602,7 +1600,7 @@ app.get('/api/debug-before-collect-get', (req, res) => {
 app.get('/api/collect-trending', (req, res) => {
   res.json({
     success: true,
-    message: 'ChannelTrendingCollector API 정상 작동중',
+    message: 'HighViewCollector API 정상 작동중',
     usage: {
       method: 'POST',
       endpoint: '/api/collect-trending',
@@ -1625,10 +1623,10 @@ app.get('/api/debug-after-collect-get', (req, res) => {
 });
 
 app.post('/api/collect-trending', async (req, res) => {
-  if (!channelTrendingCollector) {
+  if (!highViewCollector) {
     return ResponseHandler.serverError(res, 
-      new Error('ChannelTrendingCollector가 초기화되지 않았습니다'), 
-      'ChannelTrendingCollector 초기화 오류');
+      new Error('HighViewCollector가 초기화되지 않았습니다'), 
+      'HighViewCollector 초기화 오류');
   }
   
   try {
@@ -1647,7 +1645,7 @@ app.post('/api/collect-trending', async (req, res) => {
       options
     });
 
-    const results = await channelTrendingCollector.collectFromChannels(channelIds, options);
+    const results = await highViewCollector.collectFromChannels(channelIds, options);
     
     ResponseHandler.success(res, results, '채널 트렌딩 수집이 완료되었습니다.');
     
@@ -1669,14 +1667,14 @@ ServerLogger.info('🧪 DEBUG: collect-trending API 등록 후 체크');
 
 // API quota 현황 조회
 app.get('/api/quota-status', (req, res) => {
-  if (!channelTrendingCollector) {
+  if (!highViewCollector) {
     return ResponseHandler.serverError(res, 
-      new Error('ChannelTrendingCollector가 초기화되지 않았습니다'), 
-      'ChannelTrendingCollector 초기화 오류');
+      new Error('HighViewCollector가 초기화되지 않았습니다'), 
+      'HighViewCollector 초기화 오류');
   }
   
   try {
-    const quotaStatus = channelTrendingCollector.getQuotaStatus();
+    const quotaStatus = highViewCollector.getQuotaStatus();
     
     ResponseHandler.success(res, {
       quota: quotaStatus,
@@ -1860,7 +1858,7 @@ app.post('/api/mongodb/cleanup', async (req, res) => {
 // 트렌딩 수집 통계 조회
 app.get('/api/trending-stats', async (req, res) => {
   try {
-    const stats = await channelTrendingCollector.getStats();
+    const stats = await highViewCollector.getStats();
     
     const summary = stats.length > 0 ? {
       totalCollections: stats.length,
