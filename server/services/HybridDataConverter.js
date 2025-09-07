@@ -45,19 +45,21 @@ class HybridDataConverter {
         likes: String(hybridData.likeCount || hybridData.likes || '0'),
         comments: String(hybridData.commentCount || hybridData.comments_count || '0'),
         
-        // 채널 정보 (기본값 제공)
-        subscribers: '0', // API 폴백에서 채워질 수 있음
-        channelVideos: '0',
-        channelViews: '0',
-        channelCountry: '',
-        channelDescription: '',
+        // 채널 정보 (하이브리드 데이터에서 매핑)
+        subscribers: String(hybridData.subscriberCount || '0'),
+        channelVideos: String(hybridData.channelVideoCount || '0'),
+        channelViews: String(hybridData.channelViewCount || '0'),
+        channelCountry: hybridData.channelCountry || '',
+        channelDescription: hybridData.channelDescription || '',
         
         // 해시태그 및 멘션 (설명에서 추출)
         hashtags: YouTubeDataProcessor.extractHashtags(hybridData.description || ''),
         mentions: YouTubeDataProcessor.extractMentions(hybridData.description || ''),
         
-        // 댓글 (기본값)
-        topComments: '',
+        // 댓글 및 추가 채널 정보
+        topComments: Array.isArray(hybridData.topComments) ? hybridData.topComments.join('\n') : (hybridData.topComments || ''),
+        youtubeHandle: hybridData.youtubeHandle || hybridData.channelCustomUrl || '',
+        channelUrl: hybridData.channelUrl || `https://www.youtube.com/channel/${hybridData.channelId || ''}`,
         
         // 하이브리드 메타데이터
         extractionMethod: 'hybrid',

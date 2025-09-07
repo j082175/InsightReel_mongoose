@@ -1,8 +1,8 @@
 // YouTube 메타데이터 추출 테스트
 require('dotenv').config();
-const HybridYouTubeExtractor = require('./server/services/HybridYouTubeExtractor');
-const HybridDataConverter = require('./server/services/HybridDataConverter');
-const { ServerLogger } = require('./server/utils/logger');
+const HybridYouTubeExtractor = require('../server/services/HybridYouTubeExtractor');
+const HybridDataConverter = require('../server/services/HybridDataConverter');
+const { ServerLogger } = require('../server/utils/logger');
 
 async function testYouTubeMetadata() {
   console.log('🧪 YouTube 메타데이터 추출 테스트 시작\n');
