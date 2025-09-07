@@ -99,6 +99,9 @@ class ChannelModel {
         thumbnailUrl: channelData.thumbnailUrl || '',
         customUrl: channelData.customUrl || '',
         
+        // 콘텐츠 타입 정보
+        contentType: channelData.contentType || 'mixed',  // longform, shortform, mixed
+        
         // 태그 정보
         keywords: channelData.keywords || [],        // 사용자 입력 키워드
         aiTags: channelData.aiTags || [],           // AI 추출 태그
