@@ -52,6 +52,15 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // 정적 파일 서빙
 app.use('/downloads', express.static(path.join(__dirname, '../downloads')));
 
+// 🎯 클러스터 시스템 초기화
+try {
+  const { initializeClusterSystem } = require('./features/cluster');
+  initializeClusterSystem(app);
+  ServerLogger.success('✅ 클러스터 시스템 초기화 완료');
+} catch (error) {
+  ServerLogger.error('❌ 클러스터 시스템 초기화 실패:', error);
+}
+
 // 다운로드 폴더 생성
 const downloadDir = path.join(__dirname, '../downloads');
 if (!fs.existsSync(downloadDir)) {
@@ -1954,109 +1963,7 @@ app.post('/api/clear-database', async (req, res) => {
   }
 });
 
-// 🎬 YouTube 채널 분석 API (간단 버전)
-app.post('/api/analyze-channel', async (req, res) => {
-  try {
-    ServerLogger.info('🤖 채널 분석 요청 받음:', req.body);
-
-    const { type, platform, channelInfo, analysisLevel } = req.body;
-
-    // 입력 검증
-    if (type !== 'channel' || platform !== 'youtube') {
-      return ResponseHandler.clientError(res, '지원되지 않는 분석 유형입니다', 400);
-    }
-
-    if (!channelInfo || (!channelInfo.channelId && !channelInfo.channelHandle && !channelInfo.customUrl && !channelInfo.username)) {
-      return ResponseHandler.clientError(res, '채널 정보가 필요합니다', 400);
-    }
-
-    // YouTubeChannelDataCollector require
-    const YouTubeChannelDataCollector = require('./services/YouTubeChannelDataCollector');
-
-    // 1단계: YouTube 데이터 수집
-    const dataCollector = new YouTubeChannelDataCollector();
-    ServerLogger.info('📊 YouTube 채널 데이터 수집 시작');
-    
-    const channelData = await dataCollector.collectChannelData(channelInfo);
-
-    ServerLogger.info('📊 채널 데이터 수집 완료:', {
-      channelName: channelData.channelInfo.title,
-      subscriberCount: channelData.channelInfo.statistics.subscriberCount,
-      videoCount: channelData.videos.length
-    });
-
-    // 2단계: 주요 태그 추출 (AI 없이)
-    const tagCount = {};
-    channelData.videos.forEach(video => {
-      if (video.tags) {
-        video.tags.forEach(tag => {
-          tagCount[tag] = (tagCount[tag] || 0) + 1;
-        });
-      }
-    });
-    const topTags = Object.entries(tagCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .map(([tag]) => tag);
-
-    // 3단계: 간단한 채널 데이터 저장 (AI 분석 없이)
-    const channelRecord = {
-      channelId: channelData.channelInfo.id,
-      channelName: channelData.channelInfo.title,
-      channelUrl: `https://www.youtube.com/channel/${channelData.channelInfo.id}`,
-      subscriberCount: channelData.channelInfo.statistics.subscriberCount,
-      videoCount: channelData.channelInfo.statistics.videoCount,
-      totalViews: channelData.channelInfo.statistics.viewCount,
-      
-      // 간단한 분석 결과 (AI 없이)
-      category: '분석 중',
-      keywords: topTags,
-      
-      // 통계 정보
-      averageViews: channelData.analysis.videos.averageViews,
-      uploadFrequency: channelData.analysis.uploadPattern.dailyAverage,
-      shortFormRatio: channelData.analysis.durationAnalysis.shortFormRatio,
-      
-      // 메타 정보
-      analyzedAt: new Date().toISOString(),
-      analysisLevel: analysisLevel || 1,
-      platform: 'youtube'
-    };
-
-    // 채널 전용 스프레드시트에 저장
-    ServerLogger.info('💾 채널 데이터 저장 시작');
-    const sheetsManager = new SheetsManager();
-    await sheetsManager.saveChannelData(channelRecord);
-
-    ServerLogger.info('✅ 채널 분석 완료 (간단 버전):', {
-      channelName: channelData.channelInfo.title,
-      subscriberCount: channelData.channelInfo.statistics.subscriberCount,
-      keywordsCount: topTags.length
-    });
-
-    ResponseHandler.success(res, '채널 분석이 완료되었습니다', {
-      channelInfo: {
-        name: channelData.channelInfo.title,
-        subscriberCount: channelData.channelInfo.statistics.subscriberCount,
-        videoCount: channelData.channelInfo.statistics.videoCount
-      },
-      analysis: {
-        category: '분석 중',
-        keywords: topTags,
-        uploadFrequency: channelData.analysis.uploadPattern.dailyAverage,
-        shortFormRatio: channelData.analysis.durationAnalysis.shortFormRatio
-      },
-      performance: {
-        videosAnalyzed: channelData.videos.length,
-        analysisLevel: analysisLevel || 1
-      }
-    });
-
-  } catch (error) {
-    ServerLogger.error('❌ 채널 분석 실패:', error);
-    ResponseHandler.serverError(res, error, '채널 분석 중 오류가 발생했습니다');
-  }
-});
+// 🎬 기존 채널 분석 API 제거됨 - 새로운 클러스터 수집 API 사용 (/api/cluster/collect-channel)
 
 // 404 핸들러 (모든 라우트 등록 후 마지막에)
 app.use((req, res) => {

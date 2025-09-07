@@ -165,10 +165,9 @@ if (window.location.hostname === 'www.youtube.com') {
 
         // 2단계: 서버에 분석 요청
         const response = await this.sendAnalysisRequest({
-          type: 'channel',
-          platform: 'youtube',
-          channelInfo: channelInfo,
-          analysisLevel: 2 // 2단계 분석
+          channelData: channelInfo,
+          keywords: [],  // 빈 키워드 배열
+          contentType: 'mixed'  // 기본값으로 혼합형
         });
 
         console.log('✅ 채널 분석 완료:', response);
@@ -243,7 +242,7 @@ if (window.location.hostname === 'www.youtube.com') {
 
     // 서버에 분석 요청 전송
     async sendAnalysisRequest(data) {
-      const response = await fetch('http://localhost:3000/api/analyze-channel', {
+      const response = await fetch('http://localhost:3000/api/cluster/collect-channel', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

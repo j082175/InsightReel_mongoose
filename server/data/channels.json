@@ -1,0 +1,117 @@
+[
+  {
+    "id": "testgamer",
+    "name": "테스트 게임 채널",
+    "url": "https://youtube.com/@testgamer",
+    "platform": "youtube",
+    "subscribers": 50000,
+    "description": "재미있는 게임 실황과 리뷰를 제공합니다",
+    "thumbnailUrl": "https://example.com/thumb.jpg",
+    "customUrl": "",
+    "keywords": [
+      "게임",
+      "실황",
+      "리뷰",
+      "RPG"
+    ],
+    "aiTags": [
+      "게임 실황",
+      "게임 리뷰",
+      "유튜브 게임",
+      "인디 게임",
+      "모바일 게임",
+      "신작 게임",
+      "게임 채널",
+      "테스트 게임",
+      "게임",
+      "리뷰"
+    ],
+    "allTags": [
+      "게임",
+      "실황",
+      "리뷰",
+      "RPG",
+      "게임 실황",
+      "게임 리뷰",
+      "유튜브 게임",
+      "인디 게임",
+      "모바일 게임"
+    ],
+    "clusterIds": [],
+    "suggestedClusters": [],
+    "collectedAt": "2025-09-07T05:59:31.454Z",
+    "updatedAt": "2025-09-07T06:00:16.853Z",
+    "version": 2
+  },
+  {
+    "id": "ch_1757231381830_ae4nr3bcr",
+    "name": "3cushionpattern",
+    "platform": "youtube",
+    "subscribers": 0,
+    "description": "",
+    "thumbnailUrl": "",
+    "customUrl": "",
+    "keywords": [
+      "당구"
+    ],
+    "aiTags": [
+      "3쿠션",
+      "당구 패턴",
+      "3쿠션 강좌",
+      "당구 레슨",
+      "3쿠션 기술",
+      "당구 연습",
+      "3쿠션 팁"
+    ],
+    "allTags": [
+      "당구",
+      "3쿠션",
+      "당구 패턴",
+      "3쿠션 강좌",
+      "당구 레슨",
+      "3쿠션 기술"
+    ],
+    "clusterIds": [],
+    "suggestedClusters": [],
+    "collectedAt": "2025-09-07T07:49:42.627Z",
+    "updatedAt": "2025-09-07T07:49:42.627Z",
+    "version": 1
+  },
+  {
+    "id": "ch_1757234002071_17wk00km4",
+    "name": "eyebillyTV",
+    "platform": "youtube",
+    "subscribers": 0,
+    "description": "",
+    "thumbnailUrl": "",
+    "customUrl": "",
+    "keywords": [
+      "당구"
+    ],
+    "aiTags": [
+      "신규채널",
+      "브이로그",
+      "일상",
+      "취미",
+      "소통",
+      "성장",
+      "도전",
+      "새로운시작",
+      "방송",
+      "미디어"
+    ],
+    "allTags": [
+      "당구",
+      "신규채널",
+      "브이로그",
+      "일상",
+      "취미",
+      "소통"
+    ],
+    "clusterIds": [],
+    "suggestedClusters": [],
+    "collectedAt": "2025-09-07T08:33:23.123Z",
+    "updatedAt": "2025-09-07T08:33:23.124Z",
+    "version": 1
+  }
+]
