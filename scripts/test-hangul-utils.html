@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>한글 유틸리티 테스트</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .result { margin: 10px 0; padding: 5px; background: #f5f5f5; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>한글 유틸리티 테스트</h1>
+    
+    <div class="test-section">
+        <h3>초성 추출 테스트</h3>
+        <div id="chosung-test"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>스마트 매칭 테스트</h3>
+        <div id="smart-match-test"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>실시간 테스트</h3>
+        <input type="text" id="test-input" placeholder="테스트할 쿼리 입력">
+        <div id="live-results"></div>
+    </div>
+
+    <script src="../extension/utils/hangul-utils.js"></script>
+    <script>
+        const hangulUtils = new HangulUtils();
+        
+        // 1. 초성 추출 테스트
+        const chosungTestDiv = document.getElementById('chosung-test');
+        const testWords = ['게임', '음악', '스포츠', '요리', '영화', '교육'];
+        
+        testWords.forEach(word => {
+            const chosung = hangulUtils.getChosung(word);
+            chosungTestDiv.innerHTML += `<div class="result">"${word}" → "${chosung}"</div>`;
+        });
+        
+        // 2. 스마트 매칭 테스트
+        const smartMatchTestDiv = document.getElementById('smart-match-test');
+        const keywords = ['게임', '게임리뷰', '음악', '영화', '요리', '스포츠', '교육'];
+        const queries = ['ㄱ', 'ㅇ', 'ㅅ', '게', '음'];
+        
+        queries.forEach(query => {
+            smartMatchTestDiv.innerHTML += `<h4>"${query}" 검색 결과:</h4>`;
+            
+            keywords.forEach(keyword => {
+                const score = hangulUtils.smartMatch(keyword, query);
+                const color = score > 0 ? 'green' : 'red';
+                smartMatchTestDiv.innerHTML += `<div class="result" style="color: ${color}">
+                    "${keyword}" → 점수: ${score}
+                </div>`;
+            });
+        });
+        
+        // 3. 실시간 테스트
+        const testInput = document.getElementById('test-input');
+        const liveResults = document.getElementById('live-results');
+        
+        testInput.addEventListener('input', (e) => {
+            const query = e.target.value;
+            liveResults.innerHTML = `<h4>"${query}" 실시간 매칭:</h4>`;
+            
+            keywords.forEach(keyword => {
+                const score = hangulUtils.smartMatch(keyword, query);
+                if (score > 0) {
+                    liveResults.innerHTML += `<div class="result" style="color: green;">
+                        "${keyword}" → 점수: ${score}
+                    </div>`;
+                }
+            });
+        });
+    </script>
+</body>
+</html>

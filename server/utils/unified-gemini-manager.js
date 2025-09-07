@@ -420,8 +420,18 @@ class UnifiedGeminiManager {
       requestData.push({ text: prompt });
     }
 
-    // API 호출
-    const result = await model.generateContent(requestData);
+    // API 호출 (thinking 모드 지원)
+    const generationConfig = {};
+    
+    // thinking budget 설정 (환경변수 또는 옵션에서 가져오기)
+    const thinkingBudget = options.thinkingBudget ?? 
+                          (process.env.GEMINI_THINKING_BUDGET ? parseInt(process.env.GEMINI_THINKING_BUDGET) : undefined);
+    
+    if (thinkingBudget !== undefined && modelId.includes('flash')) {
+      generationConfig.thinkingBudget = thinkingBudget;
+    }
+    
+    const result = await model.generateContent(requestData, generationConfig);
     const response = await result.response;
     
     return {
@@ -457,8 +467,18 @@ class UnifiedGeminiManager {
       requestData.push({ text: prompt });
     }
 
-    // API 호출
-    const result = await model.generateContent(requestData);
+    // API 호출 (thinking 모드 지원)
+    const generationConfig = {};
+    
+    // thinking budget 설정 (환경변수 또는 옵션에서 가져오기)
+    const thinkingBudget = options.thinkingBudget ?? 
+                          (process.env.GEMINI_THINKING_BUDGET ? parseInt(process.env.GEMINI_THINKING_BUDGET) : undefined);
+    
+    if (thinkingBudget !== undefined && modelType.includes('flash')) {
+      generationConfig.thinkingBudget = thinkingBudget;
+    }
+    
+    const result = await model.generateContent(requestData, generationConfig);
     const response = await result.response;
     
     return {
@@ -739,9 +759,20 @@ class UnifiedGeminiManager {
       try {
         ServerLogger.info(`🔄 Single-Model 다중 이미지 (${this.singleModel}) 시도 (${attempt}번째)`, null, 'UNIFIED');
         
-        // API 호출 로직을 직접 포함
+        // API 호출 로직을 직접 포함 (thinking 모드 지원)
         const requestData = [prompt, ...imageContents];
-        const apiResult = await this.singleModelInstance.generateContent(requestData);
+        
+        const generationConfig = {};
+        
+        // thinking budget 설정 (환경변수 또는 옵션에서 가져오기)
+        const thinkingBudget = options.thinkingBudget ?? 
+                              (process.env.GEMINI_THINKING_BUDGET ? parseInt(process.env.GEMINI_THINKING_BUDGET) : undefined);
+        
+        if (thinkingBudget !== undefined && this.singleModel.includes('flash')) {
+          generationConfig.thinkingBudget = thinkingBudget;
+        }
+        
+        const apiResult = await this.singleModelInstance.generateContent(requestData, generationConfig);
         const response = await apiResult.response;
         
         const result = {
@@ -866,8 +897,18 @@ class UnifiedGeminiManager {
     // 요청 데이터 구성: 프롬프트 + 이미지들
     const requestData = [prompt, ...imageContents];
 
-    // API 호출
-    const result = await model.generateContent(requestData);
+    // API 호출 (thinking 모드 지원)
+    const generationConfig = {};
+    
+    // thinking budget 설정 (환경변수 또는 옵션에서 가져오기)
+    const thinkingBudget = options.thinkingBudget ?? 
+                          (process.env.GEMINI_THINKING_BUDGET ? parseInt(process.env.GEMINI_THINKING_BUDGET) : undefined);
+    
+    if (thinkingBudget !== undefined && modelId.includes('flash')) {
+      generationConfig.thinkingBudget = thinkingBudget;
+    }
+    
+    const result = await model.generateContent(requestData, generationConfig);
     const response = await result.response;
     
     return {
@@ -889,8 +930,18 @@ class UnifiedGeminiManager {
     // 요청 데이터 구성: 프롬프트 + 이미지들
     const requestData = [prompt, ...imageContents];
 
-    // API 호출
-    const result = await model.generateContent(requestData);
+    // API 호출 (thinking 모드 지원)
+    const generationConfig = {};
+    
+    // thinking budget 설정 (환경변수 또는 옵션에서 가져오기)
+    const thinkingBudget = options.thinkingBudget ?? 
+                          (process.env.GEMINI_THINKING_BUDGET ? parseInt(process.env.GEMINI_THINKING_BUDGET) : undefined);
+    
+    if (thinkingBudget !== undefined && modelType.includes('flash')) {
+      generationConfig.thinkingBudget = thinkingBudget;
+    }
+    
+    const result = await model.generateContent(requestData, generationConfig);
     const response = await result.response;
     
     return {

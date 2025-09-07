@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>한글 매칭 테스트</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test { margin: 10px 0; padding: 10px; background: #f0f0f0; }
+        .match { color: green; font-weight: bold; }
+        .no-match { color: red; }
+    </style>
+</head>
+<body>
+    <h1>한글 매칭 테스트</h1>
+    <div id="results"></div>
+
+    <script src="../extension/utils/hangul.min.js"></script>
+    <script>
+        const keywords = ['게임', '음악', '스포츠', '요리', '영화', '교육', '실황', '뉴스', '코미디'];
+        const queries = ['ㅅ', '시', '실', '실황'];
+        
+        const resultsDiv = document.getElementById('results');
+        
+        queries.forEach(query => {
+            resultsDiv.innerHTML += `<h3>"${query}" 검색 결과:</h3>`;
+            
+            keywords.forEach(keyword => {
+                const isMatch = Hangul.search(keyword, query);
+                const className = isMatch ? 'match' : 'no-match';
+                
+                resultsDiv.innerHTML += `<div class="test ${className}">
+                    "${keyword}" → ${isMatch ? '매칭됨' : '매칭안됨'}
+                </div>`;
+                
+                // 콘솔에도 출력
+                console.log(`"${query}" vs "${keyword}": ${isMatch}`);
+            });
+            
+            resultsDiv.innerHTML += '<hr>';
+        });
+        
+        // 상세 테스트
+        console.log('=== 상세 테스트 ===');
+        console.log('실황의 초성:', Hangul.getChosung('실황')); // "ㅅㅎ"
+        console.log('"ㅅ"으로 "실황" 매칭:', Hangul.search('실황', 'ㅅ')); // true여야 함
+        console.log('"시"로 "실황" 매칭:', Hangul.search('실황', '시')); // true여야 함
+        console.log('"실"로 "실황" 매칭:', Hangul.search('실황', '실')); // true여야 함
+    </script>
+</body>
+</html>

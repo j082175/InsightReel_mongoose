@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrome 확장 기능 테스트</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .test-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .test-button {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+        }
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+        }
+        .result {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .status.success {
+            background: rgba(40, 167, 69, 0.8);
+        }
+        .status.error {
+            background: rgba(220, 53, 69, 0.8);
+        }
+        .status.pending {
+            background: rgba(255, 193, 7, 0.8);
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Chrome 확장 기능 테스트</h1>
+        
+        <div class="test-section">
+            <h3>📊 클러스터 API 테스트</h3>
+            <p>서버의 클러스터 수집 기능을 테스트합니다.</p>
+            
+            <button class="test-button" onclick="testHealthCheck()">🏥 헬스 체크</button>
+            <button class="test-button" onclick="testChannelCollection()">📊 채널 수집 테스트</button>
+            <button class="test-button" onclick="testRecentKeywords()">🏷️ 최근 키워드 조회</button>
+            <button class="test-button" onclick="testStatistics()">📈 통계 조회</button>
+            
+            <div id="apiResults" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🎯 확장 프로그램 정보</h3>
+            <p>현재 로드된 확장 프로그램 정보를 확인합니다.</p>
+            
+            <button class="test-button" onclick="checkExtensionStatus()">🔍 확장 상태 확인</button>
+            
+            <div id="extensionResults" class="result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📋 사용법</h3>
+            <ol>
+                <li><strong>Chrome 확장 로드:</strong> Chrome > 확장 프로그램 > 개발자 모드 ON > "압축해제된 확장 프로그램을 로드합니다" 클릭</li>
+                <li><strong>확장 폴더 선택:</strong> <code>extension</code> 폴더 선택</li>
+                <li><strong>YouTube 채널 이동:</strong> 아무 YouTube 채널 페이지로 이동</li>
+                <li><strong>버튼 확인:</strong> 구독 버튼 옆에 "📊 채널 수집" 버튼이 나타나는지 확인</li>
+                <li><strong>기능 테스트:</strong> 버튼 클릭 후 키워드 입력 모달 확인</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'http://localhost:3000';
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const status = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            return `[${timestamp}] ${status} ${message}\n`;
+        }
+        
+        async function testHealthCheck() {
+            const resultDiv = document.getElementById('apiResults');
+            resultDiv.innerHTML = log('헬스 체크 시작...', 'pending');
+            
+            try {
+                const response = await fetch(`${SERVER_URL}/api/cluster/health`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML += log(`헬스 체크 성공! 상태: ${data.status}`, 'success');
+                    resultDiv.innerHTML += log(`데이터: 채널 ${data.data.channels}개, 클러스터 ${data.data.clusters}개`);
+                } else {
+                    resultDiv.innerHTML += log('헬스 체크 실패', 'error');
+                }
+            } catch (error) {
+                resultDiv.innerHTML += log(`헬스 체크 오류: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testChannelCollection() {
+            const resultDiv = document.getElementById('apiResults');
+            resultDiv.innerHTML = log('채널 수집 테스트 시작...', 'pending');
+            
+            const testData = {
+                channelData: {
+                    channelName: '테스트 채널',
+                    channelId: 'test_channel_123',
+                    subscriberCount: '10만명',
+                    channelDescription: '테스트용 채널입니다'
+                },
+                keywords: ['테스트', '예제', '샘플']
+            };
+            
+            try {
+                const response = await fetch(`${SERVER_URL}/api/cluster/collect-channel`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML += log('채널 수집 성공!', 'success');
+                    if (data.suggestions) {
+                        resultDiv.innerHTML += log(`클러스터 제안: ${data.suggestions.length}개`);
+                    }
+                } else {
+                    resultDiv.innerHTML += log(`채널 수집 실패: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                resultDiv.innerHTML += log(`채널 수집 오류: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testRecentKeywords() {
+            const resultDiv = document.getElementById('apiResults');
+            resultDiv.innerHTML = log('최근 키워드 조회 시작...', 'pending');
+            
+            try {
+                const response = await fetch(`${SERVER_URL}/api/cluster/recent-keywords?limit=5`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML += log(`최근 키워드 조회 성공! ${data.keywords.length}개`, 'success');
+                    data.keywords.forEach(kw => {
+                        resultDiv.innerHTML += log(`- ${kw.keyword || kw} (${kw.frequency || '?'}회)`);
+                    });
+                } else {
+                    resultDiv.innerHTML += log('최근 키워드 조회 실패', 'error');
+                }
+            } catch (error) {
+                resultDiv.innerHTML += log(`키워드 조회 오류: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testStatistics() {
+            const resultDiv = document.getElementById('apiResults');
+            resultDiv.innerHTML = log('통계 조회 시작...', 'pending');
+            
+            try {
+                const response = await fetch(`${SERVER_URL}/api/cluster/statistics`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML += log('통계 조회 성공!', 'success');
+                    resultDiv.innerHTML += log(`전체 채널: ${data.statistics.totalChannels}개`);
+                    resultDiv.innerHTML += log(`전체 클러스터: ${data.statistics.clusters?.total || 0}개`);
+                } else {
+                    resultDiv.innerHTML += log('통계 조회 실패', 'error');
+                }
+            } catch (error) {
+                resultDiv.innerHTML += log(`통계 조회 오류: ${error.message}`, 'error');
+            }
+        }
+        
+        function checkExtensionStatus() {
+            const resultDiv = document.getElementById('extensionResults');
+            resultDiv.innerHTML = log('확장 상태 확인 시작...');
+            
+            // Chrome 확장 API 접근 가능한지 확인
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                resultDiv.innerHTML += log('Chrome 확장 환경 감지됨', 'success');
+                resultDiv.innerHTML += log(`확장 ID: ${chrome.runtime.id}`);
+            } else {
+                resultDiv.innerHTML += log('Chrome 확장 환경이 아님 (정상)', 'info');
+            }
+            
+            // 현재 페이지 정보
+            resultDiv.innerHTML += log(`현재 URL: ${window.location.href}`);
+            resultDiv.innerHTML += log(`User Agent: ${navigator.userAgent.substring(0, 80)}...`);
+            
+            // YouTube 관련 요소 확인
+            if (window.location.hostname === 'www.youtube.com') {
+                resultDiv.innerHTML += log('YouTube 페이지에서 실행 중', 'success');
+                
+                // 채널 페이지 요소 확인
+                const channelName = document.querySelector('#channel-name, .ytd-channel-name');
+                const subscriberCount = document.querySelector('#subscriber-count');
+                
+                if (channelName) {
+                    resultDiv.innerHTML += log('채널 이름 요소 발견', 'success');
+                }
+                if (subscriberCount) {
+                    resultDiv.innerHTML += log('구독자 수 요소 발견', 'success');
+                }
+                
+                // 확장 버튼 확인
+                const collectButton = document.getElementById('youtube-channel-collect-btn');
+                if (collectButton) {
+                    resultDiv.innerHTML += log('📊 채널 수집 버튼 발견!', 'success');
+                } else {
+                    resultDiv.innerHTML += log('채널 수집 버튼을 찾을 수 없음', 'error');
+                }
+            } else {
+                resultDiv.innerHTML += log('YouTube 페이지가 아님');
+            }
+        }
+        
+        // 페이지 로드 시 자동으로 확장 상태 확인
+        window.addEventListener('load', () => {
+            setTimeout(checkExtensionStatus, 1000);
+        });
+    </script>
+</body>
+</html>

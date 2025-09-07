@@ -473,8 +473,10 @@ class AIAnalyzer {
       try {
         ServerLogger.info(`🔮 동적 다중 프레임 Gemini 호출 (시도 ${attempt + 1}/${maxRetries})`);
         
-        // 🔄 통합 관리자 사용으로 변경 - 다중 이미지 지원
-        const result = await this.geminiManager.generateContentWithImages(prompt, imageContents);
+        // 🔄 통합 관리자 사용으로 변경 - 다중 이미지 지원 (thinking 모드 활성화)
+        const result = await this.geminiManager.generateContentWithImages(prompt, imageContents, { 
+          thinkingBudget: -1  // 동적 thinking 모드 
+        });
         
         const text = result.text;
         
@@ -689,7 +691,9 @@ class AIAnalyzer {
       ServerLogger.info('🚀 통합 Gemini 관리자 사용', null, 'AI');
       
       // 통합 관리자로 단순화된 호출
-      const result = await this.geminiManager.generateContent(prompt, imageBase64);
+      const result = await this.geminiManager.generateContent(prompt, imageBase64, {
+        thinkingBudget: -1  // 동적 thinking 모드
+      });
       
       return result.text;
     } catch (error) {
@@ -729,7 +733,9 @@ class AIAnalyzer {
   async queryGemini(prompt, imageBase64) {
     try {
       ServerLogger.info('🤖 통합 Gemini 관리자 사용', null, 'AI');
-      const result = await this.geminiManager.generateContent(prompt, imageBase64);
+      const result = await this.geminiManager.generateContent(prompt, imageBase64, {
+        thinkingBudget: -1  // 동적 thinking 모드
+      });
       
       // 사용된 모델 추적
       this.lastUsedModel = result.model || 'unified-gemini';
@@ -981,7 +987,9 @@ class AIAnalyzer {
       ServerLogger.info('🔮 Gemini 다중 프레임 재분석 API 호출...');
       
       // 🔄 통합 관리자 사용으로 변경 - 다중 이미지 재분석
-      const result = await this.geminiManager.generateContentWithImages(retryPrompt, imageContents);
+      const result = await this.geminiManager.generateContentWithImages(retryPrompt, imageContents, {
+        thinkingBudget: -1  // 재시도에서도 동적 thinking 모드
+      });
       
       const aiResponse = result.text;
       
@@ -1586,7 +1594,9 @@ JSON 형식으로 답변:
         ServerLogger.info(`🔮 Gemini API 호출 시작... (시도 ${attempt + 1}/${maxRetries})`);
         
         // 🔄 통합 관리자 사용으로 변경 - 최종 다중 이미지 분석
-        const result = await this.geminiManager.generateContentWithImages(prompt, imageContents);
+        const result = await this.geminiManager.generateContentWithImages(prompt, imageContents, {
+          thinkingBudget: -1  // 카테고리 분석에도 동적 thinking 모드
+        });
         
         const aiResponse = result.text;
         

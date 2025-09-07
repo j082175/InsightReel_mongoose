@@ -1,6 +1,8 @@
 const fs = require('fs').promises;
 const path = require('path');
 const { ServerLogger } = require('../../utils/logger');
+const YouTubeChannelService = require('../../services/YouTubeChannelService');
+const YouTubeChannelAnalyzer = require('../../services/YouTubeChannelAnalyzer');
 
 /**
  * 📊 채널 모델
@@ -11,6 +13,8 @@ class ChannelModel {
     this.dataPath = path.join(__dirname, '../../data');
     this.channelsFile = path.join(this.dataPath, 'channels.json');
     this.channels = new Map();
+    this.youtubeService = new YouTubeChannelService();
+    this.youtubeAnalyzer = new YouTubeChannelAnalyzer();
     
     this.initialize();
   }
@@ -83,6 +87,161 @@ class ChannelModel {
   }
 
   /**
+   * 📊 YouTube API에서 채널 상세 분석 후 생성/업데이트
+   */
+  async createOrUpdateWithAnalysis(channelIdentifier, userKeywords = [], includeAnalysis = true) {
+    try {
+      ServerLogger.info(`🔍 YouTube 채널 상세 분석: ${channelIdentifier}`);
+      
+      // 1. 기본 채널 정보 가져오기
+      const youtubeData = await this.youtubeService.getChannelInfo(channelIdentifier);
+      
+      if (!youtubeData) {
+        throw new Error(`YouTube에서 채널을 찾을 수 없음: ${channelIdentifier}`);
+      }
+      
+      let analysisData = null;
+      
+      // 2. 상세 분석 수행 (선택적)
+      if (includeAnalysis) {
+        try {
+          // 향상된 분석 수행 (숏폼 채널의 경우 콘텐츠 분석 포함)
+          const analysisResult = await this.youtubeAnalyzer.analyzeChannelEnhanced(
+            youtubeData.id, 
+            200, 
+            true // 콘텐츠 분석 활성화
+          );
+          analysisData = analysisResult.analysis;
+          
+          // 향상된 분석 데이터가 있으면 추가
+          if (analysisResult.enhancedAnalysis) {
+            analysisData.enhancedAnalysis = analysisResult.enhancedAnalysis;
+            ServerLogger.success(`🎬 향상된 채널 분석 완료: ${analysisResult.videosCount}개 영상 + AI 콘텐츠 분석`);
+          } else {
+            ServerLogger.success(`📊 채널 분석 완료: ${analysisResult.videosCount}개 영상 분석`);
+          }
+        } catch (analysisError) {
+          ServerLogger.warn(`⚠️ 채널 분석 실패, 기본 정보만 저장: ${analysisError.message}`);
+        }
+      }
+      
+      // 3. 채널 데이터 구성
+      const channelData = {
+        id: youtubeData.id,
+        name: youtubeData.name,
+        url: youtubeData.url,
+        platform: 'youtube',
+        
+        // YouTube API 기본 정보
+        subscribers: youtubeData.subscribers,
+        description: youtubeData.description,
+        thumbnailUrl: youtubeData.thumbnailUrl,
+        customUrl: youtubeData.customUrl,
+        
+        // 상세 분석 정보 (요청한 6가지 + α)
+        ...(analysisData && {
+          // 1. 채널 설명 (이미 description에 포함)
+          
+          // 2. 일평균 업로드
+          dailyUploadRate: analysisData.dailyUploadRate,
+          
+          // 3. 최근 7일 조회수
+          last7DaysViews: analysisData.last7DaysViews,
+          
+          // 4. 영상 평균시간
+          avgDurationSeconds: analysisData.avgDurationSeconds,
+          avgDurationFormatted: analysisData.avgDurationFormatted,
+          
+          // 5. 숏폼 비율
+          shortFormRatio: analysisData.shortFormRatio,
+          
+          // 6. 채널 일별 조회수 (기간별)
+          viewsByPeriod: analysisData.viewsByPeriod,
+          
+          // 추가 통계
+          totalVideos: analysisData.totalVideos,
+          totalViews: analysisData.totalViews,
+          averageViewsPerVideo: analysisData.averageViewsPerVideo,
+          uploadFrequency: analysisData.uploadFrequency,
+          mostViewedVideo: analysisData.mostViewedVideo,
+          
+          // 분석 메타데이터
+          lastAnalyzedAt: new Date(),
+          analysisVersion: '1.0'
+        }),
+        
+        // 사용자 입력 정보
+        keywords: Array.isArray(userKeywords) ? userKeywords : [],
+        
+        // AI 태그 (향상된 분석에서 추출)
+        aiTags: analysisData?.enhancedAnalysis?.channelIdentity?.channelTags || [],
+        allTags: [
+          ...(userKeywords || []),
+          ...(analysisData?.enhancedAnalysis?.channelIdentity?.channelTags || [])
+        ].filter((tag, index, arr) => arr.indexOf(tag) === index), // 중복 제거
+        clusterIds: [],
+        suggestedClusters: [],
+        contentType: analysisData?.shortFormRatio > 70 ? 'shortform' : 
+                     analysisData?.shortFormRatio < 30 ? 'longform' : 'mixed'
+      };
+      
+      // 기존 createOrUpdate 메서드 호출
+      return await this.createOrUpdate(channelData);
+      
+    } catch (error) {
+      ServerLogger.error(`❌ YouTube 채널 상세 분석 실패: ${channelIdentifier}`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 🔍 YouTube API에서 채널 정보 가져와서 생성/업데이트 (기본 정보만)
+   */
+  async createOrUpdateFromYouTube(channelIdentifier, userKeywords = []) {
+    try {
+      ServerLogger.info(`🔍 YouTube에서 채널 정보 수집: ${channelIdentifier}`);
+      
+      // YouTube API에서 채널 정보 가져오기
+      const youtubeData = await this.youtubeService.getChannelInfo(channelIdentifier);
+      
+      if (!youtubeData) {
+        throw new Error(`YouTube에서 채널을 찾을 수 없음: ${channelIdentifier}`);
+      }
+      
+      // 채널 데이터 구성
+      const channelData = {
+        id: youtubeData.id,
+        name: youtubeData.name,
+        url: youtubeData.url,
+        platform: 'youtube',
+        
+        // YouTube API에서 가져온 정보
+        subscribers: youtubeData.subscribers,
+        description: youtubeData.description,
+        thumbnailUrl: youtubeData.thumbnailUrl,
+        customUrl: youtubeData.customUrl,
+        
+        // 사용자 입력 키워드
+        keywords: Array.isArray(userKeywords) ? userKeywords : [],
+        
+        // 기본값들
+        aiTags: [],
+        allTags: userKeywords || [],
+        clusterIds: [],
+        suggestedClusters: [],
+        contentType: 'mixed'
+      };
+      
+      // 기존 createOrUpdate 메서드 호출
+      return await this.createOrUpdate(channelData);
+      
+    } catch (error) {
+      ServerLogger.error(`❌ YouTube 채널 정보 수집 실패: ${channelIdentifier}`, error);
+      throw error;
+    }
+  }
+
+  /**
    * 🆕 채널 생성 또는 업데이트
    */
   async createOrUpdate(channelData) {
@@ -110,6 +269,41 @@ class ChannelModel {
         // 클러스터 정보
         clusterIds: channelData.clusterIds || [],
         suggestedClusters: channelData.suggestedClusters || [],
+        
+        // 상세 분석 정보 (있는 경우에만 포함)
+        ...(channelData.dailyUploadRate !== undefined && {
+          // 2. 일평균 업로드
+          dailyUploadRate: channelData.dailyUploadRate,
+          
+          // 3. 최근 7일 조회수
+          last7DaysViews: channelData.last7DaysViews,
+          
+          // 4. 영상 평균시간
+          avgDurationSeconds: channelData.avgDurationSeconds,
+          avgDurationFormatted: channelData.avgDurationFormatted,
+          
+          // 5. 숏폼 비율
+          shortFormRatio: channelData.shortFormRatio,
+          
+          // 6. 채널 일별 조회수 (기간별)
+          viewsByPeriod: channelData.viewsByPeriod,
+          
+          // 추가 통계
+          totalVideos: channelData.totalVideos,
+          totalViews: channelData.totalViews,
+          averageViewsPerVideo: channelData.averageViewsPerVideo,
+          uploadFrequency: channelData.uploadFrequency,
+          mostViewedVideo: channelData.mostViewedVideo,
+          
+          // 분석 메타데이터
+          lastAnalyzedAt: channelData.lastAnalyzedAt,
+          analysisVersion: channelData.analysisVersion
+        }),
+        
+        // 향상된 분석 정보 (AI 콘텐츠 분석 결과)
+        ...(channelData.enhancedAnalysis && {
+          enhancedAnalysis: channelData.enhancedAnalysis
+        }),
         
         // 메타데이터
         collectedAt: channelData.collectedAt || new Date(),
@@ -388,6 +582,117 @@ class ChannelModel {
 
     return results;
   }
+
+  /**
+   * 🔧 빈 정보가 있는 채널들을 YouTube API에서 채우기
+   */
+  async fillMissingChannelInfo() {
+    try {
+      ServerLogger.info('🔧 빈 채널 정보 채우기 시작...');
+      
+      const channelsToUpdate = [];
+      
+      // 빈 정보가 있는 채널들 찾기
+      for (const [id, channel] of this.channels) {
+        const needsUpdate = (
+          !channel.description || 
+          !channel.thumbnailUrl || 
+          !channel.subscribers ||
+          channel.subscribers === 0
+        );
+        
+        if (needsUpdate && channel.platform === 'youtube') {
+          channelsToUpdate.push({
+            id,
+            name: channel.name,
+            keywords: channel.keywords || []
+          });
+        }
+      }
+      
+      if (channelsToUpdate.length === 0) {
+        ServerLogger.info('✅ 모든 채널 정보가 완전합니다.');
+        return { updated: 0, failed: 0 };
+      }
+      
+      ServerLogger.info(`🔧 업데이트할 채널: ${channelsToUpdate.length}개`);
+      
+      let updated = 0;
+      let failed = 0;
+      
+      // 각 채널을 개별적으로 업데이트
+      for (const channelInfo of channelsToUpdate) {
+        try {
+          ServerLogger.info(`🔄 채널 업데이트 중: ${channelInfo.name}`);
+          
+          // YouTube API에서 정보 가져와서 업데이트
+          await this.createOrUpdateFromYouTube(channelInfo.name, channelInfo.keywords);
+          updated++;
+          
+          // API 호출 간격 (Rate Limit 방지)
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+        } catch (error) {
+          ServerLogger.error(`❌ 채널 업데이트 실패: ${channelInfo.name}`, error);
+          failed++;
+        }
+      }
+      
+      ServerLogger.success(`✅ 빈 채널 정보 채우기 완료: 성공 ${updated}개, 실패 ${failed}개`);
+      
+      return { updated, failed };
+      
+    } catch (error) {
+      ServerLogger.error('❌ 빈 채널 정보 채우기 실패', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 📊 채널 정보 완성도 확인
+   */
+  getChannelCompletionStats() {
+    const stats = {
+      total: this.channels.size,
+      complete: 0,
+      incomplete: 0,
+      missingFields: {
+        description: 0,
+        thumbnailUrl: 0,
+        subscribers: 0,
+        customUrl: 0
+      }
+    };
+    
+    for (const [id, channel] of this.channels) {
+      const missing = [];
+      
+      if (!channel.description) {
+        missing.push('description');
+        stats.missingFields.description++;
+      }
+      if (!channel.thumbnailUrl) {
+        missing.push('thumbnailUrl');
+        stats.missingFields.thumbnailUrl++;
+      }
+      if (!channel.subscribers || channel.subscribers === 0) {
+        missing.push('subscribers');
+        stats.missingFields.subscribers++;
+      }
+      if (!channel.customUrl) {
+        missing.push('customUrl');
+        stats.missingFields.customUrl++;
+      }
+      
+      if (missing.length === 0) {
+        stats.complete++;
+      } else {
+        stats.incomplete++;
+      }
+    }
+    
+    return stats;
+  }
 }
 
 // 싱글톤 패턴
@@ -440,5 +745,34 @@ module.exports = {
   search: async (filters) => {
     const model = module.exports.getInstance();
     return await model.search(filters);
+  },
+
+  // 새로운 메서드들
+  createOrUpdateFromYouTube: async (channelIdentifier, userKeywords) => {
+    const model = module.exports.getInstance();
+    return await model.createOrUpdateFromYouTube(channelIdentifier, userKeywords);
+  },
+
+  // 큐를 통한 분석 (비동기)
+  queueAnalysis: async (channelIdentifier, userKeywords, options = {}) => {
+    const ChannelAnalysisQueueManager = require('../../services/ChannelAnalysisQueue');
+    const queue = ChannelAnalysisQueueManager.getInstance();
+    return await queue.addJob(channelIdentifier, userKeywords, options);
+  },
+
+  fillMissingChannelInfo: async () => {
+    const model = module.exports.getInstance();
+    return await model.fillMissingChannelInfo();
+  },
+
+  getChannelCompletionStats: async () => {
+    const model = module.exports.getInstance();
+    return await model.getChannelCompletionStats();
+  },
+
+  // 새로운 상세 분석 메서드들
+  createOrUpdateWithAnalysis: async (channelIdentifier, userKeywords, includeAnalysis) => {
+    const model = module.exports.getInstance();
+    return await model.createOrUpdateWithAnalysis(channelIdentifier, userKeywords, includeAnalysis);
   }
 };
