@@ -1965,6 +1965,15 @@ app.post('/api/clear-database', async (req, res) => {
 
 // 🎬 기존 채널 분석 API 제거됨 - 새로운 클러스터 수집 API 사용 (/api/cluster/collect-channel)
 
+// 📋 채널 분석 큐 라우트 등록
+try {
+  const channelQueueRoutes = require('./routes/channel-queue');
+  app.use('/api/channel-queue', channelQueueRoutes);
+  ServerLogger.info('📋 채널 분석 큐 API 등록 완료');
+} catch (error) {
+  ServerLogger.error('❌ 채널 분석 큐 라우트 등록 실패:', error);
+}
+
 // 404 핸들러 (모든 라우트 등록 후 마지막에)
 app.use((req, res) => {
   ResponseHandler.notFound(res, `경로 '${req.path}'를 찾을 수 없습니다.`);
@@ -2000,6 +2009,8 @@ const startServer = async () => {
     } catch (cleanupError) {
       ServerLogger.warn(`⚠️ 초기 정리 실패 (무시): ${cleanupError.message}`);
     }
+
+    // 📋 채널 분석 큐 라우트는 이미 위에서 등록됨 (404 핸들러 이전)
 
     
     app.listen(PORT, () => {
