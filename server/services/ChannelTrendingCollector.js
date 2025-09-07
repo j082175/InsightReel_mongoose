@@ -1,5 +1,6 @@
 const axios = require('axios');
 const { ServerLogger } = require('../utils/logger');
+const UsageTracker = require('../utils/usage-tracker');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -13,9 +14,12 @@ class ChannelTrendingCollector {
     this.queueFilePath = path.join(__dirname, '../config/trending_channels_queue.json');
     this.statsFilePath = path.join(__dirname, '../config/trending_collection_stats.json');
     
-    // API quota 모니터링
+    // API quota 모니터링 (UsageTracker로 처리)
+    this.usageTracker = new UsageTracker();
+    
+    // 기존 quota 방식도 유지 (호환성)
     this.quotaUsed = 0;
-    this.quotaLimit = 10000; // 일일 할당량
+    this.quotaLimit = 9500; // 안전 마진: YouTube API 경고 방지를 위해 실제 10,000에서 500 차감
     this.resetQuotaDaily();
     
     // 기본 설정 (사용자가 오버라이드 가능)
@@ -81,7 +85,7 @@ class ChannelTrendingCollector {
     for (const channelId of channelIds) {
       try {
         // quota 확인
-        if (this.quotaUsed >= this.quotaLimit - 150) { // 안전 마진
+        if (this.quotaUsed >= this.quotaLimit - 100) { // 안전 마진 (이미 9500으로 제한되어 있어 작게 설정)
           ServerLogger.warn(`⚠️ API quota 한계 근접 (${this.quotaUsed}/${this.quotaLimit}) - 수집 중단`);
           break;
         }
@@ -177,8 +181,9 @@ class ChannelTrendingCollector {
         }
       });
 
-      // quota 추가
+      // quota 추가 (기존 방식 + UsageTracker)
       this.quotaUsed += 100;
+      this.usageTracker.trackAPI('youtube-search', true); // 설정 기반 추적
       ServerLogger.info(`🔍 Search API 호출: ${channelId} (quota +100, 총 ${this.quotaUsed})`);
 
       return response.data.items || [];
@@ -208,8 +213,9 @@ class ChannelTrendingCollector {
         }
       });
 
-      // quota 추가 (이 부분이 1 unit인지 videoIds 개수만큼인지 확인하려는 부분!)
-      this.quotaUsed += 1; // 우선 1로 가정
+      // quota 추가 (기존 방식 + UsageTracker)
+      this.quotaUsed += 1;
+      this.usageTracker.trackAPI('youtube-videos', true); // 설정 기반 추적
       ServerLogger.info(`📊 Videos API 호출: ${videoItems.length}개 영상 (quota +1, 총 ${this.quotaUsed})`);
 
       const videosWithStats = response.data.items || [];
