@@ -75,73 +75,28 @@ class YouTubeChannelAnalyzer {
         }, 200);
     }
 
-    // 버튼 상태 지속 모니터링
+    // 버튼 상태 지속 모니터링 - 제거됨 (더 이상 페이지에 버튼을 추가하지 않음)
     startButtonMonitoring() {
+        console.log('🚫 버튼 모니터링이 비활성화됨 - 확장 프로그램 팝업 사용');
         // 기존 모니터링 정지
         if (this.buttonCheckInterval) {
             clearInterval(this.buttonCheckInterval);
+            this.buttonCheckInterval = null;
         }
-
-        // 3초마다 버튼 상태 확인
-        this.buttonCheckInterval = setInterval(() => {
-            if (this.isChannelPage()) {
-                const button = document.getElementById('youtube-channel-collect-btn');
-                if (!button || !button.isConnected) {
-                    console.log('🔧 버튼 모니터링: 버튼이 사라짐 - 재생성 시도');
-                    this.tryAddButton();
-                }
-            }
-        }, 3000);
     }
 
-    // 페이지 로드 처리 (VidIQ 스타일)
+    // 페이지 로드 처리 - 더 이상 버튼 추가하지 않음
     handlePageLoad() {
         console.log('🔍 페이지 로드 처리:', location.href);
+        console.log('🚫 페이지 버튼 추가 비활성화됨 - 확장 프로그램 팝업 사용');
         
-        if (!this.isChannelPage()) {
-            this.removeCollectButton();
-            return;
-        }
-
-        console.log('✅ 채널 페이지 확인됨 - 버튼 추가 시작');
-        
-        // 버튼이 DOM에 실제로 존재하는지 확인 (탭 변경으로 사라졌을 수 있음)
-        const existingButton = document.getElementById('youtube-channel-collect-btn');
-        if (existingButton && existingButton.isConnected) {
-            console.log('🔄 버튼이 이미 존재하고 DOM에 연결됨');
-            return;
-        }
-
-        if (existingButton && !existingButton.isConnected) {
-            console.log('⚠️ 버튼이 존재하지만 DOM에서 분리됨 - 재생성 필요');
-        }
-
-        // VidIQ 스타일: 즉시 시도, 실패하면 짧은 대기 후 재시도
-        this.tryAddButton();
+        // 기존 버튼이 있으면 제거
+        this.removeCollectButton();
     }
 
-    // 버튼 추가 시도 (안정적인 방식)
+    // 버튼 추가 시도 - 제거됨 (더 이상 페이지에 버튼을 추가하지 않음)
     tryAddButton() {
-        // 1차 시도: 즉시
-        if (this.addCollectButton()) {
-            return;
-        }
-
-        // 2차 시도: 500ms 후 (탭 변경 후 DOM 안정화 대기)
-        setTimeout(() => {
-            if (!document.getElementById('youtube-channel-collect-btn')) {
-                if (this.addCollectButton()) {
-                    return;
-                }
-            }
-        }, 500);
-
-        // 3차 시도: 1.5초 후 (최종)
-        setTimeout(() => {
-            if (!document.getElementById('youtube-channel-collect-btn')) {
-                this.addCollectButton();
-            }
-        }, 1500);
+        console.log('🚫 버튼 추가 시도 비활성화됨 - 확장 프로그램 팝업 사용');
     }
 
     // 채널 헤더 로드 대기
@@ -203,67 +158,114 @@ class YouTubeChannelAnalyzer {
         checkHeader();
     }
 
-    // 채널 수집 버튼 추가 (VidIQ 스타일 - 성공/실패 반환)
+    // 채널 수집 버튼 추가 - 제거됨 (확장 프로그램 팝업으로 이동)
     addCollectButton() {
-        // 기존 버튼 제거
-        this.removeCollectButton();
+        console.log('🚫 채널 수집 버튼이 확장 프로그램 팝업으로 이동됨');
+        return false; // 더 이상 페이지에 버튼 추가하지 않음
+    }
 
-        console.log('🎯 버튼 추가 시도 중...');
-
-        // 탭 변경에도 유지되는 안정적인 위치 찾기
-        // 1. 먼저 채널 헤더의 액션 버튼 영역 찾기 (탭 변경에도 유지됨)
-        const actionButtons = document.querySelector('#channel-header #buttons, #channel-header-container #buttons, ytd-channel-name #buttons');
+    // 채널 헤더 오른쪽 빈 공간에 버튼 추가 (가장 우선적 위치)
+    addButtonToChannelHeaderRight(channelHeader) {
+        console.log('🎯 채널 헤더 오른쪽에 버튼 추가 중...');
         
-        if (actionButtons) {
-            console.log('🎯 안정적인 액션 버튼 영역 발견');
-            return this.addButtonToActionArea(actionButtons);
-        }
-
-        // 2. 구독 버튼 근처 (백업)
-        const subscribeButton = document.querySelector([
-            '#subscribe-button',
-            '.ytd-subscribe-button-renderer',
-            '[aria-label*="구독"]',
-            '[aria-label*="Subscribe"]',
-            'button[class*="subscribe"]',
-            '#subscribe-button-shape',
-            '.ytd-button-renderer[aria-label*="Subscribe"]'
-        ].join(', '));
-        if (!subscribeButton) {
-            console.log('⚠️ 구독 버튼을 찾을 수 없어 버튼 위치 결정 실패');
-            
-            // 대안 위치 찾기 (채널 헤더 영역)
-            const channelHeader = document.querySelector('#channel-header, ytd-channel-tagline-renderer, ytd-c4-tabbed-header-renderer');
-            if (channelHeader) {
-                console.log('🎯 대안 위치에 버튼 추가 시도');
-                return this.addButtonToAlternativeLocation(channelHeader);
-            }
-            
-            return false;
-        }
-
-        // 채널 수집 버튼 생성 (기존 "채널 분석" 재활용)
         this.channelButton = document.createElement('button');
         this.channelButton.id = 'youtube-channel-collect-btn';
-        this.channelButton.innerHTML = `
-            <span>📊 채널 수집</span>
-        `;
+        this.channelButton.innerHTML = `<span>📊 채널 수집</span>`;
         
+        // 헤더 오른쪽에 맞는 스타일 (플로팅 버튼 느낌)
+        this.channelButton.style.cssText = `
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 18px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            white-space: nowrap;
+            height: 40px;
+            line-height: 40px;
+        `;
+
+        // 호버 효과
+        this.channelButton.addEventListener('mouseenter', () => {
+            this.channelButton.style.transform = 'translateY(-2px)';
+            this.channelButton.style.boxShadow = '0 6px 16px rgba(255, 107, 107, 0.4)';
+            this.channelButton.style.background = 'linear-gradient(45deg, #ff5252, #d32f2f)';
+        });
+
+        this.channelButton.addEventListener('mouseleave', () => {
+            this.channelButton.style.transform = 'translateY(0)';
+            this.channelButton.style.boxShadow = '0 4px 12px rgba(255, 107, 107, 0.3)';
+            this.channelButton.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a24)';
+        });
+
+        // 클릭 이벤트
+        this.channelButton.addEventListener('click', () => this.showCollectModal());
+
+        // 헤더에 relative position 설정 (absolute 포지셔닝을 위해)
+        const headerStyle = window.getComputedStyle(channelHeader);
+        if (headerStyle.position === 'static') {
+            channelHeader.style.position = 'relative';
+        }
+
+        // 헤더에 버튼 추가
+        channelHeader.appendChild(this.channelButton);
+        console.log('✅ 채널 헤더 오른쪽에 채널 수집 버튼 추가됨');
+        return true;
+    }
+
+    // 채널 검색창 옆에 버튼 추가 (백업 위치)
+    addButtonNextToSearchBox(searchInput) {
+        console.log('🎯 검색창 옆에 버튼 추가 중...');
+        
+        // 검색창의 부모 컨테이너 찾기
+        const searchContainer = searchInput.closest([
+            '#search-input',
+            '.ytd-channel-search-box-renderer',
+            '#channel-search',
+            '.search-container',
+            '[id*="search"]'
+        ].join(', ')) || searchInput.parentElement;
+        
+        if (!searchContainer) {
+            console.log('⚠️ 검색창 컨테이너를 찾을 수 없음');
+            return false;
+        }
+        
+        this.channelButton = document.createElement('button');
+        this.channelButton.id = 'youtube-channel-collect-btn';
+        this.channelButton.innerHTML = `<span>📊 채널 수집</span>`;
+        
+        // 검색창에 맞는 컴팩트한 스타일
         this.channelButton.style.cssText = `
             background: linear-gradient(45deg, #ff6b6b, #ee5a24);
             color: white;
             border: none;
             border-radius: 18px;
-            padding: 10px 16px;
-            margin-left: 8px;
+            padding: 8px 14px;
+            margin-left: 10px;
             font-weight: 500;
-            font-size: 14px;
+            font-size: 13px;
             cursor: pointer;
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
             transition: all 0.3s ease;
             box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+            height: 32px;
+            line-height: 32px;
+            white-space: nowrap;
+            flex-shrink: 0;
         `;
 
         // 호버 효과
@@ -277,18 +279,36 @@ class YouTubeChannelAnalyzer {
             this.channelButton.style.boxShadow = '0 2px 8px rgba(255, 107, 107, 0.3)';
         });
 
-        // 클릭 이벤트 (채널 수집 모달 표시)
+        // 클릭 이벤트
         this.channelButton.addEventListener('click', () => this.showCollectModal());
 
-        // 버튼 추가
-        const buttonContainer = subscribeButton.parentElement;
-        if (buttonContainer) {
-            buttonContainer.appendChild(this.channelButton);
-            console.log('✅ 채널 수집 버튼 추가됨');
-            return true; // 성공
-        } else {
-            console.log('⚠️ 버튼 컨테이너를 찾을 수 없음');
-            return false; // 실패
+        // 검색창 컨테이너 옆에 추가 (flex 레이아웃 고려)
+        try {
+            // 검색창 컨테이너의 부모에 flex 스타일 적용 (이미 있을 수도 있음)
+            const parentContainer = searchContainer.parentElement;
+            if (parentContainer) {
+                const parentStyle = window.getComputedStyle(parentContainer);
+                if (!parentStyle.display.includes('flex')) {
+                    parentContainer.style.display = 'flex';
+                    parentContainer.style.alignItems = 'center';
+                    parentContainer.style.gap = '8px';
+                }
+            }
+            
+            // 검색창 바로 다음에 버튼 추가
+            searchContainer.parentElement.insertBefore(this.channelButton, searchContainer.nextSibling);
+            console.log('✅ 검색창 옆에 채널 수집 버튼 추가됨');
+            return true;
+            
+        } catch (error) {
+            console.log('⚠️ 검색창 옆 추가 실패, 컨테이너 내부에 추가 시도');
+            
+            // 실패 시 검색창 컨테이너 내부에 추가
+            searchContainer.style.display = 'flex';
+            searchContainer.style.alignItems = 'center';
+            searchContainer.appendChild(this.channelButton);
+            console.log('✅ 검색창 컨테이너 내부에 채널 수집 버튼 추가됨');
+            return true;
         }
     }
 
@@ -400,6 +420,20 @@ class YouTubeChannelAnalyzer {
                 throw new Error('채널 ID를 찾을 수 없습니다.');
             }
 
+            // 중복 검사 실행
+            const isDuplicate = await this.checkChannelDuplicate(channelInfo);
+            if (isDuplicate) {
+                const channelName = channelInfo.channelName || channelInfo.channelHandle || '이 채널';
+                const confirmMessage = `${channelName}은 이미 분석된 채널입니다.\n\n다시 분석하시겠습니까?`;
+                
+                if (!confirm(confirmMessage)) {
+                    console.log('🚫 사용자가 중복 분석을 취소했습니다.');
+                    return;
+                }
+                
+                console.log('✅ 사용자가 중복 분석을 승인했습니다.');
+            }
+
             // 최근 사용한 키워드 가져오기
             const recentKeywords = await this.getRecentKeywords();
             
@@ -412,6 +446,52 @@ class YouTubeChannelAnalyzer {
         } catch (error) {
             console.error('❌ 채널 수집 실패:', error);
             alert(`채널 수집 실패: ${error.message}`);
+        }
+    }
+
+    // 채널 중복 검사
+    async checkChannelDuplicate(channelInfo) {
+        try {
+            console.log('🔍 채널 중복 검사 시작:', channelInfo);
+
+            // 채널 식별자 결정 (우선순위: handle > channelId > customUrl > username)
+            const channelIdentifier = channelInfo.channelHandle ? `@${channelInfo.channelHandle}` : 
+                                     channelInfo.channelId ? channelInfo.channelId :
+                                     channelInfo.customUrl ? channelInfo.customUrl :
+                                     channelInfo.username ? channelInfo.username : null;
+
+            if (!channelIdentifier) {
+                console.log('⚠️ 채널 식별자를 찾을 수 없어 중복 검사를 건너뜁니다.');
+                return false;
+            }
+
+            console.log('🔍 채널 식별자:', channelIdentifier);
+
+            // 서버에 중복 검사 요청
+            const response = await fetch('http://localhost:3000/api/channel-queue/check-duplicate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    channelIdentifier: channelIdentifier
+                })
+            });
+
+            if (!response.ok) {
+                console.warn('⚠️ 중복 검사 API 호출 실패, 검사를 건너뜁니다.');
+                return false;
+            }
+
+            const result = await response.json();
+            console.log('🔍 중복 검사 결과:', result);
+
+            // API 응답 구조에 맞게 수정
+            return result.duplicate?.isDuplicate || false;
+
+        } catch (error) {
+            console.warn('⚠️ 중복 검사 실패, 검사를 건너뜁니다:', error);
+            return false; // 에러 발생 시 중복 검사를 건너뛰고 계속 진행
         }
     }
 
@@ -590,6 +670,22 @@ class YouTubeChannelAnalyzer {
                                     <input type="radio" name="contentType" value="mixed">
                                     <span>🔀 혼합형</span>
                                     <small>(롱폼 + 숏폼 병행)</small>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <label>🤖 AI 분석 옵션:</label>
+                            <div class="ai-analysis-selector">
+                                <label class="radio-option">
+                                    <input type="radio" name="aiAnalysis" value="full" checked>
+                                    <span>🧠 완전 분석</span>
+                                    <small>(AI 태그 + 카테고리 분석, 약 30초)</small>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="aiAnalysis" value="skip">
+                                    <span>⚡ 빠른 수집</span>
+                                    <small>(AI 분석 건너뛰기, 약 5초)</small>
                                 </label>
                             </div>
                         </div>
@@ -800,7 +896,8 @@ class YouTubeChannelAnalyzer {
                     background: #ccc;
                     cursor: not-allowed;
                 }
-                .content-type-selector {
+                .content-type-selector,
+                .ai-analysis-selector {
                     display: flex;
                     flex-direction: column;
                     gap: 8px;
@@ -1194,26 +1291,30 @@ class YouTubeChannelAnalyzer {
             const contentTypeEl = modal.querySelector('input[name="contentType"]:checked');
             const contentType = contentTypeEl ? contentTypeEl.value : 'longform';
             
-            this.collectChannel(channelInfo, Array.from(selectedKeywords), contentType);
+            // 선택된 AI 분석 옵션 가져오기
+            const aiAnalysisEl = modal.querySelector('input[name="aiAnalysis"]:checked');
+            const skipAIAnalysis = aiAnalysisEl ? aiAnalysisEl.value === 'skip' : false;
+            
+            this.collectChannel(channelInfo, Array.from(selectedKeywords), contentType, skipAIAnalysis);
         });
     }
 
     // 채널 수집 실행
-    async collectChannel(channelInfo, keywords, contentType = 'longform') {
+    async collectChannel(channelInfo, keywords, contentType = 'longform', skipAIAnalysis = false) {
         if (keywords.length === 0) {
             alert('키워드를 최소 하나는 선택해주세요.');
             return;
         }
 
         this.isAnalyzing = true;
-        this.updateButtonState('수집 중...', true);
+        this.updateButtonState(skipAIAnalysis ? '빠른 수집 중...' : '수집 중...', true);
 
         // 모달 닫기
         const modal = document.getElementById('channel-collect-modal');
         if (modal) modal.remove();
 
         try {
-            console.log('🚀 채널 수집 시작', { channelInfo, keywords, contentType });
+            console.log('🚀 채널 수집 시작', { channelInfo, keywords, contentType, skipAIAnalysis });
 
             // 서버에 수집 요청
             const channelDataWithName = {
@@ -1224,7 +1325,10 @@ class YouTubeChannelAnalyzer {
             const response = await this.sendCollectRequest({
                 channelData: channelDataWithName,
                 keywords: keywords,
-                contentType: contentType
+                contentType: contentType,
+                options: {
+                    skipAIAnalysis: skipAIAnalysis
+                }
             });
 
             console.log('✅ 채널 수집 완료:', response);
@@ -1261,12 +1365,20 @@ class YouTubeChannelAnalyzer {
 
     // 서버에 수집 요청 전송
     async sendCollectRequest(data) {
-        const response = await fetch('http://localhost:3000/api/cluster/collect-channel', {
+        const response = await fetch('http://localhost:3000/api/channel-queue/add', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(data)
+            body: JSON.stringify({
+                channelIdentifier: data.channelData.channelHandle ? `@${data.channelData.channelHandle}` : 
+                                  data.channelData.channelId ? data.channelData.channelId :
+                                  data.channelData.customUrl ? data.channelData.customUrl :
+                                  data.channelData.username ? data.channelData.username : 'unknown',
+                keywords: data.keywords,
+                contentType: data.contentType,
+                options: data.options
+            })
         });
 
         if (!response.ok) {
@@ -1324,5 +1436,18 @@ if (window.location.hostname === 'www.youtube.com') {
         window.youtubeChannelAnalyzer = new YouTubeChannelAnalyzer();
     }
 }
+
+// 확장 프로그램 팝업으로부터의 메시지 리스너
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'showChannelCollectModal') {
+        if (window.youtubeChannelAnalyzer) {
+            window.youtubeChannelAnalyzer.showCollectModal();
+            sendResponse({ success: true });
+        } else {
+            sendResponse({ success: false, error: '채널 분석기가 초기화되지 않음' });
+        }
+        return true; // 비동기 응답
+    }
+});
 
 console.log('📺 YouTube 채널 분석기 로드됨');

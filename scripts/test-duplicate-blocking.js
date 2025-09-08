@@ -13,7 +13,7 @@ async function testDuplicateBlocking() {
   try {
     // 첫 번째 요청 (DB 초기화 후 새로운 분석)
     console.log('1️⃣ 첫 번째 분석 요청 (DB 초기화 후)...');
-    const response = await axios.post('http://localhost:3002/api/channel-queue/add', testData, {
+    const response = await axios.post('http://localhost:3000/api/channel-queue/add', testData, {
       timeout: 5000
     });
     

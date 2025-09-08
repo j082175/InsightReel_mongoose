@@ -18,7 +18,7 @@ async function testSkipAIAnalysis() {
     
     const startTime = Date.now();
     
-    const response = await axios.post('http://localhost:3002/api/channel-queue/add', testData, {
+    const response = await axios.post('http://localhost:3000/api/channel-queue/add', testData, {
       timeout: 30000
     });
     

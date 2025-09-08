@@ -220,4 +220,95 @@ router.post('/cleanup', (req, res) => {
   }
 });
 
+/**
+ * 채널 중복 검사
+ * POST /api/channel-queue/check-duplicate
+ */
+router.post('/check-duplicate', async (req, res) => {
+  try {
+    const { channelIdentifier } = req.body;
+
+    if (!channelIdentifier) {
+      return res.status(400).json({
+        success: false,
+        error: 'channelIdentifier is required'
+      });
+    }
+
+    ServerLogger.info(`🔍 채널 중복 검사 요청: ${channelIdentifier}`);
+
+    // Channel 모델을 동적으로 로드
+    const Channel = require('../models/Channel');
+    const YouTubeChannelService = require('../services/YouTubeChannelService');
+    
+    let duplicateInfo = null;
+    
+    try {
+      // 1. 먼저 채널 식별자가 YouTube 채널 ID인지 확인해보기
+      let channelId = channelIdentifier;
+      
+      // @username이나 custom URL인 경우 실제 채널 ID로 변환 필요
+      if (channelIdentifier.startsWith('@') || channelIdentifier.includes('/channel/') || 
+          channelIdentifier.includes('/c/') || channelIdentifier.includes('/user/')) {
+        const youtubeService = new YouTubeChannelService();
+        const channelInfo = await youtubeService.getChannelInfo(channelIdentifier);
+        if (channelInfo && channelInfo.id) {
+          channelId = channelInfo.id;
+        }
+      }
+      
+      // 2. MongoDB에서 채널 ID로 중복 검사
+      const existingChannel = await Channel.findOne({ id: channelId }).lean();
+      
+      if (existingChannel) {
+        duplicateInfo = {
+          isDuplicate: true,
+          existingChannel: {
+            id: existingChannel.id,
+            name: existingChannel.name,
+            url: existingChannel.url,
+            subscribers: existingChannel.subscribers,
+            platform: existingChannel.platform,
+            collectedAt: existingChannel.collectedAt,
+            lastAnalyzedAt: existingChannel.lastAnalyzedAt
+          },
+          message: `채널 "${existingChannel.name}"은 이미 분석되었습니다.`
+        };
+        
+        ServerLogger.warn(`⚠️ 중복 채널 발견: ${existingChannel.name} (${existingChannel.id})`);
+      } else {
+        duplicateInfo = {
+          isDuplicate: false,
+          message: '새로운 채널입니다.'
+        };
+        
+        ServerLogger.info(`✅ 새로운 채널: ${channelIdentifier}`);
+      }
+      
+    } catch (searchError) {
+      ServerLogger.warn(`⚠️ 채널 정보 조회 실패: ${searchError.message}`);
+      
+      // 검색 실패 시에도 처리 계속 진행 (graceful degradation)
+      duplicateInfo = {
+        isDuplicate: false,
+        message: '중복 검사를 완전히 수행할 수 없었지만 처리를 계속합니다.',
+        warning: searchError.message
+      };
+    }
+
+    res.json({
+      success: true,
+      channelIdentifier,
+      duplicate: duplicateInfo
+    });
+
+  } catch (error) {
+    ServerLogger.error('❌ 채널 중복 검사 실패', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
