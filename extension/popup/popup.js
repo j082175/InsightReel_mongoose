@@ -89,6 +89,11 @@ class VideoSaverPopup {
       await this.testConnection();
     });
 
+    // 채널 수집 버튼
+    document.getElementById('collectChannel').addEventListener('click', async () => {
+      await this.collectChannel();
+    });
+
     // 설정 토글 - 개별 디바운싱 (AI 분석 토글 추가)
     const toggles = ['useAI', 'autoAnalyze', 'autoSave', 'batchMode', 'showNotifications'];
     toggles.forEach(id => {
@@ -139,6 +144,56 @@ class VideoSaverPopup {
     } finally {
       button.textContent = originalText;
       button.disabled = false;
+    }
+  }
+
+  async collectChannel() {
+    const button = document.getElementById('collectChannel');
+    const originalText = button.textContent;
+    
+    try {
+      // 현재 활성 탭 가져오기
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      
+      // YouTube 채널 페이지인지 확인
+      const isChannelPage = tab.url.includes('/channel/') || 
+                           tab.url.includes('/@') || 
+                           tab.url.includes('/c/') ||
+                           tab.url.includes('/user/');
+      
+      if (!isChannelPage) {
+        this.showNotification('❌ YouTube 채널 페이지에서만 사용할 수 있습니다.');
+        return;
+      }
+
+      // 버튼 상태 변경
+      button.textContent = '수집 중...';
+      button.disabled = true;
+
+      // 콘텐츠 스크립트에 채널 수집 모달 표시 요청
+      const response = await chrome.tabs.sendMessage(tab.id, {
+        action: 'showChannelCollectModal'
+      });
+
+      if (response && response.success) {
+        // 팝업 닫기 (사용자가 모달에서 작업할 수 있도록)
+        window.close();
+      } else {
+        throw new Error(response?.error || '채널 분석기를 찾을 수 없습니다.');
+      }
+
+    } catch (error) {
+      console.error('채널 수집 실패:', error);
+      this.showNotification('❌ 채널 수집 실패: ' + error.message);
+      
+      // 버튼 상태 복원
+      button.textContent = '실패';
+      button.style.background = '#f44336';
+      setTimeout(() => {
+        button.textContent = originalText;
+        button.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a24)';
+        button.disabled = false;
+      }, 2000);
     }
   }
 
