@@ -64,7 +64,9 @@ class ChannelAnalysisQueue extends EventEmitter {
 
     this.jobs.set(jobId, job);
 
-    ServerLogger.info(`📋 채널 분석 작업 추가: ${channelIdentifier} (${jobId})`);
+    // UTF-8 안전한 로그 출력
+    const safeChannelName = Buffer.from(channelIdentifier, 'utf8').toString('utf8');
+    ServerLogger.info(`📋 채널 분석 작업 추가: ${safeChannelName} (${jobId})`);
     
     // 작업 추가 이벤트 발생
     this.emit('jobAdded', job);
@@ -117,7 +119,9 @@ class ChannelAnalysisQueue extends EventEmitter {
     job.status = 'processing';
     job.startedAt = new Date();
     
-    ServerLogger.info(`⚙️ 채널 분석 시작: ${job.channelIdentifier} (${job.id})`);
+    // UTF-8 안전한 채널명 출력
+    const safeChannelName = Buffer.from(job.channelIdentifier, 'utf8').toString('utf8');
+    ServerLogger.info(`⚙️ 채널 분석 시작: ${safeChannelName} (${job.id})`);
     this.emit('jobStarted', job);
 
     try {
@@ -145,10 +149,12 @@ class ChannelAnalysisQueue extends EventEmitter {
       }
 
       // 실제 분석 수행
+      ServerLogger.info(`🔍 Queue DEBUG: 분석 요청 전송 - includeAnalysis = ${job.options.includeAnalysis}, skipAIAnalysis = ${job.options.skipAIAnalysis}`);
       const result = await this.channelModel.createOrUpdateWithAnalysis(
         job.channelIdentifier,
         job.keywords,
-        job.options.includeAnalysis
+        job.options.includeAnalysis,
+        job.options.skipAIAnalysis
       );
 
       // 완료 처리
@@ -162,7 +168,8 @@ class ChannelAnalysisQueue extends EventEmitter {
       job.result = result;
       job.completedAt = new Date();
 
-      ServerLogger.success(`✅ 채널 분석 완료: ${job.channelIdentifier} (${job.id})`);
+      const safeChannelName2 = Buffer.from(job.channelIdentifier, 'utf8').toString('utf8');
+      ServerLogger.success(`✅ 채널 분석 완료: ${safeChannelName2} (${job.id})`);
       this.emit('jobCompleted', job);
 
     } catch (error) {

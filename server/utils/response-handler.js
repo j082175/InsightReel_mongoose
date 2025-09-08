@@ -145,6 +145,15 @@ class ResponseHandler {
   }
 
   /**
+   * 잘못된 요청 응답 (400)
+   * @param {Response} res - Express Response 객체
+   * @param {string} message - 잘못된 요청 메시지
+   */
+  static badRequest(res, message = '잘못된 요청입니다.') {
+    this.clientError(res, { code: 'BAD_REQUEST', message }, 400, message);
+  }
+
+  /**
    * 리소스 없음 응답 (404)
    * @param {Response} res - Express Response 객체
    * @param {string} message - 리소스 없음 메시지

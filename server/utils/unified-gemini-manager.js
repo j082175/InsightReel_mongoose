@@ -184,6 +184,11 @@ class UnifiedGeminiManager {
    * 메인 콘텐츠 생성 메소드 - 폴백 모드에 따라 분기
    */
   async generateContent(prompt, imageBase64 = null, options = {}) {
+    // 🎯 조건부 모델 선택: flash-lite 지정 시 직접 사용
+    if (options.modelType === 'flash-lite') {
+      return await this.generateContentWithSpecificModel('flash-lite', prompt, imageBase64, options);
+    }
+    
     if (this.fallbackMode === 'multi-key') {
       return await this.generateContentMultiKey(prompt, imageBase64, options);
     } else if (this.fallbackMode === 'model-priority') {
@@ -197,6 +202,74 @@ class UnifiedGeminiManager {
         }
       }] : [];
       return await this.generateContentWithImagesSingleModel(prompt, imageContents, options);
+    }
+  }
+
+  /**
+   * 특정 모델로 직접 콘텐츠 생성
+   */
+  async generateContentWithSpecificModel(modelType, prompt, imageBase64 = null, options = {}) {
+    const startTime = Date.now();
+    
+    try {
+      ServerLogger.info(`🎯 특정 모델 직접 사용: ${modelType}`, null, 'UNIFIED');
+      
+      // API 키 선택 (첫 번째 키 사용)
+      const apiKey = this.apiKeys?.[0] || process.env.GOOGLE_API_KEY;
+      const genAI = new GoogleGenerativeAI(apiKey);
+      
+      // 모델명 매핑
+      const modelMap = {
+        'pro': 'gemini-2.5-pro',
+        'flash': 'gemini-2.5-flash', 
+        'flash-lite': 'gemini-2.5-flash-lite'
+      };
+      
+      const modelName = modelMap[modelType] || modelType;
+      const model = genAI.getGenerativeModel({ model: modelName });
+      
+      // 요청 데이터 구성
+      const requestData = imageBase64 ? [
+        prompt,
+        {
+          inlineData: {
+            mimeType: 'image/jpeg',
+            data: imageBase64
+          }
+        }
+      ] : prompt;
+      
+      // Generation Config 설정
+      const generationConfig = {
+        maxOutputTokens: 8192,
+        temperature: 0.1,
+        topP: 0.95,
+        topK: 40
+      };
+      
+      // Deep Thinking 설정 (Flash 계열 모델만)
+      const thinkingBudget = options.thinkingBudget ?? 
+                            (process.env.GEMINI_THINKING_BUDGET ? parseInt(process.env.GEMINI_THINKING_BUDGET) : undefined);
+      
+      if (thinkingBudget !== undefined && modelName.includes('flash')) {
+        generationConfig.thinkingBudget = thinkingBudget;
+      }
+      
+      const result = await model.generateContent(requestData, generationConfig);
+      const response = result.response;
+      const text = response.text();
+      
+      const duration = Date.now() - startTime;
+      this.usageTracker.increment(modelType, true);
+      ServerLogger.success(`✅ 특정 모델 분석 성공 (${modelType}, ${duration}ms)`, null, 'UNIFIED');
+      
+      return text;
+      
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      this.usageTracker.increment(modelType, false);
+      ServerLogger.error(`❌ 특정 모델 분석 실패 (${modelType}, ${duration}ms)`, error, 'UNIFIED');
+      throw error;
     }
   }
 

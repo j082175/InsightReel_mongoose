@@ -12,8 +12,8 @@ const config = getConfig(); // 여기서 검증 실행
 // DatabaseManager는 다른 API에서 사용되므로 일단 유지
 const DatabaseManager = require('./config/database');
 // 간단한 채널 분석에서는 직접 사용하지 않지만 다른 API에서 필요
-// const Video = require('./models/Video');
-// const VideoUrl = require('./models/VideoUrl');
+const Video = require('./models/Video');
+const VideoUrl = require('./models/VideoUrl');
 
 const VideoProcessor = require('./services/VideoProcessor');
 const AIAnalyzer = require('./services/AIAnalyzer');
@@ -48,6 +48,13 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// UTF-8 인코딩 미들웨어
+app.use((req, res, next) => {
+  req.setEncoding = req.setEncoding || (() => {});
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  next();
+});
 
 // 정적 파일 서빙
 app.use('/downloads', express.static(path.join(__dirname, '../downloads')));
@@ -1027,6 +1034,132 @@ app.get('/api/videos', async (req, res) => {
   }
 });
 
+// 📊 채널 목록 조회 API (MongoDB + JSON 하이브리드)
+app.get('/api/channels', async (req, res) => {
+  try {
+    const ChannelModel = require('./features/cluster/ChannelModel');
+    
+    const limit = parseInt(req.query.limit) || 20;
+    const sortBy = req.query.sortBy || 'subscribers'; // subscribers, totalViews, lastAnalyzedAt
+    const platform = req.query.platform; // 플랫폼 필터
+    const clustered = req.query.clustered; // true/false/undefined
+    const search = req.query.search; // 검색어
+    
+    ServerLogger.info(`📡 채널 목록 조회 요청: limit=${limit}, sortBy=${sortBy}, platform=${platform}`, 'DEBUG');
+    
+    // 검색 조건 구성
+    const filters = {
+      limit: limit,
+      sortBy: sortBy
+    };
+    
+    if (platform) {
+      filters.platform = platform.toLowerCase();
+    }
+    
+    if (clustered !== undefined) {
+      filters.clustered = clustered === 'true';
+    }
+    
+    if (search) {
+      filters.tags = [search]; // 태그 검색
+    }
+    
+    // ChannelModel을 통해 검색
+    const channels = await ChannelModel.search(filters);
+    
+    // 응답 데이터 구성
+    const responseData = {
+      channels: channels,
+      meta: {
+        total: channels.length,
+        limit: limit,
+        sortBy: sortBy,
+        filters: {
+          platform: platform || 'all',
+          clustered: clustered || 'all',
+          search: search || null
+        }
+      }
+    };
+    
+    ResponseHandler.success(res, responseData, '채널 목록 조회 성공');
+    
+  } catch (error) {
+    ServerLogger.error('❌ 채널 목록 조회 실패', error);
+    ResponseHandler.serverError(res, {
+      ...error,
+      code: ERROR_CODES.DATA_FETCH_FAILED
+    }, API_MESSAGES.DATA.FETCH_FAILED);
+  }
+});
+
+// 📊 특정 채널 조회 API
+app.get('/api/channels/:channelId', async (req, res) => {
+  try {
+    const ChannelModel = require('./features/cluster/ChannelModel');
+    const channelId = req.params.channelId;
+    
+    ServerLogger.info(`📡 특정 채널 조회 요청: ${channelId}`, 'DEBUG');
+    
+    const channel = await ChannelModel.findById(channelId);
+    
+    if (!channel) {
+      return ResponseHandler.notFound(res, '채널을 찾을 수 없습니다');
+    }
+    
+    ResponseHandler.success(res, { channel }, '채널 조회 성공');
+    
+  } catch (error) {
+    ServerLogger.error('❌ 특정 채널 조회 실패', error);
+    ResponseHandler.serverError(res, {
+      ...error,
+      code: ERROR_CODES.DATA_FETCH_FAILED
+    }, API_MESSAGES.DATA.FETCH_FAILED);
+  }
+});
+
+// 📊 채널 통계 조회 API
+app.get('/api/channels/stats/overview', async (req, res) => {
+  try {
+    const ChannelModel = require('./features/cluster/ChannelModel');
+    
+    ServerLogger.info(`📡 채널 통계 조회 요청`, 'DEBUG');
+    
+    const [
+      totalCount,
+      unclusteredCount,
+      platformStats,
+      keywordStats
+    ] = await Promise.all([
+      ChannelModel.getTotalCount(),
+      ChannelModel.getUnclusteredCount(),
+      ChannelModel.getPlatformStatistics(),
+      ChannelModel.getKeywordStatistics()
+    ]);
+    
+    const statsData = {
+      overview: {
+        totalChannels: totalCount,
+        clusteredChannels: totalCount - unclusteredCount,
+        unclusteredChannels: unclusteredCount,
+        clusteringRate: totalCount > 0 ? ((totalCount - unclusteredCount) / totalCount * 100).toFixed(1) : 0
+      },
+      platforms: platformStats,
+      topKeywords: keywordStats
+    };
+    
+    ResponseHandler.success(res, statsData, '채널 통계 조회 성공');
+    
+  } catch (error) {
+    ServerLogger.error('❌ 채널 통계 조회 실패', error);
+    ResponseHandler.serverError(res, {
+      ...error,
+      code: ERROR_CODES.DATA_FETCH_FAILED
+    }, API_MESSAGES.DATA.FETCH_FAILED);
+  }
+});
+
 // 🔍 캐시 강제 무효화 API
 app.post('/api/cache/clear', async (req, res) => {
   try {
@@ -1481,7 +1614,7 @@ app.post('/api/youtube-batch', async (req, res) => {
     const { videoUrl, mode = 'batch', priority = 'normal' } = req.body;
 
     if (!videoUrl) {
-      return ResponseHandler.badRequest(res, '비디오 URL이 필요합니다.');
+      return ResponseHandler.clientError(res, '비디오 URL이 필요합니다.');
     }
 
     const options = {
@@ -1642,7 +1775,7 @@ app.post('/api/collect-trending', async (req, res) => {
     const { channelIds, options = {} } = req.body;
     
     if (!channelIds || !Array.isArray(channelIds) || channelIds.length === 0) {
-      return ResponseHandler.badRequest(res, {
+      return ResponseHandler.clientError(res, {
         code: 'MISSING_CHANNELS',
         message: '채널 ID 배열이 필요합니다.',
         details: { example: ['UCChannelId1', 'UCChannelId2'] }
@@ -1706,7 +1839,7 @@ app.get('/api/proxy-image', async (req, res) => {
     const { url } = req.query;
     
     if (!url) {
-      return ResponseHandler.badRequest(res, {
+      return ResponseHandler.clientError(res, {
         field: 'url',
         message: '이미지 URL이 필요합니다.'
       });
@@ -1714,7 +1847,7 @@ app.get('/api/proxy-image', async (req, res) => {
     
     // Instagram 미디어 URL만 허용
     if (!url.includes('instagram.com')) {
-      return ResponseHandler.badRequest(res, {
+      return ResponseHandler.clientError(res, {
         field: 'url', 
         message: 'Instagram URL만 지원됩니다.'
       });
@@ -1760,7 +1893,7 @@ app.post('/api/get-instagram-thumbnail', async (req, res) => {
     const { url } = req.body;
     
     if (!url || !url.includes('instagram.com')) {
-      return ResponseHandler.badRequest(res, {
+      return ResponseHandler.clientError(res, {
         code: 'INVALID_URL',
         message: '유효한 Instagram URL이 필요합니다.',
         details: { provided: url }
@@ -1774,7 +1907,7 @@ app.post('/api/get-instagram-thumbnail', async (req, res) => {
     const postMatch = url.match(/instagram\.com\/p\/([A-Za-z0-9_-]+)/);
     
     if (!reelMatch && !postMatch) {
-      return ResponseHandler.badRequest(res, {
+      return ResponseHandler.clientError(res, {
         code: 'INVALID_INSTAGRAM_URL',
         message: 'Instagram 릴스 또는 포스트 URL이 아닙니다.',
         details: { url }
