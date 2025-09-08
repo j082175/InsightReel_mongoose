@@ -33,17 +33,17 @@
     "youtubeErrors": 0
   },
   "2025-09-07": {
-    "pro": 21,
-    "flash": 4,
-    "flashLite": 0,
-    "proErrors": 163,
-    "flashErrors": 161,
-    "flashLiteErrors": 161,
+    "pro": 40,
+    "flash": 30,
+    "flashLite": 63,
+    "proErrors": 171,
+    "flashErrors": 162,
+    "flashLiteErrors": 166,
     "youtubeVideos": 0,
     "youtubeSearch": 2,
-    "youtubeChannels": 47,
-    "youtubeComments": 0,
+    "youtubeChannels": 142,
+    "youtubeComments": 29,
     "youtubeErrors": 0,
-    "lastUpdated": "2025-09-07T12:38:37.810Z"
+    "lastUpdated": "2025-09-08T04:49:11.338Z"
   }
 }
