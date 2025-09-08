@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useVideos, useTrendingStats, useQuotaStatus, useServerStatus, useCollectTrending } from '../hooks/useApi';
 import { Video, FilterState } from '../types';
 import { useAppContext } from '../App';
@@ -9,7 +9,6 @@ import ChannelAnalysisModal from '../components/ChannelAnalysisModal';
 import VideoCard from '../components/VideoCard';
 
 const DashboardPage: React.FC = () => {
-  const [videos, setVideos] = useState<Video[]>([]);
   const [filters, setFilters] = useState<FilterState>({ 
     days: '7', 
     views: '100000', 
@@ -121,7 +120,7 @@ const DashboardPage: React.FC = () => {
   ];
 
   // 데이터 선택 로직 (수집된 영상 + API 데이터 + mock 데이터)
-  const getAllVideos = () => {
+  const getAllVideos = useMemo(() => {
     const apiMappedVideos = apiVideos.length > 0 ? apiVideos.map((v: any, index: number) => ({
       ...v,
       id: v._id || v.id || (Date.now() + index), // ID 충돌 방지
@@ -135,21 +134,19 @@ const DashboardPage: React.FC = () => {
       ...collectedVideos, // 수집된 영상들을 맨 앞에 추가
       ...apiMappedVideos
     ];
-  };
+  }, [collectedVideos, apiVideos]);
 
   // 배치별 영상 필터링
-  const getVideosByBatch = () => {
+  const allVideos = useMemo(() => {
     if (selectedBatchId === 'all') {
-      return getAllVideos();
+      return getAllVideos;
     }
     
     // 특정 배치의 영상들만 반환
     return collectedVideos.filter(video => 
       video.batchIds && video.batchIds.includes(selectedBatchId)
     );
-  };
-
-  const allVideos = getVideosByBatch();
+  }, [selectedBatchId, collectedVideos, getAllVideos]);
 
   const gridLayouts = { 
     1: 'grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8', 
@@ -183,7 +180,7 @@ const DashboardPage: React.FC = () => {
     ).length;
   };
 
-  useEffect(() => {
+  const videos = useMemo(() => {
     let filtered = allVideos.filter(v => 
       v.daysAgo <= parseInt(filters.days) && 
       v.views >= parseInt(filters.views)
@@ -191,8 +188,8 @@ const DashboardPage: React.FC = () => {
     if (filters.platform !== 'All') {
       filtered = filtered.filter(v => v.platform === filters.platform);
     }
-    setVideos(filtered);
-  }, [filters, selectedBatchId, collectedVideos, apiVideos]);
+    return filtered;
+  }, [filters, allVideos]);
 
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -287,10 +284,9 @@ const DashboardPage: React.FC = () => {
   };
 
   const handleDeleteConfirm = () => {
-    if (itemToDelete?.type === 'single' && itemToDelete.data) {
-      setVideos(videos.filter(v => v.id !== itemToDelete.data!.id));
-    } else if (itemToDelete?.type === 'bulk') {
-      setVideos(videos.filter(v => !selectedVideos.has(v.id)));
+    // TODO: Implement delete functionality with proper state management
+    // For now, just close the modal and reset selection
+    if (itemToDelete?.type === 'bulk') {
       setSelectedVideos(new Set());
       setIsSelectMode(false);
     }

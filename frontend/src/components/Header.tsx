@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import SettingsModal from './SettingsModal';
 
 interface HeaderProps {
   currentPage: string;
@@ -8,6 +9,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
   const [isProfileOpen, setProfileOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [isSettingsOpen, setSettingsOpen] = useState(false);
 
   const navStructure = [
     { id: 'dashboard', name: '대시보드' },
@@ -110,7 +112,15 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
               
               {isProfileOpen && (
                 <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 z-50">
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">설정</a>
+                  <button 
+                    onClick={() => {
+                      setSettingsOpen(true);
+                      setProfileOpen(false);
+                    }}
+                    className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    설정
+                  </button>
                   <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">로그아웃</a>
                 </div>
               )}
@@ -118,6 +128,12 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
           </div>
         </div>
       </div>
+
+      {/* 설정 모달 */}
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={() => setSettingsOpen(false)} 
+      />
     </header>
   );
 };

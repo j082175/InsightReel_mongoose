@@ -1,5 +1,6 @@
 import React, { useState, createContext, useContext } from 'react';
 import { CollectionBatch, Video } from './types';
+import { SettingsProvider } from './contexts/SettingsContext';
 import Header from './components/Header';
 import DashboardPage from './pages/DashboardPage';
 import ChannelManagementPage from './pages/ChannelManagementPage';
@@ -51,12 +52,14 @@ function App() {
   };
 
   return (
-    <AppContext.Provider value={contextValue}>
-      <div className="min-h-screen bg-gray-100">
-        <Header currentPage={currentPage} onNavigate={setCurrentPage} />
-        {renderPage()}
-      </div>
-    </AppContext.Provider>
+    <SettingsProvider>
+      <AppContext.Provider value={contextValue}>
+        <div className="min-h-screen bg-gray-100">
+          <Header currentPage={currentPage} onNavigate={setCurrentPage} />
+          {renderPage()}
+        </div>
+      </AppContext.Provider>
+    </SettingsProvider>
   );
 }
 

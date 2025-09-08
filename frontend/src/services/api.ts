@@ -111,6 +111,31 @@ class APIClient {
     });
   }
 
+  // 여러 API 키 정보 조회
+  async getApiKeys(): Promise<APIResponse<any>> {
+    return this.requestWithRetry({
+      url: '/api/api-keys',
+      method: 'GET',
+    });
+  }
+
+  // API 키 추가
+  async addApiKey(name: string, apiKey: string): Promise<APIResponse<any>> {
+    return this.requestWithRetry({
+      url: '/api/api-keys',
+      method: 'POST',
+      data: { name, apiKey },
+    });
+  }
+
+  // API 키 삭제
+  async deleteApiKey(keyId: string): Promise<APIResponse<any>> {
+    return this.requestWithRetry({
+      url: `/api/api-keys/${keyId}`,
+      method: 'DELETE',
+    });
+  }
+
   // 서버 상태 테스트
   async testConnection(): Promise<boolean> {
     try {
