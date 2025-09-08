@@ -3,31 +3,54 @@ class YouTubeChannelAnalyzer {
     constructor() {
         this.isAnalyzing = false;
         this.channelButton = null;
+        this.handlePageLoadTimeout = null; // 디바운싱용
+        this.buttonCheckInterval = null; // 버튼 상태 모니터링
         this.init();
     }
 
     init() {
-        console.log('🎥 YouTube 채널 분석기 초기화');
+        console.log('🎥 YouTube 채널 분석기 초기화 (VidIQ 스타일)');
         
+        // YouTube 내부 이벤트 리스너 등록 (VidIQ 방식)
+        this.setupYouTubeEventListeners();
         
-        this.checkForChannelPage();
+        // 초기 페이지 체크
+        this.handlePageLoad();
         
-        // URL 변경 감지 (YouTube SPA 특성)
-        this.observeURLChanges();
+        // V2에서 가져온 추가 이벤트 리스너 (더 안정적)
+        window.addEventListener('yt-page-data-updated', () => {
+            console.log('📄 페이지 데이터 업데이트');
+            this.handlePageLoad();
+        });
     }
 
-    // URL 변경 감지 (YouTube는 SPA라서 페이지 새로고침 없이 URL 변경)
-    observeURLChanges() {
+    // YouTube 내부 이벤트 리스너 설정 (상용 확장 프로그램 방식)
+    setupYouTubeEventListeners() {
+        // YouTube 페이지 로드 완료 이벤트 (디바운싱)
+        window.addEventListener('yt-navigate-finish', () => {
+            console.log('🎯 YouTube 내부 이벤트: yt-navigate-finish');
+            this.debouncedHandlePageLoad();
+        });
+
+        // YouTube 데이터 업데이트 이벤트 (디바운싱)
+        document.addEventListener('yt-page-data-updated', () => {
+            console.log('🔄 YouTube 내부 이벤트: yt-page-data-updated');
+            this.debouncedHandlePageLoad();
+        });
+
+        // 백업용: 기존 URL 변경 감지
         let currentURL = location.href;
-        
         const observer = new MutationObserver(() => {
             if (location.href !== currentURL) {
                 currentURL = location.href;
-                setTimeout(() => this.checkForChannelPage(), 1000);
+                console.log('🔄 URL 변경 감지 (백업):', currentURL);
+                this.debouncedHandlePageLoad();
             }
         });
-        
         observer.observe(document, { subtree: true, childList: true });
+
+        // 버튼 상태 지속 모니터링 시작
+        this.startButtonMonitoring();
     }
 
     // 채널 페이지인지 확인
@@ -39,15 +62,86 @@ class YouTubeChannelAnalyzer {
                url.includes('/user/');
     }
 
-    // 채널 페이지 체크 및 버튼 추가
-    checkForChannelPage() {
+    // 디바운싱된 페이지 로드 처리
+    debouncedHandlePageLoad() {
+        // 기존 타이머 취소
+        if (this.handlePageLoadTimeout) {
+            clearTimeout(this.handlePageLoadTimeout);
+        }
+        
+        // 200ms 후 실행 (여러 이벤트가 동시에 발생해도 마지막 하나만 실행)
+        this.handlePageLoadTimeout = setTimeout(() => {
+            this.handlePageLoad();
+        }, 200);
+    }
+
+    // 버튼 상태 지속 모니터링
+    startButtonMonitoring() {
+        // 기존 모니터링 정지
+        if (this.buttonCheckInterval) {
+            clearInterval(this.buttonCheckInterval);
+        }
+
+        // 3초마다 버튼 상태 확인
+        this.buttonCheckInterval = setInterval(() => {
+            if (this.isChannelPage()) {
+                const button = document.getElementById('youtube-channel-collect-btn');
+                if (!button || !button.isConnected) {
+                    console.log('🔧 버튼 모니터링: 버튼이 사라짐 - 재생성 시도');
+                    this.tryAddButton();
+                }
+            }
+        }, 3000);
+    }
+
+    // 페이지 로드 처리 (VidIQ 스타일)
+    handlePageLoad() {
+        console.log('🔍 페이지 로드 처리:', location.href);
+        
         if (!this.isChannelPage()) {
             this.removeCollectButton();
             return;
         }
 
-        // 채널 페이지에서 채널 헤더가 로드될 때까지 대기
-        this.waitForChannelHeader();
+        console.log('✅ 채널 페이지 확인됨 - 버튼 추가 시작');
+        
+        // 버튼이 DOM에 실제로 존재하는지 확인 (탭 변경으로 사라졌을 수 있음)
+        const existingButton = document.getElementById('youtube-channel-collect-btn');
+        if (existingButton && existingButton.isConnected) {
+            console.log('🔄 버튼이 이미 존재하고 DOM에 연결됨');
+            return;
+        }
+
+        if (existingButton && !existingButton.isConnected) {
+            console.log('⚠️ 버튼이 존재하지만 DOM에서 분리됨 - 재생성 필요');
+        }
+
+        // VidIQ 스타일: 즉시 시도, 실패하면 짧은 대기 후 재시도
+        this.tryAddButton();
+    }
+
+    // 버튼 추가 시도 (안정적인 방식)
+    tryAddButton() {
+        // 1차 시도: 즉시
+        if (this.addCollectButton()) {
+            return;
+        }
+
+        // 2차 시도: 500ms 후 (탭 변경 후 DOM 안정화 대기)
+        setTimeout(() => {
+            if (!document.getElementById('youtube-channel-collect-btn')) {
+                if (this.addCollectButton()) {
+                    return;
+                }
+            }
+        }, 500);
+
+        // 3차 시도: 1.5초 후 (최종)
+        setTimeout(() => {
+            if (!document.getElementById('youtube-channel-collect-btn')) {
+                this.addCollectButton();
+            }
+        }, 1500);
     }
 
     // 채널 헤더 로드 대기
@@ -109,12 +203,23 @@ class YouTubeChannelAnalyzer {
         checkHeader();
     }
 
-    // 채널 수집 버튼 추가
+    // 채널 수집 버튼 추가 (VidIQ 스타일 - 성공/실패 반환)
     addCollectButton() {
         // 기존 버튼 제거
         this.removeCollectButton();
 
-        // 버튼을 추가할 위치 찾기 (구독 버튼 근처) - 더 포괄적으로
+        console.log('🎯 버튼 추가 시도 중...');
+
+        // 탭 변경에도 유지되는 안정적인 위치 찾기
+        // 1. 먼저 채널 헤더의 액션 버튼 영역 찾기 (탭 변경에도 유지됨)
+        const actionButtons = document.querySelector('#channel-header #buttons, #channel-header-container #buttons, ytd-channel-name #buttons');
+        
+        if (actionButtons) {
+            console.log('🎯 안정적인 액션 버튼 영역 발견');
+            return this.addButtonToActionArea(actionButtons);
+        }
+
+        // 2. 구독 버튼 근처 (백업)
         const subscribeButton = document.querySelector([
             '#subscribe-button',
             '.ytd-subscribe-button-renderer',
@@ -126,7 +231,15 @@ class YouTubeChannelAnalyzer {
         ].join(', '));
         if (!subscribeButton) {
             console.log('⚠️ 구독 버튼을 찾을 수 없어 버튼 위치 결정 실패');
-            return;
+            
+            // 대안 위치 찾기 (채널 헤더 영역)
+            const channelHeader = document.querySelector('#channel-header, ytd-channel-tagline-renderer, ytd-c4-tabbed-header-renderer');
+            if (channelHeader) {
+                console.log('🎯 대안 위치에 버튼 추가 시도');
+                return this.addButtonToAlternativeLocation(channelHeader);
+            }
+            
+            return false;
         }
 
         // 채널 수집 버튼 생성 (기존 "채널 분석" 재활용)
@@ -172,7 +285,95 @@ class YouTubeChannelAnalyzer {
         if (buttonContainer) {
             buttonContainer.appendChild(this.channelButton);
             console.log('✅ 채널 수집 버튼 추가됨');
+            return true; // 성공
+        } else {
+            console.log('⚠️ 버튼 컨테이너를 찾을 수 없음');
+            return false; // 실패
         }
+    }
+
+    // 안정적인 액션 영역에 버튼 추가 (탭 변경에도 유지)
+    addButtonToActionArea(actionArea) {
+        console.log('🎯 액션 영역에 버튼 추가 중...');
+        
+        this.channelButton = document.createElement('button');
+        this.channelButton.id = 'youtube-channel-collect-btn';
+        this.channelButton.innerHTML = `<span>📊 채널 수집</span>`;
+        
+        // YouTube 스타일에 맞게 조정
+        this.channelButton.style.cssText = `
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 16px;
+            margin: 0 8px;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+            height: 36px;
+            line-height: 36px;
+        `;
+
+        // 호버 효과
+        this.channelButton.addEventListener('mouseenter', () => {
+            this.channelButton.style.transform = 'translateY(-1px)';
+            this.channelButton.style.boxShadow = '0 4px 12px rgba(255, 107, 107, 0.4)';
+        });
+
+        this.channelButton.addEventListener('mouseleave', () => {
+            this.channelButton.style.transform = 'translateY(0)';
+            this.channelButton.style.boxShadow = '0 2px 8px rgba(255, 107, 107, 0.3)';
+        });
+
+        // 클릭 이벤트
+        this.channelButton.addEventListener('click', () => this.showCollectModal());
+
+        // 액션 영역에 추가
+        actionArea.appendChild(this.channelButton);
+        console.log('✅ 액션 영역에 채널 수집 버튼 추가됨');
+        return true;
+    }
+
+    // 대안 위치에 버튼 추가
+    addButtonToAlternativeLocation(headerElement) {
+        console.log('🎯 대안 위치에 버튼 추가 중...');
+        
+        this.channelButton = document.createElement('button');
+        this.channelButton.id = 'youtube-channel-collect-btn';
+        this.channelButton.innerHTML = `<span>📊 채널 수집</span>`;
+        
+        this.channelButton.style.cssText = `
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 16px;
+            margin: 10px;
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+            position: relative;
+            z-index: 1000;
+        `;
+
+        // 이벤트 추가
+        this.channelButton.addEventListener('click', () => this.showCollectModal());
+
+        // 헤더에 직접 추가
+        headerElement.appendChild(this.channelButton);
+        console.log('✅ 대안 위치에 채널 수집 버튼 추가됨');
+        return true;
     }
 
     // 기존 버튼 제거
