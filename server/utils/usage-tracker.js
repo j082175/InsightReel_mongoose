@@ -180,9 +180,20 @@ class UsageTracker {
         const data = JSON.parse(fs.readFileSync(this.usageFilePath, 'utf8'));
         const today = this.getTodayString();
         
-        // 오늘 데이터가 있으면 반환, 없으면 초기화
+        // 키별 섹션 구조 확인
+        if (data.keys && data.keys[this.currentApiKeyHash] && data.keys[this.currentApiKeyHash][today]) {
+          const keyData = data.keys[this.currentApiKeyHash][today];
+          ServerLogger.info(`📊 오늘 사용량 로드 (키: ${this.currentApiKeyHash}): Pro ${keyData.pro}/${this.quotas['gemini-2.5-pro'].rpd}, Flash ${keyData.flash}/${this.quotas['gemini-2.5-flash'].rpd}, Flash-Lite ${keyData.flashLite || 0}/${this.quotas['gemini-2.5-flash-lite'].rpd}`, null, 'USAGE');
+          
+          // 기존 구조와 호환되도록 변환
+          const compatibleData = {};
+          compatibleData[today] = keyData;
+          return compatibleData;
+        }
+        
+        // 기존 구조 (하위 호환성)
         if (data[today]) {
-          ServerLogger.info(`📊 오늘 사용량 로드: Pro ${data[today].pro}/${this.quotas['gemini-2.5-pro'].rpd}, Flash ${data[today].flash}/${this.quotas['gemini-2.5-flash'].rpd}, Flash-Lite ${data[today].flashLite || 0}/${this.quotas['gemini-2.5-flash-lite'].rpd}`, null, 'USAGE');
+          ServerLogger.info(`📊 오늘 사용량 로드 (기존 구조): Pro ${data[today].pro}/${this.quotas['gemini-2.5-pro'].rpd}, Flash ${data[today].flash}/${this.quotas['gemini-2.5-flash'].rpd}, Flash-Lite ${data[today].flashLite || 0}/${this.quotas['gemini-2.5-flash-lite'].rpd}`, null, 'USAGE');
           return data;
         }
       }
@@ -340,16 +351,37 @@ class UsageTracker {
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
       const cutoffDate = sevenDaysAgo.toISOString().split('T')[0];
 
-      Object.keys(existingData).forEach(date => {
-        if (date < cutoffDate) {
-          delete existingData[date];
+      // 키별 섹션 구조 초기화
+      if (!existingData.keys) {
+        existingData.keys = {};
+      }
+      if (!existingData.keys[this.currentApiKeyHash]) {
+        existingData.keys[this.currentApiKeyHash] = {};
+      }
+
+      // 7일 이전 데이터 정리 (키별로)
+      Object.keys(existingData.keys).forEach(keyHash => {
+        Object.keys(existingData.keys[keyHash]).forEach(date => {
+          if (date < cutoffDate) {
+            delete existingData.keys[keyHash][date];
+          }
+        });
+      });
+
+      // 기존 구조 데이터도 정리 (하위 호환성)
+      Object.keys(existingData).forEach(key => {
+        if (key !== 'keys' && key < cutoffDate) {
+          delete existingData[key];
         }
       });
 
-      // 오늘 데이터 업데이트
-      const mergedData = { ...existingData, ...this.dailyUsage };
+      // 현재 키의 오늘 데이터 업데이트
+      const today = this.getTodayString();
+      if (this.dailyUsage[today]) {
+        existingData.keys[this.currentApiKeyHash][today] = this.dailyUsage[today];
+      }
       
-      fs.writeFileSync(this.usageFilePath, JSON.stringify(mergedData, null, 2), 'utf8');
+      fs.writeFileSync(this.usageFilePath, JSON.stringify(existingData, null, 2), 'utf8');
     } catch (error) {
       ServerLogger.error('사용량 파일 저장 실패:', error, 'USAGE');
     }
@@ -373,7 +405,9 @@ class UsageTracker {
       kstTime.setUTCDate(kstTime.getUTCDate() - 1);
     }
     
-    return kstTime.toISOString().split('T')[0];
+    const resultDate = kstTime.toISOString().split('T')[0];
+    ServerLogger.info(`🗓️ [DEBUG] getTodayString 반환값: ${resultDate} (현재 KST 시간: ${kstHour}시, API키: ${this.currentApiKeyHash})`, null, 'USAGE');
+    return resultDate;
   }
 
   /**
@@ -665,18 +699,51 @@ class UsageTracker {
    */
   getYouTubeUsage() {
     const today = this.getTodayString();
-    const todayData = this.dailyUsage[today] || { youtubeVideos: 0, youtubeSearch: 0, youtubeChannels: 0, youtubeComments: 0, youtubeErrors: 0 };
     
-    return {
-      videos: todayData.youtubeVideos || 0,
-      search: todayData.youtubeSearch || 0,
-      channels: todayData.youtubeChannels || 0,
-      comments: todayData.youtubeComments || 0,
-      total: (todayData.youtubeVideos || 0) + (todayData.youtubeSearch || 0) + (todayData.youtubeChannels || 0) + (todayData.youtubeComments || 0),
-      errors: todayData.youtubeErrors || 0,
-      remaining: this.getRemainingQuota('youtube'),
-      quota: this.quotas['youtube-data-api'].rpd
+    // 실시간으로 파일에서 데이터 읽기 (키별 섹션 지원)
+    let todayData = { youtubeVideos: 0, youtubeSearch: 0, youtubeChannels: 0, youtubeComments: 0, youtubeErrors: 0 };
+    let dataSource = 'default';
+    
+    try {
+      if (fs.existsSync(this.usageFilePath)) {
+        const data = JSON.parse(fs.readFileSync(this.usageFilePath, 'utf8'));
+        
+        // 키별 섹션에서 데이터 읽기
+        if (data.keys && data.keys[this.currentApiKeyHash] && data.keys[this.currentApiKeyHash][today]) {
+          todayData = data.keys[this.currentApiKeyHash][today];
+          dataSource = 'key-section';
+          ServerLogger.info(`📊 [DEBUG] 키별 섹션에서 데이터 로드 (${this.currentApiKeyHash}): ${JSON.stringify(todayData)}`, null, 'USAGE');
+        }
+        // 기존 구조 지원 (하위 호환성)
+        else if (data[today]) {
+          todayData = data[today];
+          dataSource = 'legacy';
+          ServerLogger.warn(`⚠️ [DEBUG] 기존 구조에서 데이터 로드 (${this.currentApiKeyHash}): ${JSON.stringify(todayData)}`, null, 'USAGE');
+        } else {
+          ServerLogger.info(`📊 [DEBUG] 파일에 데이터 없음 (${this.currentApiKeyHash}), 기본값 사용`, null, 'USAGE');
+        }
+      }
+    } catch (error) {
+      // 파일 읽기 실패 시 메모리 데이터 사용
+      todayData = this.dailyUsage[today] || todayData;
+      dataSource = 'memory';
+      ServerLogger.error(`🚨 [DEBUG] 파일 읽기 실패, 메모리 사용 (${this.currentApiKeyHash}): ${error.message}`, null, 'USAGE');
+    }
+    
+    // 실제 사용량 데이터 반환
+    const youtubeUsage = {
+      videos: todayData?.youtubeVideos || 0,
+      search: todayData?.youtubeSearch || 0, 
+      channels: todayData?.youtubeChannels || 0,
+      comments: todayData?.youtubeComments || 0,
+      errors: todayData?.youtubeErrors || 0
     };
+    
+    youtubeUsage.total = youtubeUsage.videos + youtubeUsage.search + youtubeUsage.channels + youtubeUsage.comments;
+    youtubeUsage.remaining = this.getRemainingQuota('youtube');
+    youtubeUsage.quota = this.quotas['youtube-data-api'].rpd;
+    
+    return youtubeUsage;
   }
 
   /**

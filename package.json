@@ -4,7 +4,8 @@
   "description": "자동 영상 저장 및 AI 분석 도구 (완전 무료 버전)",
   "main": "server/index.js",
   "scripts": {
-    "dev": "node server/index.js",
+    "dev": "nodemon server/index.js",
+    "start": "node server/index.js",
     "build": "webpack --mode production",
     "test": "jest",
     "test:watch": "jest --watch",

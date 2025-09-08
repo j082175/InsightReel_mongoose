@@ -13,9 +13,13 @@ class MultiKeyManager {
   constructor() {
     this.keys = this.loadKeys();
     this.trackers = new Map();
+    
+    // 안전 마진 설정 (환경변수 또는 기본값)
+    this.safetyMargin = parseInt(process.env.YOUTUBE_API_SAFETY_MARGIN) || 9500;
+    
     this.initializeTrackers();
     
-    ServerLogger.info(`🔑 YouTube API 키 ${this.keys.length}개 로드됨`, null, 'MULTI-KEY');
+    ServerLogger.info(`🔑 YouTube API 키 ${this.keys.length}개 로드됨 (안전 마진: ${this.safetyMargin})`, null, 'MULTI-KEY');
   }
   
   /**
@@ -25,11 +29,12 @@ class MultiKeyManager {
     const keys = [];
     
     // 1. 기본 환경변수에서 로드
+    const safetyMargin = parseInt(process.env.YOUTUBE_API_SAFETY_MARGIN) || 9500;
     const envKeys = [
-      { name: '메인 키', key: process.env.GOOGLE_API_KEY, quota: 9500 }, // 안전 마진 적용
-      { name: '키 1', key: process.env.YOUTUBE_KEY_1, quota: 9500 }, // 안전 마진 적용
-      { name: '키 2', key: process.env.YOUTUBE_KEY_2, quota: 9500 }, // 안전 마진 적용
-      { name: '키 3', key: process.env.YOUTUBE_KEY_3, quota: 9500 } // 안전 마진 적용
+      { name: '메인 키', key: process.env.GOOGLE_API_KEY, quota: safetyMargin },
+      { name: '키 1', key: process.env.YOUTUBE_KEY_1, quota: safetyMargin },
+      { name: '키 2', key: process.env.YOUTUBE_KEY_2, quota: safetyMargin },
+      { name: '키 3', key: process.env.YOUTUBE_KEY_3, quota: safetyMargin }
     ].filter(item => item.key); // 유효한 키만 필터
     
     keys.push(...envKeys);
@@ -63,14 +68,22 @@ class MultiKeyManager {
   }
   
   /**
-   * 사용 가능한 키 찾기
+   * 사용 가능한 키 찾기 (안전 마진 적용)
    */
   getAvailableKey() {
     for (const keyInfo of this.keys) {
       const keyData = this.trackers.get(keyInfo.key);
+      const usage = keyData.tracker.getYouTubeUsage();
       
+      // 안전 마진 체크 (API 호출 전 사전 차단)
+      if (usage.total >= this.safetyMargin) {
+        ServerLogger.warn(`⚠️ 키 ${keyInfo.name} 안전 마진 도달: ${usage.total}/${this.safetyMargin}`, null, 'MULTI-KEY');
+        continue; // 다음 키 확인
+      }
+      
+      // 기존 quota exceeded 체크도 유지 (이중 안전장치)
       if (!keyData.tracker.isYouTubeQuotaExceeded()) {
-        ServerLogger.info(`✅ 사용 가능한 키: ${keyInfo.name}`, null, 'MULTI-KEY');
+        ServerLogger.info(`✅ 사용 가능한 키: ${keyInfo.name} (사용량: ${usage.total}/${this.safetyMargin})`, null, 'MULTI-KEY');
         return {
           key: keyInfo.key,
           tracker: keyData.tracker,
@@ -79,7 +92,7 @@ class MultiKeyManager {
       }
     }
     
-    throw new Error('🚨 모든 YouTube API 키의 할당량이 소진되었습니다');
+    throw new Error(`🚨 모든 YouTube API 키의 할당량이 소진되었습니다 (${this.safetyMargin} 안전 마진 적용)`);
   }
   
   /**
@@ -98,9 +111,13 @@ class MultiKeyManager {
   getAllUsageStatus() {
     const status = [];
     
-    this.keys.forEach(keyInfo => {
+    ServerLogger.info(`🔍 [DEBUG] getAllUsageStatus 호출됨, 키 개수: ${this.keys.length}`, null, 'MULTI-KEY');
+    
+    this.keys.forEach((keyInfo, index) => {
       const keyData = this.trackers.get(keyInfo.key);
       const usage = keyData.tracker.getYouTubeUsage();
+      
+      ServerLogger.info(`🔍 [DEBUG] 키 ${index}: ${keyInfo.name}, 사용량: ${usage.total}/${usage.quota}`, null, 'MULTI-KEY');
       
       status.push({
         name: keyInfo.name,
@@ -115,15 +132,17 @@ class MultiKeyManager {
   }
   
   /**
-   * 사용량 현황 로그
+   * 사용량 현황 로그 (안전 마진 기준)
    */
   logUsageStatus() {
     const status = this.getAllUsageStatus();
     
-    ServerLogger.info('📊 YouTube API 키별 사용량:', null, 'MULTI-KEY');
+    ServerLogger.info(`📊 YouTube API 키별 사용량 (${this.safetyMargin} 안전 마진):`, null, 'MULTI-KEY');
     status.forEach(s => {
-      const icon = s.exceeded ? '🚨' : s.percentage > 80 ? '⚠️' : '✅';
-      ServerLogger.info(`  ${icon} ${s.name}: ${s.usage} (${s.percentage}%)`, null, 'MULTI-KEY');
+      const safetyUsage = `${s.usage.split('/')[0]}/${this.safetyMargin}`;
+      const safetyPercentage = Math.round((parseInt(s.usage.split('/')[0]) / this.safetyMargin) * 100);
+      const icon = safetyPercentage >= 100 ? '🚨' : safetyPercentage > 85 ? '⚠️' : '✅';
+      ServerLogger.info(`  ${icon} ${s.name}: ${safetyUsage} (${safetyPercentage}%)`, null, 'MULTI-KEY');
     });
   }
 }

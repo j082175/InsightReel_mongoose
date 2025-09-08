@@ -16,17 +16,17 @@
 
 ## 💻 주요 명령어
 ```bash
-# 개발 서버 실행
+# 개발 서버 실행 (nodemon - 자동 재시작)
 npm run dev
+
+# 프로덕션 서버 실행
+npm start
 
 # 테스트 실행
 npm test               # 모든 테스트
 npm run test:unit      # 단위 테스트만
 npm run test:watch     # 파일 변경 감지 모드
 npm run test:coverage  # 코드 커버리지 포함
-
-# 프로덕션 실행
-node server/index.js
 ```
 
 ## 🔧 개발 시 주의사항
@@ -129,7 +129,13 @@ npx http-server . -p 8081 --cors
 - **Sheets 저장**: <3초
 - **전체 처리**: ⚡<30초, ⏳ 30-60초, 🐌 >60초
 
-## ✅ 최근 변경사항 (2025-09-07)
+## ✅ 최근 변경사항 (2025-09-08)
+- **nodemon 개발 환경 구축**: 파일 변경 시 자동 재시작
+- **API 키 로드밸런싱 완전 해결**: 키별 독립적 사용량 추적 시스템
+- **메모리 캐시 문제 해결**: 서버 재시작 자동화로 캐시 충돌 방지
+- **개발 환경 최적화**: `npm run dev` 명령어로 통합 개발 경험
+
+## ✅ 이전 변경사항 (2025-09-07)
 - React + TypeScript 대시보드 마이그레이션
 - MongoDB 통합 저장 시스템 (UnifiedVideoSaver)
 - Gemini 2.5 Flash Lite 모델 통합
@@ -142,7 +148,39 @@ npx http-server . -p 8081 --cors
 - **AIAnalyzer**: Gemini 2.5 Flash Lite 분석
 - **VideoProcessor**: 비디오 다운로드/썸네일 생성
 
+## 🔄 개발 환경 관리 (2025-09-08 추가)
+
+### 서버 시작/재시작
+```bash
+# 개발 모드 (nodemon - 자동 재시작)
+npm run dev
+
+# 프로덕션 모드
+npm start
+
+# 수동 재시작 (nodemon 터미널에서)
+rs + Enter
+```
+
+### 개발 시 체크리스트
+1. [ ] **파일 변경 시 자동 재시작 확인** (nodemon 활용)
+2. [ ] API 엔드포인트 응답 테스트
+3. [ ] 브라우저 캐시 새로고침 (Ctrl+F5)
+4. [ ] 로그 확인으로 새 코드 로드 검증
+
+### 문제 발생 시 디버깅 순서
+1. **nodemon 자동 재시작 확인** (가장 중요!)
+2. 포트 충돌 확인 (`netstat -ano | grep :3000`)
+3. 메모리 캐시 vs 파일 데이터 일치성 확인
+4. 환경변수 로드 상태 점검
+
+### ⚠️ 캐시 문제 방지
+- **nodemon 사용**: 파일 변경 시 자동 재시작으로 메모리 캐시 문제 해결
+- **개발 환경에서 실시간 파일 읽기**: `disableCache = process.env.NODE_ENV === 'development'`
+- **API 키 로드밸런싱**: 키별 독립적 사용량 추적 시스템 구현완료
+
 ## 💡 개발 팁
+- **개발 시 nodemon 필수**: 메모리 캐시 문제 완전 방지
 - **테스트 우선**: `npm test` 후 작업
 - **외부 API**: 반드시 Mock 처리
 - **디버깅**: ServerLogger 레벨 활용
@@ -206,6 +244,6 @@ npx http-server . -p 8081 --cors
 
 ---
 
-**Last Updated**: 2025-09-07 (프로젝트 구조 개선 및 React 대시보드 마이그레이션)
+**Last Updated**: 2025-09-08 (nodemon 개발 환경 구축 및 API 키 로드밸런싱 완전 해결)
 **Maintainer**: JUNSOOCHO
 **License**: MIT
