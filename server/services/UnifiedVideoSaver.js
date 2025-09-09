@@ -6,7 +6,7 @@
 
 const SheetsManager = require('./SheetsManager');
 const VideoDataConverter = require('./VideoDataConverter');
-const { getModelByPlatform } = require('../models/VideoOptimized');
+const Video = require('../models/Video');
 const { ServerLogger } = require('../utils/logger');
 const { FieldMapper } = require('../types/field-mapper'); // 🚀 FieldMapper 임포트
 const mongoose = require('mongoose');
@@ -65,7 +65,7 @@ class UnifiedVideoSaver {
       const mongoTime = mongoEndTime - mongoStartTime;
 
       ServerLogger.info(`✅ 통합 저장 완료: ${platform.toUpperCase()}`, {
-        url: videoData.url || videoData.postUrl, // ⭐ 표준화 적용
+        url: videoData.url || videoData.postUrl,
         totalTime: `${totalTime}ms`,
         sheetsTime: `${sheetsTime}ms`,
         mongoTime: `${mongoTime}ms`,
@@ -160,12 +160,12 @@ class UnifiedVideoSaver {
             success: false,
             error: error.message,
             originalIndex: i,
-            url: videoData.url || videoData.postUrl  // ⭐ 표준화 적용
+            url: videoData.url || videoData.postUrl
           });
           failedCount++;
           
           ServerLogger.warn(`⚠️ MongoDB 개별 저장 실패 [${i+1}/${videoDataArray.length}]`, {
-            url: videoData.url || videoData.postUrl, // ⭐ 표준화 적용
+            url: videoData.url || videoData.postUrl,
             error: error.message
           }, 'UNIFIED_SAVER');
         }
@@ -255,7 +255,8 @@ class UnifiedVideoSaver {
    */
   async saveToMongoDB(platform, convertedData) {
     try {
-      const Model = getModelByPlatform(platform);
+      // 통합된 Video 모델 사용
+      const Model = Video;
       
       // URL 중복 체크
       const existingDoc = await Model.findOne({ url: convertedData.url });

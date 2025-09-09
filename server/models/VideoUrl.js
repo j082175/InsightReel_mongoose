@@ -25,6 +25,19 @@ const videoUrlSchema = new mongoose.Schema({
     index: true  // 플랫폼별 조회 최적화
   },
   
+  // YouTube 전용 추가 정보 (선택적)
+  videoId: {
+    type: String,
+    required: false,
+    index: true  // 비디오 ID로 빠른 검색
+  },
+  
+  channelId: {
+    type: String,
+    required: false,
+    index: true  // 채널 ID로 검색
+  },
+  
   // 🔄 처리 상태 (중복 클릭 방지용)
   status: {
     type: String,
@@ -62,8 +75,8 @@ const videoUrlSchema = new mongoose.Schema({
   }
 }, {
   // 스키마 옵션
-  collection: 'video_urls',  // 컬렉션명
-  versionKey: false         // __v 필드 제거 (성능 향상)
+  collection: 'video_duplicate_check',  // 🔍 모든 비디오 중복 검사 통합 컬렉션
+  versionKey: false                     // __v 필드 제거 (성능 향상)
 });
 
 // 🚀 복합 인덱스 생성 (추가 성능 최적화)

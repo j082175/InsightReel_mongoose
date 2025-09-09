@@ -27,7 +27,8 @@ class AIAnalyzer {
     
     // 통합 Gemini 관리자 사용
     if (this.useGemini) {
-      // 환경 설정에 따른 전략 자동 선택
+      // 전역 설정과 동일한 모드 사용
+      const mode = process.env.GEMINI_FALLBACK_MODE || 'single-model';
       const strategy = process.env.GEMINI_FALLBACK_STRATEGY || 'flash';
       
       this.geminiManager = new UnifiedGeminiManager({
@@ -36,7 +37,7 @@ class AIAnalyzer {
         retryDelay: 2000
       });
       
-      ServerLogger.success(`🤖 통합 Gemini 관리자 초기화 완료 (전략: ${strategy})`, null, 'AI');
+      ServerLogger.success(`🤖 통합 Gemini 관리자 초기화 완료 (모드: ${mode}, 전략: ${strategy})`, null, 'AI');
     } else {
       throw new Error('Gemini API를 사용해야 합니다. USE_GEMINI=true로 설정하세요.');
     }
