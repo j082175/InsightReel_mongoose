@@ -1,5 +1,6 @@
 const { google } = require('googleapis');
 const { ServerLogger } = require('../utils/logger');
+const { FieldMapper } = require('../types/field-mapper');
 
 /**
  * YouTube 채널 데이터 수집기 - 2단계 분석용
@@ -139,14 +140,14 @@ class YouTubeChannelDataCollector {
                 customUrl: channel.snippet.customUrl,
                 publishedAt: channel.snippet.publishedAt,
                 thumbnails: channel.snippet.thumbnails,
-                country: channel.snippet.country,
+                [FieldMapper.get('channelCountry')]: channel.snippet.country,
                 defaultLanguage: channel.snippet.defaultLanguage,
                 
                 // 통계
                 statistics: {
-                    viewCount: parseInt(channel.statistics.viewCount || 0),
-                    subscriberCount: parseInt(channel.statistics.subscriberCount || 0),
-                    videoCount: parseInt(channel.statistics.videoCount || 0)
+                    [FieldMapper.get('channelViews')]: parseInt(channel.statistics.viewCount || 0),
+                    [FieldMapper.get('subscribers')]: parseInt(channel.statistics.subscriberCount || 0),
+                    [FieldMapper.get('channelVideos')]: parseInt(channel.statistics.videoCount || 0)
                 },
 
                 // 브랜딩 정보
@@ -232,7 +233,7 @@ class YouTubeChannelDataCollector {
                             statistics: {
                                 viewCount: parseInt(item.statistics.viewCount || 0),
                                 likeCount: parseInt(item.statistics.likeCount || 0),
-                                commentCount: parseInt(item.statistics.commentCount || 0)
+                                [FieldMapper.get('comments')]: parseInt(item.statistics.commentCount || 0)
                             },
 
                             // 콘텐츠 정보

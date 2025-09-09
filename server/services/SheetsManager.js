@@ -2,6 +2,7 @@ const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
 const { ServerLogger } = require('../utils/logger');
+const { FieldMapper } = require('../types/field-mapper'); // 🚀 FieldMapper 임포트
 const VideoUrl = require('../models/VideoUrl');
 
 class SheetsManager {
@@ -216,15 +217,15 @@ class SheetsManager {
     if (platform.toLowerCase() === 'youtube') {
       // YouTube 시트 헤더 - 번호, 태그, 파일경로 제거, 일시->업로드날짜, 해시태그/멘션/설명/댓글/썸네일URL/수집시간 추가
       return [
-        '업로드날짜', '플랫폼', '계정', 'YouTube핸들명', '채널URL', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
+        '업로드날짜', '플랫폼', '채널이름', 'YouTube핸들명', '채널URL', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
         '키워드', '해시태그', '멘션', '설명', '분석내용', '댓글', '좋아요', '댓글수', '조회수', '영상길이',
         '구독자수', '채널동영상수', '수익화여부', 'YouTube카테고리', '라이센스', '화질', '언어',
         'URL', '썸네일URL', '신뢰도', '분석상태', '카테고리일치율', '일치유형', '일치사유', '수집시간'
       ];
     } else {
-      // Instagram, TikTok 등 - 번호, 파일경로 제거, 일시->업로드날짜, 계정 분리(계정+채널URL)
+      // Instagram, TikTok 등 - 번호, 파일경로 제거, 일시->업로드날짜, 채널이름 분리(채널이름+채널URL)
       return [
-        '업로드날짜', '플랫폼', '계정', '채널URL', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
+        '업로드날짜', '플랫폼', '채널이름', '채널URL', '대카테고리', '중카테고리', '전체카테고리경로', '카테고리깊이',
         '키워드', '해시태그', '멘션', '설명', '분석내용', '좋아요', '댓글수',
         'URL', '썸네일URL', '신뢰도', '분석상태', '수집시간'
       ];
@@ -234,7 +235,7 @@ class SheetsManager {
   // 플랫폼별 데이터 행 구성
   buildPlatformRowData({
     rowNumber,
-    displayDate,
+    uploadDate,
     platform,
     metadata,
     analysis,
@@ -246,9 +247,9 @@ class SheetsManager {
     if (platform.toLowerCase() === 'youtube') {
       // YouTube - 새로운 구조 (번호, 태그, 파일경로 제거, 해시태그/멘션/설명/댓글/썸네일URL/수집시간 추가)
       return [
-        displayDate,                                 // 업로드날짜 (업로드 날짜 우선)
+        uploadDate,                                 // 업로드날짜 (업로드 날짜 우선)
         platform.toUpperCase(),                      // 플랫폼
-        metadata.author || '',                       // 계정
+        metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.channelName || '',  // 🚀 자동화
         metadata.youtubeHandle || '',                // YouTube핸들명
         metadata.channelUrl || '',                   // 채널URL
         analysis.mainCategory || '미분류',            // 대카테고리
@@ -259,10 +260,10 @@ class SheetsManager {
         analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그 (설명에서 추출)
         analysis.mentions?.join(' ') || metadata.mentions?.join(' ') || '', // 멘션 (@username)
         metadata.description || '',                  // 설명 (YouTube description)
-        analysis.content || '',                      // 분석내용 (영상 분석 결과)
-        metadata.topComments || '',                  // 댓글 (상위 댓글들)
+        analysis.summary || '',                      // 분석내용 (영상 분석 결과)
+        metadata.comments || '',                  // 댓글 (상위 댓글들)
         metadata.likes || '0',                       // 좋아요
-        metadata.comments || '0',                    // 댓글수
+        metadata.commentsCount || '0',                    // 댓글수
         metadata.views || '0',                       // 조회수
         metadata.duration || metadata.durationFormatted || '', // 영상길이
         metadata.subscribers || '0',                // 구독자수
@@ -282,11 +283,11 @@ class SheetsManager {
         new Date().toISOString()                   // 수집시간
       ];
     } else {
-      // Instagram, TikTok - 새로운 구조 (번호, 파일경로 제거, 계정/채널URL 분리, 해시태그/멘션/설명 추가)
+      // Instagram, TikTok - 새로운 구조 (번호, 파일경로 제거, 채널이름/채널URL 분리, 해시태그/멘션/설명 추가)
       return [
-        displayDate,                                 // 업로드날짜 (업로드 날짜 우선)
+        uploadDate,                                 // 업로드날짜 (업로드 날짜 우선)
         platform.toUpperCase(),                      // 플랫폼
-        metadata.author || metadata.username || '',  // 계정 (username만)
+        metadata[FieldMapper.get('CHANNEL_NAME')] || '',  // 🚀 완전 자동화 (레거시 제거)
         metadata.channelUrl || postUrl || '',        // 채널URL (프로필 링크)
         analysis.mainCategory || '미분류',            // 대카테고리
         analysis.middleCategory || '미분류',          // 중카테고리
@@ -296,9 +297,9 @@ class SheetsManager {
         analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그 (AI 분석에서 추출)
         analysis.mentions?.join(' ') || metadata.mentions?.join(' ') || '', // 멘션 (@username)
         metadata.description || analysis.extractedText || '', // 설명 (캡션 또는 추출된 텍스트)
-        analysis.content || '',                      // 분석내용 (영상 분석 결과)
+        analysis.summary || '',                      // 분석내용 (영상 분석 결과)
         metadata.likes || '0',                       // 좋아요
-        metadata.comments || '0',                    // 댓글수
+        metadata.commentsCount || '0',                    // 댓글수
         postUrl,                                   // URL
         metadata.thumbnailUrl || '',               // 썸네일URL
         (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
@@ -621,21 +622,21 @@ class SheetsManager {
       const rowNumber = nextRow - 1; // 헤더 제외
 
       // 업로드 날짜 결정: metadata.uploadDate가 있으면 사용, 없으면 timestamp 사용
-      let displayDate;
+      let uploadDate;
       if (metadata.uploadDate) {
         // YouTube의 경우 업로드 날짜와 시간 모두 표시
         if (platform === 'youtube') {
-          displayDate = new Date(metadata.uploadDate).toLocaleString('ko-KR');
-          ServerLogger.info(`📅 YouTube 업로드 날짜/시간 사용: ${metadata.uploadDate} -> ${displayDate}`);
+          uploadDate = new Date(metadata.uploadDate).toLocaleString('ko-KR');
+          ServerLogger.info(`📅 YouTube 업로드 날짜/시간 사용: ${metadata.uploadDate} -> ${uploadDate}`);
         } else {
           // 다른 플랫폼은 날짜만 표시
           const uploadDateOnly = new Date(metadata.uploadDate).toLocaleDateString('ko-KR');
-          displayDate = uploadDateOnly;
-          ServerLogger.info(`📅 업로드 날짜 사용: ${metadata.uploadDate} -> ${displayDate}`);
+          uploadDate = uploadDateOnly;
+          ServerLogger.info(`📅 업로드 날짜 사용: ${metadata.uploadDate} -> ${uploadDate}`);
         }
       } else {
-        displayDate = new Date(timestamp).toLocaleString('ko-KR');
-        ServerLogger.info(`📅 처리 날짜 사용 (업로드 날짜 없음): ${timestamp} -> ${displayDate}`);
+        uploadDate = new Date(timestamp).toLocaleString('ko-KR');
+        ServerLogger.info(`📅 처리 날짜 사용 (업로드 날짜 없음): ${timestamp} -> ${uploadDate}`);
       }
 
       // 동적 카테고리 모드 확인
@@ -664,7 +665,7 @@ class SheetsManager {
       // 플랫폼별 데이터 행 구성
       const rowData = this.buildPlatformRowData({
         rowNumber,
-        displayDate,
+        uploadDate,
         platform,
         metadata,
         analysis,
@@ -993,15 +994,15 @@ class SheetsManager {
     const { platform, postUrl, videoPath, metadata, analysis, timestamp } = videoData;
 
     // 업로드 날짜 결정
-    let displayDate;
+    let uploadDate;
     if (metadata.uploadDate) {
       if (platform === 'youtube') {
-        displayDate = new Date(metadata.uploadDate).toLocaleString('ko-KR');
+        uploadDate = new Date(metadata.uploadDate).toLocaleString('ko-KR');
       } else {
-        displayDate = new Date(metadata.uploadDate).toLocaleDateString('ko-KR');
+        uploadDate = new Date(metadata.uploadDate).toLocaleDateString('ko-KR');
       }
     } else {
-      displayDate = new Date(timestamp).toLocaleString('ko-KR');
+      uploadDate = new Date(timestamp).toLocaleString('ko-KR');
     }
 
     // 동적 카테고리 처리
@@ -1028,9 +1029,9 @@ class SheetsManager {
     if (platform === 'youtube') {
       return [
         rowNumber,                                    // 번호
-        displayDate,                                 // 일시
+        uploadDate,                                 // 일시
         platform.toUpperCase(),                      // 플랫폼
-        metadata.author || '',                       // 계정
+        metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.channelName || '',  // 🚀 자동화
         metadata.youtubeHandle || '',                // YouTube핸들명
         metadata.channelUrl || '',                   // 채널URL
         analysis.mainCategory || '미분류',           // 대카테고리
@@ -1040,7 +1041,7 @@ class SheetsManager {
         analysis.keywords?.join(', ') || '',         // 키워드
         analysis.content || '',                      // 분석내용
         metadata.likes || '0',                       // 좋아요
-        metadata.comments || '0',                    // 댓글수
+        metadata.commentsCount || '0',                    // 댓글수
         metadata.views || '0',                       // 조회수
         metadata.durationFormatted || '',            // 영상길이
         metadata.subscribers || '0',                // 구독자수
@@ -1063,9 +1064,9 @@ class SheetsManager {
       // Instagram, TikTok
       return [
         rowNumber,                                    // 번호
-        displayDate,                                 // 일시
+        uploadDate,                                 // 일시
         platform.toUpperCase(),                      // 플랫폼
-        metadata.author || '',                       // 계정
+        metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.channelName || '',  // 🚀 자동화
         analysis.mainCategory || '미분류',           // 대카테고리
         analysis.middleCategory || '',               // 중카테고리
         fullCategoryPath,                            // 전체카테고리경로
@@ -1073,7 +1074,7 @@ class SheetsManager {
         analysis.keywords?.join(', ') || '',         // 키워드
         analysis.content || '',                      // 분석내용
         metadata.likes || '0',                       // 좋아요
-        metadata.comments || '0',                    // 댓글수
+        metadata.commentsCount || '0',                    // 댓글수
         analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그
         postUrl,                                     // URL
         videoPath ? path.basename(videoPath) : '',  // 파일경로
@@ -1369,7 +1370,7 @@ class SheetsManager {
         id: row[0],
         timestamp: row[1],
         platform: row[2],
-        account: row[3],                        // 계정
+        [FieldMapper.get('CHANNEL_NAME')]: row[3],  // 🚀 자동화
         mainCategory: row[4],                   // 대카테고리
         middleCategory: row[5],                 // 중카테고리
         fullCategoryPath: row[6],               // 전체카테고리경로

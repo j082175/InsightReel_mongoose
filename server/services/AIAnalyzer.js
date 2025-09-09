@@ -2,6 +2,7 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { ServerLogger } = require('../utils/logger');
+const { FieldMapper } = require('../types/field-mapper'); // 🚀 FieldMapper 임포트
 const UnifiedCategoryManager = require('./UnifiedCategoryManager');
 const UnifiedGeminiManager = require('../utils/unified-gemini-manager');
 // GoogleGenerativeAI는 UnifiedGeminiManager에서 처리하므로 제거
@@ -264,7 +265,7 @@ class AIAnalyzer {
           depth: verifiedCategory.verifiedCategory.parts.length,
           keywords: verifiedCategory.examples[0]?.keywords || [],
           hashtags: verifiedCategory.examples[0]?.hashtags || [],
-          content: verifiedCategory.examples[0]?.content || '',
+          summary: verifiedCategory.examples[0]?.summary || '',
           confidence: verifiedCategory.confidence,
           source: 'self-learning-verified',
           analysisCount: verifiedCategory.analysisCount,
@@ -436,7 +437,7 @@ class AIAnalyzer {
     ServerLogger.info(`⏱️ 기본 동적 분석 총 소요시간: ${dynamicTotalDuration}ms (${(dynamicTotalDuration / 1000).toFixed(2)}초)`);
     
     return {
-      content: result.content || '영상 분석 내용',
+      summary: result.summary || '영상 분석 내용',
       mainCategory: result.mainCategory,
       middleCategory: result.middleCategory || result.categoryPath?.[1] || '일반',
       fullPath: result.fullPath,
@@ -590,7 +591,7 @@ class AIAnalyzer {
         ServerLogger.error(`❌ 프레임 ${frameNumber} 분석 실패:`, error);
         frameAnalyses.push({
           frameNumber,
-          content: `프레임 ${frameNumber} 분석 실패`,
+          summary: `프레임 ${frameNumber} 분석 실패`,
           keywords: [],
           confidence: 0.1
         });
@@ -665,7 +666,7 @@ class AIAnalyzer {
 
 응답은 다음 JSON 형식으로만 답변해주세요:
 {
-  "content": "이미지에서 보이는 내용을 설명하세요",
+  "summary": "이미지에서 보이는 내용을 설명하세요",
   "main_category": "위 15개 대카테고리 중 하나를 정확히 선택",
   "middle_category": "선택한 대카테고리의 중카테고리 중 하나를 정확히 선택", 
   "keywords": ["관련", "키워드", "다섯개", "선택", "하세요"],
@@ -773,7 +774,7 @@ class AIAnalyzer {
         ServerLogger.info('🔍 카테고리 검증 결과:', categoryResult);
         
         return {
-          content: parsed.content || '내용 분석 실패',
+          summary: parsed.summary || '내용 분석 실패',
           mainCategory: categoryResult.mainCategory,
           middleCategory: categoryResult.middleCategory,
           keywords: Array.isArray(parsed.keywords) ? parsed.keywords.slice(0, 5) : [],
@@ -1090,7 +1091,7 @@ class AIAnalyzer {
     const categoryResult = this.inferCategoriesFromMetadata(metadata);
     
     return {
-      content: caption || '영상 내용',
+      summary: caption || '영상 내용',
       mainCategory: categoryResult.mainCategory,
       middleCategory: categoryResult.middleCategory,
       keywords: this.extractKeywordsFromText(caption + ' ' + hashtags.join(' ')),
@@ -1179,7 +1180,7 @@ class AIAnalyzer {
 {
   "main_category": "대카테고리명",
   "middle_category": "중카테고리명", 
-  "content": "영상 내용 분석 (2-3문장)",
+  "summary": "영상 내용 분석 (2-3문장)",
   "keywords": ["키워드1", "키워드2", "키워드3", "키워드4", "키워드5"],
   "hashtags": ["#해시태그1", "#해시태그2", "#해시태그3", "#해시태그4", "#해시태그5"]
 }
@@ -1198,7 +1199,7 @@ class AIAnalyzer {
 
 JSON 형식으로 답변:
 {
-  "content": "프레임의 상세한 내용 설명",
+  "summary": "프레임의 상세한 내용 설명",
   "keywords": ["키워드1", "키워드2", "키워드3"],
   "features": "이 프레임의 특별한 특징",
   "confidence": 0.9
@@ -1206,7 +1207,7 @@ JSON 형식으로 답변:
 
 추가 정보:
 - 캡션: "${metadata.caption || ''}"
-- 작성자: "${metadata.author || ''}"
+- 작성자: "${metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.channelName || ''}" // 🚀 자동화
 - 플랫폼: ${metadata.platform || 'unknown'}`;
   }
 
@@ -1221,7 +1222,7 @@ JSON 형식으로 답변:
         const parsed = JSON.parse(jsonMatch[0]);
         return {
           frameNumber,
-          content: parsed.content || `프레임 ${frameNumber} 내용`,
+          summary: parsed.summary || `프레임 ${frameNumber} 내용`,
           keywords: Array.isArray(parsed.keywords) ? parsed.keywords : [],
           features: parsed.features || '',
           confidence: parsed.confidence || 0.7
@@ -1235,7 +1236,7 @@ JSON 형식으로 답변:
       ServerLogger.error(`프레임 ${frameNumber} 응답 파싱 실패:`, error);
       return {
         frameNumber,
-        content: `프레임 ${frameNumber} 분석 오류`,
+        summary: `프레임 ${frameNumber} 분석 오류`,
         keywords: [],
         features: '',
         confidence: 0.3
@@ -1308,7 +1309,7 @@ JSON 형식으로 답변:
     const hashtags = this.generateHashtagsFromKeywords(topKeywords);
     
     return {
-      content: combinedContent,
+      summary: combinedContent,
       mainCategory: urlBasedCategory.mainCategory, // "없음"이 그대로 저장됨
       middleCategory: urlBasedCategory.middleCategory, // "없음"이 그대로 저장됨
       keywords: topKeywords,
@@ -1371,7 +1372,7 @@ JSON 형식으로 답변:
       
       // AI 응답에서 새로운 구조의 데이터 추출
       let aiData = { 
-        content: '영상 내용', 
+        summary: '영상 내용', 
         keywords: [], 
         hashtags: [],
         main_category: null,
@@ -1476,7 +1477,7 @@ JSON 형식으로 답변:
       
       // 최종 분석 결과 반환
       const result = {
-        content: aiData.content,
+        summary: aiData.summary,
         mainCategory: finalMainCategory,
         middleCategory: finalMiddleCategory,
         keywords: aiData.keywords.slice(0, 5),
@@ -1511,7 +1512,7 @@ JSON 형식으로 답변:
   // URL 기반 분석 생성
   createAnalysisFromUrl(urlBasedCategory, metadata) {
     return {
-      content: '영상 분석',
+      summary: '영상 분석',
       mainCategory: urlBasedCategory.mainCategory, // "없음"이 그대로 저장됨
       middleCategory: urlBasedCategory.middleCategory, // "없음"이 그대로 저장됨
       keywords: ['영상', '소셜미디어', '콘텐츠'],
@@ -1651,7 +1652,7 @@ JSON 형식으로 답변:
         middleCategory: categoryResult.middleCategory,
         keywords: this.extractKeywordsFromContent(metadata.caption || ''),
         hashtags: this.generateHashtagsFromMetadata(metadata.hashtags || [], categoryResult),
-        content: `Gemini 분석 실패: ${error.message}`,
+        summary: `Gemini 분석 실패: ${error.message}`,
         confidence: 0.3,
         source: 'fallback-metadata',
         frameCount: thumbnailPaths.length,
@@ -1704,7 +1705,7 @@ JSON 형식으로 답변:
 
 **중요**: 반드시 JSON 형식으로만 답변하세요:
 {
-  "content": "비디오 전체 내용을 시간순으로 설명",
+  "summary": "비디오 전체 내용을 시간순으로 설명",
   "main_category": "15개 대카테고리 중 하나를 정확히 선택",
   "middle_category": "선택한 대카테고리의 중카테고리 중 하나를 정확히 선택",
   "keywords": ["관련", "키워드", "다섯개", "선택", "하세요"],
@@ -1736,7 +1737,7 @@ JSON 형식으로 답변:
         middleCategory: categoryResult.middleCategory,
         keywords: Array.isArray(aiResult.keywords) ? aiResult.keywords.slice(0, 5) : this.extractKeywordsFromContent(aiResult.content || ''),
         hashtags: Array.isArray(aiResult.hashtags) ? aiResult.hashtags.slice(0, 5) : this.generateHashtagsFromMetadata(metadata.hashtags || [], categoryResult),
-        content: aiResult.content || '비디오 분석 결과',
+        summary: aiResult.summary || '비디오 분석 결과',
         confidence: aiResult.confidence || 0.8,
         source: 'gemini'
       };
@@ -1789,7 +1790,7 @@ JSON 형식으로 답변:
       middleCategory: categoryResult.middleCategory,
       keywords: keywords.length > 0 ? keywords : this.extractKeywordsFromContent(content),
       hashtags: hashtags.length > 0 ? hashtags : this.generateHashtagsFromMetadata(metadata.hashtags || [], categoryResult),
-      content: content,
+      summary: content,
       confidence: 0.7,
       source: 'gemini-text-parsed'
     };

@@ -2,6 +2,7 @@ import { CONSTANTS } from '../constants.js';
 import { Utils, StringUtils, TimeUtils, DOMUtils } from '../utils.js';
 import { BasePlatformHandler } from './base-handler.js';
 import { ErrorHandler } from '../error-handler.js';
+import { FieldMapper } from '../../utils/field-mapper.js';
 
 /**
  * YouTube 플랫폼 핸들러
@@ -265,15 +266,12 @@ export class YouTubeHandler extends BasePlatformHandler {
         metadata
       });
 
+      // FieldMapper를 사용한 서버 전송 데이터 생성
+      const requestData = FieldMapper.createRequestData('youtube', videoUrl, metadata);
+      
       const result = await this.callApiWithDuplicateCheck(
         this.apiClient.processVideo,
-        {
-          platform: 'youtube',
-          videoUrl: videoUrl,
-          postUrl: window.location.href,
-          metadata: metadata,
-          analysisType: 'quick'
-        }
+        requestData
       );
 
       if (result === null) {
@@ -320,7 +318,7 @@ export class YouTubeHandler extends BasePlatformHandler {
                           document.querySelector('#title h1');
       
       if (titleElement) {
-        metadata.title = titleElement.textContent?.trim();
+        metadata[FieldMapper.get('TITLE')] = titleElement.textContent?.trim();
       }
 
       // 채널명 추출  
@@ -330,7 +328,7 @@ export class YouTubeHandler extends BasePlatformHandler {
                            document.querySelector('#owner-name a');
       
       if (channelElement) {
-        metadata.author = channelElement.textContent?.trim();
+        metadata[FieldMapper.get('CHANNEL_NAME')] = channelElement.textContent?.trim();
       }
 
       // 조회수 추출 (가능한 경우)
@@ -339,7 +337,7 @@ export class YouTubeHandler extends BasePlatformHandler {
                          document.querySelector('#info-text .view-count');
       
       if (viewElement) {
-        metadata.views = viewElement.textContent?.trim();
+        metadata[FieldMapper.get('VIEWS')] = viewElement.textContent?.trim();
       }
 
       // 설명 추출 (일부)
@@ -347,7 +345,7 @@ export class YouTubeHandler extends BasePlatformHandler {
                          document.querySelector(CONSTANTS.SELECTORS.YOUTUBE.DESCRIPTION_ALT);
       
       if (descElement) {
-        metadata.description = descElement.textContent?.trim().substring(0, 200);
+        metadata[FieldMapper.get('DESCRIPTION')] = descElement.textContent?.trim().substring(0, 200);
       }
 
       this.log('info', 'YouTube 메타데이터 추출됨', metadata);

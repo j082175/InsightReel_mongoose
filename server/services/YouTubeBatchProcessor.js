@@ -498,7 +498,7 @@ class YouTubeBatchProcessor {
   extractMentions(description) {
     if (!description) return [];
     
-    // @으로 시작하는 계정명 추출
+    // @으로 시작하는 채널명 추출
     const mentions = description.match(/@[\w가-힣._]+/g) || [];
     
     // 중복 제거 및 @ 제거

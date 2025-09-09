@@ -3,6 +3,7 @@ const SheetsManager = require('../services/SheetsManager');
 const Video = require('../models/Video');
 const DatabaseManager = require('../config/database');
 const { ServerLogger } = require('../utils/logger');
+const { FieldMapper } = require('../types/field-mapper');
 require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 
 class DataMigrator {
@@ -43,7 +44,7 @@ class DataMigrator {
   transformSheetDataToVideo(sheetRow, platform) {
     try {
       const [
-        id, timestamp, platformCol, account, mainCategory, middleCategory,
+        id, timestamp, platformCol, channelName, mainCategory, middleCategory,
         fullCategoryPath, categoryDepth, keywords, aiDescription, likes, commentsCount, 
         views, duration, subscribers, channelVideos, monetization, youtubeCategory,
         license, quality, language, tags, youtubeUrl // W열(23번째) = 실제 YouTube URL
@@ -52,28 +53,28 @@ class DataMigrator {
       // 기본 비디오 객체 생성
       const videoData = {
         // 기본 정보
-        platform: (platform || platformCol || 'unknown').toLowerCase(),
-        timestamp: this.parseKoreanDate(timestamp),
-        account: account || 'Unknown',
-        title: aiDescription || categoryDepth || fullCategoryPath || '제목 없음', // J열(aiDescription)이 실제 분석내용
+        [FieldMapper.get('PLATFORM')]: (platform || platformCol || 'unknown').toLowerCase(),
+        [FieldMapper.get('TIMESTAMP')]: this.parseKoreanDate(timestamp),
+        [FieldMapper.get('CHANNEL_NAME')]: channelName || 'Unknown',
+        [FieldMapper.get('TITLE')]: aiDescription || categoryDepth || fullCategoryPath || '제목 없음', // J열(aiDescription)이 실제 분석내용
         
         // URL 정보 - W열에서 실제 YouTube URL 사용
-        originalUrl: youtubeUrl || '', // W열 YouTube URL 사용
+        [FieldMapper.get('URL')]: youtubeUrl || '', // W열 YouTube URL 사용
         
         // 성과 지표
-        likes: this.parseNumber(likes),
-        views: this.parseNumber(views),
-        shares: 0, // 기본값
-        comments_count: this.parseNumber(commentsCount),
+        [FieldMapper.get('LIKES')]: this.parseNumber(likes),
+        [FieldMapper.get('VIEWS')]: this.parseNumber(views),
+        [FieldMapper.get('SHARES')]: 0, // 기본값
+        [FieldMapper.get('COMMENTS_COUNT')]: this.parseNumber(commentsCount),
         
         // AI 분석 결과
-        category: mainCategory || '미분류',
-        ai_description: aiDescription || categoryDepth || '', // J열(분석내용)이 실제 AI 분석 결과
-        keywords: this.parseKeywords(keywords), // I열(키워드)
+        [FieldMapper.get('CATEGORY')]: mainCategory || '미분류',
+        [FieldMapper.get('ANALYSIS_CONTENT')]: aiDescription || categoryDepth || '', // J열(분석내용)이 실제 AI 분석 결과
+        [FieldMapper.get('KEYWORDS')]: this.parseKeywords(keywords), // I열(키워드)
         
         // 추가 메타데이터  
-        duration: duration || '',
-        hashtags: this.parseHashtags(tags),
+        [FieldMapper.get('DURATION')]: duration || '',
+        [FieldMapper.get('HASHTAGS')]: this.parseHashtags(tags),
         
         // Google Sheets 원본 데이터 보존
         sheets_row_data: {
@@ -233,9 +234,9 @@ class DataMigrator {
         
         // 중복 체크 (account + timestamp + title)
         const existing = await Video.findOne({
-          account: videoData.account,
-          timestamp: videoData.timestamp,
-          title: videoData.title
+          [FieldMapper.get('CHANNEL_NAME')]: videoData[FieldMapper.get('CHANNEL_NAME')],
+          [FieldMapper.get('TIMESTAMP')]: videoData[FieldMapper.get('TIMESTAMP')],
+          [FieldMapper.get('TITLE')]: videoData[FieldMapper.get('TITLE')]
         });
 
         if (existing) {

@@ -9,6 +9,7 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const ChannelModel = require('../server/features/cluster/ChannelModel');
 const YouTubeChannelAnalyzer = require('../server/services/YouTubeChannelAnalyzer');
 const { ServerLogger } = require('../server/utils/logger');
+const { FieldMapper } = require('../server/types/field-mapper');
 
 /**
  * 채널 상세 분석 테스트

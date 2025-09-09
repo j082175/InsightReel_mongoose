@@ -1,13 +1,14 @@
 /**
- * Google Sheets + MongoDB 통합 저장 서비스
- * 기존 SheetsManager와 새로운 VideoOptimized 모델을 통합
- * 트랜잭션 처리로 일관성 보장
+ * 🚀 Google Sheets + MongoDB 통합 저장 서비스 (FieldMapper 자동화)
+ * FieldMapper로 완전 자동화된 필드명 관리
+ * 필드명 변경 시 이 파일은 자동으로 동기화됩니다!
  */
 
 const SheetsManager = require('./SheetsManager');
 const VideoDataConverter = require('./VideoDataConverter');
 const { getModelByPlatform } = require('../models/VideoOptimized');
 const { ServerLogger } = require('../utils/logger');
+const { FieldMapper } = require('../types/field-mapper'); // 🚀 FieldMapper 임포트
 const mongoose = require('mongoose');
 
 class UnifiedVideoSaver {
@@ -28,9 +29,13 @@ class UnifiedVideoSaver {
     let mongoResult = null;
     
     try {
+      // 🚀 FieldMapper 자동화된 로깅
+      const urlField = FieldMapper.get('URL');
+      const channelNameField = FieldMapper.get('CHANNEL_NAME');
+      
       ServerLogger.info(`🚀 통합 저장 시작: ${platform.toUpperCase()}`, {
-        originalUrl: videoData.postUrl,
-        account: videoData.metadata?.author
+        [urlField]: videoData[urlField] || videoData.url || videoData.postUrl,
+        [channelNameField]: videoData[channelNameField] || videoData.channelName || videoData.metadata?.channelName || videoData.metadata?.author
       }, 'UNIFIED_SAVER');
 
       // 1단계: 행 번호 결정 (Google Sheets 기준)
@@ -60,7 +65,7 @@ class UnifiedVideoSaver {
       const mongoTime = mongoEndTime - mongoStartTime;
 
       ServerLogger.info(`✅ 통합 저장 완료: ${platform.toUpperCase()}`, {
-        originalUrl: videoData.postUrl,
+        url: videoData.url || videoData.postUrl, // ⭐ 표준화 적용
         totalTime: `${totalTime}ms`,
         sheetsTime: `${sheetsTime}ms`,
         mongoTime: `${mongoTime}ms`,
@@ -155,12 +160,12 @@ class UnifiedVideoSaver {
             success: false,
             error: error.message,
             originalIndex: i,
-            originalUrl: videoData.postUrl
+            url: videoData.url || videoData.postUrl  // ⭐ 표준화 적용
           });
           failedCount++;
           
           ServerLogger.warn(`⚠️ MongoDB 개별 저장 실패 [${i+1}/${videoDataArray.length}]`, {
-            originalUrl: videoData.postUrl,
+            url: videoData.url || videoData.postUrl, // ⭐ 표준화 적용
             error: error.message
           }, 'UNIFIED_SAVER');
         }
@@ -275,7 +280,7 @@ class UnifiedVideoSaver {
       ServerLogger.info(`✅ MongoDB 새 문서 저장: ${savedDoc._id}`, {
         platform: platform,
         url: convertedData.url,
-        account: convertedData.account
+        channelName: convertedData.channelName
       }, 'UNIFIED_SAVER');
       
       return savedDoc;

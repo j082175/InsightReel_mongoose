@@ -8,6 +8,7 @@
 
 const mongoose = require('mongoose');
 const { ServerLogger } = require('../utils/logger');
+const { FieldMapper } = require('../types/field-mapper');
 
 // 환경 변수 로드
 require('dotenv').config();
@@ -26,8 +27,8 @@ async function checkMongoDB() {
     ServerLogger.info(`📊 전체 비디오 개수: ${totalCount}개`);
 
     // YouTube 비디오만 조회
-    const youtubeVideos = await Video.find({ platform: 'youtube' })
-      .sort({ created_at: -1 })
+    const youtubeVideos = await Video.find({ [FieldMapper.get('PLATFORM')]: 'youtube' })
+      .sort({ [FieldMapper.get('CREATED_AT')]: -1 })
       .limit(10);
 
     ServerLogger.info(`📺 YouTube 비디오: ${youtubeVideos.length}개 (최신 10개)`);
@@ -36,25 +37,25 @@ async function checkMongoDB() {
       ServerLogger.info('\n=== YouTube 비디오 상세 정보 ===');
       
       youtubeVideos.forEach((video, index) => {
-        ServerLogger.info(`\n[${index + 1}] ${video.title || '제목 없음'}`);
-        ServerLogger.info(`  📅 생성일: ${video.created_at?.toLocaleString() || 'N/A'}`);
-        ServerLogger.info(`  👤 계정: ${video.account || 'N/A'}`);
-        ServerLogger.info(`  🏷️ YouTube 핸들명: ${video.youtubeHandle || '❌ 없음'}`);
-        ServerLogger.info(`  🔗 채널 URL: ${video.channelUrl || '❌ 없음'}`);
-        ServerLogger.info(`  👁️ 조회수: ${video.views?.toLocaleString() || 'N/A'}`);
-        ServerLogger.info(`  👍 좋아요: ${video.likes?.toLocaleString() || 'N/A'}`);
-        ServerLogger.info(`  📂 카테고리: ${video.category || 'N/A'}`);
+        ServerLogger.info(`\n[${index + 1}] ${video[FieldMapper.get('TITLE')] || '제목 없음'}`);
+        ServerLogger.info(`  📅 생성일: ${video[FieldMapper.get('CREATED_AT')]?.toLocaleString() || 'N/A'}`);
+        ServerLogger.info(`  👤 채널이름: ${video[FieldMapper.get('CHANNEL_NAME')] || 'N/A'}`);
+        ServerLogger.info(`  🏷️ YouTube 핸들명: ${video[FieldMapper.get('YOUTUBE_HANDLE')] || '❌ 없음'}`);
+        ServerLogger.info(`  🔗 채널 URL: ${video[FieldMapper.get('CHANNEL_URL')] || '❌ 없음'}`);
+        ServerLogger.info(`  👁️ 조회수: ${video[FieldMapper.get('VIEWS')]?.toLocaleString() || 'N/A'}`);
+        ServerLogger.info(`  👍 좋아요: ${video[FieldMapper.get('LIKES')]?.toLocaleString() || 'N/A'}`);
+        ServerLogger.info(`  📂 카테고리: ${video[FieldMapper.get('CATEGORY')] || 'N/A'}`);
       });
 
       // YouTube 핸들명이 있는 비디오 통계
       const withHandleCount = await Video.countDocuments({ 
-        platform: 'youtube', 
-        youtubeHandle: { $exists: true, $ne: null, $ne: '' }
+        [FieldMapper.get('PLATFORM')]: 'youtube', 
+        [FieldMapper.get('YOUTUBE_HANDLE')]: { $exists: true, $ne: null, $ne: '' }
       });
       
       const withChannelUrlCount = await Video.countDocuments({ 
-        platform: 'youtube', 
-        channelUrl: { $exists: true, $ne: null, $ne: '' }
+        [FieldMapper.get('PLATFORM')]: 'youtube', 
+        [FieldMapper.get('CHANNEL_URL')]: { $exists: true, $ne: null, $ne: '' }
       });
 
       ServerLogger.info(`\n📊 YouTube 핸들명 통계:`);
@@ -73,14 +74,14 @@ async function checkMongoDB() {
     const platformStats = await Video.aggregate([
       {
         $group: {
-          _id: '$platform',
+          _id: `$${FieldMapper.get('PLATFORM')}`,
           count: { $sum: 1 },
           withHandle: {
             $sum: {
               $cond: [
                 { $and: [
-                  { $ne: ['$youtubeHandle', null] },
-                  { $ne: ['$youtubeHandle', ''] }
+                  { $ne: [`$${FieldMapper.get('YOUTUBE_HANDLE')}`, null] },
+                  { $ne: [`$${FieldMapper.get('YOUTUBE_HANDLE')}`, ''] }
                 ]},
                 1,
                 0
@@ -91,8 +92,8 @@ async function checkMongoDB() {
             $sum: {
               $cond: [
                 { $and: [
-                  { $ne: ['$channelUrl', null] },
-                  { $ne: ['$channelUrl', ''] }
+                  { $ne: [`$${FieldMapper.get('CHANNEL_URL')}`, null] },
+                  { $ne: [`$${FieldMapper.get('CHANNEL_URL')}`, ''] }
                 ]},
                 1,
                 0

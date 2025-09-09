@@ -2,6 +2,7 @@ require('dotenv').config({ path: '../../.env' });
 const mongoose = require('mongoose');
 const Video = require('../models/Video');
 const { ServerLogger } = require('../utils/logger');
+const { FieldMapper } = require('../types/field-mapper');
 
 async function fixMissingThumbnails() {
   try {
@@ -16,12 +17,12 @@ async function fixMissingThumbnails() {
     const totalVideos = await Video.countDocuments();
     const videosWithoutThumbnail = await Video.countDocuments({
       $or: [
-        { thumbnailUrl: null },
-        { thumbnailUrl: { $exists: false } }
+        { [FieldMapper.get('THUMBNAIL_URL')]: null },
+        { [FieldMapper.get('THUMBNAIL_URL')]: { $exists: false } }
       ]
     });
     const videosWithBadTitles = await Video.countDocuments({
-      title: { $regex: /(watch\?v=|shorts\/|reels?\/|미분류)/ }
+      [FieldMapper.get('TITLE')]: { $regex: /(watch\?v=|shorts\/|reels?\/|미분류)/ }
     });
     
     console.log('\n📊 현재 데이터 상태:');
@@ -31,10 +32,10 @@ async function fixMissingThumbnails() {
     
     // 2. YouTube 영상들을 위한 썸네일 URL 생성
     const youtubeVideos = await Video.find({
-      platform: 'youtube',
+      [FieldMapper.get('PLATFORM')]: 'youtube',
       $or: [
-        { thumbnailUrl: null },
-        { thumbnailUrl: { $exists: false } }
+        { [FieldMapper.get('THUMBNAIL_URL')]: null },
+        { [FieldMapper.get('THUMBNAIL_URL')]: { $exists: false } }
       ]
     }).lean();
     
@@ -46,7 +47,7 @@ async function fixMissingThumbnails() {
       try {
         // YouTube URL에서 video ID 추출
         let videoId = null;
-        const url = video.originalUrl;
+        const url = video[FieldMapper.get('URL')];
         
         if (url) {
           // watch?v= 형태
@@ -71,16 +72,16 @@ async function fixMissingThumbnails() {
         if (videoId) {
           // YouTube 썸네일 URL 생성
           const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
-          const betterTitle = video.title === '미분류' || video.title.includes('watch?v=') || video.title.includes('shorts/') 
+          const betterTitle = video[FieldMapper.get('TITLE')] === '미분류' || video[FieldMapper.get('TITLE')].includes('watch?v=') || video[FieldMapper.get('TITLE')].includes('shorts/') 
             ? `YouTube 영상 ${videoId}` 
-            : video.title;
+            : video[FieldMapper.get('TITLE')];
           
           await Video.updateOne(
-            { _id: video._id },
+            { [FieldMapper.get('ID')]: video[FieldMapper.get('ID')] },
             { 
               $set: { 
-                thumbnailUrl: thumbnailUrl,
-                title: betterTitle
+                [FieldMapper.get('THUMBNAIL_URL')]: thumbnailUrl,
+                [FieldMapper.get('TITLE')]: betterTitle
               } 
             }
           );
@@ -93,16 +94,16 @@ async function fixMissingThumbnails() {
           console.log(`⚠️ 비디오 ID 추출 실패: ${url}`);
         }
       } catch (error) {
-        console.error(`❌ YouTube 영상 처리 실패: ${video.account}`, error.message);
+        console.error(`❌ YouTube 영상 처리 실패: ${video[FieldMapper.get('CHANNEL_NAME')]}`, error.message);
       }
     }
     
     // 3. Instagram 영상들을 위한 기본 썸네일
     const instagramVideos = await Video.find({
-      platform: 'instagram',
+      [FieldMapper.get('PLATFORM')]: 'instagram',
       $or: [
-        { thumbnailUrl: null },
-        { thumbnailUrl: { $exists: false } }
+        { [FieldMapper.get('THUMBNAIL_URL')]: null },
+        { [FieldMapper.get('THUMBNAIL_URL')]: { $exists: false } }
       ]
     }).lean();
     
@@ -114,32 +115,32 @@ async function fixMissingThumbnails() {
       try {
         // Instagram은 실제 썸네일을 가져올 수 없으므로 플레이스홀더 사용
         const thumbnailUrl = 'https://via.placeholder.com/300x300/E1306C/white?text=Instagram';
-        const betterTitle = video.title === '미분류' || video.title.includes('reels/') || video.title.includes('reel/')
+        const betterTitle = video[FieldMapper.get('TITLE')] === '미분류' || video[FieldMapper.get('TITLE')].includes('reels/') || video[FieldMapper.get('TITLE')].includes('reel/')
           ? 'Instagram 영상'
-          : video.title;
+          : video[FieldMapper.get('TITLE')];
         
         await Video.updateOne(
-          { _id: video._id },
+          { [FieldMapper.get('ID')]: video[FieldMapper.get('ID')] },
           { 
             $set: { 
-              thumbnailUrl: thumbnailUrl,
-              title: betterTitle
+              [FieldMapper.get('THUMBNAIL_URL')]: thumbnailUrl,
+              [FieldMapper.get('TITLE')]: betterTitle
             } 
           }
         );
         
         instagramFixed++;
       } catch (error) {
-        console.error(`❌ Instagram 영상 처리 실패: ${video.account}`, error.message);
+        console.error(`❌ Instagram 영상 처리 실패: ${video[FieldMapper.get('CHANNEL_NAME')]}`, error.message);
       }
     }
     
     // 4. TikTok 영상들을 위한 기본 썸네일
     const tiktokVideos = await Video.find({
-      platform: 'tiktok',
+      [FieldMapper.get('PLATFORM')]: 'tiktok',
       $or: [
-        { thumbnailUrl: null },
-        { thumbnailUrl: { $exists: false } }
+        { [FieldMapper.get('THUMBNAIL_URL')]: null },
+        { [FieldMapper.get('THUMBNAIL_URL')]: { $exists: false } }
       ]
     }).lean();
     
@@ -150,29 +151,29 @@ async function fixMissingThumbnails() {
     for (const video of tiktokVideos) {
       try {
         const thumbnailUrl = 'https://via.placeholder.com/300x300/FF0050/white?text=TikTok';
-        const betterTitle = video.title === '미분류' ? 'TikTok 영상' : video.title;
+        const betterTitle = video[FieldMapper.get('TITLE')] === '미분류' ? 'TikTok 영상' : video[FieldMapper.get('TITLE')];
         
         await Video.updateOne(
-          { _id: video._id },
+          { [FieldMapper.get('ID')]: video[FieldMapper.get('ID')] },
           { 
             $set: { 
-              thumbnailUrl: thumbnailUrl,
-              title: betterTitle
+              [FieldMapper.get('THUMBNAIL_URL')]: thumbnailUrl,
+              [FieldMapper.get('TITLE')]: betterTitle
             } 
           }
         );
         
         tiktokFixed++;
       } catch (error) {
-        console.error(`❌ TikTok 영상 처리 실패: ${video.account}`, error.message);
+        console.error(`❌ TikTok 영상 처리 실패: ${video[FieldMapper.get('CHANNEL_NAME')]}`, error.message);
       }
     }
     
     // 5. 최종 결과 확인
     const finalVideosWithoutThumbnail = await Video.countDocuments({
       $or: [
-        { thumbnailUrl: null },
-        { thumbnailUrl: { $exists: false } }
+        { [FieldMapper.get('THUMBNAIL_URL')]: null },
+        { [FieldMapper.get('THUMBNAIL_URL')]: { $exists: false } }
       ]
     });
     

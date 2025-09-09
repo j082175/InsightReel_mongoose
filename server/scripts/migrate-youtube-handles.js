@@ -11,6 +11,7 @@ require('dotenv').config();
 const axios = require('axios');
 const { ServerLogger } = require('../utils/logger');
 const SheetsManager = require('../services/SheetsManager');
+const { FieldMapper } = require('../types/field-mapper');
 
 class YouTubeHandleMigration {
   constructor() {
@@ -140,15 +141,15 @@ class YouTubeHandleMigration {
       ServerLogger.info(`📊 총 데이터: ${rows.length - 1}개 행`);
 
       // 필요한 컬럼 인덱스 찾기
-      const accountIndex = headers.indexOf('계정');
+      const accountIndex = headers.indexOf('채널이름');
       const handleIndex = headers.indexOf('YouTube핸들명');
       const channelUrlIndex = headers.indexOf('채널URL');
 
       if (accountIndex === -1) {
-        throw new Error('계정 컬럼을 찾을 수 없습니다.');
+        throw new Error('채널이름 컬럼을 찾을 수 없습니다.');
       }
 
-      ServerLogger.info(`🔍 컬럼 위치: 계정=${accountIndex}, 핸들명=${handleIndex}, URL=${channelUrlIndex}`);
+      ServerLogger.info(`🔍 컬럼 위치: 채널이름=${accountIndex}, 핸들명=${handleIndex}, URL=${channelUrlIndex}`);
 
       return {
         rows: rows.slice(1), // 헤더 제외
@@ -166,7 +167,7 @@ class YouTubeHandleMigration {
    * 채널ID에서 핸들명 추출
    */
   extractChannelIdFromAccount(account) {
-    // 계정 필드에서 채널ID 추출 시도
+    // 채널이름 필드에서 채널ID 추출 시도
     // 예: "채널명 (UC1234567890)" 형태에서 채널ID 추출
     const match = account.match(/\(([A-Za-z0-9_-]{24})\)/);
     if (match) {

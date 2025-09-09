@@ -1,6 +1,7 @@
 const axios = require('axios');
 const { ServerLogger } = require('../utils/logger');
 const UsageTracker = require('../utils/usage-tracker');
+const { FieldMapper } = require('../types/field-mapper');
 
 /**
  * YouTube 채널 정보 수집 서비스
@@ -132,16 +133,16 @@ class YouTubeChannelService {
     
     return {
       id: channelData.id,
-      name: snippet.title || '',
+      [FieldMapper.get('name')]: snippet.title || '',
       description: snippet.description || '',
       customUrl: snippet.customUrl || '',
       thumbnailUrl: snippet.thumbnails?.high?.url || snippet.thumbnails?.default?.url || '',
-      subscribers: parseInt(statistics.subscriberCount) || 0,
+      [FieldMapper.get('subscribers')]: parseInt(statistics.subscriberCount) || 0,
       videoCount: parseInt(statistics.videoCount) || 0,
       viewCount: parseInt(statistics.viewCount) || 0,
       publishedAt: snippet.publishedAt || null,
       platform: 'youtube',
-      url: `https://youtube.com/channel/${channelData.id}`,
+      [FieldMapper.get('originalUrl')]: `https://youtube.com/channel/${channelData.id}`,
       handleUrl: snippet.customUrl ? `https://youtube.com/@${snippet.customUrl.replace('@', '')}` : null
     };
   }

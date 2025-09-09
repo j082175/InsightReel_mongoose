@@ -1,6 +1,7 @@
 require('dotenv').config({ path: '../../.env' });
 const mongoose = require('mongoose');
 const Video = require('../models/Video');
+const { FieldMapper } = require('../types/field-mapper');
 
 async function fixInvalidRecords() {
   try {
@@ -14,8 +15,8 @@ async function fixInvalidRecords() {
     // 잘못된 레코드들 찾기
     const invalidRecords = await Video.find({
       $or: [
-        { thumbnailUrl: null },
-        { thumbnailUrl: { $exists: false } }
+        { [FieldMapper.get('THUMBNAIL_URL')]: null },
+        { [FieldMapper.get('THUMBNAIL_URL')]: { $exists: false } }
       ]
     }).lean();
     
@@ -26,7 +27,7 @@ async function fixInvalidRecords() {
     
     for (const record of invalidRecords) {
       try {
-        const url = record.originalUrl || record.account;
+        const url = record[FieldMapper.get('URL')] || record[FieldMapper.get('CHANNEL_NAME')];
         
         // "별쇼츠"나 다른 잘못된 데이터인 경우
         if (!url || !url.startsWith('http') || url === '별쇼츠') {
@@ -36,14 +37,14 @@ async function fixInvalidRecords() {
         } else {
           // 실제 URL이지만 thumbnailUrl이 없는 경우 기본값 설정
           const thumbnailUrl = 'https://via.placeholder.com/300x300/FF0000/white?text=YouTube';
-          const title = record.title || 'YouTube 영상';
+          const title = record[FieldMapper.get('TITLE')] || 'YouTube 영상';
           
           await Video.updateOne(
-            { _id: record._id },
+            { [FieldMapper.get('ID')]: record[FieldMapper.get('ID')] },
             { 
               $set: { 
-                thumbnailUrl: thumbnailUrl,
-                title: title
+                [FieldMapper.get('THUMBNAIL_URL')]: thumbnailUrl,
+                [FieldMapper.get('TITLE')]: title
               } 
             }
           );

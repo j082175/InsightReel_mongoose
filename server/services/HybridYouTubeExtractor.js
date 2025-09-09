@@ -2,6 +2,7 @@ const ytdl = require('ytdl-core');
 const axios = require('axios');
 const { ServerLogger } = require('../utils/logger');
 const MultiKeyManager = require('../utils/multi-key-manager');
+const { FieldMapper } = require('../types/field-mapper');
 
 /**
  * 🚀 하이브리드 YouTube 데이터 추출기
@@ -159,7 +160,7 @@ class HybridYouTubeExtractor {
           uploadDate: details.uploadDate,
           
           // 채널 정보 (ytdl-core 강점)
-          channelName: details.author?.name,
+          [FieldMapper.get('CHANNEL_NAME')]: details.author?.name,
           channelId: details.author?.id,
           channelUrl: details.author?.channel_url,
           
@@ -320,7 +321,7 @@ class HybridYouTubeExtractor {
       // 기본 정보 (ytdl-core 대체)
       title: snippet.title || '',
       description: snippet.description || '',
-      channelName: snippet.channelTitle || '',
+      [FieldMapper.get('CHANNEL_NAME')]: snippet.channelTitle || '',
       channelId: snippet.channelId || '',
       
       // 영상 메타데이터
@@ -346,15 +347,15 @@ class HybridYouTubeExtractor {
       youtubeCategoryId: snippet.categoryId,
       
       // 채널 정보
-      channelTitle: snippet.channelTitle,
-      channelUrl: `https://www.youtube.com/channel/${snippet.channelId}`,
-      subscriberCount: channelData.subscriberCount || 0,
-      channelVideoCount: channelData.channelVideoCount || 0,
-      channelViewCount: channelData.channelViewCount || 0,
-      channelCountry: channelData.channelCountry || '',
-      channelDescription: channelData.channelDescription || '',
+      [FieldMapper.get('channelTitle')]: snippet.channelTitle,
+      [FieldMapper.get('channelUrl')]: `https://www.youtube.com/channel/${snippet.channelId}`,
+      [FieldMapper.get('subscribers')]: channelData.subscriberCount || 0,
+      [FieldMapper.get('channelVideos')]: channelData.channelVideoCount || 0,
+      [FieldMapper.get('channelViews')]: channelData.channelViewCount || 0,
+      [FieldMapper.get('channelCountry')]: channelData.channelCountry || '',
+      [FieldMapper.get('channelDescription')]: channelData.channelDescription || '',
       channelCustomUrl: channelData.channelCustomUrl || '',
-      youtubeHandle: channelData.channelCustomUrl || '',
+      [FieldMapper.get('youtubeHandle')]: channelData.channelCustomUrl || '',
       
       // 해시태그와 멘션
       hashtags: hashtags,
@@ -470,7 +471,7 @@ class HybridYouTubeExtractor {
         
         if (apiData.commentCount !== undefined) {
           merged.commentCount = apiData.commentCount;
-          merged.comments_count = apiData.commentCount; // 별칭
+          merged[FieldMapper.get('comments')] = apiData.commentCount; // 별칭
         }
         
         if (apiData.publishedAt) {
@@ -483,8 +484,8 @@ class HybridYouTubeExtractor {
         }
         
         // 채널명 일치 확인
-        if (apiData.channelTitle && !merged.channelName) {
-          merged.channelName = apiData.channelTitle;
+        if (apiData[FieldMapper.get('CHANNEL_TITLE')] && !merged[FieldMapper.get('CHANNEL_NAME')]) {
+          merged[FieldMapper.get('CHANNEL_NAME')] = apiData[FieldMapper.get('CHANNEL_TITLE')];
         }
       }
     }

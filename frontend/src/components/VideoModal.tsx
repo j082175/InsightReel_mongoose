@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Video } from '../types';
+import { FieldMapper } from '../types/field-mapper';
 
 interface VideoModalProps {
   video: Video | null;
@@ -83,15 +84,15 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
         <div className="flex justify-between items-start p-6 border-b">
           <div className="flex-1 pr-4">
             <h2 className="text-xl font-bold text-gray-900 mb-2">
-              {video.title}
+              {FieldMapper.getTypedField<string>(video, 'TITLE') || ''}
             </h2>
             <div className="flex items-center gap-3">
               <img 
                 src={video.channelAvatarUrl} 
-                alt={video.channelName}
+                alt={FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || ''}
                 className="w-8 h-8 rounded-full"
               />
-              <span className="text-sm text-gray-600">{video.channelName}</span>
+              <span className="text-sm text-gray-600">{FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || ''}</span>
               <span className={`px-2 py-1 rounded-full text-xs ${
                 video.platform === 'YouTube' ? 'bg-red-100 text-red-700' :
                 video.platform === 'TikTok' ? 'bg-pink-100 text-pink-700' :

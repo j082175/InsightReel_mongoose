@@ -2,6 +2,7 @@ const axios = require('axios');
 const { ServerLogger } = require('../utils/logger');
 const UsageTracker = require('../utils/usage-tracker');
 const AIAnalyzer = require('./AIAnalyzer');
+const UnifiedCategoryManager = require('./UnifiedCategoryManager');
 
 /**
  * YouTube 채널 상세 분석 서비스
@@ -13,6 +14,7 @@ class YouTubeChannelAnalyzer {
     this.baseURL = 'https://www.googleapis.com/youtube/v3';
     this.usageTracker = new UsageTracker();
     this.aiAnalyzer = new AIAnalyzer();
+    this.categoryManager = new UnifiedCategoryManager({ mode: 'dynamic' });
     
     if (!this.apiKey) {
       throw new Error('YouTube API 키가 설정되지 않았습니다.');
@@ -462,11 +464,12 @@ ${videoData.comments.map((comment, i) => `${i+1}. ${comment}`).join('\n')}
   }
 
   /**
-   * 채널 종합 분석 (Pro)
+   * 채널 종합 분석 (Pro) - 카테고리 시스템 통합
    */
   async synthesizeChannelIdentity(videoAnalyses, channelInfo) {
     try {
-      const prompt = `다음은 YouTube 채널 "${channelInfo.title}"의 최근 5개 영상 분석 결과입니다.
+      // 1. 기존 채널 정체성 분석 수행
+      const identityPrompt = `다음은 YouTube 채널 "${channelInfo.title}"의 최근 5개 영상 분석 결과입니다.
 
 영상 분석 결과:
 ${videoAnalyses.map((analysis, i) => `영상 ${i+1}: ${analysis.contentType} - ${analysis.subCategory} (${(analysis.keywords || []).join(', ')})`).join('\n')}
@@ -495,31 +498,101 @@ ${videoAnalyses.map((analysis, i) => `영상 ${i+1}: ${analysis.contentType} - $
   "channelPersonality": "전반적 성격"
 }`;
 
-      const synthesis = await this.aiAnalyzer.geminiManager.generateContent(
-        prompt,
-        null, // 이미지 없음 (텍스트만)
-        { modelType: 'pro' }
-      );
+      // 2. 카테고리 분석을 위한 추가 프롬프트 생성 (일관성 검증 포함)
+      const categoryPrompt = this.categoryManager.buildDynamicCategoryPrompt('youtube') + `
 
-      // UnifiedGeminiManager 응답 처리
-      let responseText;
-      if (typeof synthesis === 'object' && synthesis.text) {
-        responseText = synthesis.text; // UnifiedGeminiManager 응답 형태
-      } else if (typeof synthesis === 'string') {
-        responseText = synthesis; // 직접 문자열
+**분석할 채널 정보:**
+- 채널명: ${channelInfo.title}
+- 구독자: ${channelInfo.subscribers?.toLocaleString()}명
+- 설명: ${channelInfo.description}
+
+**채널의 주요 콘텐츠 패턴:**
+${videoAnalyses.map((analysis, i) => `${i+1}. ${analysis.contentType} - ${analysis.subCategory}`).join('\n')}
+
+**채널 태그들:**
+${videoAnalyses.flatMap(a => a.keywords || []).slice(0, 20).join(', ')}
+
+**🎯 일관성 검증 지침:**
+위 5개 영상을 분석했을 때, 콘텐츠가 **일관된 주제**를 다루고 있나요?
+- ✅ **일관성 높음**: 모든 영상이 비슷한 주제/장르 → 세부 카테고리까지 생성
+- ⚠️ **일관성 중간**: 2-3개 주제가 섞여있음 → 대카테고리 + 중카테고리까지만
+- ❌ **일관성 부족**: 완전히 다른 주제들이 섞여있음 → 대카테고리만 지정
+
+응답 형식에 일관성 평가를 포함하세요:
+
+{
+  "consistency_level": "high|medium|low",
+  "consistency_reason": "일관성 판단 이유",
+  "full_path": "대카테고리 > 중카테고리 > 소카테고리 [또는 더 짧게]",
+  "main_category": "대카테고리",
+  "depth": 3,
+  "confidence": 0.85,
+  "keywords": ["키워드1", "키워드2"],
+  "hashtags": ["#태그1", "#태그2"],
+  "content": "콘텐츠 요약"
+}`;
+
+      // 병렬로 두 분석 수행
+      const [identityAnalysis, categoryAnalysis] = await Promise.all([
+        this.aiAnalyzer.geminiManager.generateContent(
+          identityPrompt,
+          null, // 이미지 없음 (텍스트만)
+          { modelType: 'pro' }
+        ),
+        this.aiAnalyzer.geminiManager.generateContent(
+          categoryPrompt,
+          null, // 이미지 없음 (텍스트만)
+          { modelType: 'flash-lite' }
+        )
+      ]);
+
+      // 1. 채널 정체성 분석 결과 파싱
+      let identityResponseText;
+      if (typeof identityAnalysis === 'object' && identityAnalysis.text) {
+        identityResponseText = identityAnalysis.text;
+      } else if (typeof identityAnalysis === 'string') {
+        identityResponseText = identityAnalysis;
       } else {
-        throw new Error('Unexpected response format');
+        throw new Error('Identity analysis response format error');
       }
       
-      // JSON 파싱 처리
-      let cleanedResponse = responseText.trim();
-      if (cleanedResponse.includes('```json')) {
-        cleanedResponse = cleanedResponse.split('```json')[1].split('```')[0].trim();
-      } else if (cleanedResponse.includes('```')) {
-        cleanedResponse = cleanedResponse.split('```')[1].split('```')[0].trim();
+      let cleanedIdentityResponse = identityResponseText.trim();
+      if (cleanedIdentityResponse.includes('```json')) {
+        cleanedIdentityResponse = cleanedIdentityResponse.split('```json')[1].split('```')[0].trim();
+      } else if (cleanedIdentityResponse.includes('```')) {
+        cleanedIdentityResponse = cleanedIdentityResponse.split('```')[1].split('```')[0].trim();
       }
       
-      return JSON.parse(cleanedResponse);
+      const identity = JSON.parse(cleanedIdentityResponse);
+      
+      // 2. 카테고리 분석 결과 파싱
+      const metadata = { platform: 'youtube', title: channelInfo.title };
+      const categoryResult = this.categoryManager.processDynamicCategoryResponse(
+        categoryAnalysis, 
+        metadata, 
+        'flash-lite'
+      );
+      
+      // 3. 통합 결과 반환
+      const result = {
+        ...identity,
+        // 카테고리 정보 추가 (일관성 정보 포함)
+        categoryInfo: {
+          majorCategory: categoryResult.mainCategory,
+          middleCategory: categoryResult.middleCategory,
+          fullCategoryPath: categoryResult.fullPath,
+          categoryDepth: categoryResult.depth,
+          categoryConfidence: categoryResult.confidence,
+          consistencyLevel: categoryResult.consistencyLevel,
+          consistencyReason: categoryResult.consistencyReason
+        },
+        // 기존 필드들 유지하면서 카테고리 관련 키워드 병합
+        channelTags: [...(identity.channelTags || []), ...(categoryResult.keywords || [])].slice(0, 15)
+      };
+      
+      ServerLogger.success(`✅ 채널 종합 분석 완료: ${result.categoryInfo.fullCategoryPath} (${result.categoryInfo.categoryDepth}단계)`);
+      
+      return result;
     } catch (error) {
       ServerLogger.error(`❌ 채널 종합 분석 실패: ${error.message}`);
       return {
@@ -755,13 +828,14 @@ ${videoAnalyses.map((analysis, i) => `영상 ${i+1}: ${analysis.contentType} - $
   }
 
   /**
-   * 롱폼 채널 종합 분석 (Gemini 1회 호출)
+   * 롱폼 채널 종합 분석 (Gemini 1회 호출) - 카테고리 시스템 통합
    */
   async synthesizeLongformChannelIdentity(metadata) {
-    const prompt = `다음 YouTube 롱폼 채널의 메타데이터를 분석하여 채널의 정체성을 파악해주세요.
+    // 1. 기존 채널 정체성 분석 프롬프트
+    const identityPrompt = `다음 YouTube 롱폼 채널의 메타데이터를 분석하여 채널의 정체성을 파악해주세요.
 
 채널 정보:
-- 이름: ${metadata.channelInfo.name}
+- 이름: ${metadata.channelInfo.title || metadata.channelInfo.name}
 - 구독자: ${metadata.channelInfo.subscribers?.toLocaleString()}명
 - 설명: ${metadata.channelInfo.description}
 - 총 영상: ${metadata.videoCount}개
@@ -794,56 +868,134 @@ ${metadata.tags.top20.slice(0, 15).map(item => `- ${item.tag} (${item.count}회)
   "channelPersonality": "채널의 전반적 성격과 지향점"
 }`;
 
-    const synthesis = await this.aiAnalyzer.geminiManager.generateContent(
-      prompt,
-      null, // 이미지 없음 (텍스트만)
-      { modelType: 'pro' }
-    );
+    // 2. 카테고리 분석을 위한 추가 프롬프트 생성 (일관성 검증 포함)
+    const categoryPrompt = this.categoryManager.buildDynamicCategoryPrompt('youtube') + `
 
-    // UnifiedGeminiManager 응답 처리
-    let responseText;
-    if (synthesis && synthesis.text) {
-      responseText = synthesis.text;
-    } else if (synthesis && typeof synthesis === 'string') {
-      responseText = synthesis;
-    } else {
-      throw new Error('AI 응답을 받지 못했습니다');
-    }
+**분석할 채널 정보:**
+- 채널명: ${metadata.channelInfo.title || metadata.channelInfo.name}
+- 구독자: ${metadata.channelInfo.subscribers?.toLocaleString()}명
+- 총 영상: ${metadata.videoCount}개
+
+**채널의 주요 콘텐츠 패턴:**
+${metadata.titles.sample.slice(0, 10).map((title, i) => `${i+1}. ${title}`).join('\n')}
+
+**상위 태그들:**
+${metadata.tags.top20.slice(0, 10).map(item => item.tag).join(', ')}
+
+**🎯 일관성 검증 지침:**
+위 영상 제목들과 태그들을 분석했을 때, 채널이 **일관된 주제**를 다루고 있나요?
+- ✅ **일관성 높음**: 모든 영상이 비슷한 주제/장르 → 세부 카테고리까지 생성
+- ⚠️ **일관성 중간**: 2-3개 주제가 섞여있음 → 대카테고리 + 중카테고리까지만
+- ❌ **일관성 부족**: 완전히 다른 주제들이 섞여있음 → 대카테고리만 지정
+
+응답 형식에 일관성 평가를 포함하세요:
+
+{
+  "consistency_level": "high|medium|low",
+  "consistency_reason": "일관성 판단 이유",
+  "full_path": "대카테고리 > 중카테고리 > 소카테고리 [또는 더 짧게]",
+  "main_category": "대카테고리",
+  "depth": 3,
+  "confidence": 0.85,
+  "keywords": ["키워드1", "키워드2"],
+  "hashtags": ["#태그1", "#태그2"],
+  "content": "콘텐츠 요약"
+}`;
+
+    // 병렬로 두 분석 수행
+    const [identityAnalysis, categoryAnalysis] = await Promise.all([
+      this.aiAnalyzer.geminiManager.generateContent(
+        identityPrompt,
+        null, // 이미지 없음 (텍스트만)
+        { modelType: 'pro' }
+      ),
+      this.aiAnalyzer.geminiManager.generateContent(
+        categoryPrompt,
+        null, // 이미지 없음 (텍스트만)
+        { modelType: 'flash-lite' }
+      )
+    ]);
 
     try {
-      // JSON 파싱 시도
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('JSON 형식을 찾을 수 없습니다');
+      // 1. 채널 정체성 분석 결과 파싱
+      let identityResponseText;
+      if (identityAnalysis && identityAnalysis.text) {
+        identityResponseText = identityAnalysis.text;
+      } else if (identityAnalysis && typeof identityAnalysis === 'string') {
+        identityResponseText = identityAnalysis;
+      } else {
+        throw new Error('Identity 분석 응답을 받지 못했습니다');
       }
 
-      const analysis = JSON.parse(jsonMatch[0]);
+      const identityJsonMatch = identityResponseText.match(/\{[\s\S]*\}/);
+      if (!identityJsonMatch) {
+        throw new Error('Identity JSON 형식을 찾을 수 없습니다');
+      }
+
+      const identity = JSON.parse(identityJsonMatch[0]);
       
-      // 필수 필드 확인 및 기본값 설정
-      return {
-        primaryCategory: analysis.primaryCategory || '일반',
-        secondaryCategories: Array.isArray(analysis.secondaryCategories) ? analysis.secondaryCategories : [],
-        channelTags: Array.isArray(analysis.channelTags) ? analysis.channelTags.slice(0, 10) : [],
-        targetAudience: analysis.targetAudience || '일반 시청자',
-        contentStyle: analysis.contentStyle || '롱폼 콘텐츠',
-        uniqueFeatures: Array.isArray(analysis.uniqueFeatures) ? analysis.uniqueFeatures : [],
-        channelPersonality: analysis.channelPersonality || '정보 전달형'
+      // 2. 카테고리 분석 결과 파싱
+      const channelMetadata = { 
+        platform: 'youtube', 
+        title: metadata.channelInfo.title || metadata.channelInfo.name 
       };
+      const categoryResult = this.categoryManager.processDynamicCategoryResponse(
+        categoryAnalysis, 
+        channelMetadata, 
+        'flash-lite'
+      );
+      
+      // 3. 통합 결과 반환
+      const result = {
+        primaryCategory: identity.primaryCategory || '일반',
+        secondaryCategories: Array.isArray(identity.secondaryCategories) ? identity.secondaryCategories : [],
+        channelTags: Array.isArray(identity.channelTags) ? identity.channelTags.slice(0, 10) : [],
+        targetAudience: identity.targetAudience || '일반 시청자',
+        contentStyle: identity.contentStyle || '롱폼 콘텐츠',
+        uniqueFeatures: Array.isArray(identity.uniqueFeatures) ? identity.uniqueFeatures : [],
+        channelPersonality: identity.channelPersonality || '정보 전달형',
+        // 카테고리 정보 추가 (일관성 정보 포함)
+        categoryInfo: {
+          majorCategory: categoryResult.mainCategory,
+          middleCategory: categoryResult.middleCategory,
+          fullCategoryPath: categoryResult.fullPath,
+          categoryDepth: categoryResult.depth,
+          categoryConfidence: categoryResult.confidence,
+          consistencyLevel: categoryResult.consistencyLevel,
+          consistencyReason: categoryResult.consistencyReason
+        }
+      };
+      
+      // 카테고리 관련 키워드를 channelTags에 병합 (중복 제거)
+      const allTags = [...result.channelTags, ...(categoryResult.keywords || [])];
+      result.channelTags = [...new Set(allTags)].slice(0, 15);
+      
+      ServerLogger.success(`✅ 롱폼 채널 종합 분석 완료: ${result.categoryInfo.fullCategoryPath} (${result.categoryInfo.categoryDepth}단계)`);
+      
+      return result;
 
     } catch (error) {
-      ServerLogger.error('❌ AI 응답 파싱 실패', error);
-      ServerLogger.info('AI 원본 응답:', responseText);
+      ServerLogger.error('❌ 롱폼 채널 분석 파싱 실패', error);
       
-      // 파싱 실패 시 기본값 반환
-      return {
+      // 파싱 실패 시 기본값 반환 (카테고리 정보 포함)
+      const fallbackResult = {
         primaryCategory: '일반',
         secondaryCategories: [],
         channelTags: metadata.tags.top20.slice(0, 8).map(item => item.tag),
         targetAudience: '일반 시청자',
         contentStyle: '롱폼 콘텐츠',
         uniqueFeatures: [],
-        channelPersonality: '정보 전달형'
+        channelPersonality: '정보 전달형',
+        categoryInfo: {
+          majorCategory: '엔터테인먼트',
+          middleCategory: '일반',
+          fullCategoryPath: '엔터테인먼트 > 일반 > 기본',
+          categoryDepth: 3,
+          categoryConfidence: 0.3
+        }
       };
+      
+      return fallbackResult;
     }
   }
 

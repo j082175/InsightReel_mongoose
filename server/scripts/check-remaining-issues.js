@@ -1,6 +1,7 @@
 require('dotenv').config({ path: '../../.env' });
 const mongoose = require('mongoose');
 const Video = require('../models/Video');
+const { FieldMapper } = require('../types/field-mapper');
 
 async function checkRemainingIssues() {
   try {
@@ -14,8 +15,8 @@ async function checkRemainingIssues() {
     // 썸네일이 여전히 없는 레코드들 찾기
     const problemVideos = await Video.find({
       $or: [
-        { thumbnailUrl: null },
-        { thumbnailUrl: { $exists: false } }
+        { [FieldMapper.get('THUMBNAIL_URL')]: null },
+        { [FieldMapper.get('THUMBNAIL_URL')]: { $exists: false } }
       ]
     }).lean();
     
@@ -24,7 +25,7 @@ async function checkRemainingIssues() {
     if (problemVideos.length > 0) {
       // 플랫폼별로 분류
       const byPlatform = problemVideos.reduce((acc, video) => {
-        const platform = video.platform || 'unknown';
+        const platform = video[FieldMapper.get('PLATFORM')] || 'unknown';
         if (!acc[platform]) acc[platform] = [];
         acc[platform].push(video);
         return acc;
@@ -35,11 +36,11 @@ async function checkRemainingIssues() {
         console.log(`\n${platform.toUpperCase()}: ${videos.length}개`);
         
         videos.slice(0, 5).forEach((video, index) => {
-          console.log(`  ${index + 1}. URL: ${video.originalUrl || 'N/A'}`);
-          console.log(`     계정: ${video.account || 'N/A'}`);
-          console.log(`     제목: ${video.title || 'N/A'}`);
-          console.log(`     생성일: ${video.created_at ? video.created_at.toISOString().split('T')[0] : 'N/A'}`);
-          console.log(`     _id: ${video._id}`);
+          console.log(`  ${index + 1}. URL: ${video[FieldMapper.get('URL')] || 'N/A'}`);
+          console.log(`     채널이름: ${video[FieldMapper.get('CHANNEL_NAME')] || 'N/A'}`);
+          console.log(`     제목: ${video[FieldMapper.get('TITLE')] || 'N/A'}`);
+          console.log(`     생성일: ${video[FieldMapper.get('CREATED_AT')] ? video[FieldMapper.get('CREATED_AT')].toISOString().split('T')[0] : 'N/A'}`);
+          console.log(`     _id: ${video[FieldMapper.get('ID')]}`);
           console.log('');
         });
         
@@ -50,12 +51,12 @@ async function checkRemainingIssues() {
       
       // 문제 패턴 분석
       console.log('🔍 문제 패턴 분석:');
-      const noAccount = problemVideos.filter(v => !v.account && !v.originalUrl);
+      const noAccount = problemVideos.filter(v => !v[FieldMapper.get('CHANNEL_NAME')] && !v[FieldMapper.get('URL')]);
       const invalidUrls = problemVideos.filter(v => {
-        const url = v.originalUrl;
+        const url = v[FieldMapper.get('URL')];
         return url && !url.startsWith('http');
       });
-      const emptyTitles = problemVideos.filter(v => !v.title || v.title === '');
+      const emptyTitles = problemVideos.filter(v => !v[FieldMapper.get('TITLE')] || v[FieldMapper.get('TITLE')] === '');
       
       console.log(`   URL 없음: ${noAccount.length}개`);
       console.log(`   잘못된 URL 형식: ${invalidUrls.length}개`);  
@@ -64,15 +65,15 @@ async function checkRemainingIssues() {
       if (noAccount.length > 0) {
         console.log('\n⚠️ URL이 없는 레코드들:');
         noAccount.slice(0, 3).forEach((video, index) => {
-          console.log(`   ${index + 1}. _id: ${video._id}, title: ${video.title}, platform: ${video.platform}`);
+          console.log(`   ${index + 1}. _id: ${video[FieldMapper.get('ID')]}, title: ${video[FieldMapper.get('TITLE')]}, platform: ${video[FieldMapper.get('PLATFORM')]}`);
         });
       }
       
       if (invalidUrls.length > 0) {
         console.log('\n⚠️ 잘못된 URL 형식 레코드들:');
         invalidUrls.slice(0, 3).forEach((video, index) => {
-          console.log(`   ${index + 1}. URL: ${video.originalUrl}, platform: ${video.platform}`);
-          console.log(`     계정: ${video.account || 'N/A'}`);
+          console.log(`   ${index + 1}. URL: ${video[FieldMapper.get('URL')]}, platform: ${video[FieldMapper.get('PLATFORM')]}`);
+          console.log(`     채널이름: ${video[FieldMapper.get('CHANNEL_NAME')] || 'N/A'}`);
         });
       }
       

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Video } from '../types';
+import { FieldMapper } from '../types/field-mapper';
 
 // 확장된 비디오 타입 (아카이브용 옵션 필드들)
 interface ExtendedVideo extends Video {
@@ -136,7 +137,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
         <img 
           className="w-full h-full object-cover" 
           src={video.thumbnailUrl} 
-          alt={video.title} 
+          alt={FieldMapper.getTypedField<string>(video, 'TITLE') || ''} 
         />
 
         {/* 플레이 버튼 오버레이 (hover 시) */}
@@ -202,7 +203,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
         {/* 제목 */}
         <h3 className="text-md font-semibold text-gray-800 h-12 overflow-hidden">
           {video.isTrending && <span className="mr-1">🔥</span>}
-          {video.title}
+          {FieldMapper.getTypedField<string>(video, 'TITLE') || ''}
         </h3>
 
         {/* 채널 정보 */}
@@ -210,20 +211,20 @@ const VideoCard: React.FC<VideoCardProps> = ({
           <img 
             src={video.channelAvatarUrl} 
             className="w-6 h-6 rounded-full mr-2 object-cover"
-            alt={video.channelName}
+            alt={FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || ''}
           />
           {onChannelClick ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onChannelClick(video.channelName);
+                onChannelClick(FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || '');
               }}
               className="hover:text-indigo-600 hover:underline"
             >
-              {video.channelName}
+              {FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || ''}
             </button>
           ) : (
-            <span>{video.channelName}</span>
+            <span>{FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || ''}</span>
           )}
         </div>
 
@@ -260,7 +261,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
         {/* 조회수와 날짜 (하단 고정) */}
         <div className="mt-auto pt-3 text-sm text-gray-600 font-medium">
           <span>
-            {video.platform === 'Instagram' ? '좋아요' : '조회수'} {formatViews(video.views)}회
+            {video.platform === 'Instagram' ? '좋아요' : '조회수'} {formatViews(FieldMapper.getTypedField<number>(video, 'VIEWS') || 0)}회
           </span>
           <span className="mx-1">•</span>
           <span>

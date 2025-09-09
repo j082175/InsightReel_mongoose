@@ -5,6 +5,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
 const { YouTubeVideo, InstagramVideo } = require('./server/models/VideoOptimized');
+const { FieldMapper } = require('./server/types/field-mapper');
 
 async function checkCurrentData() {
   console.log('📊 현재 데이터베이스 상태 확인\n');
@@ -28,15 +29,15 @@ async function checkCurrentData() {
     if (youtubeCount > 0) {
       console.log('3️⃣ 최근 YouTube 비디오 목록...');
       const recentYoutube = await YouTubeVideo.find()
-        .sort({ createdAt: -1 })
+        .sort(FieldMapper.buildSortObject('CREATED_AT', 'desc'))
         .limit(5)
-        .select('account title mainCategory views likes url createdAt');
+        .select(FieldMapper.buildSelectString(['CHANNEL_NAME', 'TITLE', 'MAIN_CATEGORY', 'VIEWS', 'LIKES', 'URL', 'CREATED_AT']));
       
       recentYoutube.forEach((video, index) => {
-        console.log(`   ${index + 1}. ${video.account} - "${video.title}"`);
-        console.log(`      카테고리: ${video.mainCategory}, 조회수: ${video.views}, 좋아요: ${video.likes}`);
-        console.log(`      URL: ${video.url}`);
-        console.log(`      생성일: ${video.createdAt}`);
+        console.log(`   ${index + 1}. ${video[FieldMapper.get('CHANNEL_NAME')]} - "${video[FieldMapper.get('TITLE')]}"`);
+        console.log(`      카테고리: ${video[FieldMapper.get('MAIN_CATEGORY')]}, 조회수: ${video[FieldMapper.get('VIEWS')]}, 좋아요: ${video[FieldMapper.get('LIKES')]}`);
+        console.log(`      URL: ${video[FieldMapper.get('URL')]}`);
+        console.log(`      생성일: ${video[FieldMapper.get('CREATED_AT')]}`);
         console.log('');
       });
     }
@@ -45,15 +46,15 @@ async function checkCurrentData() {
     if (instagramCount > 0) {
       console.log('4️⃣ 최근 Instagram 비디오 목록...');
       const recentInstagram = await InstagramVideo.find()
-        .sort({ createdAt: -1 })
+        .sort(FieldMapper.buildSortObject('CREATED_AT', 'desc'))
         .limit(5)
         .select('account mainCategory likes url createdAt');
       
       recentInstagram.forEach((video, index) => {
         console.log(`   ${index + 1}. ${video.account}`);
         console.log(`      카테고리: ${video.mainCategory}, 좋아요: ${video.likes}`);
-        console.log(`      URL: ${video.url}`);
-        console.log(`      생성일: ${video.createdAt}`);
+        console.log(`      URL: ${video[FieldMapper.get('URL')]}`);
+        console.log(`      생성일: ${video[FieldMapper.get('CREATED_AT')]}`);
         console.log('');
       });
     }

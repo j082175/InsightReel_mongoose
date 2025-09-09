@@ -1,6 +1,7 @@
 require('dotenv').config({ path: '../../.env' });
 const mongoose = require('mongoose');
 const Video = require('../models/Video');
+const { FieldMapper } = require('../types/field-mapper');
 
 // Instagram URL에서 사용자명 추출 함수
 const extractInstagramUsername = (url) => {
@@ -24,8 +25,8 @@ async function fixInstagramData() {
     
     // account 필드에 URL이 저장된 레코드들 찾기
     const problematicVideos = await Video.find({
-      platform: 'instagram',
-      account: { $regex: /^https?:\/\// }  // URL 패턴으로 시작하는 account
+      [FieldMapper.get('PLATFORM')]: 'instagram',
+      [FieldMapper.get('CHANNEL_NAME')]: { $regex: /^https?:\/\// }  // URL 패턴으로 시작하는 channelName
     }).lean();
     
     console.log(`📊 수정 대상: ${problematicVideos.length}개 레코드\n`);
@@ -40,13 +41,13 @@ async function fixInstagramData() {
     
     for (const video of problematicVideos) {
       try {
-        const urlInAccount = video.account;
+        const urlInAccount = video[FieldMapper.get('CHANNEL_NAME')];
         const extractedUsername = extractInstagramUsername(urlInAccount);
         
         // 새로운 데이터 구조
         const updateData = {
-          account: extractedUsername || 'Instagram 사용자',  // 추출된 사용자명 또는 기본값
-          originalUrl: video.originalUrl || urlInAccount    // originalUrl이 비어있으면 복구
+          [FieldMapper.get('CHANNEL_NAME')]: extractedUsername || 'Instagram 사용자',  // 추출된 사용자명 또는 기본값
+          [FieldMapper.get('URL')]: video[FieldMapper.get('URL')] || urlInAccount    // originalUrl이 비어있으면 복구
         };
         
         await Video.updateOne(
@@ -56,7 +57,7 @@ async function fixInstagramData() {
         
         console.log(`✅ [${fixedCount + 1}/${problematicVideos.length}] ${video.title || '제목없음'}`);
         console.log(`   이전: account="${urlInAccount}"`);
-        console.log(`   이후: account="${updateData.account}", originalUrl="${updateData.originalUrl}"`);
+        console.log(`   이후: channelName="${updateData.channelName}", originalUrl="${updateData.originalUrl}"`);
         console.log('');
         
         fixedCount++;

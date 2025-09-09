@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Video } from '../types';
+import { FieldMapper } from '../types/field-mapper';
 
 interface VideoOnlyModalProps {
   video: Video | null;
@@ -103,7 +104,7 @@ const VideoOnlyModal: React.FC<VideoOnlyModalProps> = ({ video, onClose }) => {
             {video.title}
           </h3>
           <p className="text-gray-300 text-sm mt-1">
-            {video.channelName} • {video.platform}
+            {FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || ''} • {video.platform}
           </p>
         </div>
       </div>

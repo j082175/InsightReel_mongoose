@@ -72,6 +72,51 @@ const channelSchema = new mongoose.Schema({
     type: String
   }],
   
+  // 카테고리 정보 (대중소 체계)
+  categoryInfo: {
+    majorCategory: { 
+      type: String, 
+      required: false,
+      index: true  // 대카테고리별 조회
+    },
+    middleCategory: { 
+      type: String, 
+      required: false,
+      index: true  // 중카테고리별 조회
+    },
+    subCategory: { 
+      type: String, 
+      required: false 
+    },
+    fullCategoryPath: { 
+      type: String, 
+      required: false
+    },
+    categoryDepth: { 
+      type: Number, 
+      required: false,
+      min: 1,
+      max: 6
+    },
+    categoryConfidence: { 
+      type: Number, 
+      required: false,
+      min: 0,
+      max: 1
+    },
+    // 일관성 정보 추가
+    consistencyLevel: {
+      type: String,
+      enum: ['high', 'medium', 'low'],
+      required: false,
+      index: true  // 일관성별 조회
+    },
+    consistencyReason: {
+      type: String,
+      required: false
+    }
+  },
+  
   // 클러스터 정보
   clusterIds: [{
     type: String
@@ -205,6 +250,11 @@ const channelSchema = new mongoose.Schema({
 channelSchema.index({ platform: 1, subscribers: -1 });  // 플랫폼별 구독자 순
 channelSchema.index({ platform: 1, totalViews: -1 });   // 플랫폼별 총 조회수 순
 channelSchema.index({ lastAnalyzedAt: -1 });            // 최근 분석 순
+
+// 카테고리 관련 인덱스
+channelSchema.index({ 'categoryInfo.majorCategory': 1, platform: 1 });        // 대카테고리별 플랫폼 조회
+channelSchema.index({ 'categoryInfo.majorCategory': 1, subscribers: -1 });    // 대카테고리별 구독자 순
+channelSchema.index({ 'categoryInfo.fullCategoryPath': 1 });                  // 전체 카테고리 경로 검색
 
 // 채널 모델 생성
 const Channel = mongoose.model('Channel', channelSchema);

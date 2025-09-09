@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const VideoUrl = require('../models/VideoUrl');
 const Video = require('../models/Video');
 const { ServerLogger } = require('../utils/logger');
+const { FieldMapper } = require('../types/field-mapper');
 
 async function migrateVideoUrlToVideo() {
   try {
@@ -28,8 +29,8 @@ async function migrateVideoUrlToVideo() {
       try {
         // 이미 Video 레코드가 있는지 확인 (originalUrl 필드로 검사)
         const existingVideo = await Video.findOne({
-          originalUrl: videoUrl.originalUrl,
-          platform: videoUrl.platform
+          [FieldMapper.get('URL')]: videoUrl.originalUrl,
+          [FieldMapper.get('PLATFORM')]: videoUrl.platform
         });
         
         if (existingVideo && existingVideo.originalPublishDate) {
@@ -40,14 +41,14 @@ async function migrateVideoUrlToVideo() {
         
         // Video 레코드 생성 또는 업데이트
         const videoData = {
-          platform: videoUrl.platform,
-          account: '알 수 없는 채널',
-          title: videoUrl.originalUrl.split('/').pop() || '미분류',
-          originalUrl: videoUrl.originalUrl,
-          comments_count: 0,
-          timestamp: videoUrl.originalPublishDate, // 원본 게시일을 timestamp로
+          [FieldMapper.get('PLATFORM')]: videoUrl.platform,
+          [FieldMapper.get('CHANNEL_NAME')]: '알 수 없는 채널',
+          [FieldMapper.get('TITLE')]: videoUrl.originalUrl.split('/').pop() || '미분류',
+          [FieldMapper.get('URL')]: videoUrl.originalUrl,
+          [FieldMapper.get('COMMENTS_COUNT')]: 0,
+          [FieldMapper.get('TIMESTAMP')]: videoUrl.originalPublishDate, // 원본 게시일을 timestamp로
           originalPublishDate: videoUrl.originalPublishDate,
-          processedAt: videoUrl.processedAt || videoUrl.createdAt,
+          [FieldMapper.get('PROCESSED_AT')]: videoUrl.processedAt || videoUrl.createdAt,
           category: '미분류',
           keywords: [],
           hashtags: [],
@@ -58,7 +59,7 @@ async function migrateVideoUrlToVideo() {
         };
         
         const result = await Video.findOneAndUpdate(
-          { account: videoUrl.originalUrl, platform: videoUrl.platform },
+          { originalUrl: videoUrl.originalUrl, platform: videoUrl.platform },
           { $set: videoData },
           { upsert: true, new: true }
         );

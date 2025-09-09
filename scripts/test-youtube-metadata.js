@@ -3,6 +3,7 @@ require('dotenv').config();
 const HybridYouTubeExtractor = require('../server/services/HybridYouTubeExtractor');
 const HybridDataConverter = require('../server/services/HybridDataConverter');
 const { ServerLogger } = require('../server/utils/logger');
+const { FieldMapper } = require('../server/types/field-mapper');
 
 async function testYouTubeMetadata() {
   console.log('🧪 YouTube 메타데이터 추출 테스트 시작\n');
@@ -46,10 +47,10 @@ async function testYouTubeMetadata() {
       
       // 주요 데이터 출력
       console.log('\n📊 추출된 메타데이터:');
-      console.log(`  ✅ 제목: ${legacyData.title || '❌ 없음'}`);
-      console.log(`  ✅ 채널: ${legacyData.channel || '❌ 없음'}`);
-      console.log(`  ✅ 조회수: ${legacyData.views || '❌ 없음'}`);
-      console.log(`  ✅ 좋아요: ${legacyData.likes || '❌ 없음'}`);
+      console.log(`  ✅ 제목: ${legacyData[FieldMapper.get('TITLE')] || legacyData.title || '❌ 없음'}`);
+      console.log(`  ✅ 채널: ${legacyData[FieldMapper.get('CHANNEL_NAME')] || legacyData.channel || '❌ 없음'}`);
+      console.log(`  ✅ 조회수: ${legacyData[FieldMapper.get('VIEWS')] || legacyData.views || '❌ 없음'}`);
+      console.log(`  ✅ 좋아요: ${legacyData[FieldMapper.get('LIKES')] || legacyData.likes || '❌ 없음'}`);
       console.log(`  ✅ 댓글수: ${legacyData.comments || '❌ 없음'}`);
       console.log(`  ✅ 길이: ${legacyData.durationFormatted || '❌ 없음'} (${legacyData.duration}초)`);
       console.log(`  ✅ 업로드: ${legacyData.publishedAt || '❌ 없음'}`);

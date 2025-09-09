@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Video } from '../types';
+import { FieldMapper } from '../types/field-mapper';
 
 interface VideoListItemProps {
   video: Video;
@@ -85,10 +86,10 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
               <div className="flex items-center gap-2 mb-2">
                 <img 
                   src={video.channelAvatarUrl} 
-                  alt={video.channelName}
+                  alt={FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || ''}
                   className="w-4 h-4 rounded-full"
                 />
-                <span className="text-xs text-gray-600 truncate">{video.channelName}</span>
+                <span className="text-xs text-gray-600 truncate">{FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || ''}</span>
               </div>
 
               <div className="flex items-center gap-4 text-xs text-gray-500">

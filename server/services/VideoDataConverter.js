@@ -1,10 +1,12 @@
 /**
- * 플랫폼별 데이터 변환 로직
+ * 🚀 플랫폼별 데이터 변환 로직 (FieldMapper 완전 자동화)
  * Google Sheets buildRowData 로직을 MongoDB 최적화 스키마로 변환
+ * FieldMapper로 모든 필드명이 자동 동기화됩니다!
  */
 
 const path = require('path');
 const { ServerLogger } = require('../utils/logger');
+const { FieldMapper } = require('../types/field-mapper'); // 🚀 FieldMapper 임포트
 
 class VideoDataConverter {
   /**
@@ -38,13 +40,15 @@ class VideoDataConverter {
    */
   static convertToYouTubeSchema(videoData, rowNumber = 1) {
     const { platform, postUrl, videoPath, metadata, analysis, timestamp } = videoData;
+    // ⭐ 표준화: postUrl → url 매핑
+    const url = videoData.url || postUrl;
     
     // 업로드 날짜 결정 (기존 buildRowData 로직)
-    let displayDate;
+    let uploadDate;
     if (metadata.uploadDate) {
-      displayDate = new Date(metadata.uploadDate).toLocaleString('ko-KR');
+      uploadDate = new Date(metadata.uploadDate).toLocaleString('ko-KR');
     } else {
-      displayDate = new Date(timestamp).toLocaleString('ko-KR');
+      uploadDate = new Date(timestamp).toLocaleString('ko-KR');
     }
 
     // 동적 카테고리 처리 (기존 로직)
@@ -68,41 +72,42 @@ class VideoDataConverter {
     }
 
     // YouTube 34개 필드 변환
-    return {
+    // 🚀 FieldMapper 완전 자동화된 데이터 구조
+    const result = {
       // 자동 생성 필드
-      rowNumber: rowNumber,
+      [FieldMapper.get('ROW_NUMBER')]: rowNumber,
       
-      // YouTube 전용 33개 필드 (Google Sheets 헤더 순서대로)
-      uploadDate: displayDate,                                 // 업로드날짜
-      platform: (platform || 'youtube').toUpperCase(),        // 플랫폼
-      account: metadata.author || '',                          // 계정
-      youtubeHandle: metadata.youtubeHandle || '',             // YouTube핸들명
-      channelUrl: metadata.channelUrl || '',                   // 채널URL
-      mainCategory: analysis.mainCategory || '미분류',         // 대카테고리
-      middleCategory: analysis.middleCategory || '',           // 중카테고리
-      fullCategoryPath: fullCategoryPath,                      // 전체카테고리경로
-      categoryDepth: categoryDepth,                            // 카테고리깊이
-      keywords: analysis.keywords?.join(', ') || '',           // 키워드
-      hashtags: analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그
-      mentions: analysis.mentions?.join(' ') || '',            // 멘션
-      description: metadata.description || '',                 // 설명
-      analysisContent: analysis.content || '',                 // 분석내용
-      comments: analysis.comments || '',                       // 댓글
-      likes: this.parseNumber(metadata.likes),                 // 좋아요
-      commentsCount: this.parseNumber(metadata.comments),      // 댓글수
-      views: this.parseNumber(metadata.views),                 // 조회수
-      duration: metadata.durationFormatted || '',              // 영상길이
-      subscribers: this.parseNumber(metadata.subscribers),     // 구독자수
-      channelVideos: this.parseNumber(metadata.channelVideos), // 채널동영상수
-      monetized: metadata.monetized || 'N',                    // 수익화여부
-      youtubeCategory: metadata.youtubeCategory || '',         // YouTube카테고리
-      license: metadata.license || 'youtube',                  // 라이센스
-      quality: metadata.definition || 'sd',                    // 화질
-      language: metadata.language || '',                       // 언어
-      originalUrl: postUrl || '',                               // URL (표준화된 필드명)
-      thumbnailUrl: metadata.thumbnailUrl || '',               // 썸네일URL
-      confidence: this.formatConfidence(analysis.confidence),  // 신뢰도
-      analysisStatus: analysis.aiModel || '수동',              // 분석상태
+      // YouTube 전용 33개 필드 (FieldMapper 자동화)
+      [FieldMapper.get('UPLOAD_DATE')]: uploadDate,
+      [FieldMapper.get('PLATFORM')]: (platform || 'youtube').toUpperCase(),
+      [FieldMapper.get('CHANNEL_NAME')]: metadata[FieldMapper.get('CHANNEL_NAME')] || '',
+      [FieldMapper.get('YOUTUBE_HANDLE')]: metadata[FieldMapper.get('YOUTUBE_HANDLE')] || '',
+      [FieldMapper.get('CHANNEL_URL')]: metadata[FieldMapper.get('CHANNEL_URL')] || '',
+      [FieldMapper.get('MAIN_CATEGORY')]: analysis.mainCategory || '미분류',
+      [FieldMapper.get('MIDDLE_CATEGORY')]: analysis.middleCategory || '',
+      [FieldMapper.get('FULL_CATEGORY_PATH')]: fullCategoryPath,
+      [FieldMapper.get('CATEGORY_DEPTH')]: categoryDepth,
+      [FieldMapper.get('KEYWORDS')]: analysis.keywords?.join(', ') || '',
+      [FieldMapper.get('HASHTAGS')]: analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '',
+      [FieldMapper.get('MENTIONS')]: analysis.mentions?.join(' ') || '',
+      [FieldMapper.get('DESCRIPTION')]: metadata.description || '',
+      [FieldMapper.get('ANALYSIS_CONTENT')]: analysis.summary || '',
+      [FieldMapper.get('COMMENTS')]: metadata.comments || '',
+      [FieldMapper.get('LIKES')]: this.parseNumber(metadata.likes),
+      [FieldMapper.get('COMMENTS_COUNT')]: this.parseNumber(metadata.commentsCount),
+      [FieldMapper.get('VIEWS')]: this.parseNumber(metadata.views),
+      [FieldMapper.get('DURATION')]: metadata.durationFormatted || '',
+      [FieldMapper.get('SUBSCRIBERS')]: this.parseNumber(metadata.subscribers),
+      [FieldMapper.get('CHANNEL_VIDEOS')]: this.parseNumber(metadata.channelVideos),
+      [FieldMapper.get('MONETIZED')]: metadata.monetized || 'N',
+      [FieldMapper.get('YOUTUBE_CATEGORY')]: metadata.youtubeCategory || '',
+      [FieldMapper.get('LICENSE')]: metadata.license || 'youtube',
+      [FieldMapper.get('QUALITY')]: metadata.definition || 'sd',
+      [FieldMapper.get('LANGUAGE')]: metadata.language || '',
+      [FieldMapper.get('URL')]: url || '',
+      [FieldMapper.get('THUMBNAIL_URL')]: metadata.thumbnailUrl || '',
+      [FieldMapper.get('CONFIDENCE')]: this.formatConfidence(analysis.confidence),
+      [FieldMapper.get('ANALYSIS_STATUS')]: analysis.aiModel || '수동',
       categoryMatchRate: '',                                    // 카테고리일치율 (빈 값)
       matchType: '',                                            // 일치유형 (빈 값)
       matchReason: '',                                          // 일치사유 (빈 값)
@@ -116,13 +121,15 @@ class VideoDataConverter {
    */
   static convertToInstagramSchema(videoData, rowNumber = 1) {
     const { platform, postUrl, videoPath, metadata, analysis, timestamp } = videoData;
+    // ⭐ 표준화: postUrl → url 매핑
+    const url = videoData.url || postUrl;
     
     // 업로드 날짜 결정 (Instagram은 날짜만)
-    let displayDate;
+    let uploadDate;
     if (metadata.uploadDate) {
-      displayDate = new Date(metadata.uploadDate).toLocaleDateString('ko-KR');
+      uploadDate = new Date(metadata.uploadDate).toLocaleDateString('ko-KR');
     } else {
-      displayDate = new Date(timestamp).toLocaleString('ko-KR');
+      uploadDate = new Date(timestamp).toLocaleString('ko-KR');
     }
 
     // 동적 카테고리 처리 (기존 로직 동일)
@@ -151,10 +158,10 @@ class VideoDataConverter {
       rowNumber: rowNumber,
       
       // Instagram 전용 19개 필드 (Google Sheets 헤더 순서대로)
-      uploadDate: displayDate,                                 // 업로드날짜
+      uploadDate: uploadDate,                                 // 업로드날짜
       platform: (platform || 'instagram').toUpperCase(),      // 플랫폼
-      account: metadata.author || '',                          // 계정
-      channelUrl: metadata.channelUrl || '',                   // 채널URL
+      channelName: metadata[FieldMapper.get('CHANNEL_NAME')] || '',     // 채널이름
+      channelUrl: metadata[FieldMapper.get('CHANNEL_URL')] || '',      // 채널URL
       mainCategory: analysis.mainCategory || '미분류',         // 대카테고리
       middleCategory: analysis.middleCategory || '',           // 중카테고리
       fullCategoryPath: fullCategoryPath,                      // 전체카테고리경로
@@ -163,10 +170,10 @@ class VideoDataConverter {
       hashtags: analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그
       mentions: analysis.mentions?.join(' ') || '',            // 멘션
       description: metadata.description || '',                 // 설명
-      analysisContent: analysis.content || '',                 // 분석내용
+      analysisContent: analysis.summary || '',                 // 분석내용
       likes: this.parseNumber(metadata.likes),                 // 좋아요
-      commentsCount: this.parseNumber(metadata.comments),      // 댓글수
-      originalUrl: postUrl || '',                               // URL (표준화된 필드명)
+      commentsCount: this.parseNumber(metadata.commentsCount),      // 댓글수
+      url: url || '',                                           // ⭐ URL (표준화 완료)
       thumbnailUrl: metadata.thumbnailUrl || '',               // 썸네일URL
       confidence: this.formatConfidence(analysis.confidence),  // 신뢰도
       analysisStatus: analysis.aiModel || '수동',              // 분석상태
@@ -238,7 +245,7 @@ class VideoDataConverter {
       rowNumber: this.parseNumber(rowData[0]),
       uploadDate: rowData[1] || '',
       platform: rowData[2] || 'YOUTUBE',
-      account: rowData[3] || '',
+      channelName: rowData[3] || '',
       youtubeHandle: rowData[4] || '',
       channelUrl: rowData[5] || '',
       mainCategory: rowData[6] || '',
@@ -281,7 +288,7 @@ class VideoDataConverter {
       rowNumber: this.parseNumber(rowData[0]),
       uploadDate: rowData[1] || '',
       platform: rowData[2] || 'INSTAGRAM',
-      account: rowData[3] || '',
+      channelName: rowData[3] || '',
       channelUrl: rowData[4] || '',
       mainCategory: rowData[5] || '',
       middleCategory: rowData[6] || '',
@@ -333,7 +340,7 @@ class VideoDataConverter {
       document.rowNumber || 0,
       document.uploadDate || '',
       document.platform || 'YOUTUBE',
-      document.account || '',
+      document.channelName || '',
       document.youtubeHandle || '',
       document.channelUrl || '',
       document.mainCategory || '',
@@ -375,7 +382,7 @@ class VideoDataConverter {
       document.rowNumber || 0,
       document.uploadDate || '',
       document.platform || 'INSTAGRAM',
-      document.account || '',
+      document.channelName || '',
       document.channelUrl || '',
       document.mainCategory || '',
       document.middleCategory || '',
@@ -418,8 +425,8 @@ class VideoDataConverter {
     ServerLogger.info(
       `데이터 변환 완료: ${platform.toUpperCase()}`,
       {
-        url: originalData.postUrl,
-        account: originalData.metadata?.author,
+        url: originalData.url || originalData.postUrl,  // ⭐ 표준화
+        channelName: originalData.metadata?.channelName,
         fields: Object.keys(convertedData).length,
         mainCategory: convertedData.mainCategory
       },

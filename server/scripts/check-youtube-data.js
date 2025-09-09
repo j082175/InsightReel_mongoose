@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Video = require('../models/Video');
+const { FieldMapper } = require('../types/field-mapper');
 require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 
 async function checkYouTubeData() {
@@ -7,20 +8,20 @@ async function checkYouTubeData() {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('✅ MongoDB 연결 성공!\n');
     
-    const youtubeVideos = await Video.find({ platform: 'youtube' })
+    const youtubeVideos = await Video.find({ [FieldMapper.get('PLATFORM')]: 'youtube' })
       .limit(5)
-      .select('title comments account timestamp category ai_description')
+      .select(FieldMapper.buildSelectString(['TITLE', 'COMMENTS', 'CHANNEL_NAME', 'TIMESTAMP', 'CATEGORY', 'ANALYSIS_CONTENT']))
       .lean();
     
     console.log(`🎬 YouTube 비디오 샘플 (${youtubeVideos.length}개):\n`);
     
     youtubeVideos.forEach((video, index) => {
-      console.log(`${index + 1}. ID: ${video._id}`);
-      console.log(`   제목: "${video.title || '없음'}"`);
-      console.log(`   URL: "${video.originalUrl || '없음'}"`);
-      console.log(`   계정: "${video.account || '없음'}"`);
-      console.log(`   설명: "${video.ai_description || '없음'}"`);
-      console.log(`   카테고리: "${video.category || '없음'}"`);
+      console.log(`${index + 1}. ID: ${video[FieldMapper.get('ID')]}`);
+      console.log(`   제목: "${video[FieldMapper.get('TITLE')] || '없음'}"`);
+      console.log(`   URL: "${video[FieldMapper.get('URL')] || '없음'}"`);
+      console.log(`   채널이름: "${video[FieldMapper.get('CHANNEL_NAME')] || '없음'}"`);
+      console.log(`   설명: "${video[FieldMapper.get('ANALYSIS_CONTENT')] || '없음'}"`);
+      console.log(`   카테고리: "${video[FieldMapper.get('CATEGORY')] || '없음'}"`);
       console.log('');
     });
     

@@ -5,6 +5,9 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
+// 🚀 FieldMapper 임포트 (완전 자동화 시스템)
+const { FieldMapper } = require('./types/field-mapper');
+
 // 설정 검증 먼저 실행
 const { getConfig } = require('./config/config-validator');
 const config = getConfig(); // 여기서 검증 실행
@@ -178,10 +181,10 @@ app.get('/api/database/test', async (req, res) => {
     const testVideo = new Video({
       platform: 'youtube',
       timestamp: new Date(),
-      account: 'TestChannel',
+      channelName: 'TestChannel',
       title: 'MongoDB 연결 테스트 비디오',
-      originalUrl: 'https://www.youtube.com/watch?v=test123',
-      comments_count: 0,
+      [FieldMapper.get('URL')]: 'https://www.youtube.com/watch?v=test123',  // 🚀 FieldMapper 자동화
+      [FieldMapper.get('COMMENTS_COUNT')]: 0,  // 🚀 FieldMapper 자동화
       likes: 100,
       views: 1000,
       category: 'Technology',
@@ -422,7 +425,7 @@ app.get('/api/test-youtube-sheet', async (req, res) => {
       id: row[0],
       timestamp: row[1], 
       platform: row[2],
-      account: row[3],
+      channelName: row[3],
       title: row[9]?.substring(0, 50) + '...' || 'N/A'
     }));
     
@@ -978,33 +981,45 @@ app.get('/api/videos', async (req, res) => {
       await DatabaseManager.connect();
     }
     
-    // 쿼리 조건 구성 - 모든 비디오 조회 (originalPublishDate 조건 제거)
+    // 🚀 쿼리 조건 구성 (FieldMapper 자동화)
     const query = {};
     if (platform) {
-      query.platform = platform.toLowerCase();
+      query[FieldMapper.get('PLATFORM')] = platform.toLowerCase();
     }
     
-    // 정렬 조건 구성
+    // 🚀 정렬 조건 구성 (FieldMapper 자동화)
     const sortOptions = {};
     if (sortBy === 'timestamp') {
-      // originalPublishDate가 있으면 우선, 없으면 timestamp 사용
-      sortOptions['originalPublishDate'] = sortOrder;
-      sortOptions['timestamp'] = sortOrder;
+      // uploadDate가 있으면 우선, 없으면 timestamp 사용
+      sortOptions[FieldMapper.get('UPLOAD_DATE')] = sortOrder;
+      sortOptions[FieldMapper.get('TIMESTAMP')] = sortOrder;
     } else {
-      sortOptions[sortBy] = sortOrder;
+      // sortBy를 FieldMapper로 변환 시도, 실패하면 원본 사용
+      try {
+        const mappedField = FieldMapper.get(sortBy.toUpperCase());
+        sortOptions[mappedField] = sortOrder;
+      } catch {
+        sortOptions[sortBy] = sortOrder; // 레거시 호환
+      }
     }
     
-    // MongoDB에서 비디오 조회 (단일 쿼리!)
+    // 🚀 MongoDB에서 비디오 조회 (FieldMapper 자동화)
+    const selectFields = FieldMapper.buildSelectString([
+      'PLATFORM', 'CHANNEL_NAME', 'TITLE', 'LIKES', 'VIEWS', 'COMMENTS_COUNT', 
+      'URL', 'TIMESTAMP', 'UPLOAD_DATE', 'PROCESSED_AT', 'CATEGORY', 
+      'KEYWORDS', 'HASHTAGS', 'THUMBNAIL_URL', 'YOUTUBE_HANDLE'
+    ]);
+    
     const videos = await Video.find(query)
       .sort(sortOptions)
       .limit(limit)
-      .select('platform account title likes views comments_count originalUrl timestamp originalPublishDate processedAt category keywords hashtags thumbnailUrl youtubeHandle')
+      .select(selectFields)
       .lean(); // 성능 최적화
     
-    // timestamp 필드가 originalPublishDate와 동일한지 확인하고 보정
+    // 🚀 필드 접근 자동화 (FieldMapper)
     const enhancedVideos = videos.map(video => {
       // 썸네일 URL을 HTTP URL로 변환
-      let thumbnailUrl = video.thumbnailUrl;
+      let thumbnailUrl = video[FieldMapper.get('THUMBNAIL_URL')];
       if (thumbnailUrl && !thumbnailUrl.startsWith('http')) {
         // 로컬 파일 경로를 HTTP URL로 변환
         const relativePath = thumbnailUrl.includes('/downloads/') 
@@ -1052,15 +1067,19 @@ app.get('/api/videos', async (req, res) => {
       
       return {
         ...video,
-        timestamp: video.originalPublishDate || video.timestamp, // 원본 게시일을 timestamp로 사용
-        originalPublishDate: video.originalPublishDate,
-        thumbnailUrl: thumbnailUrl,
-        // originalUrl이 없고 account가 URL인 경우 복구
-        originalUrl: video.originalUrl || (video.account && video.account.startsWith('http') ? video.account : ''),
-        // Frontend compatibility - account가 URL인 경우 정리
-        channelName: video.youtubeHandle ? `@${video.youtubeHandle}` : 
-          (video.account && !video.account.startsWith('http') ? video.account : '알 수 없는 채널'),
-        thumbnail: thumbnailUrl,
+        // 🚀 FieldMapper 자동화된 필드 접근
+        [FieldMapper.get('TIMESTAMP')]: video[FieldMapper.get('UPLOAD_DATE')] || video[FieldMapper.get('TIMESTAMP')],
+        [FieldMapper.get('UPLOAD_DATE')]: video[FieldMapper.get('UPLOAD_DATE')],
+        [FieldMapper.get('THUMBNAIL_URL')]: thumbnailUrl,
+        // url이 없고 channelName이 URL인 경우 복구
+        [FieldMapper.get('URL')]: video[FieldMapper.get('URL')] || 
+          (video[FieldMapper.get('CHANNEL_NAME')] && video[FieldMapper.get('CHANNEL_NAME')].startsWith('http') ? 
+           video[FieldMapper.get('CHANNEL_NAME')] : ''),
+        // 🚀 Frontend compatibility (FieldMapper 자동화)
+        [FieldMapper.get('CHANNEL_NAME')]: video[FieldMapper.get('YOUTUBE_HANDLE')] ? `@${video[FieldMapper.get('YOUTUBE_HANDLE')]}` : 
+          (video[FieldMapper.get('CHANNEL_NAME')] && !video[FieldMapper.get('CHANNEL_NAME')].startsWith('http') ? 
+           video[FieldMapper.get('CHANNEL_NAME')] : '알 수 없는 채널'),
+        thumbnail: thumbnailUrl, // 레거시 호환
         channelAvatarUrl: '',
         channelAvatar: '',
         viewCount: video.views,
@@ -2254,7 +2273,7 @@ app.post('/api/get-instagram-thumbnail', async (req, res) => {
       thumbnailUrl: thumbnailUrls[0],
       mediaId,
       alternativeUrls: thumbnailUrls.slice(1),
-      originalUrl: url
+      [FieldMapper.get('URL')]: url  // 🚀 FieldMapper 자동화
     }, 'Instagram 썸네일 URL을 생성했습니다.');
     
     ServerLogger.info('✅ Instagram 썸네일 URL 생성 완료:', { mediaId, url: thumbnailUrls[0] });

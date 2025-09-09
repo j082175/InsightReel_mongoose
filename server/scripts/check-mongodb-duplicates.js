@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const VideoUrl = require('../models/VideoUrl');
+const { FieldMapper } = require('../types/field-mapper');
 
 /**
  * MongoDB 중복 데이터 검사 스크립트

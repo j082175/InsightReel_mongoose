@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Video } from '../types';
+import { FieldMapper } from '../types/field-mapper'; // 🚀 FieldMapper 임포트
 import { useVideos } from '../hooks/useApi';
 import VideoModal from '../components/VideoModal';
 import VideoOnlyModal from '../components/VideoOnlyModal';
@@ -50,7 +51,7 @@ const VideoArchivePage: React.FC = () => {
       thumbnailUrl: 'https://placehold.co/600x400/3B82F6/FFFFFF?text=React18',
       channelAvatarUrl: 'https://placehold.co/100x100/3B82F6/FFFFFF?text=K',
       isTrending: false,
-      originalUrl: 'https://www.youtube.com/watch?v=react18',
+      url: 'https://www.youtube.com/watch?v=react18',  // ⭐ 표준화
       aspectRatio: '16:9' as const,
       keywords: ['React', 'JavaScript', '웹개발'],
       createdAt: '2024-01-01T10:00:00',
@@ -208,7 +209,7 @@ const VideoArchivePage: React.FC = () => {
               return firstPart;
             }
             
-            // instagram.com/reels/xxx 형태는 계정명을 알 수 없음
+            // instagram.com/reels/xxx 형태는 채널이름을 알 수 없음
             if (firstPart === 'reels' || firstPart === 'reel') {
               return 'Instagram';
             }
@@ -227,7 +228,7 @@ const VideoArchivePage: React.FC = () => {
           if (tiktokMatch && tiktokMatch[1] && tiktokMatch[1].length < 30) {
             return tiktokMatch[1];
           }
-          return '틱톡 계정';
+          return '틱톡 채널';
           
         default:
           return urlObj.hostname.replace('www.', '');
@@ -256,23 +257,29 @@ const VideoArchivePage: React.FC = () => {
     if (apiVideos.length > 0) {
       // DB 데이터를 ArchivedVideo 형식으로 변환
       const convertedVideos: ArchivedVideo[] = apiVideos.map((video: any) => {
-        const daysAgo = video.originalPublishDate 
-          ? Math.floor((Date.now() - new Date(video.originalPublishDate).getTime()) / (1000 * 60 * 60 * 24))
-          : Math.floor((Date.now() - new Date(video.timestamp).getTime()) / (1000 * 60 * 60 * 24));
+        // 🚀 FieldMapper 자동화된 필드 접근
+        const uploadDate = FieldMapper.getTypedField<string>(video, 'UPLOAD_DATE');
+        const timestamp = FieldMapper.getTypedField<string>(video, 'TIMESTAMP');
         
-        // URL 검증 및 fallback 처리
-        let originalUrl = video.originalUrl; // originalUrl 필드 사용
-        if (!originalUrl || !isValidUrl(originalUrl)) {
-          originalUrl = generateFallbackUrl(video.platform, video.account || video.youtubeHandle);
-          console.warn(`⚠️ 유효하지 않은 URL 발견, fallback 사용: ${video.title}`);
+        const daysAgo = uploadDate 
+          ? Math.floor((Date.now() - new Date(uploadDate).getTime()) / (1000 * 60 * 60 * 24))
+          : Math.floor((Date.now() - new Date(timestamp || Date.now()).getTime()) / (1000 * 60 * 60 * 24));
+        
+        // 🚀 URL 검증 및 fallback 처리 (FieldMapper 자동화)
+        let url = FieldMapper.getTypedField<string>(video, 'URL');
+        if (!url || !isValidUrl(url)) {
+          const channelName = FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME');
+          const youtubeHandle = FieldMapper.getTypedField<string>(video, 'YOUTUBE_HANDLE');
+          url = generateFallbackUrl(video.platform, channelName || youtubeHandle);
+          console.warn(`⚠️ 유효하지 않은 URL 발견, fallback 사용: ${FieldMapper.getTypedField<string>(video, 'TITLE')}`);
         }
 
         // 채널명 - 백엔드에서 channelName 필드로 제공
-        const channelName = video.channelName || '알 수 없는 채널';
+        const channelName = FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || '알 수 없는 채널';
         
         console.log('🔍 채널명 사용:', {
           platform: video.platform,
-          account: video.account,
+          channelName: FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME'),
           youtubeHandle: video.youtubeHandle,
           finalName: channelName
         });
@@ -280,14 +287,14 @@ const VideoArchivePage: React.FC = () => {
         return {
           id: video._id || video.id,
           platform: video.platform === 'youtube' ? 'YouTube' : video.platform === 'tiktok' ? 'TikTok' : 'Instagram',
-          title: video.title,
+          title: FieldMapper.getTypedField<string>(video, 'TITLE') || '',
           channelName: channelName,
-          views: video.views || 0,
+          views: FieldMapper.getTypedField<number>(video, 'VIEWS') || 0,
           daysAgo: daysAgo,
           thumbnailUrl: video.thumbnailUrl,
           channelAvatarUrl: `https://placehold.co/100x100/3B82F6/FFFFFF?text=${channelName.charAt(0).toUpperCase()}`,
           isTrending: false,
-          originalUrl: originalUrl,
+          url: url,  // ⭐ 표준화
           aspectRatio: video.platform === 'youtube' ? '16:9' as const : '9:16' as const,
           keywords: video.keywords || [],
           createdAt: video.timestamp,
@@ -302,7 +309,7 @@ const VideoArchivePage: React.FC = () => {
       });
       setArchivedVideos(convertedVideos);
       console.log('📊 변환된 영상 수:', convertedVideos.length);
-      console.log('🔍 첫 번째 영상 URL 샘플:', convertedVideos[0]?.originalUrl);
+      console.log('🔍 첫 번째 영상 URL 샘플:', convertedVideos[0]?.url);  // ⭐ 표준화
     } else {
       // API 데이터가 없으면 mock 데이터 사용
       setArchivedVideos(mockArchivedVideos);
@@ -311,8 +318,8 @@ const VideoArchivePage: React.FC = () => {
 
   useEffect(() => {
     let filtered = archivedVideos.filter(video => {
-      const matchesSearch = video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          video.channelName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const matchesSearch = (FieldMapper.getTypedField<string>(video, 'TITLE') || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                           video.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesTag = selectedTag === 'All' || video.tags.includes(selectedTag);
       const matchesCategory = selectedCategory === 'All' || video.category === selectedCategory;
@@ -573,11 +580,11 @@ const VideoArchivePage: React.FC = () => {
                         // URL 유효성 검증 후 실행
                         if (video.platform === 'YouTube') {
                           setSelectedVideoForPlay(video);
-                        } else if (video.originalUrl && video.originalUrl !== '#') {
-                          console.log('🔗 영상 링크 열기:', video.originalUrl);
-                          window.open(video.originalUrl, '_blank', 'noopener,noreferrer');
+                        } else if (video.url && video.url !== '#') {  // ⭐ 표준화
+                          console.log('🔗 영상 링크 열기:', video.url);
+                          window.open(video.url, '_blank', 'noopener,noreferrer');
                         } else {
-                          console.warn('⚠️ 유효하지 않은 URL:', video.originalUrl);
+                          console.warn('⚠️ 유효하지 않은 URL:', video.url);  // ⭐ 표준화
                           alert('죄송합니다. 이 영상의 링크를 찾을 수 없습니다.');
                         }
                       }

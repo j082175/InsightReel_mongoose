@@ -35,7 +35,7 @@ const youtubeSchema = new mongoose.Schema({
   // YouTube 전용 33개 필드 (Google Sheets 헤더 순서대로)
   uploadDate: { ...commonFieldOptions, index: true },      // 업로드날짜
   platform: { ...commonFieldOptions, index: true },        // 플랫폼  
-  account: commonFieldOptions,                              // 계정
+  channelName: commonFieldOptions,                              // 채널이름
   youtubeHandle: commonFieldOptions,                        // YouTube핸들명
   channelUrl: commonFieldOptions,                           // 채널URL
   mainCategory: { ...commonFieldOptions, index: true },    // 대카테고리
@@ -83,7 +83,7 @@ const instagramSchema = new mongoose.Schema({
   // Instagram 전용 19개 필드 (Google Sheets 헤더 순서대로)
   uploadDate: { ...commonFieldOptions, index: true },      // 업로드날짜
   platform: { ...commonFieldOptions, index: true },        // 플랫폼
-  account: commonFieldOptions,                              // 계정
+  channelName: commonFieldOptions,                              // 채널이름
   channelUrl: commonFieldOptions,                           // 채널URL
   mainCategory: { ...commonFieldOptions, index: true },    // 대카테고리
   middleCategory: commonFieldOptions,                       // 중카테고리
@@ -109,12 +109,12 @@ const instagramSchema = new mongoose.Schema({
 // 복합 인덱스 생성 (성능 최적화)
 youtubeSchema.index({ platform: 1, uploadDate: -1 });
 youtubeSchema.index({ mainCategory: 1, views: -1 });
-youtubeSchema.index({ account: 1, uploadDate: -1 });
+youtubeSchema.index({ channelName: 1, uploadDate: -1 });
 // url 인덱스는 스키마 정의에서 unique: true로 이미 생성됨
 
 instagramSchema.index({ platform: 1, uploadDate: -1 });
 instagramSchema.index({ mainCategory: 1, likes: -1 });
-instagramSchema.index({ account: 1, uploadDate: -1 });
+instagramSchema.index({ channelName: 1, uploadDate: -1 });
 // url 인덱스는 스키마 정의에서 unique: true로 이미 생성됨
 
 // 스키마 메서드 추가
@@ -123,7 +123,7 @@ youtubeSchema.statics.getFieldMapping = function() {
     // Google Sheets 컬럼 → MongoDB 필드 매핑
     1: 'uploadDate',     // 업로드날짜
     2: 'platform',       // 플랫폼
-    3: 'account',        // 계정
+    3: 'channelName',        // 채널이름
     4: 'youtubeHandle',  // YouTube핸들명
     5: 'channelUrl',     // 채널URL
     6: 'mainCategory',   // 대카테고리
@@ -163,7 +163,7 @@ instagramSchema.statics.getFieldMapping = function() {
     // Google Sheets 컬럼 → MongoDB 필드 매핑
     1: 'uploadDate',     // 업로드날짜
     2: 'platform',       // 플랫폼
-    3: 'account',        // 계정
+    3: 'channelName',        // 채널이름
     4: 'channelUrl',     // 채널URL
     5: 'mainCategory',   // 대카테고리
     6: 'middleCategory', // 중카테고리

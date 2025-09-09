@@ -11,13 +11,13 @@ async function checkInstagramUrls() {
     
     // 특정 문제 레코드 찾기
     const problematicRecord = await Video.findOne({
-      account: { $regex: /reels\/doqbpd_shxw/ }
+      channelName: { $regex: /reels\/doqbpd_shxw/ }
     }).lean();
     
     if (problematicRecord) {
       console.log('🔍 문제 레코드 발견:');
       console.log(`platform: ${problematicRecord.platform}`);
-      console.log(`account: ${problematicRecord.account}`);
+      console.log(`channelName: ${problematicRecord.channelName}`);
       console.log(`originalUrl: ${problematicRecord.originalUrl}`);
       console.log(`title: ${problematicRecord.title}`);
       console.log('');
@@ -27,17 +27,17 @@ async function checkInstagramUrls() {
     
     // 모든 Instagram 비디오도 확인
     const instagramVideos = await Video.find({ platform: 'instagram' })
-      .select('account originalUrl title')
+      .select('channelName originalUrl title')
       .limit(5)
       .lean();
     
     console.log('\n📸 Instagram URL 패턴 샘플:');
     instagramVideos.forEach((video, i) => {
-      console.log(`${i+1}. account: ${video.account}`);
+      console.log(`${i+1}. channelName: ${video.channelName}`);
       console.log(`   originalUrl: ${video.originalUrl}`);
       
       // URL에서 사용자명 추출 시도
-      const url = video.account || video.originalUrl;
+      const url = video.channelName || video.originalUrl;
       if (url && url.includes('instagram.com/')) {
         const match = url.match(/instagram\.com\/([^\/\?]+)/);
         if (match && match[1] && !['reels', 'reel', 'p'].includes(match[1])) {

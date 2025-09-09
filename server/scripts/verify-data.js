@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Video = require('../models/Video');
 const DatabaseManager = require('../config/database');
 const { ServerLogger } = require('../utils/logger');
+const { FieldMapper } = require('../types/field-mapper');
 require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 
 async function verifyData() {
@@ -19,7 +20,7 @@ async function verifyData() {
 
     // 2. 플랫폼별 통계
     const platformStats = await Video.aggregate([
-      { $group: { _id: '$platform', count: { $sum: 1 } } },
+      { $group: { _id: `$${FieldMapper.get('PLATFORM')}`, count: { $sum: 1 } } },
       { $sort: { count: -1 } }
     ]);
     
@@ -32,35 +33,35 @@ async function verifyData() {
     console.log('\n📋 샘플 데이터:');
     
     for (const platform of ['instagram', 'youtube']) {
-      const samples = await Video.find({ platform })
+      const samples = await Video.find({ [FieldMapper.get('PLATFORM')]: platform })
         .limit(2)
-        .select('platform account title likes views timestamp')
-        .sort({ timestamp: -1 });
+        .select(FieldMapper.buildSelectString(['PLATFORM', 'CHANNEL_NAME', 'TITLE', 'LIKES', 'VIEWS', 'TIMESTAMP']))
+        .sort({ [FieldMapper.get('TIMESTAMP')]: -1 });
       
       console.log(`\n${platform.toUpperCase()} 샘플:`);
       samples.forEach((video, index) => {
-        console.log(`  ${index + 1}. ${video.title}`);
-        console.log(`     계정: ${video.account}`);
-        console.log(`     좋아요: ${video.likes}, 조회수: ${video.views}`);
-        console.log(`     날짜: ${video.timestamp}`);
+        console.log(`  ${index + 1}. ${video[FieldMapper.get('TITLE')]}`);
+        console.log(`     채널이름: ${video[FieldMapper.get('CHANNEL_NAME')]}`);
+        console.log(`     좋아요: ${video[FieldMapper.get('LIKES')]}, 조회수: ${video[FieldMapper.get('VIEWS')]}`);
+        console.log(`     날짜: ${video[FieldMapper.get('TIMESTAMP')]}`);
       });
     }
 
     // 4. 데이터 품질 체크
     console.log('\n🔍 데이터 품질 체크:');
     
-    const emptyTitles = await Video.countDocuments({ title: { $in: ['', null] } });
+    const emptyTitles = await Video.countDocuments({ [FieldMapper.get('TITLE')]: { $in: ['', null] } });
     console.log(`  빈 제목: ${emptyTitles}개`);
     
     const invalidDates = await Video.countDocuments({ 
-      timestamp: { $lt: new Date('2020-01-01') } 
+      [FieldMapper.get('TIMESTAMP')]: { $lt: new Date('2020-01-01') } 
     });
     console.log(`  잘못된 날짜: ${invalidDates}개`);
     
     const missingAccounts = await Video.countDocuments({ 
-      account: { $in: ['', null, 'Unknown'] } 
+      [FieldMapper.get('CHANNEL_NAME')]: { $in: ['', null, 'Unknown'] } 
     });
-    console.log(`  계정 정보 없음: ${missingAccounts}개`);
+    console.log(`  채널이름 정보 없음: ${missingAccounts}개`);
 
     // 5. 성능 지표 분포
     console.log('\n📈 성능 지표 분포:');
@@ -68,9 +69,9 @@ async function verifyData() {
     const likesStats = await Video.aggregate([
       { $group: { 
         _id: null,
-        avgLikes: { $avg: '$likes' },
-        maxLikes: { $max: '$likes' },
-        minLikes: { $min: '$likes' }
+        avgLikes: { $avg: `$${FieldMapper.get('LIKES')}` },
+        maxLikes: { $max: `$${FieldMapper.get('LIKES')}` },
+        minLikes: { $min: `$${FieldMapper.get('LIKES')}` }
       }}
     ]);
     
@@ -82,9 +83,9 @@ async function verifyData() {
     const viewsStats = await Video.aggregate([
       { $group: { 
         _id: null,
-        avgViews: { $avg: '$views' },
-        maxViews: { $max: '$views' },
-        minViews: { $min: '$views' }
+        avgViews: { $avg: `$${FieldMapper.get('VIEWS')}` },
+        maxViews: { $max: `$${FieldMapper.get('VIEWS')}` },
+        minViews: { $min: `$${FieldMapper.get('VIEWS')}` }
       }}
     ]);
     

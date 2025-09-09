@@ -701,7 +701,7 @@ ${categories.map((cat, index) => `${index + 1}. ${cat}`).join('\n')}
   }
 
   /**
-   * 동적 카테고리 응답 처리
+   * 동적 카테고리 응답 처리 (일관성 기반 깊이 조정)
    */
   processDynamicCategoryResponse(aiResponse, metadata, modelUsed) {
     try {
@@ -722,6 +722,10 @@ ${categories.map((cat, index) => `${index + 1}. ${cat}`).join('\n')}
       const platform = metadata.platform || 'youtube';
       const availableCategories = this.getMainCategoriesForPlatform(platform);
       
+      // 일관성 레벨 확인
+      const consistencyLevel = parsedResponse.consistency_level || 'medium';
+      const consistencyReason = parsedResponse.consistency_reason || '일관성 분석 없음';
+      
       // 카테고리 정규화
       let finalCategory = parsedResponse.category || parsedResponse.main_category || '미분류';
       let fullPath = parsedResponse.full_path || finalCategory;
@@ -739,25 +743,44 @@ ${categories.map((cat, index) => `${index + 1}. ${cat}`).join('\n')}
         mainCategory = availableCategories[0];
         finalCategory = mainCategory;
         middleCategory = '일반';
-        fullPath = mainCategory; // fullPath도 업데이트
+        fullPath = mainCategory;
         depth = 1;
       }
       
-      // 최소/최대 깊이 검증 (3-6단계)
-      if (depth < 3) {
-        // 최소 3단계로 확장
-        if (depth === 1) {
-          fullPath = `${mainCategory} > 일반 > 기본`;
-          depth = 3;
-        } else if (depth === 2) {
-          fullPath = `${fullPath} > 기본`;
-          depth = 3;
-        }
-      } else if (depth > 6) {
-        // 최대 6단계로 제한
-        const parts = fullPath.split(' > ').slice(0, 6);
+      // 🎯 일관성 기반 깊이 조정
+      if (consistencyLevel === 'low') {
+        // 일관성 부족: 대카테고리만
+        fullPath = mainCategory;
+        middleCategory = '일반';
+        depth = 1;
+        ServerLogger.warn(`⚠️ 일관성 부족으로 대카테고리만 지정: ${mainCategory} (${consistencyReason})`);
+      } else if (consistencyLevel === 'medium') {
+        // 일관성 중간: 대카테고리 + 중카테고리까지만 (최대 2단계)
+        const parts = fullPath.split(' > ').slice(0, 2);
         fullPath = parts.join(' > ');
-        depth = 6;
+        depth = Math.min(depth, 2);
+        if (depth === 1) {
+          fullPath = `${mainCategory} > 일반`;
+          middleCategory = '일반';
+          depth = 2;
+        }
+        ServerLogger.info(`ℹ️ 일관성 중간으로 중카테고리까지만: ${fullPath} (${consistencyReason})`);
+      } else {
+        // 일관성 높음: 기존 로직 유지 (3-6단계)
+        if (depth < 3) {
+          if (depth === 1) {
+            fullPath = `${mainCategory} > 일반 > 기본`;
+            depth = 3;
+          } else if (depth === 2) {
+            fullPath = `${fullPath} > 기본`;
+            depth = 3;
+          }
+        } else if (depth > 6) {
+          const parts = fullPath.split(' > ').slice(0, 6);
+          fullPath = parts.join(' > ');
+          depth = 6;
+        }
+        ServerLogger.success(`✅ 일관성 높음으로 세부 카테고리 생성: ${fullPath} (${consistencyReason})`);
       }
       
       return {
@@ -768,11 +791,14 @@ ${categories.map((cat, index) => `${index + 1}. ${cat}`).join('\n')}
         depth: depth,
         keywords: Array.isArray(parsedResponse.keywords) ? parsedResponse.keywords : [],
         hashtags: Array.isArray(parsedResponse.hashtags) ? parsedResponse.hashtags : [],
-        content: parsedResponse.content || '내용 분석 완료',
+        summary: parsedResponse.summary || '내용 분석 완료',
         confidence: parsedResponse.confidence || 0.7,
         source: 'dynamic-ai',
         modelUsed: modelUsed,
-        platform: platform
+        platform: platform,
+        // 일관성 정보 추가
+        consistencyLevel: consistencyLevel,
+        consistencyReason: consistencyReason
       };
       
     } catch (error) {

@@ -328,7 +328,7 @@ class VideoController {
         const processedMetadata = { ...enrichedMetadata };
         if (enrichedMetadata._instagramAuthor) {
           processedMetadata.author = enrichedMetadata._instagramAuthor;
-          ServerLogger.info('👤 Instagram 계정 정보 처리:', enrichedMetadata._instagramAuthor);
+          ServerLogger.info('👤 Instagram 채널 정보 처리:', enrichedMetadata._instagramAuthor);
         }
         
         const sheetsResult = await this.sheetsManager.saveVideoData({

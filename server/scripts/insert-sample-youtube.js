@@ -12,7 +12,7 @@ async function insertSampleYouTubeData() {
       {
         platform: 'youtube',
         timestamp: new Date('2025-09-03T00:00:00Z'),
-        account: '별쇼츠',
+        channelName: '별쇼츠',
         title: 'YouTube Shorts 테스트 영상 1',
         originalUrl: 'https://www.youtube.com/shorts/Tw6HFU0ffc8',
         likes: 1205,
@@ -37,7 +37,7 @@ async function insertSampleYouTubeData() {
       {
         platform: 'youtube',
         timestamp: new Date('2025-09-03T01:00:00Z'),
-        account: '테스트채널',
+        channelName: '테스트채널',
         title: 'YouTube 일반 영상 테스트',
         originalUrl: 'https://www.youtube.com/watch?v=8PX5IQmUgEg',
         likes: 3420,
@@ -62,7 +62,7 @@ async function insertSampleYouTubeData() {
       {
         platform: 'youtube',
         timestamp: new Date('2025-09-03T02:00:00Z'),
-        account: '게임채널',
+        channelName: '게임채널',
         title: 'YouTube 게임 영상',
         originalUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         likes: 8750,

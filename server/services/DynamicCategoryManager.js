@@ -251,7 +251,7 @@ class DynamicCategoryManager {
         depth: normalized.depth,
         keywords: Array.isArray(categoryData.keywords) ? categoryData.keywords.slice(0, 5) : [],
         hashtags: Array.isArray(categoryData.hashtags) ? categoryData.hashtags.slice(0, 5) : [],
-        content: categoryData.content || categoryData.description || '',  // AI 분석 내용 보존
+        summary: categoryData.summary || '',  // AI 분석 내용 보존
         confidence: categoryData.confidence || 0.8,
         source: 'dynamic-ai-generated',
         aiModel: aiModel || 'AI',  // AI 모델 정보 보존
@@ -670,7 +670,7 @@ class DynamicCategoryManager {
       votes[categoryKey].examples.push({
         keywords: result.keywords || [],
         hashtags: result.hashtags || [],
-        content: result.content || '',
+        summary: result.summary || '',
         confidence: result.confidence || 0
       });
     }
