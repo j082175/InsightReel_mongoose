@@ -10,7 +10,7 @@ class YouTubeChannelService {
   constructor() {
     this.apiKey = process.env.YOUTUBE_KEY_1 || process.env.GOOGLE_API_KEY;
     this.baseURL = 'https://www.googleapis.com/youtube/v3';
-    this.usageTracker = new UsageTracker();
+    this.usageTracker = UsageTracker.getInstance();
     
     if (!this.apiKey) {
       throw new Error('YouTube API 키가 설정되지 않았습니다.');
@@ -133,16 +133,16 @@ class YouTubeChannelService {
     
     return {
       id: channelData.id,
-      [FieldMapper.get('name')]: snippet.title || '',
+      [FieldMapper.get('NAME')]: snippet.title || '',
       description: snippet.description || '',
       customUrl: snippet.customUrl || '',
       thumbnailUrl: snippet.thumbnails?.high?.url || snippet.thumbnails?.default?.url || '',
-      [FieldMapper.get('subscribers')]: parseInt(statistics.subscriberCount) || 0,
+      [FieldMapper.get('SUBSCRIBERS')]: parseInt(statistics.subscriberCount) || 0,
       videoCount: parseInt(statistics.videoCount) || 0,
       viewCount: parseInt(statistics.viewCount) || 0,
       publishedAt: snippet.publishedAt || null,
       platform: 'youtube',
-      [FieldMapper.get('originalUrl')]: `https://youtube.com/channel/${channelData.id}`,
+      [FieldMapper.get('ORIGINAL_URL')]: `https://youtube.com/channel/${channelData.id}`,
       handleUrl: snippet.customUrl ? `https://youtube.com/@${snippet.customUrl.replace('@', '')}` : null
     };
   }

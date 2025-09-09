@@ -15,10 +15,10 @@ class HighViewCollector {
     this.statsFilePath = path.join(__dirname, '../config/trending_collection_stats.json');
     
     // 멀티 키 관리자 초기화
-    this.multiKeyManager = new MultiKeyManager();
+    this.multiKeyManager = MultiKeyManager.getInstance();
     
     // 호환성을 위한 UsageTracker (제거 예정)
-    this.usageTracker = new UsageTracker();
+    this.usageTracker = UsageTracker.getInstance();
     
     // 기본 설정 (사용자가 오버라이드 가능)
     this.defaultConfig = {

@@ -18,7 +18,7 @@ class HybridYouTubeExtractor {
     this.ytdlTimeout = 10000; // 10초 타임아웃
     
     // 멀티 키 매니저 초기화
-    this.multiKeyManager = new MultiKeyManager();
+    this.multiKeyManager = MultiKeyManager.getInstance();
     
     ServerLogger.info('🔧 하이브리드 YouTube 추출기 초기화', {
       keyCount: this.multiKeyManager.keys.length,
@@ -347,15 +347,15 @@ class HybridYouTubeExtractor {
       youtubeCategoryId: snippet.categoryId,
       
       // 채널 정보
-      [FieldMapper.get('channelTitle')]: snippet.channelTitle,
-      [FieldMapper.get('channelUrl')]: `https://www.youtube.com/channel/${snippet.channelId}`,
-      [FieldMapper.get('subscribers')]: channelData.subscriberCount || 0,
-      [FieldMapper.get('channelVideos')]: channelData.channelVideoCount || 0,
-      [FieldMapper.get('channelViews')]: channelData.channelViewCount || 0,
-      [FieldMapper.get('channelCountry')]: channelData.channelCountry || '',
-      [FieldMapper.get('channelDescription')]: channelData.channelDescription || '',
+      [FieldMapper.get('CHANNEL_TITLE')]: snippet.channelTitle,
+      [FieldMapper.get('CHANNEL_URL')]: `https://www.youtube.com/channel/${snippet.channelId}`,
+      [FieldMapper.get('SUBSCRIBERS')]: channelData.subscriberCount || 0,
+      [FieldMapper.get('CHANNEL_VIDEOS')]: channelData.channelVideoCount || 0,
+      [FieldMapper.get('CHANNEL_VIEWS')]: channelData.channelViewCount || 0,
+      [FieldMapper.get('CHANNEL_COUNTRY')]: channelData.channelCountry || '',
+      [FieldMapper.get('CHANNEL_DESCRIPTION')]: channelData.channelDescription || '',
       channelCustomUrl: channelData.channelCustomUrl || '',
-      [FieldMapper.get('youtubeHandle')]: channelData.channelCustomUrl || '',
+      [FieldMapper.get('YOUTUBE_HANDLE')]: channelData.channelCustomUrl || '',
       
       // 해시태그와 멘션
       hashtags: hashtags,
@@ -471,7 +471,7 @@ class HybridYouTubeExtractor {
         
         if (apiData.commentCount !== undefined) {
           merged.commentCount = apiData.commentCount;
-          merged[FieldMapper.get('comments')] = apiData.commentCount; // 별칭
+          merged[FieldMapper.get('COMMENTS_COUNT')] = apiData.commentCount; // 별칭
         }
         
         if (apiData.publishedAt) {

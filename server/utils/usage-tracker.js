@@ -7,7 +7,15 @@ const { ServerLogger } = require('./logger');
  * Gemini API 사용량 추적 시스템
  */
 class UsageTracker {
+  static instances = new Map(); // 싱글톤 인스턴스 저장
+  
   constructor(apiKey = null) {
+    const key = apiKey || process.env.GOOGLE_API_KEY;
+    
+    // 이미 동일한 API 키로 인스턴스가 있으면 반환
+    if (UsageTracker.instances.has(key)) {
+      return UsageTracker.instances.get(key);
+    }
     this.usageFilePath = path.join(__dirname, '../../config/gemini-usage.json');
     this.quotasFilePath = path.join(__dirname, '../../config/api-quotas.json');
     this.apiKey = apiKey || process.env.GOOGLE_API_KEY;
@@ -23,6 +31,24 @@ class UsageTracker {
     this.initializeApiEndpoints();
     
     this.dailyUsage = this.loadTodayUsage();
+    
+    // 싱글톤 인스턴스로 저장
+    UsageTracker.instances.set(key, this);
+  }
+
+  /**
+   * 싱글톤 인스턴스 생성/반환
+   * @param {string} apiKey - API 키
+   * @returns {UsageTracker} 인스턴스
+   */
+  static getInstance(apiKey = null) {
+    const key = apiKey || process.env.GOOGLE_API_KEY;
+    
+    if (!UsageTracker.instances.has(key)) {
+      new UsageTracker(key); // constructor에서 instances에 저장됨
+    }
+    
+    return UsageTracker.instances.get(key);
   }
 
   /**
@@ -44,12 +70,12 @@ class UsageTracker {
       'youtube-captions': { cost: 200, enabled: false, category: 'youtube' }  // 미래 확장용
     };
 
-    ServerLogger.info('🔧 API 엔드포인트 설정 초기화 완료', {
-      total: Object.keys(this.apiEndpoints).length,
-      enabled: Object.values(this.apiEndpoints).filter(ep => ep.enabled).length,
-      gemini: Object.values(this.apiEndpoints).filter(ep => ep.category === 'gemini' && ep.enabled).length,
-      youtube: Object.values(this.apiEndpoints).filter(ep => ep.category === 'youtube' && ep.enabled).length
-    }, 'USAGE');
+    // ServerLogger.info('🔧 API 엔드포인트 설정 초기화 완료', {
+    //   total: Object.keys(this.apiEndpoints).length,
+    //   enabled: Object.values(this.apiEndpoints).filter(ep => ep.enabled).length,
+    //   gemini: Object.values(this.apiEndpoints).filter(ep => ep.category === 'gemini' && ep.enabled).length,
+    //   youtube: Object.values(this.apiEndpoints).filter(ep => ep.category === 'youtube' && ep.enabled).length
+    // }, 'USAGE');
   }
 
   /**
@@ -84,7 +110,7 @@ class UsageTracker {
       // API 키 해시가 있고 해당 설정이 있으면 사용
       if (this.currentApiKeyHash && quotaConfig.api_keys && quotaConfig.api_keys[this.currentApiKeyHash]) {
         const customQuotas = quotaConfig.api_keys[this.currentApiKeyHash];
-        ServerLogger.info(`📊 API 키별 할당량 로드: ${customQuotas.name || 'Unknown'}`, null, 'USAGE');
+        // ServerLogger.info(`📊 API 키별 할당량 로드: ${customQuotas.name || 'Unknown'}`, null, 'USAGE');
         return {
           'gemini-2.5-pro': customQuotas['gemini-2.5-pro'] || defaultQuotas['gemini-2.5-pro'],
           'gemini-2.5-flash': customQuotas['gemini-2.5-flash'] || defaultQuotas['gemini-2.5-flash'],
@@ -163,7 +189,7 @@ class UsageTracker {
         }
         
         fs.writeFileSync(this.quotasFilePath, JSON.stringify(quotaConfig, null, 2));
-        ServerLogger.info(`📊 새로운 API 키 자동 등록: ${this.currentApiKeyHash}`, null, 'USAGE');
+        // ServerLogger.info(`📊 새로운 API 키 자동 등록: ${this.currentApiKeyHash}`, null, 'USAGE');
       }
 
     } catch (error) {
@@ -183,7 +209,7 @@ class UsageTracker {
         // 키별 섹션 구조 확인
         if (data.keys && data.keys[this.currentApiKeyHash] && data.keys[this.currentApiKeyHash][today]) {
           const keyData = data.keys[this.currentApiKeyHash][today];
-          ServerLogger.info(`📊 오늘 사용량 로드 (키: ${this.currentApiKeyHash}): Pro ${keyData.pro}/${this.quotas['gemini-2.5-pro'].rpd}, Flash ${keyData.flash}/${this.quotas['gemini-2.5-flash'].rpd}, Flash-Lite ${keyData.flashLite || 0}/${this.quotas['gemini-2.5-flash-lite'].rpd}`, null, 'USAGE');
+          // ServerLogger.info(`📊 오늘 사용량 로드 (키: ${this.currentApiKeyHash}): Pro ${keyData.pro}/${this.quotas['gemini-2.5-pro'].rpd}, Flash ${keyData.flash}/${this.quotas['gemini-2.5-flash'].rpd}, Flash-Lite ${keyData.flashLite || 0}/${this.quotas['gemini-2.5-flash-lite'].rpd}`, null, 'USAGE');
           
           // 기존 구조와 호환되도록 변환
           const compatibleData = {};
@@ -227,7 +253,7 @@ class UsageTracker {
       }
     };
     
-    ServerLogger.info('📊 새로운 일일 사용량 초기화', null, 'USAGE');
+    // ServerLogger.info('📊 새로운 일일 사용량 초기화', null, 'USAGE');
     return usage;
   }
 
@@ -406,7 +432,7 @@ class UsageTracker {
     }
     
     const resultDate = kstTime.toISOString().split('T')[0];
-    ServerLogger.info(`🗓️ [DEBUG] getTodayString 반환값: ${resultDate} (현재 KST 시간: ${kstHour}시, API키: ${this.currentApiKeyHash})`, null, 'USAGE');
+    // ServerLogger.info(`🗓️ [DEBUG] getTodayString 반환값: ${resultDate} (현재 KST 시간: ${kstHour}시, API키: ${this.currentApiKeyHash})`, null, 'USAGE');
     return resultDate;
   }
 

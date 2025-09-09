@@ -18,11 +18,11 @@ class MultiApiManager {
     
     // 각 API 키별 사용량 추적기
     this.usageTrackers = new Map();
-    this.usageTrackers.set('primary', new UsageTracker());
+    this.usageTrackers.set('primary', UsageTracker.getInstance());
     
     // 보조 키들도 추적기 생성
     this.secondaryApiKeys.forEach((key, index) => {
-      this.usageTrackers.set(`secondary_${index}`, new UsageTracker());
+      this.usageTrackers.set(`secondary_${index}`, UsageTracker.getInstance());
     });
     
     // 현재 활성 API 키 상태

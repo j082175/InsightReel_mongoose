@@ -4,13 +4,19 @@ const UsageTracker = require('./usage-tracker');
 const { AI } = require('../config/constants');
 
 /**
- * 통합 Gemini API 관리자
+ * 통합 Gemini API 관리자 (싱글톤)
  * 2가지 폴백 모드 지원:
  * - multi-key: 여러 API 키 간 전환 폴백
  * - model-priority: 단일 키에서 모델 우선순위 폴백 (pro → flash → flash-lite)
  */
 class UnifiedGeminiManager {
+  static instance = null;
+  
   constructor(options = {}) {
+    // 싱글톤 패턴: 이미 인스턴스가 있으면 반환
+    if (UnifiedGeminiManager.instance) {
+      return UnifiedGeminiManager.instance;
+    }
     // 폴백 모드 결정 (multi-key 또는 model-priority)
     this.fallbackMode = process.env.GEMINI_FALLBACK_MODE || 'multi-key';
     this.enableFallback = process.env.ENABLE_GEMINI_FALLBACK !== 'false';
@@ -28,6 +34,19 @@ class UnifiedGeminiManager {
     }
     
     ServerLogger.success(`🤖 통합 Gemini 관리자 초기화 완료 (모드: ${this.fallbackMode})`, null, 'UNIFIED');
+    
+    // 싱글톤 인스턴스 저장
+    UnifiedGeminiManager.instance = this;
+  }
+  
+  /**
+   * 싱글톤 인스턴스 반환
+   */
+  static getInstance(options = {}) {
+    if (!UnifiedGeminiManager.instance) {
+      new UnifiedGeminiManager(options);
+    }
+    return UnifiedGeminiManager.instance;
   }
 
   /**
@@ -50,7 +69,7 @@ class UnifiedGeminiManager {
     
     this.apiKeys.forEach((keyInfo, index) => {
       const trackerId = `key_${index}`;
-      this.usageTrackers.set(trackerId, new UsageTracker());
+      this.usageTrackers.set(trackerId, UsageTracker.getInstance());
       
       const genAI = new GoogleGenerativeAI(keyInfo.key);
       this.genAIInstances.set(trackerId, genAI);
@@ -115,7 +134,7 @@ class UnifiedGeminiManager {
     };
     
     // 사용량 추적기
-    this.usageTracker = new UsageTracker();
+    this.usageTracker = UsageTracker.getInstance();
     
     // 자동 복구 타이머 시작
     if (this.autoRecovery) {
@@ -143,7 +162,7 @@ class UnifiedGeminiManager {
     this.singleModelInstance = genAI.getGenerativeModel({ model: this.singleModel });
     
     // 사용량 추적기
-    this.usageTracker = new UsageTracker();
+    this.usageTracker = UsageTracker.getInstance();
     
     ServerLogger.info(`📍 Single-Model 설정: ${this.singleModel}`, null, 'UNIFIED');
   }

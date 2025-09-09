@@ -7,10 +7,16 @@ const path = require('path');
 require('dotenv').config();
 
 /**
- * 여러 YouTube API 키 관리자
+ * 여러 YouTube API 키 관리자 (싱글톤)
  */
 class MultiKeyManager {
+  static instance = null;
+  
   constructor() {
+    // 싱글톤 패턴: 이미 인스턴스가 있으면 반환
+    if (MultiKeyManager.instance) {
+      return MultiKeyManager.instance;
+    }
     this.keys = this.loadKeys();
     this.trackers = new Map();
     
@@ -20,6 +26,19 @@ class MultiKeyManager {
     this.initializeTrackers();
     
     ServerLogger.info(`🔑 YouTube API 키 ${this.keys.length}개 로드됨 (안전 마진: ${this.safetyMargin})`, null, 'MULTI-KEY');
+    
+    // 싱글톤 인스턴스 저장
+    MultiKeyManager.instance = this;
+  }
+  
+  /**
+   * 싱글톤 인스턴스 반환
+   */
+  static getInstance() {
+    if (!MultiKeyManager.instance) {
+      new MultiKeyManager();
+    }
+    return MultiKeyManager.instance;
   }
   
   /**
@@ -58,7 +77,7 @@ class MultiKeyManager {
    */
   initializeTrackers() {
     this.keys.forEach((keyInfo, index) => {
-      const tracker = new UsageTracker(keyInfo.key);
+      const tracker = UsageTracker.getInstance(keyInfo.key);
       this.trackers.set(keyInfo.key, {
         tracker,
         info: keyInfo,

@@ -14,7 +14,7 @@ class AIAnalyzer {
     const categoryMode = process.env.USE_DYNAMIC_CATEGORIES === 'true' ? 'dynamic' : 
                         process.env.USE_FLEXIBLE_CATEGORIES === 'true' ? 'flexible' : 'basic';
     
-    this.categoryManager = new UnifiedCategoryManager({ mode: categoryMode });
+    this.categoryManager = UnifiedCategoryManager.getInstance({ mode: categoryMode });
     this.useDynamicCategories = categoryMode !== 'basic';
     
     // AI 시스템 설정 (상호 배타적)
@@ -31,13 +31,13 @@ class AIAnalyzer {
       const mode = process.env.GEMINI_FALLBACK_MODE || 'single-model';
       const strategy = process.env.GEMINI_FALLBACK_STRATEGY || 'flash';
       
-      this.geminiManager = new UnifiedGeminiManager({
+      this.geminiManager = UnifiedGeminiManager.getInstance({
         strategy: strategy,
         retryAttempts: 3,
         retryDelay: 2000
       });
       
-      ServerLogger.success(`🤖 통합 Gemini 관리자 초기화 완료 (모드: ${mode}, 전략: ${strategy})`, null, 'AI');
+      // 싱글톤이므로 UnifiedGeminiManager에서 이미 로그를 출력함 (중복 방지)
     } else {
       throw new Error('Gemini API를 사용해야 합니다. USE_GEMINI=true로 설정하세요.');
     }

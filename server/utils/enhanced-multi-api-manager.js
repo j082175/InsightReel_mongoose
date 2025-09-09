@@ -18,7 +18,7 @@ class EnhancedMultiApiManager {
     // 각 API 키별 개별 사용량 추적기 (키별로 분리된 할당량)
     this.usageTrackers = new Map();
     this.apiKeys.forEach((keyInfo, index) => {
-      this.usageTrackers.set(`key_${index}`, new UsageTracker());
+      this.usageTrackers.set(`key_${index}`, UsageTracker.getInstance());
     });
     
     ServerLogger.info(`🔧 Enhanced Multi API Manager 초기화`, null, 'MULTIAPI');

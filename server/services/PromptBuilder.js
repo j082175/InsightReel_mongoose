@@ -7,7 +7,7 @@ const UnifiedCategoryManager = require('./UnifiedCategoryManager');
 class PromptBuilder {
   constructor(categoryManager) {
     this.categoryManager = categoryManager;
-    this.dynamicCategoryManager = new UnifiedCategoryManager({ mode: 'dynamic' });
+    this.dynamicCategoryManager = UnifiedCategoryManager.getInstance({ mode: 'dynamic' });
     this.useDynamicCategories = process.env.USE_DYNAMIC_CATEGORIES === 'true';
   }
 

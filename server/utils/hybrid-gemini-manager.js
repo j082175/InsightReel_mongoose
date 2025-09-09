@@ -11,7 +11,7 @@ class HybridGeminiManager {
   constructor(apiKey) {
     this.apiKey = apiKey;
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.usageTracker = new UsageTracker();
+    this.usageTracker = UsageTracker.getInstance();
     
     // 모델 인스턴스 생성
     this.models = {

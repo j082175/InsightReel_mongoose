@@ -3,14 +3,20 @@ const path = require('path');
 const { ServerLogger } = require('../utils/logger');
 
 /**
- * 통합 카테고리 관리자
+ * 통합 카테고리 관리자 (싱글톤)
  * 기존 3개 클래스의 모든 기능을 통합:
  * - CategoryManager: 기본 2단계 카테고리 시스템
  * - DynamicCategoryManager: AI 동적 카테고리 + 자가학습
  * - FlexibleCategoryManager: 무한 깊이 + 태그 시스템
  */
 class UnifiedCategoryManager {
+  static instance = null;
+  
   constructor(options = {}) {
+    // 싱글톤 패턴: 이미 인스턴스가 있으면 반환
+    if (UnifiedCategoryManager.instance) {
+      return UnifiedCategoryManager.instance;
+    }
     // 작동 모드 설정
     this.mode = options.mode || process.env.CATEGORY_MANAGER_MODE || 'dynamic';
     // 'basic', 'dynamic', 'flexible'
@@ -53,6 +59,19 @@ class UnifiedCategoryManager {
     this.initializeByMode();
     
     ServerLogger.success(`통합 카테고리 관리자 초기화 완료 (모드: ${this.mode})`, null, 'UNIFIED_CATEGORY');
+    
+    // 싱글톤 인스턴스 저장
+    UnifiedCategoryManager.instance = this;
+  }
+  
+  /**
+   * 싱글톤 인스턴스 반환
+   */
+  static getInstance(options = {}) {
+    if (!UnifiedCategoryManager.instance) {
+      new UnifiedCategoryManager(options);
+    }
+    return UnifiedCategoryManager.instance;
   }
 
   /**

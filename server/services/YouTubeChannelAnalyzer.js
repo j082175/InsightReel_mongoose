@@ -12,9 +12,9 @@ class YouTubeChannelAnalyzer {
   constructor() {
     this.apiKey = process.env.YOUTUBE_KEY_1 || process.env.GOOGLE_API_KEY;
     this.baseURL = 'https://www.googleapis.com/youtube/v3';
-    this.usageTracker = new UsageTracker();
+    this.usageTracker = UsageTracker.getInstance();
     this.aiAnalyzer = new AIAnalyzer();
-    this.categoryManager = new UnifiedCategoryManager({ mode: 'dynamic' });
+    this.categoryManager = UnifiedCategoryManager.getInstance({ mode: 'dynamic' });
     
     if (!this.apiKey) {
       throw new Error('YouTube API 키가 설정되지 않았습니다.');
