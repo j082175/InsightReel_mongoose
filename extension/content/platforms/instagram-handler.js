@@ -56,6 +56,7 @@ export class InstagramHandler extends BasePlatformHandler {
       // FieldMapper 표준을 사용한 메타데이터 구조
       const metadata = {
         [FieldMapper.get('CHANNEL_NAME')]: '',
+        [FieldMapper.get('CHANNEL_URL')]: '',  // ✅ 추가: 채널 URL 필드
         [FieldMapper.get('DESCRIPTION')]: '',
         [FieldMapper.get('LIKES')]: '0',
         [FieldMapper.get('COMMENTS_COUNT')]: '0',
@@ -63,7 +64,7 @@ export class InstagramHandler extends BasePlatformHandler {
         [FieldMapper.get('UPLOAD_DATE')]: null
       };
 
-      // 작성자 추출
+      // 작성자 및 채널 URL 추출
       const authorElements = [
         'header a[role="link"]', 
         '[data-testid="user-avatar"] + a',
@@ -73,7 +74,22 @@ export class InstagramHandler extends BasePlatformHandler {
       for (const selector of authorElements) {
         const authorElement = document.querySelector(selector);
         if (authorElement) {
-          metadata[FieldMapper.get('CHANNEL_NAME')] = authorElement.innerText.trim() || authorElement.href.split('/').filter(x => x)[2] || '';
+          // 작성자명 추출
+          const authorName = authorElement.innerText.trim() || authorElement.href.split('/').filter(x => x)[2] || '';
+          metadata[FieldMapper.get('CHANNEL_NAME')] = authorName;
+          
+          // 채널 URL 생성
+          if (authorElement.href) {
+            metadata[FieldMapper.get('CHANNEL_URL')] = authorElement.href;
+          } else if (authorName) {
+            // href가 없으면 작성자명으로 URL 구성
+            metadata[FieldMapper.get('CHANNEL_URL')] = `https://www.instagram.com/${authorName}/`;
+          }
+          
+          this.log('info', '작성자 정보 추출 완료', {
+            channelName: metadata[FieldMapper.get('CHANNEL_NAME')],
+            channelUrl: metadata[FieldMapper.get('CHANNEL_URL')]
+          });
           break;
         }
       }
@@ -119,6 +135,7 @@ export class InstagramHandler extends BasePlatformHandler {
       this.log('error', '메타데이터 추출 실패', error);
       return { 
         [FieldMapper.get('CHANNEL_NAME')]: '', 
+        [FieldMapper.get('CHANNEL_URL')]: '',  // ✅ 추가: 에러 상황에서도 채널 URL 필드 포함
         [FieldMapper.get('DESCRIPTION')]: '', 
         [FieldMapper.get('LIKES')]: '0', 
         [FieldMapper.get('COMMENTS_COUNT')]: '0', 
