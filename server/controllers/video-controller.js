@@ -3,6 +3,7 @@ const AIAnalyzer = require('../services/AIAnalyzer');
 const SheetsManager = require('../services/SheetsManager');
 const ErrorHandler = require('../middleware/error-handler');
 const { ServerLogger } = require('../utils/logger');
+const { FieldMapper } = require('../types/field-mapper');
 
 /**
  * 비디오 처리 컨트롤러
@@ -251,6 +252,15 @@ class VideoController {
       // 1단계: 비디오 준비 및 메타데이터 수집
       let enrichedMetadata = { ...metadata };
       
+      // Instagram 메타데이터 보존 (FieldMapper 표준)
+      ServerLogger.info('📱 Instagram 메타데이터 수신:', {
+        channelName: metadata[FieldMapper.get('CHANNEL_NAME')],
+        channelUrl: metadata[FieldMapper.get('CHANNEL_URL')],
+        description: metadata[FieldMapper.get('DESCRIPTION')]?.substring(0, 50),
+        likes: metadata[FieldMapper.get('LIKES')],
+        commentsCount: metadata[FieldMapper.get('COMMENTS_COUNT')]
+      });
+      
       if (isBlob && videoPath) {
         ServerLogger.info('1️⃣ 업로드된 비디오 사용');
         pipeline.videoPath = videoPath;
@@ -326,6 +336,10 @@ class VideoController {
       try {
         // Instagram과 YouTube 메타데이터 처리
         const processedMetadata = { ...enrichedMetadata };
+        
+        // Instagram 필드는 이미 FieldMapper로 전달되므로 그대로 사용
+        // processedMetadata에는 enrichedMetadata가 그대로 전달됨
+        
         if (enrichedMetadata._instagramAuthor) {
           processedMetadata.author = enrichedMetadata._instagramAuthor;
           ServerLogger.info('👤 Instagram 채널 정보 처리:', enrichedMetadata._instagramAuthor);

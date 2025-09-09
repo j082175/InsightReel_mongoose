@@ -4972,16 +4972,27 @@ class VideoSaver {
       const hashtags = Utils.extractHashtags(caption);
       
       return {
-        author: author.trim(),
-        caption: caption.trim(),
+        channelName: author.trim(),
+        channelUrl: author.trim() ? `https://www.instagram.com/${author.trim()}/` : '',
+        description: caption.trim(),
         likes: likes.trim(),
-        comments: comments.trim(),
+        commentsCount: comments.trim(),
         hashtags,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        platform: 'INSTAGRAM'
       };
     } catch (error) {
       Utils.log('error', '인스타그램 메타데이터 추출 실패', error);
-      return { timestamp: new Date().toISOString() };
+      return { 
+        channelName: '',
+        channelUrl: '',
+        description: '',
+        likes: '0',
+        commentsCount: '0',
+        hashtags: [],
+        timestamp: new Date().toISOString(),
+        platform: 'INSTAGRAM'
+      };
     }
   }
 

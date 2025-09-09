@@ -129,6 +129,10 @@ export class InstagramHandler extends BasePlatformHandler {
         uploadDate: metadata[FieldMapper.get('UPLOAD_DATE')]
       });
       
+      // 🔍 extractPostMetadata 반환 직전 디버깅
+      console.log('🔍 extractPostMetadata 반환 직전 metadata 전체:', JSON.stringify(metadata, null, 2));
+      console.log('🔍 extractPostMetadata metadata 키들:', Object.keys(metadata));
+      
       return metadata;
       
     } catch (error) {
@@ -1350,6 +1354,7 @@ export class InstagramHandler extends BasePlatformHandler {
       
       this.log('info', '추출된 메타데이터 (extractMetadata)', {
         channelName: currentMetadata[FieldMapper.get('CHANNEL_NAME')],
+        channelUrl: currentMetadata[FieldMapper.get('CHANNEL_URL')],  // channelUrl 로깅 추가
         description: currentMetadata[FieldMapper.get('DESCRIPTION')]?.substring(0, 50) + '...',
         likes: currentMetadata[FieldMapper.get('LIKES')],
         commentsCount: currentMetadata[FieldMapper.get('COMMENTS_COUNT')],
@@ -1357,8 +1362,9 @@ export class InstagramHandler extends BasePlatformHandler {
         uploadDate: currentMetadata[FieldMapper.get('UPLOAD_DATE')]
       });
       
-      return {
+      const finalMetadata = {
         [FieldMapper.get('CHANNEL_NAME')]: currentMetadata[FieldMapper.get('CHANNEL_NAME')],
+        [FieldMapper.get('CHANNEL_URL')]: currentMetadata[FieldMapper.get('CHANNEL_URL')],  // 누락된 channelUrl 추가!
         [FieldMapper.get('DESCRIPTION')]: currentMetadata[FieldMapper.get('DESCRIPTION')],
         [FieldMapper.get('LIKES')]: currentMetadata[FieldMapper.get('LIKES')],
         [FieldMapper.get('COMMENTS_COUNT')]: currentMetadata[FieldMapper.get('COMMENTS_COUNT')],
@@ -1366,6 +1372,12 @@ export class InstagramHandler extends BasePlatformHandler {
         [FieldMapper.get('UPLOAD_DATE')]: currentMetadata[FieldMapper.get('UPLOAD_DATE')],
         [FieldMapper.get('TIMESTAMP')]: new Date().toISOString()
       };
+      
+      // 🔍 추가 필드들 디버깅
+      console.log('🔍 extractMetadata 최종 반환 전 finalMetadata:', JSON.stringify(finalMetadata, null, 2));
+      console.log('🔍 extractMetadata 최종 반환 전 currentMetadata 전체:', JSON.stringify(currentMetadata, null, 2));
+      
+      return finalMetadata;
     } catch (error) {
       this.log('error', '인스타그램 메타데이터 추출 실패', error);
       return { [FieldMapper.get('TIMESTAMP')]: new Date().toISOString() };

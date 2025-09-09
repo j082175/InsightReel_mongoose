@@ -140,14 +140,14 @@ class YouTubeChannelDataCollector {
                 customUrl: channel.snippet.customUrl,
                 publishedAt: channel.snippet.publishedAt,
                 thumbnails: channel.snippet.thumbnails,
-                [FieldMapper.get('channelCountry')]: channel.snippet.country,
+                [FieldMapper.get('CHANNEL_COUNTRY')]: channel.snippet.country,
                 defaultLanguage: channel.snippet.defaultLanguage,
                 
                 // 통계
                 statistics: {
-                    [FieldMapper.get('channelViews')]: parseInt(channel.statistics.viewCount || 0),
-                    [FieldMapper.get('subscribers')]: parseInt(channel.statistics.subscriberCount || 0),
-                    [FieldMapper.get('channelVideos')]: parseInt(channel.statistics.videoCount || 0)
+                    [FieldMapper.get('CHANNEL_VIEWS')]: parseInt(channel.statistics.viewCount || 0),
+                    [FieldMapper.get('SUBSCRIBERS')]: parseInt(channel.statistics.subscriberCount || 0),
+                    [FieldMapper.get('CHANNEL_VIDEOS')]: parseInt(channel.statistics.videoCount || 0)
                 },
 
                 // 브랜딩 정보
@@ -233,7 +233,7 @@ class YouTubeChannelDataCollector {
                             statistics: {
                                 viewCount: parseInt(item.statistics.viewCount || 0),
                                 likeCount: parseInt(item.statistics.likeCount || 0),
-                                [FieldMapper.get('comments')]: parseInt(item.statistics.commentCount || 0)
+                                [FieldMapper.get('COMMENTS_COUNT')]: parseInt(item.statistics.commentCount || 0)
                             },
 
                             // 콘텐츠 정보

@@ -101,6 +101,12 @@ class FieldMapper {
    */
   static get(fieldKey) {
     if (!MASTER_FIELD_NAMES[fieldKey]) {
+      // 🚨 항상 상세 에러 정보 제공 (개발/프로덕션 구분 없이)
+      console.error(`\n❌ FieldMapper Error: Unknown field key "${fieldKey}"`);
+      console.error(`📋 Available keys: ${Object.keys(MASTER_FIELD_NAMES).join(', ')}`);
+      console.error('🔍 Called from:');
+      console.trace();
+      
       throw new Error(`Unknown field key: ${fieldKey}. Available keys: ${Object.keys(MASTER_FIELD_NAMES).join(', ')}`);
     }
     return MASTER_FIELD_NAMES[fieldKey];

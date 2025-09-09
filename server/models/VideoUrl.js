@@ -99,8 +99,8 @@ videoUrlSchema.statics.checkDuplicate = async function(normalizedUrl) {
       return {
         isDuplicate: true,
         existingPlatform: existing.platform,
-        existingRow: existing.sheetLocation?.row,
-        existingColumn: existing.sheetLocation?.column,
+        existingRow: existing.sheetLocation?.row || 'Unknown',
+        existingColumn: existing.sheetLocation?.column || '',
         originalUrl: existing.originalUrl,
         status: existing.status,
         createdAt: existing.createdAt,

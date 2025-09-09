@@ -129,18 +129,18 @@ npx http-server . -p 8081 --cors
 - **Sheets 저장**: <3초
 - **전체 처리**: ⚡<30초, ⏳ 30-60초, 🐌 >60초
 
-## ✅ 최근 변경사항 (2025-09-08)
+## ✅ 최근 변경사항 (2025-09-09)
+- **싱글톤 패턴 적용**: UsageTracker, MultiKeyManager, UnifiedGeminiManager, UnifiedCategoryManager 중복 초기화 방지
+- **서버 시작 로그 최적화**: 중복 초기화 로그 제거 및 로깅 노이즈 감소
+- **메모리 사용량 최적화**: getInstance() 패턴으로 인스턴스 관리 개선
+- **개발 환경 안정성 향상**: nodemon과 싱글톤 패턴 조합으로 완전한 개발 경험
+
+## ✅ 이전 변경사항 (2025-09-08)
 - **nodemon 개발 환경 구축**: 파일 변경 시 자동 재시작
 - **API 키 로드밸런싱 완전 해결**: 키별 독립적 사용량 추적 시스템
 - **메모리 캐시 문제 해결**: 서버 재시작 자동화로 캐시 충돌 방지
-- **개발 환경 최적화**: `npm run dev` 명령어로 통합 개발 경험
-
-## ✅ 이전 변경사항 (2025-09-07)
 - React + TypeScript 대시보드 마이그레이션
 - MongoDB 통합 저장 시스템 (UnifiedVideoSaver)
-- Gemini 2.5 Flash Lite 모델 통합
-- 테스트 스크립트 scripts 폴더로 이동
-- YouTube Data API v3 통합
 
 ## 🏷️ 주요 클래스
 - **DynamicCategoryManager**: 플랫폼별 카테고리 관리
@@ -244,6 +244,6 @@ rs + Enter
 
 ---
 
-**Last Updated**: 2025-09-08 (nodemon 개발 환경 구축 및 API 키 로드밸런싱 완전 해결)
+**Last Updated**: 2025-09-09 (싱글톤 패턴 적용으로 서버 초기화 최적화)
 **Maintainer**: JUNSOOCHO
 **License**: MIT

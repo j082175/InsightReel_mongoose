@@ -35,6 +35,17 @@ export class ApiClient {
     try {
       Utils.log('info', 'Processing video with URL', { platform: data.platform, url: data.videoUrl });
       
+      // 🔍 URL 방식 전송 전 메타데이터 로깅
+      console.log('🚨🚨🚨 API CLIENT URL 전송 시작 🚨🚨🚨');
+      console.log('📤 서버로 전송하는 데이터:');
+      console.log('  Platform:', data.platform);
+      console.log('  VideoURL:', data.videoUrl);
+      console.log('  PostURL:', data.postUrl);
+      console.log('  Metadata 타입:', typeof data.metadata);
+      console.log('  Metadata keys:', data.metadata ? Object.keys(data.metadata) : 'NO KEYS');
+      console.log('  Metadata JSON:', JSON.stringify(data.metadata, null, 2));
+      console.log('🚨🚨🚨 API CLIENT URL 전송 끝 🚨🚨🚨');
+      
       const response = await fetch(`${this.serverUrl}/api/process-video`, {
         method: 'POST',
         headers: {
@@ -101,6 +112,19 @@ export class ApiClient {
       formData.append('platform', data.platform);
       formData.append('postUrl', data.postUrl);
       formData.append('metadata', JSON.stringify(data.metadata));
+      
+      // 🔍 전송 전 메타데이터 로깅 (더 명확하게)
+      console.log('🚨🚨🚨 API CLIENT BLOB 전송 시작 🚨🚨🚨');
+      console.log('📤 서버로 전송하는 데이터:');
+      console.log('  Platform:', data.platform);
+      console.log('  PostURL:', data.postUrl);
+      console.log('  VideoBlob size:', data.videoBlob?.size);
+      console.log('  Metadata 타입:', typeof data.metadata);
+      console.log('  Metadata null 여부:', data.metadata === null);
+      console.log('  Metadata undefined 여부:', data.metadata === undefined);
+      console.log('  Metadata keys:', data.metadata ? Object.keys(data.metadata) : 'NO KEYS');
+      console.log('  Metadata JSON:', JSON.stringify(data.metadata, null, 2));
+      console.log('🚨🚨🚨 API CLIENT BLOB 전송 끝 🚨🚨🚨');
       
       const response = await fetch(`${this.serverUrl}/api/process-video-blob`, {
         method: 'POST',

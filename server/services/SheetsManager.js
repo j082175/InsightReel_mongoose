@@ -242,14 +242,15 @@ class SheetsManager {
     fullCategoryPath,
     categoryDepth,
     postUrl,
-    videoPath
+    videoPath,
+    thumbnailPath  // 썸네일 경로 추가
   }) {
     if (platform.toLowerCase() === 'youtube') {
       // YouTube - 새로운 구조 (번호, 태그, 파일경로 제거, 해시태그/멘션/설명/댓글/썸네일URL/수집시간 추가)
       return [
         uploadDate,                                 // 업로드날짜 (업로드 날짜 우선)
         platform.toUpperCase(),                      // 플랫폼
-        metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.channelName || '',  // 🚀 자동화
+        metadata[FieldMapper.get('CHANNEL_NAME')] || '',  // FieldMapper 표준
         metadata.youtubeHandle || '',                // YouTube핸들명
         metadata.channelUrl || '',                   // 채널URL
         analysis.mainCategory || '미분류',            // 대카테고리
@@ -287,21 +288,21 @@ class SheetsManager {
       return [
         uploadDate,                                 // 업로드날짜 (업로드 날짜 우선)
         platform.toUpperCase(),                      // 플랫폼
-        metadata[FieldMapper.get('CHANNEL_NAME')] || '',  // 🚀 완전 자동화 (레거시 제거)
-        metadata.channelUrl || postUrl || '',        // 채널URL (프로필 링크)
+        metadata[FieldMapper.get('CHANNEL_NAME')] || '',  // 채널이름 (FieldMapper 표준)
+        metadata[FieldMapper.get('CHANNEL_URL')] || '',  // 채널URL (FieldMapper 표준)
         analysis.mainCategory || '미분류',            // 대카테고리
         analysis.middleCategory || '미분류',          // 중카테고리
         fullCategoryPath,                            // 전체카테고리경로 (동적)
         categoryDepth,                               // 카테고리깊이
         analysis.keywords?.join(', ') || '',         // 키워드
-        analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그 (AI 분석에서 추출)
-        analysis.mentions?.join(' ') || metadata.mentions?.join(' ') || '', // 멘션 (@username)
-        metadata.description || analysis.extractedText || '', // 설명 (캡션 또는 추출된 텍스트)
+        analysis.hashtags?.join(' ') || metadata[FieldMapper.get('HASHTAGS')]?.join(' ') || '', // 해시태그 (FieldMapper 표준)
+        analysis.mentions?.join(' ') || metadata[FieldMapper.get('MENTIONS')]?.join(' ') || '', // 멘션 (FieldMapper 표준)
+        metadata[FieldMapper.get('DESCRIPTION')] || analysis.extractedText || '', // 설명 (FieldMapper 표준)
         analysis.summary || '',                      // 분석내용 (영상 분석 결과)
-        metadata.likes || '0',                       // 좋아요
-        metadata.commentsCount || '0',                    // 댓글수
+        metadata[FieldMapper.get('LIKES')] || '0',  // 좋아요 (FieldMapper 표준)
+        metadata[FieldMapper.get('COMMENTS_COUNT')] || '0',  // 댓글수 (FieldMapper 표준)
         postUrl,                                   // URL
-        metadata.thumbnailUrl || '',               // 썸네일URL
+        thumbnailPath || metadata[FieldMapper.get('THUMBNAIL_URL')] || '',  // 썸네일URL (FieldMapper 표준)
         (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
         analysis.aiModel || '수동',                   // 분석상태 (AI 모델 정보)
         new Date().toISOString()                   // 수집시간
@@ -672,7 +673,8 @@ class SheetsManager {
         fullCategoryPath,
         categoryDepth,
         postUrl,
-        videoPath
+        videoPath,
+        thumbnailPath  // 썸네일 경로 전달
       });
 
       // 시트 행 수가 부족하면 확장
@@ -1031,7 +1033,7 @@ class SheetsManager {
         rowNumber,                                    // 번호
         uploadDate,                                 // 일시
         platform.toUpperCase(),                      // 플랫폼
-        metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.channelName || '',  // 🚀 자동화
+        metadata[FieldMapper.get('CHANNEL_NAME')] || '',  // FieldMapper 표준
         metadata.youtubeHandle || '',                // YouTube핸들명
         metadata.channelUrl || '',                   // 채널URL
         analysis.mainCategory || '미분류',           // 대카테고리
@@ -1066,7 +1068,7 @@ class SheetsManager {
         rowNumber,                                    // 번호
         uploadDate,                                 // 일시
         platform.toUpperCase(),                      // 플랫폼
-        metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.channelName || '',  // 🚀 자동화
+        metadata[FieldMapper.get('CHANNEL_NAME')] || '',  // FieldMapper 표준
         analysis.mainCategory || '미분류',           // 대카테고리
         analysis.middleCategory || '',               // 중카테고리
         fullCategoryPath,                            // 전체카테고리경로

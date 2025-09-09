@@ -44,23 +44,23 @@ class HybridDataConverter {
         // 통계 (하이브리드의 핵심 장점)
         views: String(hybridData.viewCount || hybridData.views || '0'),
         likes: String(hybridData.likeCount || hybridData.likes || '0'),
-        [FieldMapper.get('comments')]: String(hybridData.commentCount || hybridData[FieldMapper.get('comments')] || '0'),
+        [FieldMapper.get('COMMENTS_COUNT')]: String(hybridData.commentCount || hybridData[FieldMapper.get('COMMENTS_COUNT')] || '0'),
         
         // 채널 정보 (하이브리드 데이터에서 매핑)
-        [FieldMapper.get('subscribers')]: String(hybridData.subscriberCount || '0'),
-        [FieldMapper.get('channelVideos')]: String(hybridData.channelVideoCount || '0'),
-        [FieldMapper.get('channelViews')]: String(hybridData.channelViewCount || '0'),
-        [FieldMapper.get('channelCountry')]: hybridData.channelCountry || '',
-        [FieldMapper.get('channelDescription')]: hybridData.channelDescription || '',
+        [FieldMapper.get('SUBSCRIBERS')]: String(hybridData.subscriberCount || '0'),
+        [FieldMapper.get('CHANNEL_VIDEOS')]: String(hybridData.channelVideoCount || '0'),
+        [FieldMapper.get('CHANNEL_VIEWS')]: String(hybridData.channelViewCount || '0'),
+        [FieldMapper.get('CHANNEL_COUNTRY')]: hybridData.channelCountry || '',
+        [FieldMapper.get('CHANNEL_DESCRIPTION')]: hybridData.channelDescription || '',
         
         // 해시태그 및 멘션 (설명에서 추출)
         hashtags: YouTubeDataProcessor.extractHashtags(hybridData.description || ''),
         mentions: YouTubeDataProcessor.extractMentions(hybridData.description || ''),
         
         // 댓글 및 추가 채널 정보
-        [FieldMapper.get('topComments')]: Array.isArray(hybridData.topComments) ? hybridData.topComments.join('\n') : (hybridData.topComments || ''),
-        [FieldMapper.get('youtubeHandle')]: hybridData.youtubeHandle || hybridData.channelCustomUrl || '',
-        [FieldMapper.get('channelUrl')]: hybridData.channelUrl || `https://www.youtube.com/channel/${hybridData.channelId || ''}`,
+        [FieldMapper.get('TOP_COMMENTS')]: Array.isArray(hybridData.topComments) ? hybridData.topComments.join('\n') : (hybridData.topComments || ''),
+        [FieldMapper.get('YOUTUBE_HANDLE')]: hybridData.youtubeHandle || hybridData.channelCustomUrl || '',
+        [FieldMapper.get('CHANNEL_URL')]: hybridData.channelUrl || `https://www.youtube.com/channel/${hybridData.channelId || ''}`,
         
         // 하이브리드 메타데이터
         extractionMethod: 'hybrid',
@@ -106,7 +106,7 @@ class HybridDataConverter {
         tags: [],
         views: '0',
         likes: '0', 
-        [FieldMapper.get('comments')]: '0',
+        [FieldMapper.get('COMMENTS_COUNT')]: '0',
         subscribers: '0',
         extractionMethod: 'hybrid-fallback',
         error: error.message

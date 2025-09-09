@@ -38,7 +38,7 @@ const PORT = config.get('PORT');
 app.get('/api/debug-very-early', (req, res) => {
   res.json({ success: true, message: '🔍 VERY EARLY DEBUG: 라인 25 실행됨!' });
 });
-ServerLogger.info('🔍 VERY EARLY DEBUG: Express 앱 생성 후 즉시 API 등록');
+// ServerLogger.info('🔍 VERY EARLY DEBUG: Express 앱 생성 후 즉시 API 등록');
 
 // 미들웨어 설정
 app.use(cors({
@@ -93,7 +93,7 @@ const upload = multer({ storage });
 app.get('/api/debug-before-services', (req, res) => {
   res.json({ success: true, message: '🔧 BEFORE SERVICES: 서비스 초기화 전 실행됨!' });
 });
-ServerLogger.info('🔧 BEFORE SERVICES DEBUG: 서비스 초기화 전');
+// ServerLogger.info('🔧 BEFORE SERVICES DEBUG: 서비스 초기화 전');
 
 // 간단한 채널 분석에 필요한 서비스만 초기화
 const sheetsManager = new SheetsManager();
@@ -106,7 +106,7 @@ const unifiedVideoSaver = new UnifiedVideoSaver(sheetsManager, aiAnalyzer);
 app.get('/api/debug-after-services', (req, res) => {
   res.json({ success: true, message: '✅ AFTER SERVICES: 기본 서비스 초기화 완료!' });
 });
-ServerLogger.info('✅ AFTER SERVICES DEBUG: 기본 서비스 초기화 완료');
+// ServerLogger.info('✅ AFTER SERVICES DEBUG: 기본 서비스 초기화 완료');
 
 // 기본 통계
 let stats = {
@@ -552,6 +552,14 @@ app.get('/api/config/health', (req, res) => {
 app.post('/api/process-video', async (req, res) => {
   try {
     const { platform, videoUrl, postUrl, url, metadata, analysisType = 'quick', useAI = true, mode = 'immediate' } = req.body;
+    
+    // 🔍 디버그: 받은 메타데이터 로깅
+    ServerLogger.info('📡 /api/process-video 엔드포인트에서 metadata 수신:', {
+      platform,
+      hasMetadata: !!metadata,
+      metadataKeys: metadata ? Object.keys(metadata) : [],
+      metadataPreview: metadata ? JSON.stringify(metadata).substring(0, 200) + '...' : 'null'
+    });
     
     // 🆕 URL 필드 통합 처리 (url 필드도 지원)
     const finalVideoUrl = videoUrl || url;
@@ -1430,7 +1438,57 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
   try {
     const { platform, analysisType = 'quick', useAI = true } = req.body;
     postUrl = req.body.postUrl;  // 명시적으로 할당
-    const metadata = JSON.parse(req.body.metadata || '{}');
+    // 🚨 중요: FormData로 전송된 metadata는 JSON 문자열이므로 파싱 필요!
+    let metadata = {};
+    try {
+      metadata = req.body.metadata ? JSON.parse(req.body.metadata) : {};
+    } catch (error) {
+      ServerLogger.warn('❌ metadata JSON 파싱 실패:', req.body.metadata);
+      metadata = {};
+    }
+    
+    // 🔍 디버그: blob 엔드포인트에서 metadata 수신 로깅
+    ServerLogger.info('📡 /api/process-video-blob 엔드포인트에서 metadata 수신:', {
+      platform,
+      rawMetadata: req.body.metadata,
+      hasMetadata: !!metadata && Object.keys(metadata).length > 0,
+      metadataKeys: Object.keys(metadata),
+      metadataPreview: JSON.stringify(metadata).substring(0, 200) + '...'
+    });
+    
+    // 🔧 Instagram 메타데이터 보정 (author 필드 처리)
+    try {
+      const { FieldMapper } = require('./types/field-mapper');
+      
+      // author 필드가 있고 channelName이 비어있으면 매핑
+      if (metadata.author && !metadata[FieldMapper.get('CHANNEL_NAME')]) {
+        const authorUrl = metadata.author;
+        
+        // URL에서 사용자명 추출
+        const usernameMatch = authorUrl.match(/instagram\.com\/([^\/]+)/);
+        if (usernameMatch) {
+          const username = usernameMatch[1];
+          metadata[FieldMapper.get('CHANNEL_NAME')] = username;
+          metadata[FieldMapper.get('CHANNEL_URL')] = `https://www.instagram.com/${username}/`;
+          
+          ServerLogger.info('🔧 author 필드에서 채널 정보 매핑:', {
+            원본Author: authorUrl,
+            추출된Username: username,
+            생성된ChannelUrl: metadata[FieldMapper.get('CHANNEL_URL')]
+          });
+        }
+      }
+      
+      ServerLogger.info('🔑 FieldMapper로 접근한 메타데이터 값들:', {
+        channelName: metadata[FieldMapper.get('CHANNEL_NAME')] || 'null',
+        channelUrl: metadata[FieldMapper.get('CHANNEL_URL')] || 'null',
+        description: metadata[FieldMapper.get('DESCRIPTION')] || 'null',
+        likes: metadata[FieldMapper.get('LIKES')] || 'null',
+        commentsCount: metadata[FieldMapper.get('COMMENTS_COUNT')] || 'null'
+      });
+    } catch (error) {
+      ServerLogger.error('❌ FieldMapper 디버깅 실패:', error.message);
+    }
     
     ServerLogger.info(`🎬 Processing ${platform} blob video from:`, postUrl);
     ServerLogger.info(`📁 Uploaded file: ${req.file ? `${req.file.filename} (${req.file.size} bytes)` : 'None'}`);
@@ -1836,7 +1894,7 @@ app.delete('/api/youtube-batch/clear', async (req, res) => {
 app.get('/api/test-early', (req, res) => {
   res.json({ success: true, message: 'EARLY DEBUG: 500번대 라인 실행됨!' });
 });
-ServerLogger.info('🧪 EARLY DEBUG: 500번대 라인에서 API 등록');
+// ServerLogger.info('🧪 EARLY DEBUG: 500번대 라인에서 API 등록');
 
 // 임시 테스트 API (먼저 추가해서 여기까지 실행되는지 확인)
 app.get('/api/test-debug', (req, res) => {
@@ -1847,7 +1905,7 @@ app.get('/api/test-debug', (req, res) => {
   });
 });
 
-ServerLogger.info('🧪 DEBUG: /api/test-debug API 등록 완료');
+// ServerLogger.info('🧪 DEBUG: /api/test-debug API 등록 완료');
 
 // 채널 트렌딩 수집 API
 let highViewCollector;
@@ -1868,7 +1926,7 @@ app.get('/api/debug-collector', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
-ServerLogger.info('🧪 DEBUG: HighViewCollector 초기화 체크 API 등록');
+// ServerLogger.info('🧪 DEBUG: HighViewCollector 초기화 체크 API 등록');
 
 // collect-trending GET API 등록 전 디버그
 app.get('/api/debug-before-collect-get', (req, res) => {
@@ -1942,7 +2000,7 @@ app.get('/api/debug-after-collect', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
-ServerLogger.info('🧪 DEBUG: collect-trending API 등록 후 체크');
+// ServerLogger.info('🧪 DEBUG: collect-trending API 등록 후 체크');
 
 // API quota 현황 조회 (MultiKeyManager 기반)
 app.get('/api/quota-status', (req, res) => {
