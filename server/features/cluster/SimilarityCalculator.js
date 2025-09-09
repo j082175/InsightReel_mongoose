@@ -1,4 +1,5 @@
 const { ServerLogger } = require('../../utils/logger');
+const { FieldMapper } = require('../../types/field-mapper');
 
 /**
  * 📊 유사도 계산기
@@ -65,10 +66,10 @@ class SimilarityCalculator {
 
     // 2. 구독자 규모 유사도
     const subscriberSimilarity = this.calculateSubscriberSimilarity(
-      channel1.subscribers || 0,
-      channel2.subscribers || 0
+      channel1[FieldMapper.get('SUBSCRIBERS')] || channel1.subscribers || 0,
+      channel2[FieldMapper.get('SUBSCRIBERS')] || channel2.subscribers || 0
     );
-    totalSimilarity += subscriberSimilarity * finalWeights.subscribers;
+    totalSimilarity += subscriberSimilarity * (finalWeights[FieldMapper.get('SUBSCRIBERS')] || finalWeights.subscribers);
 
     // 3. 플랫폼 유사도
     const platformSimilarity = (channel1.platform === channel2.platform) ? 1 : 0;
@@ -76,10 +77,10 @@ class SimilarityCalculator {
 
     // 4. 설명 유사도
     const descriptionSimilarity = this.calculateTextSimilarity(
-      channel1.description || '',
-      channel2.description || ''
+      channel1[FieldMapper.get('DESCRIPTION')] || channel1.description || '',
+      channel2[FieldMapper.get('DESCRIPTION')] || channel2.description || ''
     );
-    totalSimilarity += descriptionSimilarity * finalWeights.description;
+    totalSimilarity += descriptionSimilarity * (finalWeights[FieldMapper.get('DESCRIPTION')] || finalWeights.description);
 
     return Math.round(totalSimilarity * 100) / 100;
   }

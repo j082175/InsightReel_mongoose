@@ -264,16 +264,16 @@ videoSchema.statics.createOrUpdateFromVideoUrl = async function(videoUrlData, me
     keywords: Array.isArray(metadata.keywords) ? metadata.keywords.join(', ') : (metadata.keywords || ''),
     hashtags: Array.isArray(metadata.hashtags) ? metadata.hashtags.join(', ') : (metadata.hashtags || ''),
     mentions: Array.isArray(metadata.mentions) ? metadata.mentions.join(', ') : (metadata.mentions || ''),
-    description: metadata.description || '',
+    description: metadata[FieldMapper.get('DESCRIPTION')] || metadata.description || '',
     analysisContent: metadata.analysisContent || metadata.ai_description || '',
     
-    // 성과 지표 (표준화 적용)
-    likes: metadata.likes || 0,
-    commentsCount: metadata.commentsCount || metadata.comments_count || metadata.comments || 0,  // ⭐ 표준화
-    views: metadata.views || 0,
+    // 성과 지표 (FieldMapper 완전 표준화)
+    [FieldMapper.get('LIKES')]: metadata[FieldMapper.get('LIKES')] || metadata.likes || 0,
+    [FieldMapper.get('COMMENTS_COUNT')]: metadata[FieldMapper.get('COMMENTS_COUNT')] || metadata.commentsCount || metadata.comments_count || metadata.comments || 0,
+    [FieldMapper.get('VIEWS')]: metadata[FieldMapper.get('VIEWS')] || metadata.views || 0,
     
     // URL 및 메타데이터
-    thumbnailUrl: metadata.thumbnailUrl || metadata.thumbnailPath || '',
+    thumbnailUrl: metadata[FieldMapper.get('THUMBNAIL_URL')] || metadata.thumbnailUrl || metadata.thumbnailPath || '',
     channelUrl: metadata.channelUrl || '',
     confidence: metadata.confidence || '',
     analysisStatus: metadata.analysisStatus || 'completed',
@@ -282,9 +282,9 @@ videoSchema.statics.createOrUpdateFromVideoUrl = async function(videoUrlData, me
     // YouTube 전용 필드
     youtubeHandle: metadata.youtubeHandle || '',
     comments: metadata.commentText || '',
-    duration: metadata.duration || '',
-    subscribers: metadata.subscribers || 0,
-    channelVideos: metadata.channelVideos || 0,
+    duration: metadata[FieldMapper.get('DURATION')] || metadata.duration || '',
+    [FieldMapper.get('SUBSCRIBERS')]: metadata[FieldMapper.get('SUBSCRIBERS')] || metadata.subscribers || 0,
+    [FieldMapper.get('CHANNEL_VIDEOS')]: metadata[FieldMapper.get('CHANNEL_VIDEOS')] || metadata.channelVideos || 0,
     monetized: metadata.monetized || '',
     youtubeCategory: metadata.youtubeCategory || '',
     license: metadata.license || '',

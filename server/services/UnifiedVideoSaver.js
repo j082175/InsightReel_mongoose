@@ -38,8 +38,16 @@ class UnifiedVideoSaver {
         [channelNameField]: videoData[channelNameField] || videoData.channelName || videoData.metadata?.channelName || videoData.metadata?.author
       }, 'UNIFIED_SAVER');
 
-      // 1단계: 행 번호 결정 (Google Sheets 기준)
-      const actualRowNumber = rowNumber || await this.getNextRowNumber(platform);
+      // 1단계: Google Sheets 저장 비활성화 확인 (먼저 체크)
+      let actualRowNumber;
+      
+      if (process.env.DISABLE_SHEETS_SAVING === 'true') {
+        // Sheets 비활성화시 기본 행 번호 사용
+        actualRowNumber = rowNumber || 1;
+      } else {
+        // Sheets 활성화시 실제 다음 행 번호 가져오기
+        actualRowNumber = rowNumber || await this.getNextRowNumber(platform);
+      }
       
       // 2단계: 플랫폼별 데이터 변환
       const convertedData = VideoDataConverter.convertToSchema(platform, videoData, actualRowNumber);
@@ -48,14 +56,14 @@ class UnifiedVideoSaver {
       // 3단계: Google Sheets 저장 (기존 로직 사용)
       const sheetsStartTime = Date.now();
       
-      // Google Sheets 저장 비활성화 확인
       if (process.env.DISABLE_SHEETS_SAVING === 'true') {
         ServerLogger.info('⚠️ Google Sheets 저장이 비활성화되어 건너뜁니다', {}, 'UNIFIED_SAVER');
         sheetsResult = {
           success: true,
           message: 'Google Sheets 저장 비활성화됨',
           sheetName: `${platform}_disabled`,
-          nextRow: 1
+          nextRow: 1,
+          spreadsheetUrl: null
         };
       } else {
         sheetsResult = await this.saveToGoogleSheets(platform, videoData);
@@ -81,7 +89,7 @@ class UnifiedVideoSaver {
         totalTime: `${totalTime}ms`,
         sheetsTime: `${sheetsTime}ms`,
         mongoTime: `${mongoTime}ms`,
-        sheetsUrl: sheetsResult.spreadsheetUrl,
+        sheetsUrl: sheetsResult.spreadsheetUrl || 'disabled',
         mongoId: mongoResult._id
       }, 'UNIFIED_SAVER');
 
@@ -141,7 +149,18 @@ class UnifiedVideoSaver {
 
       // 1단계: Google Sheets 배치 저장 (기존 로직 사용)
       const sheetsStartTime = Date.now();
-      sheetsResult = await this.saveBatchToGoogleSheets(platform, videoDataArray);
+      
+      if (process.env.DISABLE_SHEETS_SAVING === 'true') {
+        ServerLogger.info('⚠️ Google Sheets 배치 저장이 비활성화되어 건너뜁니다', {}, 'UNIFIED_SAVER');
+        sheetsResult = {
+          success: true,
+          message: 'Google Sheets 배치 저장 비활성화됨',
+          savedCount: videoDataArray.length,
+          spreadsheetUrl: null
+        };
+      } else {
+        sheetsResult = await this.saveBatchToGoogleSheets(platform, videoDataArray);
+      }
       const sheetsEndTime = Date.now();
       
       if (!sheetsResult.success) {
@@ -150,7 +169,7 @@ class UnifiedVideoSaver {
 
       // 2단계: MongoDB 배치 저장
       const mongoStartTime = Date.now();
-      const startRow = await this.getNextRowNumber(platform);
+      const startRow = process.env.DISABLE_SHEETS_SAVING === 'true' ? 1 : await this.getNextRowNumber(platform);
       
       for (let i = 0; i < videoDataArray.length; i++) {
         const videoData = videoDataArray[i];

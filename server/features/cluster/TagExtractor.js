@@ -1,4 +1,5 @@
 const { ServerLogger } = require('../../utils/logger');
+const { FieldMapper } = require('../../types/field-mapper');
 const axios = require('axios');
 
 /**
@@ -31,7 +32,7 @@ class TagExtractor {
       const extractedTags = await this.extractWithGemini(channel, contentType);
       
       // 추가 태그 추출 방법들
-      const descriptiveTag = this.extractFromDescription(channel.description);
+      const descriptiveTag = this.extractFromDescription(channel[FieldMapper.get('DESCRIPTION')] || channel.description);
       const nameTag = this.extractFromChannelName(channel.name);
       
       // 태그 결합 및 정제
@@ -91,10 +92,10 @@ class TagExtractor {
 다음 YouTube 채널의 특성을 분석해서 핵심 태그 5-8개를 추출해주세요.
 
 채널명: ${channel.name}
-설명: ${channel.description || '없음'}
-구독자 수: ${channel.subscribers || 0}
+설명: ${channel[FieldMapper.get('DESCRIPTION')] || channel.description || '없음'}
+구독자 수: ${channel[FieldMapper.get('SUBSCRIBERS')] || channel.subscribers || 0}
 사용자 정의 URL: ${channel.customUrl || '없음'}
-콘텐츠 유형: ${context.description}
+콘텐츠 유형: ${context[FieldMapper.get('DESCRIPTION')] || context.description}
 
 요구사항:
 - 채널의 주요 콘텐츠 카테고리
@@ -235,9 +236,9 @@ class TagExtractor {
     fallbackTags.push(channel.platform || 'youtube');
 
     // 구독자 수 기반 태그
-    if (channel.subscribers > 1000000) {
+    if ((channel[FieldMapper.get('SUBSCRIBERS')] || channel.subscribers) > 1000000) {
       fallbackTags.push('대형채널');
-    } else if (channel.subscribers > 100000) {
+    } else if ((channel[FieldMapper.get('SUBSCRIBERS')] || channel.subscribers) > 100000) {
       fallbackTags.push('중견채널');
     } else {
       fallbackTags.push('소형채널');

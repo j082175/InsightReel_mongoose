@@ -209,6 +209,25 @@ videoUrlSchema.statics.cleanupStaleProcessing = async function() {
   }
 };
 
+// 🔄 정적 메서드: 서버 재시작 시 모든 processing 상태 정리 (즉시 실행)
+videoUrlSchema.statics.cleanupAllProcessing = async function() {
+  try {
+    const result = await this.deleteMany({
+      status: 'processing'
+    });
+    
+    if (result.deletedCount > 0) {
+      console.log(`🔄 서버 재시작: 모든 processing 레코드 정리: ${result.deletedCount}개`);
+    }
+    
+    return { success: true, deletedCount: result.deletedCount };
+    
+  } catch (error) {
+    console.error('서버 재시작 processing 레코드 정리 실패:', error.message);
+    return { success: false, error: error.message };
+  }
+};
+
 // 📊 정적 메서드: 통계 조회 (상태별 포함)
 videoUrlSchema.statics.getStats = async function() {
   try {

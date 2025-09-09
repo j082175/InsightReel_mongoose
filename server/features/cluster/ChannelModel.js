@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const { ServerLogger } = require('../../utils/logger');
+const { FieldMapper } = require('../../types/field-mapper');
 const YouTubeChannelService = require('../../services/YouTubeChannelService');
 const YouTubeChannelAnalyzer = require('../../services/YouTubeChannelAnalyzer');
 const Channel = require('../../models/Channel');
@@ -230,9 +231,9 @@ class ChannelModel {
         platform: 'youtube',
         
         // YouTube API 기본 정보
-        subscribers: youtubeData.subscribers,
-        description: youtubeData.description,
-        thumbnailUrl: youtubeData.thumbnailUrl,
+        [FieldMapper.get('SUBSCRIBERS')]: youtubeData[FieldMapper.get('SUBSCRIBERS')] || youtubeData.subscribers,
+        [FieldMapper.get('DESCRIPTION')]: youtubeData[FieldMapper.get('DESCRIPTION')] || youtubeData.description,
+        [FieldMapper.get('THUMBNAIL_URL')]: youtubeData[FieldMapper.get('THUMBNAIL_URL')] || youtubeData.thumbnailUrl,
         customUrl: youtubeData.customUrl,
         
         // 상세 분석 정보 (요청한 6가지 + α)
@@ -382,9 +383,9 @@ class ChannelModel {
         platform: 'youtube',
         
         // YouTube API에서 가져온 정보
-        subscribers: youtubeData.subscribers,
-        description: youtubeData.description,
-        thumbnailUrl: youtubeData.thumbnailUrl,
+        [FieldMapper.get('SUBSCRIBERS')]: youtubeData[FieldMapper.get('SUBSCRIBERS')] || youtubeData.subscribers,
+        [FieldMapper.get('DESCRIPTION')]: youtubeData[FieldMapper.get('DESCRIPTION')] || youtubeData.description,
+        [FieldMapper.get('THUMBNAIL_URL')]: youtubeData[FieldMapper.get('THUMBNAIL_URL')] || youtubeData.thumbnailUrl,
         customUrl: youtubeData.customUrl,
         
         // 사용자 입력 키워드
@@ -419,9 +420,9 @@ class ChannelModel {
         platform: channelData.platform || 'youtube',
         
         // 기본 정보
-        subscribers: channelData.subscribers || 0,
-        description: channelData.description || '',
-        thumbnailUrl: channelData.thumbnailUrl || '',
+        [FieldMapper.get('SUBSCRIBERS')]: channelData[FieldMapper.get('SUBSCRIBERS')] || channelData.subscribers || 0,
+        [FieldMapper.get('DESCRIPTION')]: channelData[FieldMapper.get('DESCRIPTION')] || channelData.description || '',
+        [FieldMapper.get('THUMBNAIL_URL')]: channelData[FieldMapper.get('THUMBNAIL_URL')] || channelData.thumbnailUrl || '',
         customUrl: channelData.customUrl || '',
         
         // 콘텐츠 타입 정보

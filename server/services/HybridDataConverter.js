@@ -42,8 +42,8 @@ class HybridDataConverter {
         tags: hybridData.tags || hybridData.keywords || [],
         
         // 통계 (하이브리드의 핵심 장점)
-        views: String(hybridData.viewCount || hybridData.views || '0'),
-        likes: String(hybridData.likeCount || hybridData.likes || '0'),
+        [FieldMapper.get('VIEWS')]: String(hybridData.viewCount || hybridData[FieldMapper.get('VIEWS')] || hybridData.views || '0'),
+        [FieldMapper.get('LIKES')]: String(hybridData.likeCount || hybridData[FieldMapper.get('LIKES')] || hybridData.likes || '0'),
         [FieldMapper.get('COMMENTS_COUNT')]: String(hybridData.commentCount || hybridData[FieldMapper.get('COMMENTS_COUNT')] || '0'),
         
         // 채널 정보 (하이브리드 데이터에서 매핑) - FieldMapper 키 우선 사용
@@ -54,8 +54,8 @@ class HybridDataConverter {
         [FieldMapper.get('CHANNEL_DESCRIPTION')]: hybridData.channelDescription || '',
         
         // 해시태그 및 멘션 (설명에서 추출)
-        hashtags: YouTubeDataProcessor.extractHashtags(hybridData.description || ''),
-        mentions: YouTubeDataProcessor.extractMentions(hybridData.description || ''),
+        hashtags: YouTubeDataProcessor.extractHashtags(hybridData[FieldMapper.get('DESCRIPTION')] || hybridData.description || ''),
+        mentions: YouTubeDataProcessor.extractMentions(hybridData[FieldMapper.get('DESCRIPTION')] || hybridData.description || ''),
         
         // 댓글 및 추가 채널 정보 - 객체 배열 처리 개선
         [FieldMapper.get('TOP_COMMENTS')]: this.formatComments(hybridData.topComments),
@@ -80,7 +80,7 @@ class HybridDataConverter {
       ServerLogger.info('🔄 하이브리드 → 레거시 포맷 변환 완료', {
         title: converted.title.substring(0, 50),
         sources: hybridData.dataSources,
-        stats: `${converted.views} views, ${converted.likes} likes`
+        stats: `${converted[FieldMapper.get('VIEWS')]} views, ${converted[FieldMapper.get('LIKES')]} likes`
       });
 
       return converted;
@@ -92,7 +92,7 @@ class HybridDataConverter {
       return {
         videoId: videoId,
         title: hybridData?.title || '변환 실패',
-        description: hybridData?.description || '',
+        [FieldMapper.get('DESCRIPTION')]: hybridData?.[FieldMapper.get('DESCRIPTION')] || hybridData?.description || '',
         channel: hybridData?.[FieldMapper.get('CHANNEL_NAME')] || '알 수 없음',
         channelId: hybridData?.channelId || '',
         publishedAt: new Date().toISOString(),

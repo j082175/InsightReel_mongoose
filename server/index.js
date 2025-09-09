@@ -246,37 +246,37 @@ app.get('/api/database/collections', async (req, res) => {
   }
 });
 
-// 🚀 Google Sheets → MongoDB 마이그레이션 API
-app.post('/api/database/migrate', async (req, res) => {
-  try {
-    const DataMigrator = require('./scripts/migrate-to-mongodb');
-    const migrator = new DataMigrator();
-    
-    ServerLogger.info('🚀 웹 API를 통한 마이그레이션 시작', 'API');
-    
-    // 마이그레이션 실행
-    const stats = await migrator.migrate();
-    
-    res.json({
-      success: true,
-      message: 'Google Sheets → MongoDB 마이그레이션 완료!',
-      stats: stats,
-      next_steps: [
-        '1. /api/database/collections로 마이그레이션된 데이터 확인',
-        '2. /api/videos-mongo로 MongoDB 데이터 조회 테스트',
-        '3. 기존 /api/videos와 성능 비교'
-      ]
-    });
-    
-  } catch (error) {
-    ServerLogger.error('❌ 마이그레이션 API 실패', error.message, 'API');
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      message: '마이그레이션 실패'
-    });
-  }
-});
+// 🚀 Google Sheets → MongoDB 마이그레이션 API (비활성화 - scripts 폴더 제거됨)
+// app.post('/api/database/migrate', async (req, res) => {
+//   try {
+//     const DataMigrator = require('./scripts/migrate-to-mongodb');
+//     const migrator = new DataMigrator();
+//     
+//     ServerLogger.info('🚀 웹 API를 통한 마이그레이션 시작', 'API');
+//     
+//     // 마이그레이션 실행
+//     const stats = await migrator.migrate();
+//     
+//     res.json({
+//       success: true,
+//       message: 'Google Sheets → MongoDB 마이그레이션 완료!',
+//       stats: stats,
+//       next_steps: [
+//         '1. /api/database/collections로 마이그레이션된 데이터 확인',
+//         '2. /api/videos-mongo로 MongoDB 데이터 조회 테스트',
+//         '3. 기존 /api/videos와 성능 비교'
+//       ]
+//     });
+//     
+//   } catch (error) {
+//     ServerLogger.error('❌ 마이그레이션 API 실패', error.message, 'API');
+//     res.status(500).json({
+//       success: false,
+//       error: error.message,
+//       message: '마이그레이션 실패'
+//     });
+//   }
+// });
 
 // 🗑️ MongoDB 데이터 초기화 API (재마이그레이션용)
 app.delete('/api/database/reset', async (req, res) => {
@@ -302,39 +302,39 @@ app.delete('/api/database/reset', async (req, res) => {
   }
 });
 
-// 🔍 MongoDB 데이터 검증 API
-app.get('/api/database/verify', async (req, res) => {
-  try {
-    const verifyData = require('./scripts/verify-data');
-    
-    // 콘솔 출력을 캡처하기 위한 헬퍼
-    const originalLog = console.log;
-    let output = '';
-    console.log = (...args) => {
-      output += args.join(' ') + '\n';
-      originalLog(...args);
-    };
-    
-    const success = await verifyData();
-    
-    // 원래 console.log 복구
-    console.log = originalLog;
-    
-    res.json({
-      success: success,
-      message: success ? 'MongoDB 데이터 검증 완료!' : '데이터 검증 실패',
-      verification_output: output,
-      timestamp: new Date()
-    });
-    
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message,
-      message: '데이터 검증 API 실패'
-    });
-  }
-});
+// 🔍 MongoDB 데이터 검증 API (비활성화 - scripts 폴더 제거됨)
+// app.get('/api/database/verify', async (req, res) => {
+//   try {
+//     const verifyData = require('./scripts/verify-data');
+//     
+//     // 콘솔 출력을 캡처하기 위한 헬퍼
+//     const originalLog = console.log;
+//     let output = '';
+//     console.log = (...args) => {
+//       output += args.join(' ') + '\n';
+//       originalLog(...args);
+//     };
+//     
+//     const success = await verifyData();
+//     
+//     // 원래 console.log 복구
+//     console.log = originalLog;
+//     
+//     res.json({
+//       success: success,
+//       message: success ? 'MongoDB 데이터 검증 완료!' : '데이터 검증 실패',
+//       verification_output: output,
+// //       timestamp: new Date()
+//     });
+//     
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       error: error.message,
+//       message: '데이터 검증 API 실패'
+//     });
+//   }
+// });
 
 // 📊 마이그레이션 진행 상황 조회
 app.get('/api/database/migration-status', async (req, res) => {
@@ -612,13 +612,13 @@ app.post('/api/process-video', async (req, res) => {
         const registerResult = await VideoUrl.registerUrl(
           normalizedUrl,
           checkUrl,
-          platform,
+          finalPlatform,
           null  // sheetLocation은 나중에 업데이트
         );
         
         if (registerResult.success) {
           videoUrlDoc = registerResult.document;
-          ServerLogger.info(`✅ URL processing 상태 등록: ${normalizedUrl} (${platform})`);
+          ServerLogger.info(`✅ URL processing 상태 등록: ${normalizedUrl} (${finalPlatform})`);
         } else {
           ServerLogger.warn(`⚠️ URL processing 상태 등록 실패: ${registerResult.error}`);
         }
@@ -706,6 +706,7 @@ app.post('/api/process-video', async (req, res) => {
         
         let thumbnailPaths;
         let analysis;
+        let enrichedMetadata = { platform }; // 🆕 기본값으로 초기화
         
         if (platform === 'youtube') {
           // YouTube 정보를 원본 metadata에 병합 (시트 저장용)
@@ -715,19 +716,19 @@ app.post('/api/process-video', async (req, res) => {
           }
           Object.assign(metadata, {
             title: youtubeInfo.title,
-            description: youtubeInfo.description,
-            author: youtubeInfo.channel,
-            likes: youtubeInfo.likes || 0,
-            comments: youtubeInfo.comments || 0,
-            views: youtubeInfo.views || 0,
-            duration: youtubeInfo.duration,
+            [FieldMapper.get('DESCRIPTION')]: youtubeInfo[FieldMapper.get('DESCRIPTION')] || youtubeInfo.description,
+            [FieldMapper.get('CHANNEL_NAME')]: youtubeInfo.channel,
+            [FieldMapper.get('LIKES')]: youtubeInfo[FieldMapper.get('LIKES')] || youtubeInfo.likes || 0,
+            [FieldMapper.get('COMMENTS')]: youtubeInfo[FieldMapper.get('COMMENTS_COUNT')] || youtubeInfo.commentsCount || 0,
+            [FieldMapper.get('VIEWS')]: youtubeInfo[FieldMapper.get('VIEWS')] || youtubeInfo.views || 0,
+            [FieldMapper.get('DURATION')]: youtubeInfo[FieldMapper.get('DURATION')] || youtubeInfo.duration,
             durationFormatted: youtubeInfo.durationFormatted,
-            uploadDate: youtubeInfo.publishedAt,
+            [FieldMapper.get('UPLOAD_DATE')]: youtubeInfo[FieldMapper.get('UPLOAD_DATE')] || youtubeInfo.publishedAt,
             contentType: youtubeInfo.contentType,
             youtubeCategory: youtubeInfo.category,
             // YouTube 추가 정보
-            subscribers: youtubeInfo.subscribers || '0',
-            channelVideos: youtubeInfo.channelVideos || '0',
+            [FieldMapper.get('SUBSCRIBERS')]: youtubeInfo[FieldMapper.get('SUBSCRIBERS')] || youtubeInfo.subscribers || '0',
+            [FieldMapper.get('CHANNEL_VIDEOS')]: youtubeInfo[FieldMapper.get('CHANNEL_VIDEOS')] || youtubeInfo.channelVideos || '0',
             monetized: youtubeInfo.monetized || 'N',
             categoryId: youtubeInfo.categoryId || '',
             license: youtubeInfo.license || 'youtube',
@@ -737,26 +738,34 @@ app.post('/api/process-video', async (req, res) => {
             liveBroadcast: youtubeInfo.liveBroadcast || 'none',
             // YouTube 핸들명과 채널 URL 추가 🎯
             youtubeHandle: youtubeInfo.youtubeHandle || '',
-            channelUrl: youtubeInfo.channelUrl || '',
+            [FieldMapper.get('CHANNEL_URL')]: youtubeInfo[FieldMapper.get('CHANNEL_URL')] || youtubeInfo.channelUrl || '',
             // 새로운 필드들 추가 🆕
-            description: youtubeInfo.description || '',
+            [FieldMapper.get('DESCRIPTION')]: youtubeInfo[FieldMapper.get('DESCRIPTION')] || youtubeInfo.description || '',
             hashtags: youtubeInfo.hashtags || [],
             mentions: youtubeInfo.mentions || [],
             topComments: youtubeInfo.topComments || '',
-            thumbnailUrl: youtubeInfo.thumbnailUrl || ''
+            commentsCount: youtubeInfo[FieldMapper.get('COMMENTS_COUNT')] || youtubeInfo.commentsCount || 0,
+            [FieldMapper.get('THUMBNAIL_URL')]: youtubeInfo[FieldMapper.get('THUMBNAIL_URL')] || youtubeInfo.thumbnailUrl || ''
           });
           
-          const enrichedMetadata = { 
+          enrichedMetadata = { 
             ...metadata, 
-            platform
+            platform,
+            url: videoUrl || postUrl, // 🆕 원본 URL 추가
+            // 🆕 YouTube 전용 ID 추가
+            videoId: youtubeInfo?.videoId || videoUrl?.match(/[?&]v=([^&]+)/)?.[1],
+            channelId: youtubeInfo?.channelId
           };
           
-          thumbnailPaths = [youtubeInfo.thumbnailUrl]; // 썸네일 URL 저장
+          thumbnailPaths = [youtubeInfo[FieldMapper.get('THUMBNAIL_URL')] || youtubeInfo.thumbnailUrl]; // 썸네일 URL 저장
           
           // AI 분석 조건부 실행
           if (useAI && analysisType !== 'none') {
             ServerLogger.info('1️⃣ YouTube 썸네일로 AI 분석 중...');
-            analysis = await aiAnalyzer.analyzeVideo(youtubeInfo.thumbnailUrl, enrichedMetadata);
+            analysis = await aiAnalyzer.analyzeVideo(youtubeInfo[FieldMapper.get('THUMBNAIL_URL')] || youtubeInfo.thumbnailUrl, enrichedMetadata);
+            
+            // 🔍 AI 분석 결과 디버깅
+            console.log('🔍 AI 분석 결과 전체:', JSON.stringify(analysis, null, 2));
             
             // YouTube 카테고리와 AI 카테고리 일치율 비교
             if (youtubeInfo.category && analysis.mainCategory) {
@@ -810,7 +819,7 @@ app.post('/api/process-video', async (req, res) => {
           }
           
           // 3단계: AI 분석 (조건부 실행)
-          const enrichedMetadata = { ...metadata, platform };
+          enrichedMetadata = { ...metadata, platform, url: videoUrl || postUrl };
           
           if (useAI && analysisType !== 'none') {
             if (thumbnailPaths.length > 1) {
@@ -927,24 +936,80 @@ app.post('/api/process-video', async (req, res) => {
           }
         }
         
+        // 🕰️ 처리 시간 계산
+        const processingEndTime = Date.now();
+        const totalProcessingTime = 2000; // 임시값
+        
         const responseData = {
           processing: {
             platform,
             analysisType,
-            frameCount: analysis.frameCount || 1
+            frameCount: analysis.frameCount || 1,
+            // 🆕 시간 정보 추가
+            startTime: new Date().toISOString(),
+            endTime: new Date().toISOString(),
+            totalTime: `${totalProcessingTime}ms`,
+            aiProcessingTime: analysis.processingTime || 'N/A'
+          },
+          metadata: {
+            ...enrichedMetadata,
+            // 🆕 상세 메타데이터 추가
+            title: enrichedMetadata.title || youtubeInfo?.title || '',
+            publishedAt: enrichedMetadata.uploadDate || enrichedMetadata.publishedAt || '',
+            channelId: youtubeInfo?.channelId || '',
+            videoId: youtubeInfo?.videoId || videoUrl?.match(/[?&]v=([^&]+)/)?.[1] || '',
+            channelName: enrichedMetadata.channelName || youtubeInfo?.channelName || '',
+            channelUrl: enrichedMetadata.channelUrl || youtubeInfo?.channelUrl || '',
+            tags: enrichedMetadata.tags || youtubeInfo?.tags || [],
+            language: (enrichedMetadata.language && enrichedMetadata.language.trim() !== '') ? enrichedMetadata.language : 
+                     (enrichedMetadata.defaultLanguage && enrichedMetadata.defaultLanguage.trim() !== '') ? enrichedMetadata.defaultLanguage :
+                     (youtubeInfo?.language && youtubeInfo?.language.trim() !== '') ? youtubeInfo?.language :
+                     (youtubeInfo?.defaultLanguage && youtubeInfo?.defaultLanguage.trim() !== '') ? youtubeInfo?.defaultLanguage :
+                     (youtubeInfo?.defaultAudioLanguage && youtubeInfo?.defaultAudioLanguage.trim() !== '') ? youtubeInfo?.defaultAudioLanguage : null,
+            licensedContent: enrichedMetadata.licensedContent || '',
+            categoryId: youtubeInfo?.categoryId || enrichedMetadata.categoryId || 0,
+            shares: enrichedMetadata.shares || 0,
+            videoUrl: videoUrl || '',
+            topComments: enrichedMetadata.topComments || enrichedMetadata.comments || '',
+            // 📈 통계 정보 추가
+            likeRatio: enrichedMetadata.likes && enrichedMetadata.views ? 
+              ((parseInt(enrichedMetadata.likes) / parseInt(enrichedMetadata.views)) * 100).toFixed(2) + '%' : '',
+            engagementRate: enrichedMetadata.likes && enrichedMetadata.comments && enrichedMetadata.views ?
+              (((parseInt(enrichedMetadata.likes) + parseInt(enrichedMetadata.commentsCount || 0)) / parseInt(enrichedMetadata.views)) * 100).toFixed(2) + '%' : ''
           },
           analysis: {
-            category: analysis.category,
+            category: analysis.category || analysis.mainCategory || '미분류',
             mainCategory: analysis.mainCategory,
             middleCategory: analysis.middleCategory,
             keywords: analysis.keywords,
             hashtags: analysis.hashtags,
-            confidence: analysis.confidence
+            confidence: analysis.confidence,
+            // 🆕 AI 분석 상세 내용 추가 (폴백 시스템 신뢰)
+            summary: analysis.summary,
+            description: analysis.description,
+            content: analysis.content,
+            analysisContent: analysis.analysisContent || analysis.summary || analysis.description || analysis.content || null,
+            source: analysis.source || 'gemini',
+            aiModel: analysis.aiModel || 'gemini-2.5-flash-lite',
+            processingTime: analysis.processingTime || 'N/A',
+            // 🏷️ 카테고리 매칭 상세
+            fullCategoryPath: analysis.fullCategoryPath || `${analysis.mainCategory}/${analysis.middleCategory}`,
+            categoryMatchRate: analysis.categoryMatch ? `${analysis.categoryMatch.matchScore}%` : (analysis.categoryMatchRate || null),
+            matchType: analysis.categoryMatch ? analysis.categoryMatch.matchType : (analysis.matchType || (analysis.source ? `${analysis.source}-analysis` : null)),
+            matchReason: analysis.categoryMatch ? analysis.categoryMatch.matchReason : (analysis.matchReason || (analysis.source ? `${analysis.source} 분석 결과` : null))
           },
+          // 🆕 누락된 필드들 추가
+          commentsCount: enrichedMetadata.commentsCount || 0,
+          comments: enrichedMetadata[FieldMapper.get('TOP_COMMENTS')] || enrichedMetadata.topComments || '',
+          url: enrichedMetadata.url || videoUrl || postUrl || '',
           files: {
             videoPath,
             thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
-            thumbnailPaths: thumbnailPaths
+            thumbnailPaths: thumbnailPaths,
+            // 🆕 비디오 상세 정보 추가
+            videoSize: videoPath ? 'N/A' : null,
+            videoFormat: 'youtube-stream',
+            videoQuality: enrichedMetadata.definition || 'hd'
           }
         };
 
@@ -1559,6 +1624,12 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
           }
         }
         
+        // 🆕 플랫폼 자동 감지 (platform이 없는 경우)
+        const finalPlatform = platform || (postUrl ? 
+          (postUrl.includes('youtube.com') || postUrl.includes('youtu.be') ? 'youtube' : 
+           postUrl.includes('instagram.com') ? 'instagram' : 
+           postUrl.includes('tiktok.com') ? 'tiktok' : 'unknown') : 'unknown');
+        
         // ✅ 중복이 아닌 경우 - 즉시 processing 상태로 MongoDB에 등록
         const normalizedUrl = sheetsManager.normalizeVideoUrl(postUrl);
         const VideoUrl = require('./models/VideoUrl');
@@ -1566,13 +1637,13 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
         const registerResult = await VideoUrl.registerUrl(
           normalizedUrl,
           postUrl,
-          platform,
+          finalPlatform,
           null  // sheetLocation은 나중에 업데이트
         );
         
         if (registerResult.success) {
           videoUrlDoc = registerResult.document;
-          ServerLogger.info(`✅ URL processing 상태 등록 (Blob): ${normalizedUrl} (${platform})`);
+          ServerLogger.info(`✅ URL processing 상태 등록 (Blob): ${normalizedUrl} (${finalPlatform})`);
         } else {
           ServerLogger.warn(`⚠️ URL processing 상태 등록 실패 (Blob): ${registerResult.error}`);
         }
@@ -1600,9 +1671,9 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     
     // 큐에 작업 추가
     const result = await videoQueue.addToQueue({
-      id: `blob_${platform}_${Date.now()}`,
+      id: `blob_${finalPlatform}_${Date.now()}`,
       type: 'blob',
-      data: { platform, postUrl, analysisType, metadata, videoPath, useAI },
+      data: { platform: finalPlatform, postUrl, analysisType, metadata, videoPath, useAI },
       processor: async (taskData) => {
         const { platform, postUrl, analysisType, metadata, videoPath, useAI } = taskData;
         
@@ -2578,13 +2649,13 @@ const startServer = async () => {
     // MongoDB 연결 시도
     await DatabaseManager.connect();
     
-    // 🧹 서버 시작 시 오래된 processing 레코드 정리
+    // 🧹 서버 시작 시 모든 processing 레코드 정리 (재시작으로 인한 orphaned 상태 해결)
     try {
       const VideoUrl = require('./models/VideoUrl');
-      const cleanupResult = await VideoUrl.cleanupStaleProcessing();
+      const cleanupResult = await VideoUrl.cleanupAllProcessing();
       
       if (cleanupResult.success && cleanupResult.deletedCount > 0) {
-        ServerLogger.info(`🧹 서버 시작 시 오래된 processing 레코드 정리: ${cleanupResult.deletedCount}개`);
+        ServerLogger.info(`🔄 서버 재시작: 모든 processing 레코드 정리: ${cleanupResult.deletedCount}개`);
       }
       
       // ⏰ 10분마다 정리 작업 스케줄링

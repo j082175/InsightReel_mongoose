@@ -1,5 +1,6 @@
 const EventEmitter = require('events');
 const { ServerLogger } = require('../utils/logger');
+const { FieldMapper } = require('../types/field-mapper');
 const ChannelModel = require('../features/cluster/ChannelModel');
 
 /**
@@ -220,7 +221,7 @@ class ChannelAnalysisQueue extends EventEmitter {
       result: job.result ? {
         id: job.result.id,
         name: job.result.name,
-        subscribers: job.result.subscribers,
+        [FieldMapper.get('SUBSCRIBERS')]: job.result[FieldMapper.get('SUBSCRIBERS')] || job.result.subscribers,
         aiTags: job.result.aiTags
       } : null
     };

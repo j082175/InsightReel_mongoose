@@ -80,9 +80,10 @@ class VideoDataConverter {
       // YouTube 전용 33개 필드 (FieldMapper 자동화)
       [FieldMapper.get('UPLOAD_DATE')]: uploadDate,
       [FieldMapper.get('PLATFORM')]: (platform || 'youtube').toUpperCase(),
-      [FieldMapper.get('CHANNEL_NAME')]: metadata[FieldMapper.get('CHANNEL_NAME')] || '',
-      [FieldMapper.get('YOUTUBE_HANDLE')]: metadata[FieldMapper.get('YOUTUBE_HANDLE')] || '',
-      [FieldMapper.get('CHANNEL_URL')]: metadata[FieldMapper.get('CHANNEL_URL')] || '',
+      [FieldMapper.get('CHANNEL_NAME')]: metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.author || '',
+      [FieldMapper.get('TITLE')]: metadata[FieldMapper.get('TITLE')] || metadata.title || '',
+      [FieldMapper.get('YOUTUBE_HANDLE')]: metadata.youtubeHandle || metadata[FieldMapper.get('YOUTUBE_HANDLE')] || '',
+      [FieldMapper.get('CHANNEL_URL')]: metadata.channelUrl || metadata[FieldMapper.get('CHANNEL_URL')] || '',
       [FieldMapper.get('MAIN_CATEGORY')]: analysis.mainCategory || '미분류',
       [FieldMapper.get('MIDDLE_CATEGORY')]: analysis.middleCategory || '',
       [FieldMapper.get('FULL_CATEGORY_PATH')]: fullCategoryPath,
@@ -90,27 +91,29 @@ class VideoDataConverter {
       [FieldMapper.get('KEYWORDS')]: analysis.keywords?.join(', ') || '',
       [FieldMapper.get('HASHTAGS')]: analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '',
       [FieldMapper.get('MENTIONS')]: analysis.mentions?.join(' ') || '',
-      [FieldMapper.get('DESCRIPTION')]: metadata.description || '',
-      [FieldMapper.get('ANALYSIS_CONTENT')]: analysis.summary || '',
+      [FieldMapper.get('DESCRIPTION')]: metadata[FieldMapper.get('DESCRIPTION')] || metadata.description || '',
+      [FieldMapper.get('ANALYSIS_CONTENT')]: analysis.analysisContent || analysis.summary || analysis.description || analysis.content || '',
       [FieldMapper.get('COMMENTS')]: metadata.comments || '',
-      [FieldMapper.get('LIKES')]: this.parseNumber(metadata.likes),
-      [FieldMapper.get('COMMENTS_COUNT')]: this.parseNumber(metadata.commentsCount),
-      [FieldMapper.get('VIEWS')]: this.parseNumber(metadata.views),
-      [FieldMapper.get('DURATION')]: metadata.durationFormatted || '',
-      [FieldMapper.get('SUBSCRIBERS')]: this.parseNumber(metadata.subscribers),
-      [FieldMapper.get('CHANNEL_VIDEOS')]: this.parseNumber(metadata.channelVideos),
+      [FieldMapper.get('LIKES')]: this.parseNumber(metadata[FieldMapper.get('LIKES')] || metadata.likes),
+      [FieldMapper.get('COMMENTS_COUNT')]: this.parseNumber(metadata[FieldMapper.get('COMMENTS_COUNT')] || metadata.commentsCount),
+      [FieldMapper.get('VIEWS')]: this.parseNumber(metadata[FieldMapper.get('VIEWS')] || metadata.views),
+      [FieldMapper.get('DURATION')]: metadata[FieldMapper.get('DURATION')] || metadata.durationFormatted || '',
+      [FieldMapper.get('SUBSCRIBERS')]: this.parseNumber(metadata.subscribers) || this.parseNumber(metadata[FieldMapper.get('SUBSCRIBERS')]),
+      [FieldMapper.get('CHANNEL_VIDEOS')]: this.parseNumber(metadata.channelVideos) || this.parseNumber(metadata[FieldMapper.get('CHANNEL_VIDEOS')]),
       [FieldMapper.get('MONETIZED')]: metadata.monetized || 'N',
       [FieldMapper.get('YOUTUBE_CATEGORY')]: metadata.youtubeCategory || '',
       [FieldMapper.get('LICENSE')]: metadata.license || 'youtube',
       [FieldMapper.get('QUALITY')]: metadata.definition || 'sd',
-      [FieldMapper.get('LANGUAGE')]: metadata.language || '',
+      [FieldMapper.get('LANGUAGE')]: (metadata.language && metadata.language.trim() !== '') ? metadata.language :
+                                     (metadata.defaultLanguage && metadata.defaultLanguage.trim() !== '') ? metadata.defaultLanguage :
+                                     (metadata.defaultAudioLanguage && metadata.defaultAudioLanguage.trim() !== '') ? metadata.defaultAudioLanguage : null,
       [FieldMapper.get('URL')]: url || '',
-      [FieldMapper.get('THUMBNAIL_URL')]: metadata.thumbnailUrl || '',
+      [FieldMapper.get('THUMBNAIL_URL')]: metadata[FieldMapper.get('THUMBNAIL_URL')] || metadata.thumbnailUrl || '',
       [FieldMapper.get('CONFIDENCE')]: this.formatConfidence(analysis.confidence),
       [FieldMapper.get('ANALYSIS_STATUS')]: analysis.aiModel || '수동',
-      categoryMatchRate: '',                                    // 카테고리일치율 (빈 값)
-      matchType: '',                                            // 일치유형 (빈 값)
-      matchReason: '',                                          // 일치사유 (빈 값)
+      [FieldMapper.get('CATEGORY_MATCH_RATE')]: analysis.categoryMatch ? `${analysis.categoryMatch.matchScore}%` : '',
+      [FieldMapper.get('MATCH_TYPE')]: analysis.categoryMatch ? analysis.categoryMatch.matchType : '',
+      [FieldMapper.get('MATCH_REASON')]: analysis.categoryMatch ? analysis.categoryMatch.matchReason : '',
       collectionTime: new Date()                                // 수집시간
     };
 
@@ -171,12 +174,12 @@ class VideoDataConverter {
       keywords: analysis.keywords?.join(', ') || '',           // 키워드
       hashtags: analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그
       mentions: analysis.mentions?.join(' ') || '',            // 멘션
-      description: metadata.description || '',                 // 설명
+      description: metadata[FieldMapper.get('DESCRIPTION')] || metadata.description || '', // 설명 (FieldMapper 표준)
       analysisContent: analysis.summary || '',                 // 분석내용
-      likes: this.parseNumber(metadata.likes),                 // 좋아요
-      commentsCount: this.parseNumber(metadata.commentsCount),      // 댓글수
+      likes: this.parseNumber(metadata[FieldMapper.get('LIKES')] || metadata.likes), // 좋아요 (FieldMapper 표준)
+      commentsCount: this.parseNumber(metadata[FieldMapper.get('COMMENTS_COUNT')] || metadata.commentsCount), // 댓글수 (FieldMapper 표준)
       url: url || '',                                           // ⭐ URL (표준화 완료)
-      thumbnailUrl: metadata.thumbnailUrl || '',               // 썸네일URL
+      thumbnailUrl: metadata[FieldMapper.get('THUMBNAIL_URL')] || metadata.thumbnailUrl || '', // 썸네일URL (FieldMapper 표준)
       confidence: this.formatConfidence(analysis.confidence),  // 신뢰도
       analysisStatus: analysis.aiModel || '수동',              // 분석상태
       collectionTime: new Date()                                // 수집시간

@@ -1,4 +1,5 @@
 const { ServerLogger } = require('../../utils/logger');
+const { FieldMapper } = require('../../types/field-mapper');
 const TagExtractor = require('./TagExtractor');
 const SimilarityCalculator = require('./SimilarityCalculator');
 const ChannelModel = require('./ChannelModel');
@@ -278,9 +279,9 @@ class ClusterManager {
       name: channelData.name || channelData.channelTitle,
       url: channelData.url || channelData.channelUrl,
       platform: channelData.platform || 'youtube',
-      subscribers: channelData.subscribers || 0,
-      description: channelData.description || '',
-      thumbnailUrl: channelData.thumbnailUrl || '',
+      [FieldMapper.get('SUBSCRIBERS')]: channelData[FieldMapper.get('SUBSCRIBERS')] || channelData.subscribers || 0,
+      [FieldMapper.get('DESCRIPTION')]: channelData[FieldMapper.get('DESCRIPTION')] || channelData.description || '',
+      [FieldMapper.get('THUMBNAIL_URL')]: channelData[FieldMapper.get('THUMBNAIL_URL')] || channelData.thumbnailUrl || '',
       customUrl: channelData.customUrl || channelData.youtubeHandle || ''
     };
   }

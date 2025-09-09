@@ -1,5 +1,6 @@
 const express = require('express');
 const { ServerLogger } = require('../utils/logger');
+const { FieldMapper } = require('../types/field-mapper');
 
 const router = express.Router();
 
@@ -267,7 +268,7 @@ router.post('/check-duplicate', async (req, res) => {
             id: existingChannel.id,
             name: existingChannel.name,
             url: existingChannel.url,
-            subscribers: existingChannel.subscribers,
+            [FieldMapper.get('SUBSCRIBERS')]: existingChannel[FieldMapper.get('SUBSCRIBERS')] || existingChannel.subscribers,
             platform: existingChannel.platform,
             collectedAt: existingChannel.collectedAt,
             lastAnalyzedAt: existingChannel.lastAnalyzedAt

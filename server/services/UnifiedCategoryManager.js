@@ -810,7 +810,7 @@ ${categories.map((cat, index) => `${index + 1}. ${cat}`).join('\n')}
         depth: depth,
         keywords: Array.isArray(parsedResponse.keywords) ? parsedResponse.keywords : [],
         hashtags: Array.isArray(parsedResponse.hashtags) ? parsedResponse.hashtags : [],
-        summary: parsedResponse.summary || '내용 분석 완료',
+        summary: parsedResponse.summary || parsedResponse.content || parsedResponse.description || `${mainCategory}/${middleCategory} 카테고리로 분류된 영상입니다.`,
         confidence: parsedResponse.confidence || 0.7,
         source: 'dynamic-ai',
         modelUsed: modelUsed,

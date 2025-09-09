@@ -276,9 +276,9 @@ class VideoController {
             enrichedMetadata = {
               ...enrichedMetadata,
               author: youtubeInfo.channel,
-              likes: youtubeInfo.likes,
+              [FieldMapper.get('LIKES')]: youtubeInfo[FieldMapper.get('LIKES')] || youtubeInfo.likes,
               comments: youtubeInfo.comments,
-              views: youtubeInfo.views,
+              [FieldMapper.get('VIEWS')]: youtubeInfo[FieldMapper.get('VIEWS')] || youtubeInfo.views,
               uploadDate: youtubeInfo.publishedAt,
               duration: youtubeInfo.duration,
               durationFormatted: youtubeInfo.durationFormatted,
@@ -286,7 +286,7 @@ class VideoController {
             };
             ServerLogger.info(`✅ YouTube 메타데이터 수집 완료:`);
             ServerLogger.info(`👤 채널: ${youtubeInfo.channel}`);
-            ServerLogger.info(`👍 좋아요: ${youtubeInfo.likes}, 💬 댓글: ${youtubeInfo.comments}, 👀 조회수: ${youtubeInfo.views}`);
+            ServerLogger.info(`👍 좋아요: ${youtubeInfo[FieldMapper.get('LIKES')] || youtubeInfo.likes}, 💬 댓글: ${youtubeInfo.comments}, 👀 조회수: ${youtubeInfo[FieldMapper.get('VIEWS')] || youtubeInfo.views}`);
             ServerLogger.info(`⏱️ 영상길이: ${youtubeInfo.durationFormatted} (${youtubeInfo.duration}초)`);
             ServerLogger.info(`📅 업로드: ${youtubeInfo.publishedAt}`);
           } catch (error) {
@@ -341,7 +341,7 @@ class VideoController {
         // processedMetadata에는 enrichedMetadata가 그대로 전달됨
         
         if (enrichedMetadata._instagramAuthor) {
-          processedMetadata.author = enrichedMetadata._instagramAuthor;
+          processedMetadata[FieldMapper.get('CHANNEL_NAME')] = enrichedMetadata._instagramAuthor;
           ServerLogger.info('👤 Instagram 채널 정보 처리:', enrichedMetadata._instagramAuthor);
         }
         

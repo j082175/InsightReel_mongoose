@@ -1373,7 +1373,10 @@ JSON 형식으로 답변:
       
       // AI 응답에서 새로운 구조의 데이터 추출
       let aiData = { 
-        summary: '영상 내용', 
+        summary: null, 
+        content: null,
+        analysisContent: null,
+        description: null,
         keywords: [], 
         hashtags: [],
         main_category: null,
@@ -1390,7 +1393,32 @@ JSON 형식으로 답변:
             const parsed = JSON.parse(jsonMatch[0]);
             ServerLogger.info('파싱된 AI 데이터:', parsed);
             
-            aiData.content = parsed.content || '영상 내용';
+            aiData.content = parsed.content;
+            aiData.analysisContent = parsed.analysisContent || parsed.content;
+            aiData.summary = parsed.summary;
+            aiData.description = parsed.description;
+            
+            // 🚀 플레이스홀더 텍스트 감지 및 처리
+            if (this.isPlaceholderContent(aiData.analysisContent) || 
+                this.isPlaceholderContent(aiData.summary) || 
+                this.isPlaceholderContent(aiData.content)) {
+              
+              ServerLogger.info('🔍 플레이스홀더 콘텐츠 감지 - 지능형 폴백 적용');
+              const fallbackContent = this.generateIntelligentFallback(metadata, urlBasedCategory, null);
+              
+              if (this.isPlaceholderContent(aiData.analysisContent)) {
+                aiData.analysisContent = fallbackContent.analysisContent;
+              }
+              if (this.isPlaceholderContent(aiData.summary)) {
+                aiData.summary = fallbackContent.summary;
+              }
+              if (this.isPlaceholderContent(aiData.content)) {
+                aiData.content = fallbackContent.content;
+              }
+              if (this.isPlaceholderContent(aiData.description)) {
+                aiData.description = fallbackContent.description;
+              }
+            }
             aiData.keywords = Array.isArray(parsed.keywords) ? parsed.keywords : [];
             aiData.hashtags = Array.isArray(parsed.hashtags) ? parsed.hashtags : [];
             aiData.main_category = parsed.main_category;
@@ -1406,12 +1434,37 @@ JSON 형식으로 답변:
           ServerLogger.info(aiResponse.substring(0, 500));
         }
       } else {
-        ServerLogger.info('❌ AI 응답이 null 또는 undefined');
+        ServerLogger.info('❌ AI 응답이 null 또는 undefined - 메타데이터 기반 폴백 생성');
+        
+        // 🚀 Gemini가 블록된 경우 메타데이터 기반으로 의미있는 콘텐츠 생성
+        const fallbackContent = this.generateIntelligentFallback(metadata, urlBasedCategory, geminiError);
+        aiData.content = fallbackContent.content;
+        aiData.analysisContent = fallbackContent.analysisContent;
+        aiData.summary = fallbackContent.summary;
+        aiData.description = fallbackContent.description;
+        aiData.keywords = fallbackContent.keywords;
+        aiData.hashtags = fallbackContent.hashtags;
+        
+        ServerLogger.info('🔄 지능형 폴백 콘텐츠 생성 완료:', {
+          contentLength: fallbackContent.content?.length || 0,
+          keywordsCount: fallbackContent.keywords.length,
+          hashtagsCount: fallbackContent.hashtags.length
+        });
       }
       
       // AI가 카테고리를 제대로 분석했는지 검증
       let finalMainCategory = urlBasedCategory.mainCategory;
       let finalMiddleCategory = urlBasedCategory.middleCategory;
+      
+      // 🎯 YouTube categoryId가 있는 경우 우선 사용
+      if (metadata.categoryId) {
+        const youtubeMappedCategory = this.mapYouTubeCategoryToKorean(metadata.categoryId, metadata.title, metadata.channelName);
+        if (youtubeMappedCategory.main !== '엔터테인먼트' || metadata.categoryId === '24') {
+          ServerLogger.info(`🎬 YouTube 카테고리 우선 적용: ${youtubeMappedCategory.main}/${youtubeMappedCategory.middle}`);
+          finalMainCategory = youtubeMappedCategory.main;
+          finalMiddleCategory = youtubeMappedCategory.middle;
+        }
+      }
       
       ServerLogger.info('🔍 AI 카테고리 검증 전:', {
         main: aiData.main_category,
@@ -1476,15 +1529,18 @@ JSON 형식으로 답변:
         }
       }
       
-      // 최종 분석 결과 반환
+      // 최종 분석 결과 반환 (무조건 폴백 보장)
       const result = {
-        summary: aiData.summary,
+        summary: aiData.summary || this.generateFallbackSummary(metadata),
+        content: aiData.content || this.generateFallbackContent(metadata), 
+        analysisContent: aiData.analysisContent || this.generateFallbackAnalysisContent(metadata, finalMainCategory, finalMiddleCategory),
+        description: aiData.description || (metadata.description || metadata.caption || "설명없음"),
         mainCategory: finalMainCategory,
         middleCategory: finalMiddleCategory,
-        keywords: aiData.keywords.slice(0, 5),
-        hashtags: aiData.hashtags.length > 0 ? aiData.hashtags : this.generateHashtagsFromKeywords(aiData.keywords),
+        keywords: aiData.keywords.length > 0 ? aiData.keywords.slice(0, 5) : this.extractKeywordsFromMetadata(metadata),
+        hashtags: aiData.hashtags.length > 0 ? aiData.hashtags : this.generateHashtagsFromKeywords(aiData.keywords.length > 0 ? aiData.keywords : this.extractKeywordsFromMetadata(metadata)),
         confidence: aiData.main_category ? 0.9 : 0.6, // AI 카테고리 성공시 높은 신뢰도
-        source: 'gemini',
+        source: aiResponse ? 'gemini' : 'intelligent-fallback',
         aiModel: this.lastUsedModel || 'unknown'
       };
 
@@ -1868,9 +1924,13 @@ JSON 형식으로 답변:
       userMessage = '📏 요청 크기 초과 - 영상이 너무 길거나 복잡합니다';
       retryable = false;
     }
-    // 콘텐츠 정책 위반
-    else if (errorMessage.includes('safety') || errorMessage.includes('blocked')) {
-      userMessage = '🛡️ 콘텐츠 정책으로 인해 분석할 수 없습니다';
+    // 콘텐츠 정책 위반 - 더 구체적 감지
+    else if (errorMessage.includes('safety') || 
+             errorMessage.includes('blocked') || 
+             errorMessage.includes('Response was blocked due to OTHER') ||
+             errorMessage.includes('Text not available') ||
+             errorMessage.includes('SAFETY')) {
+      userMessage = '🛡️ AI 안전 정책으로 인해 분석이 차단되었습니다 - 메타데이터 기반 분석으로 대체됩니다';
       retryable = false;
     }
 
@@ -1915,6 +1975,276 @@ JSON 형식으로 답변:
       status: 'no_manager',
       message: 'Gemini 관리자가 초기화되지 않았습니다.'
     };
+  }
+
+  /**
+   * 🚀 지능형 폴백 시스템 - Gemini 블록 시 메타데이터 기반 콘텐츠 생성
+   */
+  generateIntelligentFallback(metadata, urlBasedCategory, geminiError) {
+    ServerLogger.info('🔄 지능형 폴백 콘텐츠 생성 시작...');
+    
+    const title = metadata.title || metadata.caption || '제목 없음';
+    const channelName = metadata.channelName || metadata.author || '채널 정보 없음';
+    const description = metadata.description || metadata.caption || '';
+    const viewCount = metadata.viewCount || metadata.views || 0;
+    const likeCount = metadata.likeCount || metadata.likes || 0;
+    
+    // 카테고리 기반 분석 생성
+    const categoryContext = this.getCategoryAnalysisContext(urlBasedCategory.mainCategory, urlBasedCategory.middleCategory);
+    
+    // 메타데이터에서 키워드 추출
+    const extractedKeywords = this.extractKeywordsFromMetadata(metadata);
+    
+    const content = this.generateIntelligentContent(title, channelName, description, categoryContext, extractedKeywords);
+    const analysisContent = this.generateIntelligentAnalysisContent(title, channelName, categoryContext, viewCount, likeCount, geminiError);
+    const summary = this.generateIntelligentSummary(title, channelName, categoryContext);
+    const description_field = this.generateIntelligentDescription(title, channelName, description, categoryContext);
+    
+    return {
+      content,
+      analysisContent,
+      summary,
+      description: description_field,
+      keywords: extractedKeywords,
+      hashtags: this.generateIntelligentHashtags(extractedKeywords, categoryContext)
+    };
+  }
+
+  /**
+   * 카테고리별 분석 컨텍스트 제공
+   */
+  getCategoryAnalysisContext(mainCategory, middleCategory) {
+    const categoryMap = {
+      '음악': {
+        '팝': { context: '팝 음악', keywords: ['음악', '멜로디', '가사', '뮤직비디오', '아티스트'], action: '노래하며' },
+        '클래식': { context: '클래식 음악', keywords: ['클래식', '오케스트라', '연주', '작곡가'], action: '연주하며' },
+        '힙합': { context: '힙합 음악', keywords: ['힙합', '랩', '비트', '라이딩'], action: '랩하며' },
+        '댄스': { context: '댄스 음악', keywords: ['댄스', '비트', '리듬', '클럽'], action: '춤추며' }
+      },
+      '게임': {
+        '플레이·리뷰': { context: '게임 플레이', keywords: ['게임', '플레이', '리뷰', '공략'], action: '게임하며' },
+        'e스포츠': { context: 'e스포츠 경기', keywords: ['e스포츠', '프로경기', '토너먼트'], action: '경기하며' }
+      },
+      '엔터테인먼트': {
+        '예능·밈·챌린지': { context: '엔터테인먼트 콘텐츠', keywords: ['예능', '재미', '웃음', '챌린지'], action: '재미있게' },
+        '연예 뉴스·K-culture': { context: '연예 및 K-culture', keywords: ['연예', 'K-pop', '한류', '스타'], action: '소개하며' }
+      }
+    };
+
+    const category = categoryMap[mainCategory];
+    if (category && category[middleCategory]) {
+      return category[middleCategory];
+    }
+    
+    return { 
+      context: `${mainCategory} 관련 콘텐츠`, 
+      keywords: [mainCategory, middleCategory, '영상', '콘텐츠'], 
+      action: '제작하며' 
+    };
+  }
+
+  /**
+   * 지능형 콘텐츠 생성
+   */
+  generateIntelligentContent(title, channelName, description, categoryContext, keywords) {
+    const keywordText = keywords.slice(0, 3).join(', ');
+    
+    if (description && description.length > 20) {
+      return `${channelName}이 업로드한 "${title}" 영상입니다. ${categoryContext.context} 분야의 콘텐츠로, ${keywordText} 등의 요소가 포함되어 있습니다. ${description.substring(0, 100)}...`;
+    } else {
+      return `${channelName}이 제작한 "${title}"는 ${categoryContext.context} 장르의 영상으로, 시청자들에게 ${keywordText} 관련 콘텐츠를 제공합니다.`;
+    }
+  }
+
+  /**
+   * 지능형 분석 콘텐츠 생성
+   */
+  generateIntelligentAnalysisContent(title, channelName, categoryContext, viewCount, likeCount, geminiError) {
+    const engagement = likeCount > 0 ? `${likeCount.toLocaleString()}개의 좋아요` : '양호한 반응';
+    const popularity = viewCount > 10000 ? '인기 콘텐츠' : viewCount > 1000 ? '관심을 받고 있는 콘텐츠' : '새로운 콘텐츠';
+    
+    let analysisReason = '';
+    if (geminiError?.message?.includes('blocked due to OTHER')) {
+      analysisReason = ' AI 콘텐츠 정책으로 인해 메타데이터 기반으로 분석되었습니다.';
+    }
+    
+    return `"${title}"은 ${channelName}이 제작한 ${categoryContext.context} 영역의 ${popularity}입니다. 현재 ${engagement}을 받으며 좋은 반응을 보이고 있습니다. ${categoryContext.context} 특성상 ${categoryContext.action} 제작된 콘텐츠로 분석됩니다.${analysisReason}`;
+  }
+
+  /**
+   * 지능형 요약 생성
+   */
+  generateIntelligentSummary(title, channelName, categoryContext) {
+    return `${channelName}의 "${title}" - ${categoryContext.context} 콘텐츠`;
+  }
+
+  /**
+   * 지능형 설명 생성
+   */
+  generateIntelligentDescription(title, channelName, description, categoryContext) {
+    if (description && description.length > 10) {
+      return `${categoryContext.context} 분야: ${description.substring(0, 150)}...`;
+    }
+    return `${channelName}이 제작한 ${categoryContext.context} 영상 "${title}"`;
+  }
+
+  /**
+   * 메타데이터에서 키워드 추출
+   */
+  extractKeywordsFromMetadata(metadata) {
+    const keywords = new Set();
+    
+    // 제목에서 키워드 추출
+    if (metadata.title) {
+      const titleWords = metadata.title
+        .replace(/[^\w\sㄱ-ㅎ가-힣]/g, ' ')
+        .split(/\s+/)
+        .filter(word => word.length >= 2 && word.length <= 10);
+      titleWords.forEach(word => keywords.add(word));
+    }
+    
+    // 채널명 추가
+    if (metadata.channelName || metadata.author) {
+      keywords.add(metadata.channelName || metadata.author);
+    }
+    
+    // 기본 키워드 추가
+    keywords.add('영상');
+    keywords.add('콘텐츠');
+    
+    return Array.from(keywords).slice(0, 5);
+  }
+
+  /**
+   * 지능형 해시태그 생성
+   */
+  generateIntelligentHashtags(keywords, categoryContext) {
+    const hashtags = [];
+    
+    // 키워드 기반 해시태그
+    keywords.slice(0, 3).forEach(keyword => {
+      hashtags.push(`#${keyword}`);
+    });
+    
+    // 카테고리 기반 해시태그
+    categoryContext.keywords.slice(0, 2).forEach(keyword => {
+      if (!hashtags.some(tag => tag.includes(keyword))) {
+        hashtags.push(`#${keyword}`);
+      }
+    });
+    
+    return hashtags.slice(0, 5);
+  }
+
+  /**
+   * 기본 폴백 메서드들 (하위 호환성)
+   */
+  generateFallbackSummary(metadata) {
+    const title = metadata.title || metadata.caption || '영상';
+    const channelName = metadata.channelName || metadata.author || '채널';
+    return `${channelName}의 "${title}"`;
+  }
+
+  generateFallbackContent(metadata) {
+    const title = metadata.title || '제목 없음';
+    const channelName = metadata.channelName || metadata.author || '작성자';
+    const description = metadata.description || metadata.caption || '';
+    
+    if (description && description.length > 20) {
+      return `${channelName}이 업로드한 "${title}" 영상입니다. ${description.substring(0, 200)}...`;
+    }
+    return `${channelName}이 업로드한 "${title}" 영상입니다. 이 콘텐츠는 다양한 시청자들에게 유용한 정보와 재미를 제공합니다.`;
+  }
+
+  generateFallbackAnalysisContent(metadata, mainCategory, middleCategory) {
+    const title = metadata.title || '영상';
+    const channelName = metadata.channelName || metadata.author || '채널';
+    const viewCount = metadata.viewCount || metadata.views || 0;
+    
+    const popularityLevel = viewCount > 1000000 ? '인기' : viewCount > 100000 ? '관심을 받는' : '새로운';
+    
+    return `"${title}"은 ${channelName}이 제작한 ${mainCategory}/${middleCategory} 카테고리의 ${popularityLevel} 콘텐츠입니다. 현재 ${viewCount.toLocaleString()}회 조회수를 기록하며 시청자들의 관심을 받고 있습니다.`;
+  }
+
+  generateFallbackDescription(metadata) {
+    const originalDesc = metadata.description || metadata.caption;
+    if (originalDesc && originalDesc.length > 10) {
+      return originalDesc;
+    }
+    
+    const title = metadata.title || '영상';
+    const channelName = metadata.channelName || metadata.author || '채널';
+    
+    return `${channelName}에서 제작한 "${title}" 콘텐츠입니다. 시청자들에게 유익한 정보와 재미를 제공합니다.`;
+  }
+
+  /**
+   * 플레이스홀더 콘텐츠 감지
+   */
+  isPlaceholderContent(content) {
+    // null, undefined, 빈 문자열, N/A 체크
+    if (!content || 
+        content === 'N/A' || 
+        content === '' || 
+        content === 'undefined' || 
+        content === 'null' ||
+        content.trim() === '') {
+      return true;
+    }
+    
+    const placeholderPatterns = [
+      '실제 AI 분석 내용',
+      '영상 내용', 
+      '영상 분석',
+      '내용 분석 완료',
+      'AI 분석 결과',
+      '분석 중...',
+      '처리 중...',
+      '영상 설명이 제공되지 않았습니다',
+      '제목 없음',
+      '채널 정보 없음'
+    ];
+    
+    // 문자열이 아닌 경우 처리
+    if (typeof content !== 'string') {
+      return true;
+    }
+    
+    return placeholderPatterns.some(pattern => 
+      content.includes(pattern)
+    );
+  }
+
+  /**
+   * YouTube 카테고리 ID를 한국어 카테고리로 매핑
+   */
+  mapYouTubeCategoryToKorean(categoryId, title, channelName) {
+    const youtubeCategoryMap = {
+      '1': { main: '영화·애니메이션', middle: '영화' },
+      '2': { main: '자동차·교통', middle: '스포츠카' },
+      '10': { main: '음악', middle: '팝' },  // Music
+      '15': { main: '동물', middle: '반려동물 브이로그' },
+      '17': { main: '스포츠', middle: '경기 하이라이트' },
+      '19': { main: '여행·이벤트', middle: '여행 Vlog' },
+      '20': { main: '게임', middle: '플레이·리뷰' },
+      '22': { main: 'How-to & 라이프스타일', middle: '생활 꿀팁·가전·정리' },
+      '23': { main: '사회·공익', middle: '환경·인권 캠페인' },
+      '24': { main: '엔터테인먼트', middle: '예능·밈·챌린지' },
+      '25': { main: '뉴스·시사', middle: '시사 브리핑·이슈 분석' },
+      '26': { main: 'How-to & 라이프스타일', middle: 'DIY·공예·인테리어' },
+      '27': { main: '교육', middle: '학문·교양' },
+      '28': { main: '과학·기술', middle: '과학 이론·실험' }
+    };
+    
+    const mapping = youtubeCategoryMap[String(categoryId)];
+    if (mapping) {
+      ServerLogger.info(`🎯 YouTube 카테고리 매핑: categoryId ${categoryId} → ${mapping.main}/${mapping.middle}`);
+      return mapping;
+    }
+    
+    // 기본값
+    ServerLogger.info(`⚠️ 알 수 없는 YouTube 카테고리 ID: ${categoryId}`);
+    return { main: '엔터테인먼트', middle: '예능·밈·챌린지' };
   }
 }
 

@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const { ServerLogger } = require('../../utils/logger');
+const { FieldMapper } = require('../../types/field-mapper');
 
 /**
  * 🎯 클러스터 모델
@@ -86,7 +87,7 @@ class ClusterModel {
       const cluster = {
         id: clusterData.id || this.generateClusterId(),
         name: clusterData.name,
-        description: clusterData.description || '',
+        [FieldMapper.get('DESCRIPTION')]: clusterData[FieldMapper.get('DESCRIPTION')] || clusterData.description || '',
         
         // 태그 정보
         commonTags: clusterData.commonTags || [],
@@ -285,7 +286,7 @@ class ClusterModel {
       cluster.avgSubscribers = 0;
       cluster.avgChannelSize = 0;
     } else {
-      cluster.totalSubscribers = channelData.reduce((sum, ch) => sum + ch.subscribers, 0);
+      cluster.totalSubscribers = channelData.reduce((sum, ch) => sum + (ch[FieldMapper.get('SUBSCRIBERS')] || ch.subscribers || 0), 0);
       cluster.avgSubscribers = Math.round(cluster.totalSubscribers / channelData.length);
       cluster.avgChannelSize = Math.round(
         channelData.reduce((sum, ch) => sum + (ch.videoCount || 0), 0) / channelData.length

@@ -1,4 +1,5 @@
 const { ServerLogger } = require('./logger');
+const { FieldMapper } = require('../types/field-mapper');
 
 /**
  * YouTube 데이터 처리 유틸리티 클래스
@@ -392,7 +393,7 @@ class YouTubeDataProcessor {
         // 기본 정보
         videoId: videoId,
         title: snippet.title || '제목 없음',
-        description: snippet.description || '',
+        [FieldMapper.get('DESCRIPTION')]: snippet[FieldMapper.get('DESCRIPTION')] || snippet.description || '',
         thumbnailUrl: this.buildThumbnailUrl(videoId),
         
         // 채널 정보
@@ -417,9 +418,9 @@ class YouTubeDataProcessor {
         
         // 콘텐츠 분석
         contentType: this.getContentType(rawData.url, duration),
-        hashtags: this.extractHashtags(snippet.description),
-        mentions: this.extractMentions(snippet.description),
-        keywords: this.extractKeywords(snippet.title, snippet.description, snippet.tags),
+        hashtags: this.extractHashtags(snippet[FieldMapper.get('DESCRIPTION')] || snippet.description),
+        mentions: this.extractMentions(snippet[FieldMapper.get('DESCRIPTION')] || snippet.description),
+        keywords: this.extractKeywords(snippet.title, snippet[FieldMapper.get('DESCRIPTION')] || snippet.description, snippet.tags),
         
         // 기타
         defaultLanguage: snippet.defaultLanguage,
