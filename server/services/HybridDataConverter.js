@@ -46,10 +46,10 @@ class HybridDataConverter {
         likes: String(hybridData.likeCount || hybridData.likes || '0'),
         [FieldMapper.get('COMMENTS_COUNT')]: String(hybridData.commentCount || hybridData[FieldMapper.get('COMMENTS_COUNT')] || '0'),
         
-        // 채널 정보 (하이브리드 데이터에서 매핑)
-        [FieldMapper.get('SUBSCRIBERS')]: String(hybridData.subscriberCount || '0'),
-        [FieldMapper.get('CHANNEL_VIDEOS')]: String(hybridData.channelVideoCount || '0'),
-        [FieldMapper.get('CHANNEL_VIEWS')]: String(hybridData.channelViewCount || '0'),
+        // 채널 정보 (하이브리드 데이터에서 매핑) - FieldMapper 키 우선 사용
+        [FieldMapper.get('SUBSCRIBERS')]: String(hybridData[FieldMapper.get('SUBSCRIBERS')] || hybridData.subscriberCount || '0'),
+        [FieldMapper.get('CHANNEL_VIDEOS')]: String(hybridData[FieldMapper.get('CHANNEL_VIDEOS')] || hybridData.channelVideoCount || '0'),
+        [FieldMapper.get('CHANNEL_VIEWS')]: String(hybridData[FieldMapper.get('CHANNEL_VIEWS')] || hybridData.channelViewCount || '0'),
         [FieldMapper.get('CHANNEL_COUNTRY')]: hybridData.channelCountry || '',
         [FieldMapper.get('CHANNEL_DESCRIPTION')]: hybridData.channelDescription || '',
         
@@ -57,8 +57,8 @@ class HybridDataConverter {
         hashtags: YouTubeDataProcessor.extractHashtags(hybridData.description || ''),
         mentions: YouTubeDataProcessor.extractMentions(hybridData.description || ''),
         
-        // 댓글 및 추가 채널 정보
-        [FieldMapper.get('TOP_COMMENTS')]: Array.isArray(hybridData.topComments) ? hybridData.topComments.join('\n') : (hybridData.topComments || ''),
+        // 댓글 및 추가 채널 정보 - 객체 배열 처리 개선
+        [FieldMapper.get('TOP_COMMENTS')]: this.formatComments(hybridData.topComments),
         [FieldMapper.get('YOUTUBE_HANDLE')]: hybridData.youtubeHandle || hybridData.channelCustomUrl || '',
         [FieldMapper.get('CHANNEL_URL')]: hybridData.channelUrl || `https://www.youtube.com/channel/${hybridData.channelId || ''}`,
         
@@ -112,6 +112,37 @@ class HybridDataConverter {
         error: error.message
       };
     }
+  }
+
+  /**
+   * 댓글 배열을 문자열로 포맷팅
+   */
+  static formatComments(comments) {
+    if (!comments) return '';
+    
+    // 이미 문자열인 경우
+    if (typeof comments === 'string') {
+      return comments.replace(/\[object Object\]/g, '');
+    }
+    
+    // 배열인 경우
+    if (Array.isArray(comments)) {
+      return comments.map(comment => {
+        if (typeof comment === 'string') return comment;
+        if (comment && typeof comment === 'object') {
+          // 댓글 객체에서 텍스트 추출
+          return comment.text || comment.snippet?.textOriginal || comment.snippet?.textDisplay || String(comment).replace('[object Object]', '댓글');
+        }
+        return String(comment);
+      }).filter(text => text && text.trim()).join('\n');
+    }
+    
+    // 객체인 경우
+    if (typeof comments === 'object') {
+      return comments.text || comments.snippet?.textOriginal || comments.snippet?.textDisplay || '';
+    }
+    
+    return String(comments);
   }
 
   /**

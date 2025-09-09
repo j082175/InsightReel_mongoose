@@ -113,6 +113,8 @@ class VideoDataConverter {
       matchReason: '',                                          // 일치사유 (빈 값)
       collectionTime: new Date()                                // 수집시간
     };
+
+    return result;
   }
 
   /**

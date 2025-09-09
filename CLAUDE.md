@@ -134,6 +134,8 @@ npx http-server . -p 8081 --cors
 - **서버 시작 로그 최적화**: 중복 초기화 로그 제거 및 로깅 노이즈 감소
 - **메모리 사용량 최적화**: getInstance() 패턴으로 인스턴스 관리 개선
 - **개발 환경 안정성 향상**: nodemon과 싱글톤 패턴 조합으로 완전한 개발 경험
+- **VideoDataConverter return 문 누락 수정**: "Cannot convert undefined or null to object" 오류 해결
+- **HybridDataConverter 데이터 매핑 수정**: 채널 정보 및 댓글 처리 개선
 
 ## ✅ 이전 변경사항 (2025-09-08)
 - **nodemon 개발 환경 구축**: 파일 변경 시 자동 재시작
@@ -186,6 +188,42 @@ rs + Enter
 - **디버깅**: ServerLogger 레벨 활용
 - **성능**: AI 분석이 대부분 병목
 - **CORS**: `npx http-server . -p 8081 --cors`
+
+## 🚨 **중요: FieldMapper 표준화 미완료 사항**
+
+**⚠️ CRITICAL TODO: 모든 파일을 FieldMapper로 통일해야 함!**
+
+### **현재 상황 (2025-09-09)**
+- ✅ **완료**: HybridYouTubeExtractor.js, VideoDataConverter.js
+- 🔄 **임시 수정**: HybridDataConverter.js (부분적 패치만 적용)
+- ❌ **미완료**: 15개 파일에서 여전히 하드코딩된 필드명 사용
+
+### **문제점**
+```javascript
+// 현재 혼재 상황 (3가지 표준이 공존!)
+HybridYouTubeExtractor → FieldMapper.get('SUBSCRIBERS')
+HybridDataConverter    → subscriberCount (임시 패치)
+SheetsManager.js       → metadata.subscribers
+index.js              → youtubeInfo.subscribers
+models/Video.js       → metadata.likes
+```
+
+### **해결해야 할 파일 목록**
+```
+server/index.js (subscribers, channelVideos 등)
+server/models/Video.js (likes, views, subscribers 등)
+server/services/SheetsManager.js (15개 하드코딩 필드)
+server/routes/channel-queue.js
+server/services/ChannelAnalysisQueue.js
+```
+
+### **완전한 표준화 계획**
+1. **1단계**: 모든 하드코딩된 필드명을 FieldMapper로 변경
+2. **2단계**: HybridDataConverter를 완전히 FieldMapper 기반으로 재작성
+3. **3단계**: 레거시 호환성 레이어 제거
+4. **4단계**: 전체 테스트 및 검증
+
+**⚠️ 이 작업을 하지 않으면 계속해서 데이터 매핑 버그가 발생할 것입니다!**
 
 ## 🔍 주요 규칙
 
