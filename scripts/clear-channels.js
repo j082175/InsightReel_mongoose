@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 
 async function clearChannels() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/video-analyzer');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/InsightReel');
     console.log('📦 MongoDB 연결됨');
     
     // channels 컬렉션 클리어

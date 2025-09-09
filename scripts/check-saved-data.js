@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 
 async function checkSavedData() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/video-analyzer');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/InsightReel');
     console.log('📦 MongoDB 연결됨\n');
     
     const channels = await mongoose.connection.db.collection('channels').find({}).toArray();

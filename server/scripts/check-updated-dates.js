@@ -6,7 +6,7 @@ async function checkUpdatedDates() {
   try {
     console.log('🔍 원본 게시일 업데이트 결과 확인...\n');
     
-    const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://j082175:z1fBAVVFkNq5QF3X@video-analyzer.3htjgex.mongodb.net/?retryWrites=true&w=majority&appName=video-analyzer';
+    const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://j082175:z1fBAVVFkNq5QF3X@InsightReel.3htjgex.mongodb.net/?retryWrites=true&w=majority&appName=InsightReel';
     await mongoose.connect(mongoUri);
     console.log('✅ MongoDB 연결 성공');
     

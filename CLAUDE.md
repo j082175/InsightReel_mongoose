@@ -54,7 +54,7 @@ GOOGLE_SPREADSHEET_ID=your-spreadsheet-id
 GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
 
 # MongoDB
-MONGODB_URI=mongodb://localhost:27017/video-analyzer
+MONGODB_URI=mongodb://localhost:27017/InsightReel
 
 # YouTube API
 YOUTUBE_API_KEY=your-youtube-api-key

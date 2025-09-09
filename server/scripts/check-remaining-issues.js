@@ -7,7 +7,7 @@ async function checkRemainingIssues() {
     console.log('🔍 남은 문제 레코드 분석 시작...\n');
     
     // MongoDB 연결
-    const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://j082175:z1fBAVVFkNq5QF3X@video-analyzer.3htjgex.mongodb.net/?retryWrites=true&w=majority&appName=video-analyzer';
+    const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://j082175:z1fBAVVFkNq5QF3X@InsightReel.3htjgex.mongodb.net/?retryWrites=true&w=majority&appName=InsightReel';
     await mongoose.connect(mongoUri);
     console.log('✅ MongoDB 연결 성공');
     
