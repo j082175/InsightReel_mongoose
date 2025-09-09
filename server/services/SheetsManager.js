@@ -1580,14 +1580,17 @@ class SheetsManager {
       // 기본 정리
       let normalized = url.toString().trim().toLowerCase();
       
-      // 프로토콜 통일
+      // 프로토콜 통일 (http → https)
       normalized = normalized.replace(/^http:\/\//, 'https://');
       
-      // 쿼리 파라미터 제거 (YouTube의 경우 v= 파라미터는 유지)
+      // 🔧 모든 플랫폼에 대해 www. 제거 (일관성 확보)
+      normalized = normalized.replace(/\/\/www\./, '//');
+      
+      // 플랫폼별 정규화 처리
       if (normalized.includes('youtube.com') || normalized.includes('youtu.be')) {
-        // YouTube URL 정규화
+        // YouTube URL 정규화 - v= 파라미터만 유지
         if (normalized.includes('youtube.com/watch')) {
-          // https://www.youtube.com/watch?v=VIDEO_ID&other=params → https://youtube.com/watch?v=VIDEO_ID
+          // https://youtube.com/watch?v=VIDEO_ID&other=params → https://youtube.com/watch?v=VIDEO_ID
           const videoIdMatch = normalized.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
           if (videoIdMatch) {
             normalized = `https://youtube.com/watch?v=${videoIdMatch[1]}`;
@@ -1605,30 +1608,29 @@ class SheetsManager {
             normalized = `https://youtube.com/watch?v=${videoIdMatch[1]}`;
           }
         }
-        
-        // www. 제거
-        normalized = normalized.replace(/www\./, '');
       } else if (normalized.includes('instagram.com')) {
-        // Instagram URL 정규화
-        // https://www.instagram.com/p/POST_ID/?params → https://instagram.com/p/POST_ID/
-        normalized = normalized.replace(/www\./, '').split('?')[0];
-        if (!normalized.endsWith('/')) normalized += '/';
+        // Instagram URL 정규화 - 쿼리 파라미터 제거, 슬래시 제거
+        // https://instagram.com/p/POST_ID/?params → https://instagram.com/p/POST_ID
+        // https://instagram.com/reels/POST_ID/?params → https://instagram.com/reels/POST_ID
+        normalized = normalized.split('?')[0];
+        // 일관성을 위해 마지막 슬래시 제거 (Instagram 특성상 있어도 없어도 같은 페이지)
+        normalized = normalized.replace(/\/$/, '');
       } else if (normalized.includes('tiktok.com')) {
-        // TikTok URL 정규화
-        // https://www.tiktok.com/@user/video/VIDEO_ID?params → https://tiktok.com/@user/video/VIDEO_ID
-        normalized = normalized.replace(/www\./, '').split('?')[0];
-      }
-      
-      // 마지막 슬래시 통일
-      if (normalized.includes('instagram.com') && !normalized.endsWith('/')) {
-        normalized += '/';
+        // TikTok URL 정규화 - 쿼리 파라미터 제거
+        // https://tiktok.com/@user/video/VIDEO_ID?params → https://tiktok.com/@user/video/VIDEO_ID
+        normalized = normalized.split('?')[0];
+        // 마지막 슬래시 제거
+        normalized = normalized.replace(/\/$/, '');
+      } else {
+        // 기타 플랫폼 - 기본적인 정리만
+        normalized = normalized.split('?')[0].replace(/\/$/, '');
       }
       
       return normalized;
       
     } catch (error) {
       ServerLogger.warn(`URL 정규화 실패: ${url}`, 'SHEETS_DUPLICATE');
-      return url.toString().trim().toLowerCase();
+      return url.toString().trim().toLowerCase().replace(/\/\/www\./, '//').split('?')[0].replace(/\/$/, '');
     }
   }
 

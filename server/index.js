@@ -872,7 +872,18 @@ app.post('/api/process-video', async (req, res) => {
         
         // 통합 저장 결과 확인
         if (!result.success) {
-          throw new Error(`통합 저장 실패: ${result.error}`);
+          // Google Sheets 인증 문제는 경고로 처리하고 계속 진행
+          if (result.error && result.error.includes('invalid_grant')) {
+            ServerLogger.warn(`⚠️ Google Sheets 인증 실패로 시트 저장 건너뜀: ${result.error}`);
+            // MongoDB 저장이 성공했다면 계속 진행
+            if (result.mongodb && result.mongodb.success) {
+              ServerLogger.info('✅ MongoDB 저장은 성공, Google Sheets 실패는 무시하고 계속 진행');
+            } else {
+              throw new Error(`통합 저장 실패: ${result.error}`);
+            }
+          } else {
+            throw new Error(`통합 저장 실패: ${result.error}`);
+          }
         }
         
         ServerLogger.info('✅ 통합 저장 완료!', {
@@ -1414,9 +1425,11 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
 
 app.post('/api/process-video-blob', upload.single('video'), async (req, res) => {
   let videoUrlDoc = null;  // MongoDB 문서 참조용
+  let postUrl = null;      // 에러 핸들링에서 사용하기 위해 상위 스코프에 선언
   
   try {
-    const { platform, postUrl, analysisType = 'quick', useAI = true } = req.body;
+    const { platform, analysisType = 'quick', useAI = true } = req.body;
+    postUrl = req.body.postUrl;  // 명시적으로 할당
     const metadata = JSON.parse(req.body.metadata || '{}');
     
     ServerLogger.info(`🎬 Processing ${platform} blob video from:`, postUrl);
@@ -1433,26 +1446,59 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
           let errorMessage;
           
           if (duplicateCheck.isProcessing) {
-            errorMessage = `🔄 처리 중인 URL: 같은 URL이 현재 처리되고 있습니다 (${duplicateCheck.existingPlatform})`;
-          } else {
-            errorMessage = `⚠️ 중복 URL: 이미 ${duplicateCheck.existingPlatform} 시트의 ${duplicateCheck.existingColumn}${duplicateCheck.existingRow}행에 존재합니다`;
-          }
-          
-          ServerLogger.warn(errorMessage, 'API_DUPLICATE_BLOB');
-          
-          return res.status(409).json({
-            success: false,
-            error: 'DUPLICATE_URL',
-            message: errorMessage,
-            duplicate_info: {
-              platform: duplicateCheck.existingPlatform,
-              row: duplicateCheck.existingRow,
-              column: duplicateCheck.existingColumn,
-              normalized_url: sheetsManager.normalizeVideoUrl(postUrl),
-              isProcessing: duplicateCheck.isProcessing || false,
-              status: duplicateCheck.status
+            // ⚠️ 임시 해결책: processing 상태가 10분 이상 된 경우 재처리 허용
+            const createdAt = new Date(duplicateCheck.createdAt);
+            const now = new Date();
+            const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+            
+            if (createdAt < tenMinutesAgo) {
+              ServerLogger.warn(`🔄 오래된 processing 상태 감지 - 재처리 허용: ${postUrl}`, 'API_DUPLICATE_BLOB');
+              
+              // 오래된 processing 레코드 삭제하고 계속 진행
+              try {
+                const VideoUrl = require('./models/VideoUrl');
+                const normalizedUrl = sheetsManager.normalizeVideoUrl(postUrl);
+                await VideoUrl.deleteOne({ normalizedUrl, status: 'processing' });
+                ServerLogger.info(`🗑️ 오래된 processing 레코드 삭제: ${normalizedUrl}`);
+              } catch (cleanupError) {
+                ServerLogger.warn(`⚠️ 오래된 processing 레코드 삭제 실패: ${cleanupError.message}`);
+              }
+            } else {
+              errorMessage = `🔄 처리 중인 URL: 같은 URL이 현재 처리되고 있습니다 (${duplicateCheck.existingPlatform})`;
+              ServerLogger.warn(errorMessage, 'API_DUPLICATE_BLOB');
+              
+              return res.status(409).json({
+                success: false,
+                error: 'DUPLICATE_URL_PROCESSING',
+                message: errorMessage,
+                duplicate_info: {
+                  platform: duplicateCheck.existingPlatform,
+                  normalized_url: sheetsManager.normalizeVideoUrl(postUrl),
+                  isProcessing: true,
+                  status: duplicateCheck.status,
+                  createdAt: duplicateCheck.createdAt
+                }
+              });
             }
-          });
+          } else {
+            const rowInfo = duplicateCheck.existingRow ? `${duplicateCheck.existingColumn || ''}${duplicateCheck.existingRow}행` : '알 수 없는 위치';
+            errorMessage = `⚠️ 중복 URL: 이미 ${duplicateCheck.existingPlatform} 시트의 ${rowInfo}에 존재합니다`;
+            ServerLogger.warn(errorMessage, 'API_DUPLICATE_BLOB');
+            
+            return res.status(409).json({
+              success: false,
+              error: 'DUPLICATE_URL_COMPLETED',
+              message: errorMessage,
+              duplicate_info: {
+                platform: duplicateCheck.existingPlatform,
+                row: duplicateCheck.existingRow,
+                column: duplicateCheck.existingColumn,
+                normalized_url: sheetsManager.normalizeVideoUrl(postUrl),
+                isProcessing: false,
+                status: duplicateCheck.status
+              }
+            });
+          }
         }
         
         // ✅ 중복이 아닌 경우 - 즉시 processing 상태로 MongoDB에 등록
@@ -1584,7 +1630,18 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
         
         // 통합 저장 결과 확인
         if (!result.success) {
-          throw new Error(`통합 저장 실패: ${result.error}`);
+          // Google Sheets 인증 문제는 경고로 처리하고 계속 진행
+          if (result.error && result.error.includes('invalid_grant')) {
+            ServerLogger.warn(`⚠️ Google Sheets 인증 실패로 시트 저장 건너뜀: ${result.error}`);
+            // MongoDB 저장이 성공했다면 계속 진행
+            if (result.mongodb && result.mongodb.success) {
+              ServerLogger.info('✅ MongoDB 저장은 성공, Google Sheets 실패는 무시하고 계속 진행');
+            } else {
+              throw new Error(`통합 저장 실패: ${result.error}`);
+            }
+          } else {
+            throw new Error(`통합 저장 실패: ${result.error}`);
+          }
         }
         
         ServerLogger.info('✅ 통합 저장 완료!', {

@@ -47,7 +47,19 @@ class UnifiedVideoSaver {
 
       // 3단계: Google Sheets 저장 (기존 로직 사용)
       const sheetsStartTime = Date.now();
-      sheetsResult = await this.saveToGoogleSheets(platform, videoData);
+      
+      // Google Sheets 저장 비활성화 확인
+      if (process.env.DISABLE_SHEETS_SAVING === 'true') {
+        ServerLogger.info('⚠️ Google Sheets 저장이 비활성화되어 건너뜁니다', {}, 'UNIFIED_SAVER');
+        sheetsResult = {
+          success: true,
+          message: 'Google Sheets 저장 비활성화됨',
+          sheetName: `${platform}_disabled`,
+          nextRow: 1
+        };
+      } else {
+        sheetsResult = await this.saveToGoogleSheets(platform, videoData);
+      }
       const sheetsEndTime = Date.now();
       
       if (!sheetsResult.success) {
