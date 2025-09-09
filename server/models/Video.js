@@ -42,7 +42,7 @@ const schemaDefinition = {
   [FieldMapper.get('PLATFORM')]: { 
     type: String,
     required: true,
-    enum: ['instagram', 'youtube', 'tiktok'],
+    enum: ['INSTAGRAM', 'YOUTUBE', 'TIKTOK'],
     index: true
   },
   [FieldMapper.get('CHANNEL_NAME')]: { ...commonFieldOptions, index: true },

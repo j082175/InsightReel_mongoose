@@ -53,13 +53,14 @@ export class InstagramHandler extends BasePlatformHandler {
     console.log('🔍 extractPostMetadata 함수 시작!');
     this.log('info', '🔍 extractPostMetadata 함수 시작');
     try {
+      // FieldMapper 표준을 사용한 메타데이터 구조
       const metadata = {
-        author: '',
-        caption: '',
-        likes: '0',
-        comments: '0',
-        hashtags: [],
-        uploadDate: null
+        [FieldMapper.get('CHANNEL_NAME')]: '',
+        [FieldMapper.get('DESCRIPTION')]: '',
+        [FieldMapper.get('LIKES')]: '0',
+        [FieldMapper.get('COMMENTS_COUNT')]: '0',
+        [FieldMapper.get('HASHTAGS')]: [],
+        [FieldMapper.get('UPLOAD_DATE')]: null
       };
 
       // 작성자 추출
@@ -99,24 +100,30 @@ export class InstagramHandler extends BasePlatformHandler {
       if (metadata[FieldMapper.get('DESCRIPTION')]) {
         const hashtagMatches = metadata[FieldMapper.get('DESCRIPTION')].match(/#[\w가-힣]+/g);
         if (hashtagMatches) {
-          metadata.hashtags = hashtagMatches;
+          metadata[FieldMapper.get('HASHTAGS')] = hashtagMatches;
         }
       }
 
       this.log('info', '메타데이터 추출 완료', {
-        channelName: metadata.channelName,
-        caption: metadata.caption.substring(0, 50) + '...',
-        likes: metadata.likes,
-        commentsCount: metadata.commentsCount,
-        hashtags: metadata.hashtags,
-        uploadDate: metadata.uploadDate
+        channelName: metadata[FieldMapper.get('CHANNEL_NAME')],
+        description: metadata[FieldMapper.get('DESCRIPTION')]?.substring(0, 50) + '...',
+        likes: metadata[FieldMapper.get('LIKES')],
+        commentsCount: metadata[FieldMapper.get('COMMENTS_COUNT')],
+        hashtags: metadata[FieldMapper.get('HASHTAGS')],
+        uploadDate: metadata[FieldMapper.get('UPLOAD_DATE')]
       });
       
       return metadata;
       
     } catch (error) {
       this.log('error', '메타데이터 추출 실패', error);
-      return { channelName: '', caption: '', likes: '0', commentsCount: '0', hashtags: [] };
+      return { 
+        [FieldMapper.get('CHANNEL_NAME')]: '', 
+        [FieldMapper.get('DESCRIPTION')]: '', 
+        [FieldMapper.get('LIKES')]: '0', 
+        [FieldMapper.get('COMMENTS_COUNT')]: '0', 
+        [FieldMapper.get('HASHTAGS')]: [] 
+      };
     }
   }
 
@@ -147,9 +154,9 @@ export class InstagramHandler extends BasePlatformHandler {
       }
 
       // 업로드 날짜 추출 (좋아요/댓글 수와 함께)
-      this.log('info', '📅 업로드 날짜 추출 시작...', { channelName: metadata.channelName });
+      this.log('info', '📅 업로드 날짜 추출 시작...', { channelName: metadata[FieldMapper.get('CHANNEL_NAME')] });
       this.extractUploadDate(metadata);
-      this.log('info', '📅 업로드 날짜 추출 완료', { uploadDate: metadata.uploadDate });
+      this.log('info', '📅 업로드 날짜 추출 완료', { uploadDate: metadata[FieldMapper.get('UPLOAD_DATE')] });
 
       // 방법 1: aria-label을 이용한 정확한 좋아요 수 추출
       const likeSelectors = [
@@ -168,8 +175,8 @@ export class InstagramHandler extends BasePlatformHandler {
           // 숫자만 추출
           const likeMatch = likeText.match(/[\d,]+/);
           if (likeMatch && !likeText.includes('댓글') && !likeText.includes('comment')) {
-            metadata.likes = likeMatch[0].replace(/,/g, '');
-            this.log('info', `좋아요 수 설정: ${metadata.likes}`);
+            metadata[FieldMapper.get('LIKES')] = likeMatch[0].replace(/,/g, '');
+            this.log('info', `좋아요 수 설정: ${metadata[FieldMapper.get('LIKES')]}`);
             break;
           }
         }
@@ -193,22 +200,22 @@ export class InstagramHandler extends BasePlatformHandler {
           // 숫자만 추출
           const commentMatch = commentText.match(/[\d,]+/);
           if (commentMatch && (commentText.includes('댓글') || commentText.includes('comment'))) {
-            metadata.commentsCount = commentMatch[0].replace(/,/g, '');
-            this.log('info', `댓글 수 설정: ${metadata.commentsCount}`);
+            metadata[FieldMapper.get('COMMENTS_COUNT')] = commentMatch[0].replace(/,/g, '');
+            this.log('info', `댓글 수 설정: ${metadata[FieldMapper.get('COMMENTS_COUNT')]}`);
             break;
           }
         }
       }
 
       // 방법 3: 텍스트 패턴으로 구분하기 (fallback)
-      if (metadata.likes === '0' || metadata.commentsCount === '0') {
+      if (metadata[FieldMapper.get('LIKES')] === '0' || metadata[FieldMapper.get('COMMENTS_COUNT')] === '0') {
         this.log('info', '대안 방법으로 좋아요/댓글 수 추출 시도');
         this.extractEngagementByText(actionSection, metadata);
       }
 
       this.log('info', '최종 추출 결과', { 
-        likes: metadata.likes, 
-        commentsCount: metadata.commentsCount 
+        likes: metadata[FieldMapper.get('LIKES')], 
+        commentsCount: metadata[FieldMapper.get('COMMENTS_COUNT')] 
       });
 
     } catch (error) {
@@ -220,12 +227,12 @@ export class InstagramHandler extends BasePlatformHandler {
    * 업로드 날짜 추출 (IG Sorter 데이터 우선 활용)
    */
   extractUploadDate(metadata) {
-    this.log('info', '🔍 extractUploadDate 함수 시작', { channelName: metadata.channelName });
+    this.log('info', '🔍 extractUploadDate 함수 시작', { channelName: metadata[FieldMapper.get('CHANNEL_NAME')] });
     try {
       // 방법 1: IG Sorter 블록 데이터에서 날짜 추출
-      const igSorterDate = this.getIGSorterUploadDate(metadata.channelName);
+      const igSorterDate = this.getIGSorterUploadDate(metadata[FieldMapper.get('CHANNEL_NAME')]);
       if (igSorterDate) {
-        metadata.uploadDate = igSorterDate;
+        metadata[FieldMapper.get('UPLOAD_DATE')] = igSorterDate;
         this.log('info', `업로드 날짜 추출 성공 (IG Sorter): ${igSorterDate}`);
         return;
       }
@@ -246,8 +253,8 @@ export class InstagramHandler extends BasePlatformHandler {
           // datetime 속성 우선
           if (timeElement.dateTime || timeElement.getAttribute('datetime')) {
             const datetime = timeElement.dateTime || timeElement.getAttribute('datetime');
-            metadata.uploadDate = new Date(datetime).toISOString();
-            this.log('info', `업로드 날짜 추출 성공 (datetime): ${datetime} -> ${metadata.uploadDate}`);
+            metadata[FieldMapper.get('UPLOAD_DATE')] = new Date(datetime).toISOString();
+            this.log('info', `업로드 날짜 추출 성공 (datetime): ${datetime} -> ${metadata[FieldMapper.get('UPLOAD_DATE')]}`);
             return;
           }
           
@@ -256,8 +263,8 @@ export class InstagramHandler extends BasePlatformHandler {
             try {
               const parsedDate = new Date(timeElement.title);
               if (!isNaN(parsedDate.getTime())) {
-                metadata.uploadDate = parsedDate.toISOString();
-                this.log('info', `업로드 날짜 추출 성공 (title): ${timeElement.title} -> ${metadata.uploadDate}`);
+                metadata[FieldMapper.get('UPLOAD_DATE')] = parsedDate.toISOString();
+                this.log('info', `업로드 날짜 추출 성공 (title): ${timeElement.title} -> ${metadata[FieldMapper.get('UPLOAD_DATE')]}`);
                 return;
               }
             } catch (e) {}
@@ -267,8 +274,8 @@ export class InstagramHandler extends BasePlatformHandler {
           const timeText = timeElement.innerText.trim();
           const parsedDate = this.parseRelativeDate(timeText);
           if (parsedDate) {
-            metadata.uploadDate = parsedDate.toISOString();
-            this.log('info', `업로드 날짜 추출 성공 (상대시간): ${timeText} -> ${metadata.uploadDate}`);
+            metadata[FieldMapper.get('UPLOAD_DATE')] = parsedDate.toISOString();
+            this.log('info', `업로드 날짜 추출 성공 (상대시간): ${timeText} -> ${metadata[FieldMapper.get('UPLOAD_DATE')]}`);
             return;
           }
         }
@@ -287,8 +294,8 @@ export class InstagramHandler extends BasePlatformHandler {
           if (this.isRelativeTimePattern(text)) {
             const parsedDate = this.parseRelativeDate(text);
             if (parsedDate) {
-              metadata.uploadDate = parsedDate.toISOString();
-              this.log('info', `업로드 날짜 추출 성공 (패턴매칭): ${text} -> ${metadata.uploadDate}`);
+              metadata[FieldMapper.get('UPLOAD_DATE')] = parsedDate.toISOString();
+              this.log('info', `업로드 날짜 추출 성공 (패턴매칭): ${text} -> ${metadata[FieldMapper.get('UPLOAD_DATE')]}`);
               return;
             }
           }
@@ -465,16 +472,16 @@ export class InstagramHandler extends BasePlatformHandler {
           // 좋아요 관련 키워드 체크
           if ((text.includes('좋아요') || text.includes('like')) && 
               !text.includes('댓글') && !text.includes('comment') && 
-              metadata.likes === '0') {
-            metadata.likes = number;
+              metadata[FieldMapper.get('LIKES')] === '0') {
+            metadata[FieldMapper.get('LIKES')] = number;
             this.log('info', `텍스트 패턴으로 좋아요 수 발견: ${number} ("${text}")`);
           }
           
           // 댓글 관련 키워드 체크
           if ((text.includes('댓글') || text.includes('comment')) && 
               !text.includes('좋아요') && !text.includes('like') && 
-              metadata.commentsCount === '0') {
-            metadata.commentsCount = number;
+              metadata[FieldMapper.get('COMMENTS_COUNT')] === '0') {
+            metadata[FieldMapper.get('COMMENTS_COUNT')] = number;
             this.log('info', `텍스트 패턴으로 댓글 수 발견: ${number} ("${text}")`);
           }
         }
@@ -1325,26 +1332,26 @@ export class InstagramHandler extends BasePlatformHandler {
       const currentMetadata = this.extractPostMetadata();
       
       this.log('info', '추출된 메타데이터 (extractMetadata)', {
-        author: currentMetadata.author,
-        caption: currentMetadata.caption?.substring(0, 50) + '...',
-        likes: currentMetadata.likes,
-        comments: currentMetadata.comments,
-        hashtags: currentMetadata.hashtags,
-        uploadDate: currentMetadata.uploadDate
+        channelName: currentMetadata[FieldMapper.get('CHANNEL_NAME')],
+        description: currentMetadata[FieldMapper.get('DESCRIPTION')]?.substring(0, 50) + '...',
+        likes: currentMetadata[FieldMapper.get('LIKES')],
+        commentsCount: currentMetadata[FieldMapper.get('COMMENTS_COUNT')],
+        hashtags: currentMetadata[FieldMapper.get('HASHTAGS')],
+        uploadDate: currentMetadata[FieldMapper.get('UPLOAD_DATE')]
       });
       
       return {
-        author: currentMetadata.author,
-        caption: currentMetadata.caption,
-        likes: currentMetadata.likes,
-        comments: currentMetadata.comments,
-        hashtags: currentMetadata.hashtags,
-        uploadDate: currentMetadata.uploadDate,
-        timestamp: new Date().toISOString()
+        [FieldMapper.get('CHANNEL_NAME')]: currentMetadata[FieldMapper.get('CHANNEL_NAME')],
+        [FieldMapper.get('DESCRIPTION')]: currentMetadata[FieldMapper.get('DESCRIPTION')],
+        [FieldMapper.get('LIKES')]: currentMetadata[FieldMapper.get('LIKES')],
+        [FieldMapper.get('COMMENTS_COUNT')]: currentMetadata[FieldMapper.get('COMMENTS_COUNT')],
+        [FieldMapper.get('HASHTAGS')]: currentMetadata[FieldMapper.get('HASHTAGS')],
+        [FieldMapper.get('UPLOAD_DATE')]: currentMetadata[FieldMapper.get('UPLOAD_DATE')],
+        [FieldMapper.get('TIMESTAMP')]: new Date().toISOString()
       };
     } catch (error) {
       this.log('error', '인스타그램 메타데이터 추출 실패', error);
-      return { timestamp: new Date().toISOString() };
+      return { [FieldMapper.get('TIMESTAMP')]: new Date().toISOString() };
     }
   }
 

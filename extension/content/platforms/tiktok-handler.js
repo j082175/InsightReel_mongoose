@@ -1,6 +1,7 @@
 import { CONSTANTS } from '../constants.js';
 import { Utils, StringUtils, TimeUtils, DOMUtils } from '../utils.js';
 import { BasePlatformHandler } from './base-handler.js';
+import { FieldMapper } from '../../utils/field-mapper.js';
 
 /**
  * TikTok 플랫폼 핸들러
@@ -336,22 +337,24 @@ export class TikTokHandler extends BasePlatformHandler {
       const duration = this.getVideoDuration(videoContainer);
       const isLive = this.checkIfLive(videoContainer);
       
+      // FieldMapper 표준을 사용한 메타데이터 구조
       return {
-        author: author.trim(),
-        caption: caption.trim(),
-        likes: likes.trim(),
-        hashtags,
-        uploadDate,
+        [FieldMapper.get('CHANNEL_NAME')]: author.trim(),
+        [FieldMapper.get('DESCRIPTION')]: caption.trim(),
+        [FieldMapper.get('LIKES')]: likes.trim(),
+        [FieldMapper.get('COMMENTS_COUNT')]: '0', // TikTok은 댓글수 추출 어려움
+        [FieldMapper.get('HASHTAGS')]: hashtags,
+        [FieldMapper.get('UPLOAD_DATE')]: uploadDate,
         duration,
         isLive,
-        timestamp: new Date().toISOString(),
-        platform: CONSTANTS.PLATFORMS.TIKTOK
+        [FieldMapper.get('TIMESTAMP')]: new Date().toISOString(),
+        [FieldMapper.get('PLATFORM')]: CONSTANTS.PLATFORMS.TIKTOK
       };
     } catch (error) {
       this.log('error', 'TikTok 메타데이터 추출 실패', error);
       return { 
-        timestamp: new Date().toISOString(),
-        platform: CONSTANTS.PLATFORMS.TIKTOK
+        [FieldMapper.get('TIMESTAMP')]: new Date().toISOString(),
+        [FieldMapper.get('PLATFORM')]: CONSTANTS.PLATFORMS.TIKTOK
       };
     }
   }
