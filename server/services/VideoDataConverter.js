@@ -99,7 +99,7 @@ class VideoDataConverter {
       license: metadata.license || 'youtube',                  // 라이센스
       quality: metadata.definition || 'sd',                    // 화질
       language: metadata.language || '',                       // 언어
-      url: postUrl || '',                                       // URL
+      originalUrl: postUrl || '',                               // URL (표준화된 필드명)
       thumbnailUrl: metadata.thumbnailUrl || '',               // 썸네일URL
       confidence: this.formatConfidence(analysis.confidence),  // 신뢰도
       analysisStatus: analysis.aiModel || '수동',              // 분석상태
@@ -166,7 +166,7 @@ class VideoDataConverter {
       analysisContent: analysis.content || '',                 // 분석내용
       likes: this.parseNumber(metadata.likes),                 // 좋아요
       commentsCount: this.parseNumber(metadata.comments),      // 댓글수
-      url: postUrl || '',                                       // URL
+      originalUrl: postUrl || '',                               // URL (표준화된 필드명)
       thumbnailUrl: metadata.thumbnailUrl || '',               // 썸네일URL
       confidence: this.formatConfidence(analysis.confidence),  // 신뢰도
       analysisStatus: analysis.aiModel || '수동',              // 분석상태

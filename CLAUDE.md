@@ -1,11 +1,11 @@
-# CLAUDE.md - 영상자동저장분석기 프로젝트 가이드
+# CLAUDE.md - InsightReel 프로젝트 가이드
 
 ## 🎯 프로젝트 개요
 이 프로젝트는 소셜미디어(Instagram, TikTok 등) 비디오를 자동으로 다운로드하고, AI를 통해 분석한 후 Google Sheets에 저장하는 시스템입니다.
 
 ## 🏗️ 프로젝트 구조
 ```
-영상자동저장분석기/
+InsightReel/
 ├── server/               # 백엔드 서버 (Express)
 ├── extension/            # Chrome 확장 프로그램
 ├── prototype/            # 대시보드 (HTML & React)

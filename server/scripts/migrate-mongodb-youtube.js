@@ -190,7 +190,7 @@ class MongoDBYouTubeMigration {
         
         try {
           // URL에서 비디오 ID 추출
-          const videoId = this.extractVideoId(video.account || video.comments || '');
+          const videoId = this.extractVideoId(video.originalUrl || '');
           
           if (!videoId) {
             ServerLogger.warn(`⚠️ [${i + 1}/${youtubeVideos.length}] 비디오 ID 추출 실패: ${video.account}`);

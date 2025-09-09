@@ -179,7 +179,7 @@ class VideoSaverPopup {
         // 팝업 닫기 (사용자가 모달에서 작업할 수 있도록)
         window.close();
       } else {
-        throw new Error(response?.error || '채널 분석기를 찾을 수 없습니다.');
+        throw new Error(response?.error || '채널 수집 기능을 찾을 수 없습니다.');
       }
 
     } catch (error) {

@@ -26,9 +26,9 @@ async function migrateVideoUrlToVideo() {
     
     for (const videoUrl of videoUrls) {
       try {
-        // 이미 Video 레코드가 있는지 확인
+        // 이미 Video 레코드가 있는지 확인 (originalUrl 필드로 검사)
         const existingVideo = await Video.findOne({
-          account: videoUrl.originalUrl,
+          originalUrl: videoUrl.originalUrl,
           platform: videoUrl.platform
         });
         
@@ -41,9 +41,10 @@ async function migrateVideoUrlToVideo() {
         // Video 레코드 생성 또는 업데이트
         const videoData = {
           platform: videoUrl.platform,
-          account: videoUrl.originalUrl,
+          account: '알 수 없는 채널',
           title: videoUrl.originalUrl.split('/').pop() || '미분류',
-          comments: videoUrl.originalUrl,
+          originalUrl: videoUrl.originalUrl,
+          comments_count: 0,
           timestamp: videoUrl.originalPublishDate, // 원본 게시일을 timestamp로
           originalPublishDate: videoUrl.originalPublishDate,
           processedAt: videoUrl.processedAt || videoUrl.createdAt,

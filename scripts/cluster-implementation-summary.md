@@ -71,7 +71,7 @@ GET  /api/cluster/health              # 헬스 체크
 
 ### 1. 서버 시작
 ```bash
-cd "영상자동저장분석기"
+cd "InsightReel"
 node server/index.js
 ```
 

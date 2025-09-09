@@ -308,7 +308,19 @@ const DashboardPage: React.FC = () => {
               </div>
               {quotaStatus && (
                 <div className="text-sm text-gray-600">
-                  API 할당량: {quotaStatus.used || 0}/{quotaStatus.limit || 10000}
+                  <div className="flex items-center space-x-2">
+                    <span>
+                      API 할당량: {quotaStatus.quota?.used || 0}/{quotaStatus.safetyMargin || 8000}
+                    </span>
+                    <span className="text-xs text-blue-600">
+                      (안전 마진: {quotaStatus.safetyMargin || 8000})
+                    </span>
+                  </div>
+                  {quotaStatus.quota?.allKeys && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      키 현황: {quotaStatus.quota.allKeys.filter((k: any) => !k.exceeded).length}/{quotaStatus.quota.keyCount}개 사용 가능
+                    </div>
+                  )}
                 </div>
               )}
             </div>

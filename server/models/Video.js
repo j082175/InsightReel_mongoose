@@ -57,7 +57,7 @@ const videoSchema = new mongoose.Schema({
   },
   
   // URL 정보
-  comments: String,  // 영상 URL
+  originalUrl: String,  // 원본 영상 URL
   videoUrl: String,  // 다운로드된 영상 경로
   thumbnailUrl: String,  // 썸네일 경로
   
@@ -162,12 +162,33 @@ videoSchema.methods.updateStats = function(likes, views, shares, comments) {
 videoSchema.statics.createOrUpdateFromVideoUrl = async function(videoUrlData, metadata = {}) {
   const { originalUrl, platform, originalPublishDate, processedAt } = videoUrlData;
   
-  // URL을 account 필드로 사용 (기존 구조 유지)
+  // Instagram URL에서 사용자명 추출 함수
+  const extractInstagramUsername = (url) => {
+    if (!url || !url.includes('instagram.com/')) return null;
+    
+    // 패턴: https://instagram.com/username/ 또는 https://instagram.com/username/reel/xyz/
+    const match = url.match(/instagram\.com\/([^\/\?]+)/);
+    if (match && match[1] && !['reels', 'reel', 'p', 'stories'].includes(match[1])) {
+      return match[1];
+    }
+    return null;
+  };
+
+  // 플랫폼별 채널명 처리
+  let channelName = metadata.channelName || metadata.youtubeHandle || metadata.account;
+  
+  // Instagram의 경우 URL에서 사용자명 추출 시도
+  if (platform === 'instagram' && !channelName) {
+    const extractedUsername = extractInstagramUsername(originalUrl);
+    channelName = extractedUsername || 'Instagram 사용자';
+  }
+
+  // 채널명을 account 필드로 사용 (URL이 아닌 실제 채널명)
   const videoData = {
     platform: platform,
-    account: originalUrl,
+    account: channelName || '알 수 없는 채널',
     title: metadata.title || originalUrl.split('/').pop() || '미분류',
-    comments: originalUrl, // URL 저장
+    originalUrl: originalUrl, // 원본 영상 URL 저장
     timestamp: originalPublishDate || new Date(), // 원본 게시일을 timestamp로 사용
     originalPublishDate: originalPublishDate,
     processedAt: processedAt || new Date(),
@@ -191,9 +212,9 @@ videoSchema.statics.createOrUpdateFromVideoUrl = async function(videoUrlData, me
     collectedAt: new Date()
   };
   
-  // upsert: 있으면 업데이트, 없으면 생성
+  // upsert: 있으면 업데이트, 없으면 생성 (originalUrl 필드로 URL 기준 중복 체크)
   return this.findOneAndUpdate(
-    { account: originalUrl, platform: platform },
+    { originalUrl: originalUrl, platform: platform },
     { $set: videoData },
     { upsert: true, new: true }
   );

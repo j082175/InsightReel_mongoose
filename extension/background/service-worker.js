@@ -50,7 +50,7 @@ class BackgroundService {
   }
 
   handleInstall() {
-    console.log('영상 자동저장 분석기가 설치되었습니다.');
+    console.log('InsightReel이 설치되었습니다.');
     
     // 올바른 설정 키와 구조 사용
     chrome.storage.sync.set({
@@ -241,7 +241,7 @@ class BackgroundService {
       chrome.notifications.create({
         type: type,
         iconUrl: 'icons/icon48.png',
-        title: '영상 자동저장 분석기',
+        title: 'InsightReel',
         message: message
       });
     });

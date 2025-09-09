@@ -17,7 +17,7 @@ async function checkYouTubeData() {
     youtubeVideos.forEach((video, index) => {
       console.log(`${index + 1}. ID: ${video._id}`);
       console.log(`   제목: "${video.title || '없음'}"`);
-      console.log(`   URL: "${video.comments || '없음'}"`);
+      console.log(`   URL: "${video.originalUrl || '없음'}"`);
       console.log(`   계정: "${video.account || '없음'}"`);
       console.log(`   설명: "${video.ai_description || '없음'}"`);
       console.log(`   카테고리: "${video.category || '없음'}"`);

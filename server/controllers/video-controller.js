@@ -262,7 +262,7 @@ class VideoController {
         if (platform === 'youtube') {
           ServerLogger.info('📊 YouTube 메타데이터 수집 중...');
           try {
-            const youtubeInfo = await this.videoProcessor.getYouTubeVideoInfo(postUrl || videoUrl);
+            const youtubeInfo = await this.videoProcessor.getYouTubeVideoInfo(postUrl);
             enrichedMetadata = {
               ...enrichedMetadata,
               author: youtubeInfo.channel,

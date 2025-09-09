@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "영상 자동저장 분석기",
+  "name": "InsightReel",
   "version": "1.0.0",
-  "description": "인스타그램, 틱톡, 유튜브 영상을 자동으로 저장하고 AI로 분석하여 구글 스프레드시트에 정리",
+  "description": "InsightReel - 소셜미디어 비디오 자동 저장 및 AI 분석 도구",
   
   "permissions": [
     "activeTab",
@@ -51,7 +51,7 @@
   
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "영상 자동저장 분석기"
+    "default_title": "InsightReel"
   },
   
   "icons": {

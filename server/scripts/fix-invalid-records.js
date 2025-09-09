@@ -26,7 +26,7 @@ async function fixInvalidRecords() {
     
     for (const record of invalidRecords) {
       try {
-        const url = record.account || record.comments;
+        const url = record.originalUrl || record.account;
         
         // "별쇼츠"나 다른 잘못된 데이터인 경우
         if (!url || !url.startsWith('http') || url === '별쇼츠') {

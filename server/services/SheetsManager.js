@@ -921,8 +921,8 @@ class SheetsManager {
           const videoData = videoDataArray[i];
           const rowNumber = startRow + i;
           
-          if (videoData.postUrl || videoData.videoUrl) {
-            const originalUrl = videoData.postUrl || videoData.videoUrl;
+          if (videoData.postUrl) {
+            const originalUrl = videoData.postUrl;
             const normalizedUrl = this.normalizeVideoUrl(originalUrl);
             
             try {

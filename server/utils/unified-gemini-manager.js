@@ -657,6 +657,15 @@ class UnifiedGeminiManager {
    * 사용량 통계 조회
    */
   getUsageStats() {
+    // API 키가 초기화되지 않은 경우 기본값 반환
+    if (!this.apiKeys || this.apiKeys.length === 0) {
+      return {
+        pro: { used: 0, limit: 50 },
+        flash: { used: 0, limit: 250 },
+        flashLite: { used: 0, limit: 1000 }
+      };
+    }
+    
     const stats = {
       strategy: this.fallbackStrategy,
       currentKey: this.currentKeyIndex,

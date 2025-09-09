@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Keys Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .key { border: 1px solid #ccc; margin: 10px; padding: 15px; border-radius: 5px; }
+        .gemini { background-color: #e8f5e8; }
+        .youtube { background-color: #fff3cd; }
+        .error { color: red; }
+        .success { color: green; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>API Keys Status Test</h1>
+    <button onclick="testApiKeys()">Test API Keys Endpoint</button>
+    <div id="results"></div>
+
+    <script>
+        async function testApiKeys() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Loading...</p>';
+            
+            try {
+                const response = await fetch('/api/api-keys');
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${data.message || 'Unknown error'}`);
+                }
+                
+                resultsDiv.innerHTML = `
+                    <div class="success">
+                        <h2>✅ Success!</h2>
+                        <p>Found ${data.apiKeys.length} API keys:</p>
+                        ${data.apiKeys.map(key => `
+                            <div class="key ${key.type}">
+                                <h3>${key.name} (${key.type.toUpperCase()})</h3>
+                                <p><strong>ID:</strong> ${key.id}</p>
+                                <p><strong>Status:</strong> ${key.status}</p>
+                                <p><strong>Masked Key:</strong> ${key.maskedKey}</p>
+                                <p><strong>Last Used:</strong> ${key.lastUsed}</p>
+                                ${key.type === 'gemini' ? `
+                                    <p><strong>Usage:</strong></p>
+                                    <ul>
+                                        <li>Pro: ${key.usage.pro.used}/${key.usage.pro.limit}</li>
+                                        <li>Flash: ${key.usage.flash.used}/${key.usage.flash.limit}</li>
+                                        <li>Flash Lite: ${key.usage.flashLite.used}/${key.usage.flashLite.limit}</li>
+                                        <li>Total: ${key.usage.total.used}/${key.usage.total.limit}</li>
+                                    </ul>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                        
+                        <h3>Raw Response:</h3>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        <h2>❌ Error!</h2>
+                        <p>${error.message}</p>
+                        <pre>${error.stack || 'No stack trace'}</pre>
+                    </div>
+                `;
+                console.error('API Keys test failed:', error);
+            }
+        }
+    </script>
+</body>
+</html>

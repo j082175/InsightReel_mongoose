@@ -1,4 +1,4 @@
-# 🎬 영상 자동저장 분석기 설치 가이드
+# 🎬 InsightReel 설치 가이드
 
 완전 무료 버전 설치 및 설정 가이드입니다.
 
@@ -21,7 +21,7 @@ npm --version
 
 ### 1.2 프로젝트 의존성 설치
 ```bash
-cd "영상자동저장분석기"
+cd "InsightReel"
 npm install
 ```
 
@@ -96,7 +96,7 @@ npm run dev
 
 성공하면 다음과 같이 표시됩니다:
 ```
-🎬 영상 자동저장 분석기 서버 실행중
+🎬 InsightReel 서버 실행중
 📍 포트: 3000
 🌐 URL: http://localhost:3000
 ```
@@ -141,7 +141,7 @@ npm run dev
 ## 📁 파일 구조
 
 ```
-영상자동저장분석기/
+InsightReel/
 ├── downloads/           # 다운로드된 영상
 ├── downloads/thumbnails/# 썸네일 이미지
 ├── extension/           # Chrome 확장프로그램
@@ -212,4 +212,4 @@ npm install
 # GOOGLE_API_KEY=your-key
 ```
 
-이제 완전 무료 영상 자동저장 분석기를 사용할 준비가 완료되었습니다! 🎉
+이제 InsightReel을 사용할 준비가 완료되었습니다! 🎉

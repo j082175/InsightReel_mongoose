@@ -1,41 +1,4 @@
 /******/ (() => { // webpackBootstrap
-/******/ 	"use strict";
-
-;// ./config/environment.js
-/**
- * Chrome Extension 환경 설정
- * 빌드 시 환경변수를 주입받아 설정을 관리
- */
-
-// 빌드 시 webpack DefinePlugin으로 주입되는 환경변수들
-var environment = {
-  // 서버 설정
-  SERVER_URL: "http://localhost:3000" || 0,
-  NODE_ENV: "development" || 0,
-  // API 키 설정 (보안 중요)
-  GOOGLE_API_KEY: undefined,
-  YOUTUBE_KEY_1: undefined,
-  YOUTUBE_KEY_2: undefined,
-  YOUTUBE_KEY_3: undefined,
-  // 기능 플래그
-  USE_GEMINI: "true" === 'true',
-  USE_DYNAMIC_CATEGORIES: "true" === 'true',
-  // 개발 모드 체크
-  isDevelopment: "development" === 'development',
-  isProduction: "development" === 'production'
-};
-
-// 필수 환경변수 검증
-var requiredVars = ['GOOGLE_API_KEY'];
-var missingVars = requiredVars.filter(function (key) {
-  return !environment[key];
-});
-if (missingVars.length > 0) {
-  console.error('❌ 필수 환경변수 누락:', missingVars);
-  console.error('💡 .env 파일에서 다음 변수들을 확인해주세요:', missingVars.join(', '));
-}
-/* harmony default export */ const config_environment = (environment);
-;// ./background/service-worker.js
 function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 function ownKeys(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
 function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), !0).forEach(function (r) { _defineProperty(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
@@ -50,16 +13,26 @@ function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), 
 function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
 function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
 // Service Worker - 백그라운드 작업 처리
-// CONSTANTS 모듈은 ES6 모듈이므로 동적 import 사용
-// 환경 설정 import (빌드 시 환경변수 주입)
-
+// 환경별 서버 URL 설정
 var BackgroundService = /*#__PURE__*/function () {
   function BackgroundService() {
     _classCallCheck(this, BackgroundService);
-    this.serverUrl = config_environment.SERVER_URL;
+    // 환경별 서버 URL (실제 배포 시 수정 가능)
+    this.serverUrl = this.getServerUrl();
     this.init();
   }
+
+  /**
+   * 환경별 서버 URL 결정
+   */
   return _createClass(BackgroundService, [{
+    key: "getServerUrl",
+    value: function getServerUrl() {
+      // Chrome Extension에서는 location을 직접 사용할 수 없으므로
+      // chrome.management API를 통해 개발 모드 확인
+      return chrome.runtime.getManifest().version.includes('dev') || chrome.runtime.getManifest().name.includes('개발') ? 'http://localhost:3000' : 'https://api.yourdomain.com'; // 프로덕션 URL로 변경
+    }
+  }, {
     key: "init",
     value: function init() {
       var _this = this;
@@ -93,7 +66,7 @@ var BackgroundService = /*#__PURE__*/function () {
   }, {
     key: "handleInstall",
     value: function handleInstall() {
-      console.log('영상 자동저장 분석기가 설치되었습니다.');
+      console.log('InsightReel이 설치되었습니다.');
 
       // 올바른 설정 키와 구조 사용
       chrome.storage.sync.set({
@@ -419,7 +392,7 @@ var BackgroundService = /*#__PURE__*/function () {
         chrome.notifications.create({
           type: type,
           iconUrl: 'icons/icon48.png',
-          title: '영상 자동저장 분석기',
+          title: 'InsightReel',
           message: message
         });
       });

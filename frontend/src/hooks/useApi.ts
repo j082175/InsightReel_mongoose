@@ -6,8 +6,20 @@ export const useVideos = () => {
   return useQuery({
     queryKey: ['videos'],
     queryFn: async () => {
-      const response = await apiClient.getVideos();
-      return response.data || [];
+      try {
+        const response = await apiClient.getVideos();
+        console.log('🎬 Videos API 응답:', response);
+        
+        // 백엔드 응답 구조: { data: { videos: [...], total: ..., platform_stats: {...} } }
+        const videos = response?.data?.videos || response?.data || [];
+        console.log('📊 파싱된 영상 수:', videos.length);
+        console.log('🔍 첫 번째 영상 샘플:', videos[0]);
+        
+        return videos;
+      } catch (error) {
+        console.warn('영상 API 호출 실패, 빈 배열 반환:', error);
+        return [];
+      }
     },
     retry: 2,
     staleTime: 5 * 60 * 1000, // 5분
@@ -59,9 +71,13 @@ export const useChannels = () => {
     queryFn: async () => {
       try {
         const response = await apiClient.getChannels();
-        return response.data || [];
+        console.log('🔍 Channels API 응답:', response);
+        // 백엔드 응답 구조: { data: { channels: [...], meta: {...} } }
+        const channels = response?.data?.channels || response?.data || [];
+        console.log('📊 파싱된 채널 수:', channels.length);
+        return channels;
       } catch (error) {
-        console.warn('채널 API 호출 실패, mock 데이터 사용');
+        console.warn('채널 API 호출 실패, mock 데이터 사용:', error);
         return [];
       }
     },

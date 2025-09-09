@@ -194,7 +194,8 @@
       "Read(/C:\\Users\\j0821\\Documents\\___JUNSOOCHO___\\영상자동저장분析기\\prototype\\dashboard-react/**)",
       "Read(/C:\\Users\\j0821\\Documents\\___JUNSOOCHO___\\영상자동저장분석기\\prototype\\dashboard-react\\src\\types/**)",
       "Read(/C:\\Users\\j0821\\Documents\\___JUNSOOCHO___\\영상자동저장분석기\\prototype\\dashboard-react\\src\\services/**)",
-      "Read(/C:\\Users\\j0821\\Documents\\___JUNSOOCHO___\\영상자동저장분석기\\prototype\\dashboard-react\\src/**)"
+      "Read(/C:\\Users\\j0821\\Documents\\___JUNSOOCHO___\\영상자동저장분석기\\prototype\\dashboard-react\\src/**)",
+      "Bash(chcp:*)"
     ],
     "deny": [
       "Bash(curl:*)"

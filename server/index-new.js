@@ -179,7 +179,7 @@ class VideoSaverServer {
    */
   getApiDocs(req, res) {
     const docs = {
-      title: "영상 자동저장 분석기 API",
+      title: "InsightReel API",
       version: "1.0.0",
       endpoints: {
         "GET /health": "서버 상태 확인",
@@ -207,7 +207,7 @@ class VideoSaverServer {
   start() {
     this.server = this.app.listen(this.port, () => {
       console.log(`
-🎬 영상 자동저장 분석기 서버 실행중 (리팩토링 버전)
+🎬 InsightReel 서버 실행중 (리팩토링 버전)
 📍 포트: ${this.port}
 🌐 URL: http://localhost:${this.port}
 📊 Health Check: http://localhost:${this.port}/health

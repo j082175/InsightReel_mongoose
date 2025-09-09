@@ -29,7 +29,7 @@ class UnifiedVideoSaver {
     
     try {
       ServerLogger.info(`🚀 통합 저장 시작: ${platform.toUpperCase()}`, {
-        url: videoData.postUrl,
+        originalUrl: videoData.postUrl,
         account: videoData.metadata?.author
       }, 'UNIFIED_SAVER');
 
@@ -60,7 +60,7 @@ class UnifiedVideoSaver {
       const mongoTime = mongoEndTime - mongoStartTime;
 
       ServerLogger.info(`✅ 통합 저장 완료: ${platform.toUpperCase()}`, {
-        url: videoData.postUrl,
+        originalUrl: videoData.postUrl,
         totalTime: `${totalTime}ms`,
         sheetsTime: `${sheetsTime}ms`,
         mongoTime: `${mongoTime}ms`,
@@ -155,12 +155,12 @@ class UnifiedVideoSaver {
             success: false,
             error: error.message,
             originalIndex: i,
-            url: videoData.postUrl
+            originalUrl: videoData.postUrl
           });
           failedCount++;
           
           ServerLogger.warn(`⚠️ MongoDB 개별 저장 실패 [${i+1}/${videoDataArray.length}]`, {
-            url: videoData.postUrl,
+            originalUrl: videoData.postUrl,
             error: error.message
           }, 'UNIFIED_SAVER');
         }

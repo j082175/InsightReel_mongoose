@@ -35,7 +35,8 @@ async function checkRemainingIssues() {
         console.log(`\n${platform.toUpperCase()}: ${videos.length}개`);
         
         videos.slice(0, 5).forEach((video, index) => {
-          console.log(`  ${index + 1}. URL: ${video.account || video.comments || 'N/A'}`);
+          console.log(`  ${index + 1}. URL: ${video.originalUrl || 'N/A'}`);
+          console.log(`     계정: ${video.account || 'N/A'}`);
           console.log(`     제목: ${video.title || 'N/A'}`);
           console.log(`     생성일: ${video.created_at ? video.created_at.toISOString().split('T')[0] : 'N/A'}`);
           console.log(`     _id: ${video._id}`);
@@ -49,9 +50,9 @@ async function checkRemainingIssues() {
       
       // 문제 패턴 분석
       console.log('🔍 문제 패턴 분석:');
-      const noAccount = problemVideos.filter(v => !v.account && !v.comments);
+      const noAccount = problemVideos.filter(v => !v.account && !v.originalUrl);
       const invalidUrls = problemVideos.filter(v => {
-        const url = v.account || v.comments;
+        const url = v.originalUrl;
         return url && !url.startsWith('http');
       });
       const emptyTitles = problemVideos.filter(v => !v.title || v.title === '');
@@ -70,7 +71,8 @@ async function checkRemainingIssues() {
       if (invalidUrls.length > 0) {
         console.log('\n⚠️ 잘못된 URL 형식 레코드들:');
         invalidUrls.slice(0, 3).forEach((video, index) => {
-          console.log(`   ${index + 1}. URL: ${video.account || video.comments}, platform: ${video.platform}`);
+          console.log(`   ${index + 1}. URL: ${video.originalUrl}, platform: ${video.platform}`);
+          console.log(`     계정: ${video.account || 'N/A'}`);
         });
       }
       

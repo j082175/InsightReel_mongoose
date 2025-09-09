@@ -1,7 +1,7 @@
 {
-  "name": "video-auto-saver-analyzer",
+  "name": "insightreel",
   "version": "1.0.0",
-  "description": "자동 영상 저장 및 AI 분석 도구 (완전 무료 버전)",
+  "description": "InsightReel - 자동 영상 저장 및 AI 분석 도구",
   "main": "server/index.js",
   "scripts": {
     "dev": "nodemon server/index.js",

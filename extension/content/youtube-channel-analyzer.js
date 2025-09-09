@@ -1,4 +1,4 @@
-// YouTube 채널 분석기 - 2단계 분석 (썸네일 + 제목 + 태그 + 설명)
+// YouTube 채널 수집 - 2단계 분석 (썸네일 + 제목 + 태그 + 설명)
 class YouTubeChannelAnalyzer {
     constructor() {
         this.isAnalyzing = false;
@@ -9,7 +9,7 @@ class YouTubeChannelAnalyzer {
     }
 
     init() {
-        console.log('🎥 YouTube 채널 분석기 초기화 (VidIQ 스타일)');
+        console.log('🎥 YouTube 채널 수집 초기화 (VidIQ 스타일)');
         
         // YouTube 내부 이벤트 리스너 등록 (VidIQ 방식)
         this.setupYouTubeEventListeners();
@@ -1444,10 +1444,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             window.youtubeChannelAnalyzer.showCollectModal();
             sendResponse({ success: true });
         } else {
-            sendResponse({ success: false, error: '채널 분석기가 초기화되지 않음' });
+            sendResponse({ success: false, error: '채널 수집 기능이 초기화되지 않음' });
         }
         return true; // 비동기 응답
     }
 });
 
-console.log('📺 YouTube 채널 분석기 로드됨');
+console.log('📺 YouTube 채널 수집 기능 로드됨');

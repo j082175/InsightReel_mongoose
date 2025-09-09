@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Video } from '../types';
+import { useVideos } from '../hooks/useApi';
 import VideoModal from '../components/VideoModal';
 import VideoOnlyModal from '../components/VideoOnlyModal';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
@@ -23,16 +24,19 @@ const VideoArchivePage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [gridSize, setGridSize] = useState(2);
   const [isSelectMode, setIsSelectMode] = useState(false);
-  const [selectedVideos, setSelectedVideos] = useState<Set<number>>(new Set());
-  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
-  const [selectedVideoForPlay, setSelectedVideoForPlay] = useState<Video | null>(null);
+  const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
+  const [selectedVideo, setSelectedVideo] = useState<ArchivedVideo | null>(null);
+  const [selectedVideoForPlay, setSelectedVideoForPlay] = useState<ArchivedVideo | null>(null);
   const [itemToDelete, setItemToDelete] = useState<{
     type: 'single' | 'bulk';
-    data?: Video;
+    data?: ArchivedVideo;
     count?: number;
   } | null>(null);
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
   const [showTagModal, setShowTagModal] = useState(false);
+  
+  // API에서 실제 비디오 데이터 가져오기
+  const { data: apiVideos = [], isLoading, error } = useVideos();
 
   // Mock 데이터
   const mockArchivedVideos: ArchivedVideo[] = [
@@ -133,9 +137,177 @@ const VideoArchivePage: React.FC = () => {
     }
   ];
 
+  // URL 유효성 검증 함수
+  const isValidUrl = (urlString: string) => {
+    try {
+      const url = new URL(urlString);
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
+  // URL에서 채널명 추출하는 함수
+  const extractChannelNameFromUrl = (url: string, platform: string): string => {
+    if (!url || !isValidUrl(url)) return '알 수 없는 채널';
+    
+    try {
+      const urlObj = new URL(url);
+      const normalizedPlatform = platform.toLowerCase();
+      
+      switch (normalizedPlatform) {
+        case 'youtube':
+          // YouTube URL 패턴들 처리
+          console.log('🎥 YouTube URL 분석:', { url });
+          
+          // @channelname, /c/channelname, /channel/channelid, /user/username 패턴
+          const youtubeMatch = url.match(/@([^/?&\s]+)|\/c\/([^/?&\s]+)|\/channel\/([^/?&\s]+)|\/user\/([^/?&\s]+)/);
+          if (youtubeMatch) {
+            const channelName = youtubeMatch[1] || youtubeMatch[2] || youtubeMatch[3] || youtubeMatch[4];
+            console.log('🎥 YouTube 매치 결과:', { channelName });
+            // 채널 ID가 아닌 실제 이름인지 확인 (채널 ID는 보통 UC로 시작)
+            if (channelName && !channelName.startsWith('UC') && channelName.length < 50) {
+              return channelName;
+            }
+          }
+          
+          // shorts URL 패턴도 확인
+          const shortsMatch = url.match(/\/shorts\/([^/?&\s]+)/);
+          if (shortsMatch) {
+            return '유튜브 쇼츠';
+          }
+          
+          // watch?v= 패턴에서 채널 정보 추출 시도
+          if (url.includes('watch?v=')) {
+            // 일반적으로 채널 정보를 추출하기 어렵지만, 시도해볼 수 있는 다른 패턴들
+            return '유튜브 채널';
+          }
+          
+          return '유튜브 채널';
+          
+        case 'instagram':
+          // Instagram URL 패턴들 처리
+          const pathParts = urlObj.pathname.split('/').filter(Boolean);
+          console.log('📱 Instagram URL 분석:', { url, pathParts });
+          
+          if (pathParts.length > 0) {
+            const firstPart = pathParts[0];
+            
+            // instagram.com/username 형태 (가장 일반적)
+            if (!['reels', 'p', 'stories', 'tv', 'explore', 'accounts', 'direct', 'reel'].includes(firstPart) && 
+                firstPart.length > 1 && firstPart.length < 30 && 
+                !firstPart.includes('.') && 
+                firstPart.match(/^[a-zA-Z0-9._]+$/)) {
+              return firstPart;
+            }
+            
+            // instagram.com/username/reels/... 형태
+            if (pathParts.length > 2 && pathParts[1] === 'reels' && 
+                firstPart.length > 1 && firstPart.length < 30 && 
+                firstPart.match(/^[a-zA-Z0-9._]+$/)) {
+              return firstPart;
+            }
+            
+            // instagram.com/reels/xxx 형태는 계정명을 알 수 없음
+            if (firstPart === 'reels' || firstPart === 'reel') {
+              return 'Instagram';
+            }
+            
+            // instagram.com/p/xxx 형태 (포스트 직접 링크)
+            if (firstPart === 'p') {
+              return 'Instagram';
+            }
+          }
+          
+          return 'Instagram';
+          
+        case 'tiktok':
+          // TikTok URL 패턴들 처리  
+          const tiktokMatch = url.match(/@([^/?&\s]+)/);
+          if (tiktokMatch && tiktokMatch[1] && tiktokMatch[1].length < 30) {
+            return tiktokMatch[1];
+          }
+          return '틱톡 계정';
+          
+        default:
+          return urlObj.hostname.replace('www.', '');
+      }
+    } catch {
+      return '알 수 없는 채널';
+    }
+  };
+
+  // 플랫폼별 기본 URL 생성
+  const generateFallbackUrl = (platform: string, channelName?: string) => {
+    const normalizedPlatform = platform.toLowerCase();
+    switch (normalizedPlatform) {
+      case 'youtube':
+        return channelName ? `https://www.youtube.com/@${channelName}` : 'https://www.youtube.com';
+      case 'instagram':
+        return channelName ? `https://www.instagram.com/${channelName}` : 'https://www.instagram.com';
+      case 'tiktok':
+        return channelName ? `https://www.tiktok.com/@${channelName}` : 'https://www.tiktok.com';
+      default:
+        return '#';
+    }
+  };
+
   useEffect(() => {
-    setArchivedVideos(mockArchivedVideos);
-  }, []);
+    if (apiVideos.length > 0) {
+      // DB 데이터를 ArchivedVideo 형식으로 변환
+      const convertedVideos: ArchivedVideo[] = apiVideos.map((video: any) => {
+        const daysAgo = video.originalPublishDate 
+          ? Math.floor((Date.now() - new Date(video.originalPublishDate).getTime()) / (1000 * 60 * 60 * 24))
+          : Math.floor((Date.now() - new Date(video.timestamp).getTime()) / (1000 * 60 * 60 * 24));
+        
+        // URL 검증 및 fallback 처리
+        let originalUrl = video.originalUrl; // originalUrl 필드 사용
+        if (!originalUrl || !isValidUrl(originalUrl)) {
+          originalUrl = generateFallbackUrl(video.platform, video.account || video.youtubeHandle);
+          console.warn(`⚠️ 유효하지 않은 URL 발견, fallback 사용: ${video.title}`);
+        }
+
+        // 채널명 - 백엔드에서 channelName 필드로 제공
+        const channelName = video.channelName || '알 수 없는 채널';
+        
+        console.log('🔍 채널명 사용:', {
+          platform: video.platform,
+          account: video.account,
+          youtubeHandle: video.youtubeHandle,
+          finalName: channelName
+        });
+          
+        return {
+          id: video._id || video.id,
+          platform: video.platform === 'youtube' ? 'YouTube' : video.platform === 'tiktok' ? 'TikTok' : 'Instagram',
+          title: video.title,
+          channelName: channelName,
+          views: video.views || 0,
+          daysAgo: daysAgo,
+          thumbnailUrl: video.thumbnailUrl,
+          channelAvatarUrl: `https://placehold.co/100x100/3B82F6/FFFFFF?text=${channelName.charAt(0).toUpperCase()}`,
+          isTrending: false,
+          originalUrl: originalUrl,
+          aspectRatio: video.platform === 'youtube' ? '16:9' as const : '9:16' as const,
+          keywords: video.keywords || [],
+          createdAt: video.timestamp,
+          archivedAt: video.collectedAt || video.timestamp,
+          tags: [
+            ...(video.hashtags || []),
+            ...(video.keywords || [])
+          ].filter(Boolean),
+          category: video.category || '미분류',
+          notes: video.ai_description
+        };
+      });
+      setArchivedVideos(convertedVideos);
+      console.log('📊 변환된 영상 수:', convertedVideos.length);
+      console.log('🔍 첫 번째 영상 URL 샘플:', convertedVideos[0]?.originalUrl);
+    } else {
+      // API 데이터가 없으면 mock 데이터 사용
+      setArchivedVideos(mockArchivedVideos);
+    }
+  }, [apiVideos]);
 
   useEffect(() => {
     let filtered = archivedVideos.filter(video => {
@@ -167,7 +339,7 @@ const VideoArchivePage: React.FC = () => {
     });
   };
 
-  const handleSelectToggle = (videoId: number) => {
+  const handleSelectToggle = (videoId: string) => {
     const newSelection = new Set(selectedVideos);
     if (newSelection.has(videoId)) {
       newSelection.delete(videoId);
@@ -378,7 +550,18 @@ const VideoArchivePage: React.FC = () => {
 
         {/* 영상 그리드/리스트 */}
         <div className="p-6">
-          {filteredVideos.length > 0 ? (
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">영상 데이터를 불러오는 중...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12 text-red-500">
+              <p className="text-lg">⚠️</p>
+              <p className="mt-2">영상 데이터를 불러오는데 실패했습니다.</p>
+              <p className="text-sm text-gray-500 mt-1">Mock 데이터를 사용합니다.</p>
+            </div>
+          ) : filteredVideos.length > 0 ? (
             viewMode === 'grid' ? (
               <div className={`grid ${gridLayouts[gridSize as keyof typeof gridLayouts]} gap-6`}>
                 {filteredVideos.map(video => (
@@ -387,10 +570,15 @@ const VideoArchivePage: React.FC = () => {
                     video={video}
                     onClick={(video) => {
                       if (!isSelectMode) {
+                        // URL 유효성 검증 후 실행
                         if (video.platform === 'YouTube') {
                           setSelectedVideoForPlay(video);
-                        } else {
+                        } else if (video.originalUrl && video.originalUrl !== '#') {
+                          console.log('🔗 영상 링크 열기:', video.originalUrl);
                           window.open(video.originalUrl, '_blank', 'noopener,noreferrer');
+                        } else {
+                          console.warn('⚠️ 유효하지 않은 URL:', video.originalUrl);
+                          alert('죄송합니다. 이 영상의 링크를 찾을 수 없습니다.');
                         }
                       }
                     }}

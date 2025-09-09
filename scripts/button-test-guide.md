@@ -46,7 +46,7 @@
 
 ### 버튼이 보이지 않는 경우
 1. **페이지 새로고침**: F5 또는 Ctrl+R
-2. **확장 상태 확인**: `chrome://extensions/` → "영상 자동저장 분석기" 활성화 확인
+2. **확장 상태 확인**: `chrome://extensions/` → "InsightReel" 활성화 확인
 3. **디버그 스크립트 실행**: 콘솔에서
    ```javascript
    // scripts/debug-extension.js 내용 붙여넣기

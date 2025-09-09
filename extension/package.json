@@ -1,7 +1,7 @@
 {
-  "name": "video-auto-saver-extension",
+  "name": "insightreel-extension",
   "version": "1.0.0",
-  "description": "영상 자동저장 분석기 Chrome Extension",
+  "description": "InsightReel Chrome Extension",
   "private": true,
   "scripts": {
     "build": "webpack --mode=production",

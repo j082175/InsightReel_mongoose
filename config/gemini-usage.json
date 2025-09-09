@@ -1,63 +1,52 @@
 {
-  "2025-09-02": {
-    "pro": 8,
-    "flash": 0,
-    "proErrors": 3,
-    "flashErrors": 0,
-    "lastUpdated": "2025-09-03T06:40:04.277Z"
-  },
-  "2025-09-01": {
-    "pro": 3,
-    "flash": 131,
-    "proErrors": 0,
-    "flashErrors": 0,
-    "lastUpdated": "2025-09-02T06:01:09.000Z"
-  },
-  "2025-09-03": {
-    "pro": 9,
-    "flash": 0,
-    "proErrors": 15,
-    "flashErrors": 0,
-    "lastUpdated": "2025-09-03T17:13:36.449Z"
-  },
-  "2025-09-06": {
-    "pro": 17,
-    "flash": 1,
-    "proErrors": 0,
-    "flashErrors": 0,
-    "lastUpdated": "2025-09-07T04:06:39.719Z",
-    "youtubeVideos": 7,
-    "youtubeChannels": 7,
-    "youtubeComments": 10,
-    "youtubeSearch": 100,
-    "youtubeErrors": 0
-  },
-  "2025-09-07": {
-    "pro": 41,
-    "flash": 24,
-    "flashLite": 74,
-    "proErrors": 171,
-    "flashErrors": 162,
-    "flashLiteErrors": 166,
-    "youtubeVideos": 0,
-    "youtubeSearch": 3,
-    "youtubeChannels": 144,
-    "youtubeComments": 29,
-    "youtubeErrors": 0,
-    "lastUpdated": "2025-09-08T02:43:25.550Z"
-  },
-  "2025-09-08": {
-    "pro": 1,
-    "flash": 0,
-    "flashLite": 1,
-    "proErrors": 0,
-    "flashErrors": 0,
-    "flashLiteErrors": 0,
-    "youtubeVideos": 0,
-    "youtubeSearch": 6,
-    "youtubeChannels": 29,
-    "youtubeComments": 5,
-    "youtubeErrors": 0,
-    "lastUpdated": "2025-09-08T07:44:54.704Z"
+  "keys": {
+    "c1e202dc1b293fd0": {
+      "2025-09-08": {
+        "pro": 0,
+        "flash": 0,
+        "flashLite": 0,
+        "proErrors": 0,
+        "flashErrors": 0,
+        "flashLiteErrors": 0,
+        "youtubeVideos": 0,
+        "youtubeSearch": 0,
+        "youtubeChannels": 0,
+        "youtubeComments": 0,
+        "youtubeErrors": 0,
+        "lastUpdated": "2025-09-08T14:00:00.000Z"
+      }
+    },
+    "3742b2bda3c5b7f3": {
+      "2025-09-08": {
+        "pro": 0,
+        "flash": 0,
+        "flashLite": 0,
+        "proErrors": 0,
+        "flashErrors": 0,
+        "flashLiteErrors": 0,
+        "youtubeVideos": 0,
+        "youtubeSearch": 0,
+        "youtubeChannels": 0,
+        "youtubeComments": 0,
+        "youtubeErrors": 0,
+        "lastUpdated": "2025-09-08T14:00:00.000Z"
+      }
+    },
+    "5955264c478ac562": {
+      "2025-09-08": {
+        "pro": 0,
+        "flash": 0,
+        "flashLite": 0,
+        "proErrors": 0,
+        "flashErrors": 0,
+        "flashLiteErrors": 0,
+        "youtubeVideos": 0,
+        "youtubeSearch": 0,
+        "youtubeChannels": 0,
+        "youtubeComments": 0,
+        "youtubeErrors": 0,
+        "lastUpdated": "2025-09-08T14:00:00.000Z"
+      }
+    }
   }
 }

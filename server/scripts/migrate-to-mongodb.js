@@ -58,8 +58,7 @@ class DataMigrator {
         title: aiDescription || categoryDepth || fullCategoryPath || '제목 없음', // J열(aiDescription)이 실제 분석내용
         
         // URL 정보 - W열에서 실제 YouTube URL 사용
-        comments: youtubeUrl || '', // W열 YouTube URL 사용
-        videoUrl: youtubeUrl || '',
+        originalUrl: youtubeUrl || '', // W열 YouTube URL 사용
         
         // 성과 지표
         likes: this.parseNumber(likes),

@@ -180,7 +180,8 @@ app.get('/api/database/test', async (req, res) => {
       timestamp: new Date(),
       account: 'TestChannel',
       title: 'MongoDB 연결 테스트 비디오',
-      comments: 'https://www.youtube.com/watch?v=test123',
+      originalUrl: 'https://www.youtube.com/watch?v=test123',
+      comments_count: 0,
       likes: 100,
       views: 1000,
       category: 'Technology',
@@ -670,7 +671,7 @@ app.post('/api/process-video', async (req, res) => {
         const { platform, videoUrl, postUrl, analysisType, useAI } = taskData;
         let metadata = taskData.metadata; // 🆕 재할당 가능하도록 let으로 선언
         
-        ServerLogger.info(`🎬 Processing ${platform} video:`, postUrl || videoUrl);
+        ServerLogger.info(`🎬 Processing ${platform} video:`, postUrl);
         ServerLogger.info(`🔍 Analysis type: ${analysisType}, AI 분석: ${useAI ? '활성화' : '비활성화'}`);
         
         let videoPath;
@@ -977,18 +978,18 @@ app.get('/api/videos', async (req, res) => {
       await DatabaseManager.connect();
     }
     
-    // 쿼리 조건 구성 - originalPublishDate가 있는 레코드 우선
-    const query = {
-      originalPublishDate: { $exists: true, $ne: null }
-    };
+    // 쿼리 조건 구성 - 모든 비디오 조회 (originalPublishDate 조건 제거)
+    const query = {};
     if (platform) {
       query.platform = platform.toLowerCase();
     }
     
-    // 정렬 조건 구성 (timestamp로 요청해도 originalPublishDate로 정렬)
+    // 정렬 조건 구성
     const sortOptions = {};
     if (sortBy === 'timestamp') {
+      // originalPublishDate가 있으면 우선, 없으면 timestamp 사용
       sortOptions['originalPublishDate'] = sortOrder;
+      sortOptions['timestamp'] = sortOrder;
     } else {
       sortOptions[sortBy] = sortOrder;
     }
@@ -997,15 +998,74 @@ app.get('/api/videos', async (req, res) => {
     const videos = await Video.find(query)
       .sort(sortOptions)
       .limit(limit)
-      .select('platform account title likes views comments timestamp originalPublishDate processedAt category keywords hashtags thumbnailUrl')
+      .select('platform account title likes views comments_count originalUrl timestamp originalPublishDate processedAt category keywords hashtags thumbnailUrl youtubeHandle')
       .lean(); // 성능 최적화
     
     // timestamp 필드가 originalPublishDate와 동일한지 확인하고 보정
     const enhancedVideos = videos.map(video => {
+      // 썸네일 URL을 HTTP URL로 변환
+      let thumbnailUrl = video.thumbnailUrl;
+      if (thumbnailUrl && !thumbnailUrl.startsWith('http')) {
+        // 로컬 파일 경로를 HTTP URL로 변환
+        const relativePath = thumbnailUrl.includes('/downloads/') 
+          ? thumbnailUrl.split('/downloads/')[1] 
+          : thumbnailUrl.replace(/^.*[\\\/]/, '');
+        
+        // 파일 존재 여부 확인
+        const fullPath = path.join(__dirname, '../downloads', relativePath);
+        try {
+          if (fs.existsSync(fullPath)) {
+            thumbnailUrl = `http://localhost:3000/downloads/${relativePath}`;
+          } else {
+            // 파일이 없으면 플랫폼별 placeholder
+            const platform = video.platform;
+            if (platform === 'instagram') {
+              thumbnailUrl = 'https://placehold.co/400x600/E4405F/FFFFFF?text=IG';
+            } else if (platform === 'tiktok') {
+              thumbnailUrl = 'https://placehold.co/400x600/000000/FFFFFF?text=TT';
+            } else {
+              thumbnailUrl = 'https://placehold.co/600x400/FF0000/FFFFFF?text=YT';
+            }
+          }
+        } catch (err) {
+          // 에러 발생시 placeholder 사용
+          const platform = video.platform;
+          if (platform === 'instagram') {
+            thumbnailUrl = 'https://placehold.co/400x600/E4405F/FFFFFF?text=IG';
+          } else if (platform === 'tiktok') {
+            thumbnailUrl = 'https://placehold.co/400x600/000000/FFFFFF?text=TT';
+          } else {
+            thumbnailUrl = 'https://placehold.co/600x400/FF0000/FFFFFF?text=YT';
+          }
+        }
+      } else if (!thumbnailUrl) {
+        // 썸네일이 없으면 플랫폼별 placeholder 제공
+        const platform = video.platform;
+        if (platform === 'instagram') {
+          thumbnailUrl = 'https://placehold.co/400x600/E4405F/FFFFFF?text=IG';
+        } else if (platform === 'tiktok') {
+          thumbnailUrl = 'https://placehold.co/400x600/000000/FFFFFF?text=TT';
+        } else {
+          thumbnailUrl = 'https://placehold.co/600x400/FF0000/FFFFFF?text=YT';
+        }
+      }
+      
       return {
         ...video,
         timestamp: video.originalPublishDate || video.timestamp, // 원본 게시일을 timestamp로 사용
-        originalPublishDate: video.originalPublishDate
+        originalPublishDate: video.originalPublishDate,
+        thumbnailUrl: thumbnailUrl,
+        // originalUrl이 없고 account가 URL인 경우 복구
+        originalUrl: video.originalUrl || (video.account && video.account.startsWith('http') ? video.account : ''),
+        // Frontend compatibility - account가 URL인 경우 정리
+        channelName: video.youtubeHandle ? `@${video.youtubeHandle}` : 
+          (video.account && !video.account.startsWith('http') ? video.account : '알 수 없는 채널'),
+        thumbnail: thumbnailUrl,
+        channelAvatarUrl: '',
+        channelAvatar: '',
+        viewCount: video.views,
+        daysAgo: 0,
+        isTrending: false
       };
     });
     
@@ -1808,7 +1868,7 @@ app.get('/api/debug-after-collect', (req, res) => {
 });
 ServerLogger.info('🧪 DEBUG: collect-trending API 등록 후 체크');
 
-// API quota 현황 조회
+// API quota 현황 조회 (MultiKeyManager 기반)
 app.get('/api/quota-status', (req, res) => {
   if (!highViewCollector) {
     return ResponseHandler.serverError(res, 
@@ -1818,14 +1878,17 @@ app.get('/api/quota-status', (req, res) => {
   
   try {
     const quotaStatus = highViewCollector.getQuotaStatus();
+    const safetyMargin = parseInt(process.env.YOUTUBE_API_SAFETY_MARGIN) || 8000;
     
     ResponseHandler.success(res, {
       quota: quotaStatus,
+      safetyMargin: safetyMargin,
       timestamp: new Date().toISOString(),
       recommendations: {
         canProcess: quotaStatus.remaining > 200,
         estimatedChannels: Math.floor(quotaStatus.remaining / 101),
-        resetTime: '매일 자정 (한국 시간)'
+        resetTime: '매일 오후 4시 (한국 시간, Google 기준)',
+        safetyInfo: `안전 마진 ${safetyMargin} 적용됨`
       }
     }, 'API quota 현황을 조회했습니다.');
     
@@ -1834,35 +1897,142 @@ app.get('/api/quota-status', (req, res) => {
   }
 });
 
+// 테스트용 API 추가
+app.get('/api/test-usage', (req, res) => {
+  try {
+    ServerLogger.info('🧪 [TEST] test-usage API 호출됨', null, 'SERVER');
+    
+    const testResults = [];
+    highViewCollector.multiKeyManager.keys.forEach((keyInfo, index) => {
+      const keyData = highViewCollector.multiKeyManager.trackers.get(keyInfo.key);
+      const usage = keyData.tracker.getYouTubeUsage();
+      
+      testResults.push({
+        index,
+        name: keyInfo.name,
+        keyHash: keyData.tracker.currentApiKeyHash,
+        usage: usage
+      });
+    });
+    
+    ResponseHandler.success(res, {
+      message: 'Direct usage test',
+      results: testResults,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    ResponseHandler.serverError(res, error, 'Test usage API error');
+  }
+});
+
 // 여러 API 키 관리 엔드포인트
 app.get('/api/api-keys', async (req, res) => {
   try {
     ServerLogger.info('🔍 API 키 정보 조회 요청');
     
-    // ApiKeyManager에서 모든 API 키 조회
-    const allKeys = await ApiKeyManager.getAllApiKeys();
+    // ApiKeyManager에서 모든 YouTube API 키 조회
+    const allYouTubeKeys = await ApiKeyManager.getAllApiKeys();
+    
+    // Gemini API 키 추가
+    const geminiKeys = [];
+    if (process.env.GOOGLE_API_KEY) {
+      // Gemini 사용량 조회 (aiAnalyzer 사용)
+      const geminiUsage = aiAnalyzer && aiAnalyzer.getGeminiUsageStats ? aiAnalyzer.getGeminiUsageStats() : {
+        pro: { used: 0, limit: 50 },
+        flash: { used: 0, limit: 250 },
+        flashLite: { used: 0, limit: 1000 }
+      };
+      
+      geminiKeys.push({
+        id: 'gemini-main',
+        name: 'Gemini API (Main)',
+        apiKey: process.env.GOOGLE_API_KEY,
+        type: 'gemini',
+        usage: geminiUsage,
+        source: 'env'
+      });
+    }
+    
+    const allKeys = [...allYouTubeKeys, ...geminiKeys];
     
     if (allKeys.length === 0) {
-      ServerLogger.warn('⚠️ 등록된 YouTube API 키가 없습니다');
+      ServerLogger.warn('⚠️ 등록된 API 키가 없습니다');
       return ResponseHandler.success(res, {
         apiKeys: [],
         summary: { total: 0, active: 0, warning: 0, error: 0 }
       }, '등록된 API 키가 없습니다.');
     }
 
-    ServerLogger.info(`📊 ${allKeys.length}개의 YouTube API 키 발견`);
+    ServerLogger.info(`📊 ${allYouTubeKeys.length}개의 YouTube API 키, ${geminiKeys.length}개의 Gemini API 키 발견`);
 
     // 실제 사용량 조회
     const apiKeys = await Promise.all(allKeys.map(async (key, index) => {
       let realUsage = null;
       let quotaStatus = null;
       
+      // Gemini API 키 처리
+      if (key.type === 'gemini') {
+        try {
+          // Gemini 사용량 조회 (aiAnalyzer 사용)
+          const geminiUsage = aiAnalyzer && aiAnalyzer.getGeminiUsageStats ? aiAnalyzer.getGeminiUsageStats() : {
+            pro: { used: 0, limit: 50 },
+            flash: { used: 0, limit: 250 },
+            flashLite: { used: 0, limit: 1000 }
+          };
+          
+          realUsage = {
+            pro: geminiUsage.pro,
+            flash: geminiUsage.flash,
+            flashLite: geminiUsage.flashLite,
+            total: {
+              used: geminiUsage.pro.used + geminiUsage.flash.used + geminiUsage.flashLite.used,
+              limit: geminiUsage.pro.limit + geminiUsage.flash.limit + geminiUsage.flashLite.limit
+            }
+          };
+          
+          // 상태 결정
+          const usagePercent = (realUsage.total.used / realUsage.total.limit) * 100;
+          let status = 'active';
+          if (usagePercent >= 90) status = 'error';
+          else if (usagePercent >= 75) status = 'warning';
+          
+          return {
+            id: key.id,
+            name: key.name,
+            maskedKey: ApiKeyManager.maskApiKey(key.apiKey),
+            type: 'gemini',
+            status,
+            usage: realUsage,
+            errors: 0,
+            lastUsed: realUsage.total.used > 0 ? '방금 전' : '미사용',
+            resetTime: '오후 4시 (한국시간)',
+            source: key.source
+          };
+        } catch (error) {
+          ServerLogger.warn('⚠️ Gemini 사용량 조회 실패:', error.message);
+          return {
+            id: key.id,
+            name: key.name,
+            maskedKey: ApiKeyManager.maskApiKey(key.apiKey),
+            type: 'gemini',
+            status: 'active',
+            usage: { pro: { used: 0, limit: 50 }, flash: { used: 0, limit: 250 }, flashLite: { used: 0, limit: 1000 }, total: { used: 0, limit: 1300 } },
+            errors: 0,
+            lastUsed: '미사용',
+            resetTime: '오후 4시 (한국시간)',
+            source: key.source
+          };
+        }
+      }
+      
+      // YouTube API 키 처리 (기존 로직)
       try {
         // 현재 quota 상태 조회 (실제 사용량)
         quotaStatus = highViewCollector ? highViewCollector.getQuotaStatus() : null;
         
         // 키별 개별 사용량은 아직 미구현이므로 전체 사용량을 키 개수로 분배
-        const estimatedPerKeyUsage = quotaStatus ? Math.floor(quotaStatus.used / allKeys.length) : 0;
+        const estimatedPerKeyUsage = quotaStatus ? Math.floor(quotaStatus.used / allYouTubeKeys.length) : 0;
         
         realUsage = {
           search: { 
@@ -1914,6 +2084,7 @@ app.get('/api/api-keys', async (req, res) => {
         id: key.id,
         name: key.name,
         maskedKey: ApiKeyManager.maskApiKey(key.apiKey),
+        type: 'youtube',
         status,
         usage: realUsage,
         errors: 0,
@@ -2303,7 +2474,7 @@ const startServer = async () => {
     
     app.listen(PORT, () => {
       ServerLogger.info(`
-🎬 영상 자동저장 분석기 서버 실행중
+🎬 InsightReel 서버 실행중
 📍 포트: ${PORT}
 🌐 URL: http://localhost:${PORT}
 📊 Health Check: http://localhost:${PORT}/health

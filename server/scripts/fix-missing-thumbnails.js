@@ -46,7 +46,7 @@ async function fixMissingThumbnails() {
       try {
         // YouTube URL에서 video ID 추출
         let videoId = null;
-        const url = video.account || video.comments;
+        const url = video.originalUrl;
         
         if (url) {
           // watch?v= 형태

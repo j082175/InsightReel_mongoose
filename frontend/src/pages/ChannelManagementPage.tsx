@@ -7,17 +7,23 @@ import VideoAnalysisModal from '../components/VideoAnalysisModal';
 import BulkCollectionModal from '../components/BulkCollectionModal';
 
 interface Channel {
-  id: number;
+  id: string;
   name: string;
-  platform: 'YouTube' | 'TikTok' | 'Instagram';
-  url: string;
-  subscriberCount: number;
-  videoCount: number;
-  lastChecked: string;
+  platform: 'youtube' | 'tiktok' | 'instagram';
+  url?: string;
+  subscribers?: number;
+  totalVideos?: number;
+  lastAnalyzedAt?: string;
   status: 'active' | 'inactive' | 'error';
   autoCollect: boolean;
   collectInterval: string;
-  avatar: string;
+  thumbnailUrl?: string;
+  description?: string;
+  totalViews?: number;
+  avgDurationFormatted?: string;
+  contentType?: 'shortform' | 'longform' | 'mixed';
+  keywords?: string[];
+  aiTags?: string[];
 }
 
 const ChannelManagementPage: React.FC = () => {
@@ -107,13 +113,24 @@ const ChannelManagementPage: React.FC = () => {
   useEffect(() => {
     // API 데이터가 있으면 사용, 없으면 mock 데이터 사용
     if (apiChannels.length > 0) {
-      setChannels(apiChannels.map((ch: any, index: number) => ({
-        ...ch,
-        id: ch._id || ch.id || index,
-        avatar: ch.avatar || `https://placehold.co/100x100/3B82F6/FFFFFF?text=${ch.name?.charAt(0)}`,
-        status: ch.status || 'active',
-        autoCollect: ch.autoCollect ?? true,
-        collectInterval: ch.collectInterval || '매일'
+      setChannels(apiChannels.map((ch: any) => ({
+        id: ch.id || ch._id,
+        name: ch.name,
+        platform: ch.platform,
+        url: ch.url || `https://${ch.platform}.com/@${ch.name}`,
+        subscribers: ch.subscribers || 0,
+        totalVideos: ch.totalVideos || 0,
+        lastAnalyzedAt: ch.lastAnalyzedAt || ch.updatedAt,
+        status: ch.lastAnalyzedAt ? 'active' : 'inactive',
+        autoCollect: true, // DB에서 관리하지 않으므로 기본값
+        collectInterval: '매일', // DB에서 관리하지 않으므로 기본값
+        thumbnailUrl: ch.thumbnailUrl || `https://placehold.co/100x100/3B82F6/FFFFFF?text=${ch.name?.charAt(0)}`,
+        description: ch.description,
+        totalViews: ch.totalViews,
+        avgDurationFormatted: ch.avgDurationFormatted,
+        contentType: ch.contentType,
+        keywords: ch.keywords || [],
+        aiTags: ch.aiTags || []
       })));
     } else {
       setChannels(mockChannels);
@@ -300,7 +317,7 @@ const ChannelManagementPage: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-500">총 구독자</h3>
           <p className="mt-2 text-3xl font-bold text-gray-900">
-            {formatNumber(channels.reduce((sum, ch) => sum + ch.subscriberCount, 0))}
+            {formatNumber(channels.reduce((sum, ch) => sum + (ch.subscribers || 0), 0))}
           </p>
           <p className="mt-1 text-sm text-gray-600">전체 도달 범위</p>
         </div>
@@ -325,9 +342,9 @@ const ChannelManagementPage: React.FC = () => {
                 className="border-gray-300 rounded-md"
               >
                 <option value="All">모든 플랫폼</option>
-                <option value="YouTube">YouTube</option>
-                <option value="TikTok">TikTok</option>
-                <option value="Instagram">Instagram</option>
+                <option value="youtube">YouTube</option>
+                <option value="tiktok">TikTok</option>
+                <option value="instagram">Instagram</option>
               </select>
               <button
                 onClick={() => setShowAddModal(true)}
@@ -414,7 +431,7 @@ const ChannelManagementPage: React.FC = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center">
                       <img 
-                        src={channel.avatar} 
+                        src={channel.thumbnailUrl || `https://placehold.co/100x100/3B82F6/FFFFFF?text=${channel.name.charAt(0)}`} 
                         alt={channel.name}
                         className="w-10 h-10 rounded-full mr-3"
                       />
@@ -425,24 +442,32 @@ const ChannelManagementPage: React.FC = () => {
                         >
                           {channel.name}
                         </button>
-                        <div className="text-xs text-gray-500">{channel.url}</div>
+                        <div className="text-xs text-gray-500">{channel.url || 'URL 없음'}</div>
+                        {channel.keywords && channel.keywords.length > 0 && (
+                          <div className="text-xs text-blue-500 mt-1">
+                            키워드: {channel.keywords.slice(0, 3).join(', ')}{channel.keywords.length > 3 ? '...' : ''}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                      channel.platform === 'YouTube' ? 'bg-red-100 text-red-700' :
-                      channel.platform === 'TikTok' ? 'bg-pink-100 text-pink-700' :
+                      channel.platform === 'youtube' ? 'bg-red-100 text-red-700' :
+                      channel.platform === 'tiktok' ? 'bg-pink-100 text-pink-700' :
                       'bg-purple-100 text-purple-700'
                     }`}>
-                      {channel.platform}
+                      {channel.platform === 'youtube' ? 'YouTube' : 
+                       channel.platform === 'tiktok' ? 'TikTok' : 
+                       channel.platform === 'instagram' ? 'Instagram' : 
+                       channel.platform}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {formatNumber(channel.subscriberCount)}
+                    {formatNumber(channel.subscribers || 0)}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {channel.videoCount}
+                    {channel.totalVideos || 0}
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
@@ -455,7 +480,7 @@ const ChannelManagementPage: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    {formatLastChecked(channel.lastChecked)}
+                    {channel.lastAnalyzedAt ? formatLastChecked(channel.lastAnalyzedAt) : '미분석'}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center">

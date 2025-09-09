@@ -1,5 +1,5 @@
 /**
- * 영상자동저장분석기 통합 상수 정의
+ * InsightReel 통합 상수 정의
  * 모든 하드코딩된 값들을 중앙화하여 관리
  */
 export const CONSTANTS = {
