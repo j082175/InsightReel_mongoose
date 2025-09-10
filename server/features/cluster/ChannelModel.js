@@ -133,6 +133,7 @@ class ChannelModel {
   async saveToMongoDB(channelData) {
     try {
       // MongoDB upsert (존재하면 업데이트, 없으면 생성)
+      // Channel 스키마에서는 'id' 필드를 사용하므로 '_id' 대신 'id'로 조회
       const result = await Channel.findOneAndUpdate(
         { [FieldMapper.get('ID')]: channelData[FieldMapper.get('ID')] },
         channelData,
@@ -502,7 +503,7 @@ class ChannelModel {
    */
   async findById(channelId) {
     try {
-      // MongoDB에서 직접 조회
+      // MongoDB에서 직접 조회 - Channel 스키마의 'id' 필드 사용
       const channel = await Channel.findOne({ [FieldMapper.get('ID')]: channelId }).lean();
       return channel || null;
     } catch (error) {

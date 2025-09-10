@@ -235,9 +235,16 @@ const VideoArchivePage: React.FC = () => {
 
   // Partial ExtendedVideo를 ExtendedVideo로 변환하는 헬퍼 함수
   const ensureCompleteVideo = (partialVideo: Partial<ExtendedVideo>): ExtendedVideo => {
+    // 🐛 플랫폼 변환 디버깅
+    console.log('🔧 ensureCompleteVideo 입력:', {
+      platform: partialVideo.platform,
+      title: partialVideo.title?.substring(0, 20),
+      inputLikes: partialVideo[FieldMapper.get('LIKES')]
+    });
+    
     const defaultVideo: ExtendedVideo = {
       uploadDate: '',
-      platform: 'YouTube',
+      platform: 'YouTube', // 기본값
       channelName: '',
       mainCategory: '',
       keywords: [],
@@ -245,8 +252,26 @@ const VideoArchivePage: React.FC = () => {
       commentsCount: 0,
       url: '',
       thumbnailUrl: '',
-      ...partialVideo
+      ...partialVideo, // 실제 데이터로 덮어씀
+      // FieldMapper 필드들도 명시적으로 보존
+      [FieldMapper.get('UPLOAD_DATE')]: partialVideo[FieldMapper.get('UPLOAD_DATE')] || '',
+      [FieldMapper.get('ARCHIVED_AT')]: partialVideo[FieldMapper.get('ARCHIVED_AT')] || '',
+      [FieldMapper.get('CREATED_AT')]: partialVideo[FieldMapper.get('CREATED_AT')] || '',
+      [FieldMapper.get('TIMESTAMP')]: partialVideo[FieldMapper.get('TIMESTAMP')] || '',
+      [FieldMapper.get('KEYWORDS')]: partialVideo[FieldMapper.get('KEYWORDS')] || [],
+      [FieldMapper.get('LIKES')]: partialVideo[FieldMapper.get('LIKES')] !== undefined ? partialVideo[FieldMapper.get('LIKES')] : 0
     };
+    
+    console.log('🔧 ensureCompleteVideo 출력:', {
+      platform: defaultVideo.platform,
+      title: defaultVideo.title?.substring(0, 20),
+      uploadDate: defaultVideo[FieldMapper.get('UPLOAD_DATE')],
+      archivedAt: defaultVideo[FieldMapper.get('ARCHIVED_AT')],
+      keywords: defaultVideo[FieldMapper.get('KEYWORDS')],
+      likes: defaultVideo[FieldMapper.get('LIKES')],
+      inputLikes: partialVideo[FieldMapper.get('LIKES')]
+    });
+    
     return defaultVideo;
   };
 
@@ -267,6 +292,19 @@ const VideoArchivePage: React.FC = () => {
 
   useEffect(() => {
     if (apiVideos.length > 0) {
+      // 🐛 원본 API 데이터 확인
+      console.log('🔍 원본 API 데이터 전체:', apiVideos);
+      apiVideos.forEach((video, index) => {
+        console.log(`🔍 영상 ${index + 1} 상세 정보:`, {
+          platform: video.platform,
+          title: video.title?.substring(0, 20),
+          likes: video.likes,
+          views: video.views,
+          좋아요관련필드: Object.keys(video || {}).filter(key => key.toLowerCase().includes('like')),
+          조회수관련필드: Object.keys(video || {}).filter(key => key.toLowerCase().includes('view'))
+        });
+      });
+      
       // DB 데이터를 ArchivedVideo 형식으로 변환
       const convertedVideos: Partial<ExtendedVideo>[] = apiVideos.map((video: Video) => {
         // 🚀 FieldMapper 자동화된 필드 접근
@@ -286,35 +324,71 @@ const VideoArchivePage: React.FC = () => {
           console.warn(`⚠️ 유효하지 않은 URL 발견, fallback 사용: ${FieldMapper.getTypedField<string>(video, 'TITLE')}`);
         }
 
-        // 채널명 - 백엔드에서 channelName 필드로 제공
+        // 채널명 - 백엔드에서 CHANNEL_NAME 필드로 실제 채널명 제공
         const channelName = FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || '알 수 없는 채널';
         
-        console.log('🔍 채널명 사용:', {
-          [FieldMapper.get('PLATFORM')]: FieldMapper.getTypedField<string>(video, 'PLATFORM') || '',
-          [FieldMapper.get('CHANNEL_NAME')]: FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME'),
+        // 🐛 채널 및 카테고리 필드 디버깅
+        console.log('🔍 필드 디버깅:', {
+          title: FieldMapper.getTypedField<string>(video, 'TITLE')?.substring(0, 20),
+          channelName: FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME'),
           youtubeHandle: FieldMapper.getTypedField<string>(video, 'YOUTUBE_HANDLE'),
-          finalName: channelName
+          mainCategory: FieldMapper.getTypedField<string>(video, 'MAIN_CATEGORY'),
+          middleCategory: FieldMapper.getTypedField<string>(video, 'MIDDLE_CATEGORY'),
+          fullCategoryPath: FieldMapper.getTypedField<string>(video, 'FULL_CATEGORY_PATH'),
+          categoryFields: Object.keys(video).filter(key => key.toLowerCase().includes('category')),
+          allFields: Object.keys(video)
         });
           
+        // 키워드 처리 - 문자열이면 배열로 변환
+        const keywordsField = FieldMapper.getTypedField<string | string[]>(video, 'KEYWORDS');
+        let keywordsArray: string[] = [];
+        if (typeof keywordsField === 'string') {
+          keywordsArray = keywordsField.split(',').map(k => k.trim()).filter(k => k.length > 0);
+        } else if (Array.isArray(keywordsField)) {
+          keywordsArray = keywordsField;
+        }
+
+        // 실제 YouTube 업로드 일자 vs 시스템 수집일자 구분
+        const youtubeUploadDate = video.publishedAt || video.published_at || video.youtubeUploadDate || video.youtube_upload_date;
+        const systemCollectionDate = FieldMapper.getTypedField<string>(video, 'CREATED_AT') || 
+                                     FieldMapper.getTypedField<string>(video, 'TIMESTAMP') || 
+                                     FieldMapper.getTypedField<string>(video, 'PROCESSED_AT');
+
+        // 업로드 일자: YouTube 실제 업로드 날짜 우선, 없으면 시스템 날짜
+        const finalUploadDate = youtubeUploadDate || 
+                               FieldMapper.getTypedField<string>(video, 'UPLOAD_DATE') || 
+                               systemCollectionDate || '';
+
+        // 수집 일자: 실제 수집일은 현재 시간 (API에서 받은 데이터가 부정확할 수 있음)
+        const actualCollectionDate = new Date().toLocaleString('ko-KR');
+        const finalArchivedAt = FieldMapper.getTypedField<string>(video, 'COLLECTION_TIME') || 
+                               FieldMapper.getTypedField<string>(video, 'PROCESSED_AT') ||
+                               actualCollectionDate;
+
         return {
           [FieldMapper.get('ID')]: FieldMapper.getTypedField<number>(video, 'ID') || Date.now(),
-          [FieldMapper.get('PLATFORM')]: FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'youtube' ? 'YouTube' : 
-                                        FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'tiktok' ? 'TikTok' : 'Instagram',
+          [FieldMapper.get('PLATFORM')]: FieldMapper.getTypedField<string>(video, 'PLATFORM')?.toLowerCase() === 'youtube' ? 'YouTube' : 
+                                        FieldMapper.getTypedField<string>(video, 'PLATFORM')?.toLowerCase() === 'tiktok' ? 'TikTok' : 
+                                        FieldMapper.getTypedField<string>(video, 'PLATFORM')?.toLowerCase() === 'instagram' ? 'Instagram' : 'YouTube',
           [FieldMapper.get('TITLE')]: FieldMapper.getTypedField<string>(video, 'TITLE') || '',
           [FieldMapper.get('CHANNEL_NAME')]: channelName,
           [FieldMapper.get('VIEWS')]: FieldMapper.getTypedField<number>(video, 'VIEWS') || 0,
+          [FieldMapper.get('LIKES')]: FieldMapper.getTypedField<number>(video, 'LIKES') || 0,
+          [FieldMapper.get('COMMENTS_COUNT')]: FieldMapper.getTypedField<number>(video, 'COMMENTS_COUNT') || 0,
           [FieldMapper.get('DAYS_AGO')]: daysAgo,
           [FieldMapper.get('THUMBNAIL_URL')]: FieldMapper.getTypedField<string>(video, 'THUMBNAIL_URL') || '',
           [FieldMapper.get('CHANNEL_AVATAR_URL')]: `https://placehold.co/100x100/3B82F6/FFFFFF?text=${channelName.charAt(0).toUpperCase()}`,
           [FieldMapper.get('IS_TRENDING')]: false,
           [FieldMapper.get('URL')]: url,
-          [FieldMapper.get('ASPECT_RATIO')]: FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'youtube' ? '16:9' : '9:16',
-          [FieldMapper.get('KEYWORDS')]: FieldMapper.getTypedField<string[]>(video, 'KEYWORDS') || [],
-          [FieldMapper.get('CREATED_AT')]: FieldMapper.getTypedField<string>(video, 'CREATED_AT') || FieldMapper.getTypedField<string>(video, 'TIMESTAMP'),
-          [FieldMapper.get('ARCHIVED_AT')]: FieldMapper.getTypedField<string>(video, 'COLLECTION_TIME') || FieldMapper.getTypedField<string>(video, 'TIMESTAMP'),
+          [FieldMapper.get('ASPECT_RATIO')]: FieldMapper.getTypedField<string>(video, 'PLATFORM')?.toLowerCase() === 'youtube' ? '16:9' : '9:16',
+          [FieldMapper.get('KEYWORDS')]: keywordsArray,
+          [FieldMapper.get('UPLOAD_DATE')]: finalUploadDate,
+          [FieldMapper.get('TIMESTAMP')]: systemCollectionDate || finalUploadDate,
+          [FieldMapper.get('CREATED_AT')]: systemCollectionDate,
+          [FieldMapper.get('ARCHIVED_AT')]: finalArchivedAt,
           [FieldMapper.get('TAGS')]: [
             ...(FieldMapper.getTypedField<string[]>(video, 'HASHTAGS') || []),
-            ...(FieldMapper.getTypedField<string[]>(video, 'KEYWORDS') || [])
+            ...keywordsArray
           ].filter(Boolean),
           [FieldMapper.get('CATEGORY')]: FieldMapper.getTypedField<string>(video, 'MAIN_CATEGORY') || '미분류',
           [FieldMapper.get('NOTES')]: FieldMapper.getTypedField<string>(video, 'ANALYSIS_CONTENT') || ''

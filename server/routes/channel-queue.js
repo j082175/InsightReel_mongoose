@@ -245,23 +245,27 @@ router.post('/check-duplicate', async (req, res) => {
     let duplicateInfo = null;
     
     try {
-      // 1. 먼저 채널 식별자가 YouTube 채널 ID인지 확인해보기
-      let channelId = channelIdentifier;
+      // 1. 먼저 MongoDB에서 채널 식별자로 직접 검색 시도 (API 호출 없이)
+      const mongoose = require('mongoose');
+      let existingChannel = null;
       
-      // @username이나 custom URL인 경우 실제 채널 ID로 변환 필요
-      if (channelIdentifier.startsWith('@') || channelIdentifier.includes('/channel/') || 
-          channelIdentifier.includes('/c/') || channelIdentifier.includes('/user/')) {
-        const youtubeService = new YouTubeChannelService();
-        const channelInfo = await youtubeService.getChannelInfo(channelIdentifier);
-        if (channelInfo && channelInfo.id) {
-          channelId = channelInfo.id;
-        }
+      if (mongoose.Types.ObjectId.isValid(channelIdentifier)) {
+        // MongoDB ObjectId인 경우
+        const query = {};
+        query[FieldMapper.get('ID')] = channelIdentifier;
+        existingChannel = await Channel.findOne(query).lean();
+      } else {
+        // YouTube 핸들이나 채널명인 경우 다른 필드로 검색
+        existingChannel = await Channel.findOne({
+          $or: [
+            { [FieldMapper.get('YOUTUBE_HANDLE')]: channelIdentifier },
+            { [FieldMapper.get('CHANNEL_NAME')]: channelIdentifier },
+            { [FieldMapper.get('YOUTUBE_HANDLE')]: channelIdentifier.startsWith('@') ? channelIdentifier : `@${channelIdentifier}` }
+          ]
+        }).lean();
       }
       
-      // 2. MongoDB에서 채널 ID로 중복 검사
-      const query = {};
-      query[FieldMapper.get('ID')] = channelId;
-      const existingChannel = await Channel.findOne(query).lean();
+      // 2. MongoDB에서 찾았으면 중복으로 처리 (API 호출 없이)
       
       if (existingChannel) {
         duplicateInfo = {
@@ -280,12 +284,14 @@ router.post('/check-duplicate', async (req, res) => {
         
         ServerLogger.warn(`⚠️ 중복 채널 발견: ${existingChannel[FieldMapper.get('NAME')]} (${existingChannel[FieldMapper.get('ID')]})`);
       } else {
+        // 3. MongoDB에 없는 경우 - 새로운 채널로 간주 (API 호출은 실제 수집 시에만)
         duplicateInfo = {
           isDuplicate: false,
-          message: '새로운 채널입니다.'
+          message: '새로운 채널입니다. "수집하기" 버튼을 눌러 채널 정보를 수집하세요.',
+          note: '중복 검사에서는 API를 호출하지 않아 할당량을 절약합니다.'
         };
         
-        ServerLogger.info(`✅ 새로운 채널: ${channelIdentifier}`);
+        ServerLogger.info(`✅ 새로운 채널 (API 호출 없음): ${channelIdentifier}`);
       }
       
     } catch (searchError) {

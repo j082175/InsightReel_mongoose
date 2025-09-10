@@ -86,10 +86,10 @@ videoUrlSchema.index({ status: 1, createdAt: 1 });              // 상태별 처
 videoUrlSchema.index({ normalizedUrl: 1, status: 1 });          // URL + 상태 조합 검색
 videoUrlSchema.index({ originalPublishDate: -1 });              // 전체 게시일순 조회
 
-// 🔍 정적 메서드: URL 중복 검사 (초고속) - failed는 재시도 가능하므로 제외
+// 🔍 정적 메서드: URL 중복 검사 (초고속) - failed는 완전히 무시
 videoUrlSchema.statics.checkDuplicate = async function(normalizedUrl) {
   try {
-    // processing 또는 completed 상태인 URL만 중복으로 처리 (failed는 재시도 가능)
+    // processing 또는 completed 상태인 URL만 중복으로 처리 (failed는 존재하지 않는 것으로 처리)
     const existing = await this.findOne({ 
       normalizedUrl,
       status: { $in: ['processing', 'completed'] }

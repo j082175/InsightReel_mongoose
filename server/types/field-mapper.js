@@ -12,7 +12,7 @@
 // 🎯 이 값들만 변경하면 전체 시스템이 자동으로 동기화됩니다!
 const MASTER_FIELD_NAMES = {
   // 기본 필드
-  ID: '_id',
+  ID: 'id',
   ROW_NUMBER: 'rowNumber',
   
   // 시간 필드  
@@ -29,6 +29,7 @@ const MASTER_FIELD_NAMES = {
   CHANNEL_NAME: 'channelName',         // ✅ 자동화 테스트 완료: 전체 시스템 동기화 확인
   CHANNEL_URL: 'channelUrl',
   YOUTUBE_HANDLE: 'youtubeHandle',
+  YOUTUBE_HANDLE_URL: 'youtubeHandleUrl', // YouTube @핸들 URL
   CHANNEL_TITLE: 'channelTitle',       // API 응답에서 사용
   CHANNEL_VIEWS: 'channelViews',       // 채널 총 조회수
   CHANNEL_COUNTRY: 'channelCountry',   // 채널 국가

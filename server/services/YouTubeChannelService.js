@@ -133,8 +133,10 @@ class YouTubeChannelService {
     
     // 🚀 FieldMapper 완전 자동화된 채널 데이터 구조
     return {
-      [FieldMapper.get('CHANNEL_ID')]: channelData.id,
-      [FieldMapper.get('CHANNEL_NAME')]: snippet.title || '',
+      [FieldMapper.get('ID')]: channelData.id,  // ChannelModel이 기대하는 필드명
+      [FieldMapper.get('NAME')]: snippet.title || '',  // ChannelModel이 기대하는 필드명
+      [FieldMapper.get('CHANNEL_ID')]: channelData.id,  // 호환성을 위한 추가
+      [FieldMapper.get('CHANNEL_NAME')]: snippet.title || '',  // 호환성을 위한 추가
       [FieldMapper.get('DESCRIPTION')]: snippet.description || '',
       [FieldMapper.get('CUSTOM_URL')]: snippet.customUrl || '',
       [FieldMapper.get('THUMBNAIL_URL')]: snippet.thumbnails?.high?.url || snippet.thumbnails?.default?.url || '',

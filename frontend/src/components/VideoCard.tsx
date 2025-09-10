@@ -47,19 +47,39 @@ const VideoCard: React.FC<VideoCardProps> = ({
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    if (!dateString) return '날짜 없음';
+    
+    // 한국어 날짜 형식 처리
+    if (dateString.includes('오전') || dateString.includes('오후')) {
+      // '2025. 9. 9. 오전 5:37:21' 형식을 '2025. 09. 09' 형식으로 변환
+      const match = dateString.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+      if (match) {
+        const [, year, month, day] = match;
+        return `${year}. ${month.padStart(2, '0')}. ${day.padStart(2, '0')}`;
+      }
+    }
+    
+    try {
+      const date = new Date(dateString);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString('ko-KR', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      }
+    } catch {}
+    
+    return dateString; // 원본 문자열 반환
   };
 
-  // 플랫폼별 스타일
+  // 플랫폼별 스타일 (파스칼 케이스로 통일)
   const platformStyles = {
     YouTube: { bg: 'bg-red-500' },
     TikTok: { bg: 'bg-black' },
     Instagram: { bg: 'bg-gradient-to-r from-purple-500 to-pink-500' }
   };
+
 
   const handleClick = (e: React.MouseEvent) => {
     if (isSelectMode && onSelectToggle) {
@@ -231,7 +251,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
         {/* 아카이브 정보 (옵션) */}
         {showArchiveInfo && FieldMapper.getTypedField<string>(video, 'ARCHIVED_AT') && (
           <div className="text-xs text-gray-500 mt-2">
-            보관: {formatDate(FieldMapper.getTypedField<string>(video, 'ARCHIVED_AT') || '')}
+            수집일: {formatDate(FieldMapper.getTypedField<string>(video, 'ARCHIVED_AT') || '')}
           </div>
         )}
 
@@ -261,14 +281,21 @@ const VideoCard: React.FC<VideoCardProps> = ({
         {/* 조회수와 날짜 (하단 고정) */}
         <div className="mt-auto pt-3 text-sm text-gray-600 font-medium">
           <span>
-            {FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'Instagram' ? '좋아요' : '조회수'} {formatViews(FieldMapper.getTypedField<number>(video, 'VIEWS') || 0)}회
+            {FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'Instagram' ? (
+              FieldMapper.getTypedField<number>(video, 'LIKES') == null ? '좋아요 정보 없음' : `좋아요 ${formatViews(FieldMapper.getTypedField<number>(video, 'LIKES') || 0)}개`
+            ) : (
+              `조회수 ${formatViews(FieldMapper.getTypedField<number>(video, 'VIEWS') || 0)}회`
+            )}
           </span>
           <span className="mx-1">•</span>
           <span>
-            {showArchiveInfo && FieldMapper.getTypedField<string>(video, 'ARCHIVED_AT') ? 
-              formatDate(FieldMapper.getTypedField<string>(video, 'ARCHIVED_AT') || '') : 
+            {showArchiveInfo ? (
+              FieldMapper.getTypedField<string>(video, 'UPLOAD_DATE') ? 
+                `업로드: ${formatDate(FieldMapper.getTypedField<string>(video, 'UPLOAD_DATE') || '')}` :
+                formatDaysAgo(FieldMapper.getTypedField<number>(video, 'DAYS_AGO') || 0)
+            ) : (
               formatDaysAgo(FieldMapper.getTypedField<number>(video, 'DAYS_AGO') || 0)
-            }
+            )}
           </span>
         </div>
       </div>

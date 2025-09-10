@@ -274,8 +274,7 @@ class ClusterManager {
    * 💾 채널 기본 정보 저장
    */
   async saveChannelInfo(channelData) {
-    return {
-      [FieldMapper.get('ID')]: channelData[FieldMapper.get('CHANNEL_ID')] || this.generateChannelId(channelData[FieldMapper.get('URL')]),
+    const channelInfo = {
       [FieldMapper.get('NAME')]: channelData[FieldMapper.get('NAME')] || channelData[FieldMapper.get('CHANNEL_TITLE')],
       [FieldMapper.get('URL')]: channelData[FieldMapper.get('URL')] || channelData[FieldMapper.get('CHANNEL_URL')],
       [FieldMapper.get('PLATFORM')]: channelData[FieldMapper.get('PLATFORM')] || 'youtube',
@@ -284,6 +283,15 @@ class ClusterManager {
       [FieldMapper.get('THUMBNAIL_URL')]: channelData[FieldMapper.get('THUMBNAIL_URL')] || '',
       [FieldMapper.get('CUSTOM_URL')]: channelData[FieldMapper.get('CUSTOM_URL')] || channelData[FieldMapper.get('YOUTUBE_HANDLE')] || ''
     };
+
+    // Only set ID if it's already a valid MongoDB ObjectId or YouTube channel ID (UC...)
+    const existingId = channelData[FieldMapper.get('CHANNEL_ID')] || channelData[FieldMapper.get('ID')];
+    if (existingId && (existingId.startsWith('UC') || /^[a-f\d]{24}$/i.test(existingId))) {
+      channelInfo[FieldMapper.get('ID')] = existingId;
+    }
+    // Otherwise, let MongoDB generate its own ObjectId
+
+    return channelInfo;
   }
 
   /**

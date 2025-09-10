@@ -41,6 +41,17 @@ export const useVideos = () => {
         console.log('📊 파싱된 영상 수:', videos.length);
         console.log('🔍 첫 번째 영상 샘플:', videos[0]);
         
+        // 🐛 플랫폼 정보 디버깅
+        videos.forEach((video: any, index: number) => {
+          if (index < 3) { // 처음 3개만 로그
+            console.log(`🔍 영상 ${index + 1} 플랫폼 정보:`, {
+              title: video.title?.substring(0, 30) + '...',
+              platform: video.platform,
+              rawData: video
+            });
+          }
+        });
+        
         return videos;
       } catch (error) {
         console.warn('영상 API 호출 실패, 빈 배열 반환:', error);

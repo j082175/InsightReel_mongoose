@@ -9,6 +9,20 @@ interface VideoModalProps {
 
 const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
   const [isAnimating, setIsAnimating] = useState(false);
+  
+  // 🐛 VideoModal 데이터 디버깅
+  if (video) {
+    console.log('🎬 VideoModal 받은 데이터:', {
+      title: FieldMapper.getTypedField<string>(video, 'TITLE'),
+      uploadDate: FieldMapper.getTypedField<string>(video, 'UPLOAD_DATE'),
+      timestamp: FieldMapper.getTypedField<string>(video, 'TIMESTAMP'),
+      createdAt: FieldMapper.getTypedField<string>(video, 'CREATED_AT'),
+      archivedAt: FieldMapper.getTypedField<string>(video, 'ARCHIVED_AT'),
+      keywords: FieldMapper.getTypedField<string[]>(video, 'KEYWORDS'),
+      keywordsType: typeof FieldMapper.getTypedField<string[]>(video, 'KEYWORDS'),
+      rawVideo: video
+    });
+  }
 
   const handleClose = useCallback(() => {
     setIsAnimating(false);
@@ -200,7 +214,29 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500">업로드</span>
                     <span className="text-sm font-medium">
-                      {FieldMapper.getTypedField<number>(video, 'DAYS_AGO') === 0 ? '오늘' : `${FieldMapper.getTypedField<number>(video, 'DAYS_AGO')}일 전`}
+                      {(() => {
+                        const uploadDate = FieldMapper.getTypedField<string>(video, 'UPLOAD_DATE');
+                        if (uploadDate) {
+                          // 한국어 날짜 형식 처리
+                          if (uploadDate.includes('오전') || uploadDate.includes('오후')) {
+                            // '2025. 9. 9. 오전 5:37:21' 형식을 '2025-09-09' 형식으로 변환
+                            const match = uploadDate.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+                            if (match) {
+                              const [, year, month, day] = match;
+                              return `${year}. ${month.padStart(2, '0')}. ${day.padStart(2, '0')}.`;
+                            }
+                          }
+                          try {
+                            const date = new Date(uploadDate);
+                            if (!isNaN(date.getTime())) {
+                              return date.toLocaleDateString('ko-KR');
+                            }
+                          } catch {}
+                          return uploadDate; // 원본 문자열 반환
+                        }
+                        const daysAgo = FieldMapper.getTypedField<number>(video, 'DAYS_AGO');
+                        return daysAgo === 0 ? '오늘' : `${daysAgo}일 전`;
+                      })()}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -210,7 +246,28 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500">수집일</span>
                     <span className="text-sm font-medium">
-                      {new Date(FieldMapper.getTypedField<string>(video, 'CREATED_AT') || '').toLocaleDateString()}
+                      {(() => {
+                        const archivedAt = FieldMapper.getTypedField<string>(video, 'ARCHIVED_AT');
+                        if (archivedAt) {
+                          // 한국어 날짜 형식 처리
+                          if (archivedAt.includes('오전') || archivedAt.includes('오후')) {
+                            // '2025. 9. 9. 오전 5:37:21' 형식을 '2025. 09. 09.' 형식으로 변환
+                            const match = archivedAt.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+                            if (match) {
+                              const [, year, month, day] = match;
+                              return `${year}. ${month.padStart(2, '0')}. ${day.padStart(2, '0')}.`;
+                            }
+                          }
+                          try {
+                            const date = new Date(archivedAt);
+                            if (!isNaN(date.getTime())) {
+                              return date.toLocaleDateString('ko-KR');
+                            }
+                          } catch {}
+                          return archivedAt; // 원본 문자열 반환
+                        }
+                        return '정보 없음';
+                      })()}
                     </span>
                   </div>
                 </div>
@@ -220,14 +277,18 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">키워드</h3>
                 <div className="flex flex-wrap gap-2">
-                  {(FieldMapper.getTypedField<string[]>(video, 'KEYWORDS') || []).map((keyword, index) => (
-                    <span 
-                      key={index}
-                      className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full"
-                    >
-                      #{keyword}
-                    </span>
-                  ))}
+                  {Array.isArray(FieldMapper.getTypedField<string[]>(video, 'KEYWORDS')) 
+                    ? FieldMapper.getTypedField<string[]>(video, 'KEYWORDS')!.map((keyword, index) => (
+                      <span 
+                        key={index}
+                        className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full"
+                      >
+                        #{keyword}
+                      </span>
+                    ))
+                    : (
+                      <span className="text-gray-500 text-sm">키워드가 없습니다</span>
+                    )}
                 </div>
               </div>
 

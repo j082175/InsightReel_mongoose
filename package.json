@@ -13,7 +13,11 @@
     "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration",
     "test:verbose": "jest --verbose",
-    "test:ci": "jest --ci --coverage --watchAll=false"
+    "test:ci": "jest --ci --coverage --watchAll=false",
+    "validate:pipeline": "node scripts/validate-data-pipeline.js",
+    "lint:fieldmapper": "eslint --config .eslintrc-fieldmapper.js frontend/src/**/*.{ts,tsx}",
+    "prestart": "npm run validate:pipeline",
+    "pretest": "npm run validate:pipeline"
   },
   "keywords": [
     "video",

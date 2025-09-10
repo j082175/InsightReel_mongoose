@@ -108,7 +108,24 @@ router.get('/channels', async (req, res) => {
 router.get('/channels/:channelId', async (req, res) => {
   try {
     const { channelId } = req.params;
-    const channel = await ChannelModel.findById(channelId);
+    const mongoose = require('mongoose');
+    const { FieldMapper } = require('../../types/field-mapper');
+    
+    // ObjectId 여부 확인 후 적절한 검색 방법 선택
+    let channel;
+    if (mongoose.Types.ObjectId.isValid(channelId)) {
+      // MongoDB ObjectId인 경우
+      channel = await ChannelModel.findById(channelId);
+    } else {
+      // YouTube 핸들(@handle) 또는 채널명인 경우
+      channel = await ChannelModel.findOne({
+        $or: [
+          { [FieldMapper.get('YOUTUBE_HANDLE')]: channelId },
+          { [FieldMapper.get('CHANNEL_NAME')]: channelId },
+          { [FieldMapper.get('YOUTUBE_HANDLE')]: channelId.startsWith('@') ? channelId : `@${channelId}` }
+        ]
+      });
+    }
 
     if (!channel) {
       return res.status(404).json({

@@ -11,7 +11,7 @@
 // ===== 마스터 필드명 정의 (백엔드와 동일) =====
 export const MASTER_FIELD_NAMES = {
   // 기본 필드
-  ID: '_id',
+  ID: 'id',
   ROW_NUMBER: 'rowNumber',
   
   // 시간 필드  
@@ -28,6 +28,7 @@ export const MASTER_FIELD_NAMES = {
   CHANNEL_URL: 'channelUrl',
   CHANNEL_AVATAR_URL: 'channelAvatarUrl',
   YOUTUBE_HANDLE: 'youtubeHandle',
+  YOUTUBE_HANDLE_URL: 'youtubeHandleUrl', // YouTube @핸들 URL
   
   // 성과 지표
   LIKES: 'likes',
