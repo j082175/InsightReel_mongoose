@@ -39,7 +39,7 @@ class YouTubeChannelService {
       }
       
       if (channelData) {
-        ServerLogger.success(`✅ 채널 정보 수집 성공: ${channelData.name}`);
+        ServerLogger.success(`✅ 채널 정보 수집 성공: ${channelData[FieldMapper.get('CHANNEL_NAME')]}`);
         return channelData;
       } else {
         ServerLogger.warn(`⚠️ 채널을 찾을 수 없음: ${channelIdentifier}`);
@@ -131,19 +131,20 @@ class YouTubeChannelService {
     const snippet = channelData.snippet || {};
     const statistics = channelData.statistics || {};
     
+    // 🚀 FieldMapper 완전 자동화된 채널 데이터 구조
     return {
-      id: channelData.id,
-      [FieldMapper.get('NAME')]: snippet.title || '',
-      description: snippet.description || '',
-      customUrl: snippet.customUrl || '',
-      thumbnailUrl: snippet.thumbnails?.high?.url || snippet.thumbnails?.default?.url || '',
+      [FieldMapper.get('CHANNEL_ID')]: channelData.id,
+      [FieldMapper.get('CHANNEL_NAME')]: snippet.title || '',
+      [FieldMapper.get('DESCRIPTION')]: snippet.description || '',
+      [FieldMapper.get('CUSTOM_URL')]: snippet.customUrl || '',
+      [FieldMapper.get('THUMBNAIL_URL')]: snippet.thumbnails?.high?.url || snippet.thumbnails?.default?.url || '',
       [FieldMapper.get('SUBSCRIBERS')]: parseInt(statistics.subscriberCount) || 0,
-      videoCount: parseInt(statistics.videoCount) || 0,
-      viewCount: parseInt(statistics.viewCount) || 0,
-      publishedAt: snippet.publishedAt || null,
-      platform: 'youtube',
-      [FieldMapper.get('ORIGINAL_URL')]: `https://youtube.com/channel/${channelData.id}`,
-      handleUrl: snippet.customUrl ? `https://youtube.com/@${snippet.customUrl.replace('@', '')}` : null
+      [FieldMapper.get('CHANNEL_VIDEOS')]: parseInt(statistics.videoCount) || 0,
+      [FieldMapper.get('CHANNEL_VIEWS')]: parseInt(statistics.viewCount) || 0,
+      [FieldMapper.get('UPLOAD_DATE')]: snippet.publishedAt || null,
+      [FieldMapper.get('PLATFORM')]: 'youtube',
+      [FieldMapper.get('CHANNEL_URL')]: `https://youtube.com/channel/${channelData.id}`,
+      [FieldMapper.get('YOUTUBE_HANDLE_URL')]: snippet.customUrl ? `https://youtube.com/@${snippet.customUrl.replace('@', '')}` : null
     };
   }
 

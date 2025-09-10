@@ -466,7 +466,7 @@ class HybridYouTubeExtractor {
         // 하이브리드 모드: API가 더 정확한 데이터들만 덮어쓰기
         if (apiData.likeCount !== undefined) {
           merged.likeCount = apiData.likeCount;
-          merged.likes = apiData.likeCount; // 별칭
+          merged[FieldMapper.get('LIKES')] = apiData.likeCount; // 별칭
         }
         
         if (apiData.commentCount !== undefined) {

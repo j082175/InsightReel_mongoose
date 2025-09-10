@@ -11,6 +11,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const axios = require('axios');
 const { ServerLogger } = require('../utils/logger');
+const { FieldMapper } = require('../types/field-mapper');
 
 class MongoDBYouTubeMigration {
   constructor() {
@@ -168,14 +169,21 @@ class MongoDBYouTubeMigration {
       const Video = require('../models/Video');
 
       // 핸들명이 없는 YouTube 비디오들 찾기
-      const youtubeVideos = await Video.find({
-        platform: 'youtube',
-        $or: [
-          { youtubeHandle: { $exists: false } },
-          { youtubeHandle: null },
-          { youtubeHandle: '' }
-        ]
-      }).sort({ created_at: -1 });
+      const query = {};
+      query[FieldMapper.get('PLATFORM')] = 'youtube';
+      
+      const orConditions = [];
+      const handleField = FieldMapper.get('YOUTUBE_HANDLE');
+      orConditions.push({ [handleField]: { $exists: false } });
+      orConditions.push({ [handleField]: null });
+      orConditions.push({ [handleField]: '' });
+      
+      query.$or = orConditions;
+      
+      const sortObj = {};
+      sortObj[FieldMapper.get('CREATED_AT')] = -1;
+      
+      const youtubeVideos = await Video.find(query).sort(sortObj);
 
       ServerLogger.info(`🔍 업데이트 대상: ${youtubeVideos.length}개 YouTube 비디오`);
 
@@ -190,10 +198,10 @@ class MongoDBYouTubeMigration {
         
         try {
           // URL에서 비디오 ID 추출
-          const videoId = this.extractVideoId(video.originalUrl || '');
+          const videoId = this.extractVideoId(video[FieldMapper.get('URL')] || video[FieldMapper.get('ORIGINAL_URL')] || '');
           
           if (!videoId) {
-            ServerLogger.warn(`⚠️ [${i + 1}/${youtubeVideos.length}] 비디오 ID 추출 실패: ${video.account}`);
+            ServerLogger.warn(`⚠️ [${i + 1}/${youtubeVideos.length}] 비디오 ID 추출 실패: ${video[FieldMapper.get('CHANNEL_NAME')] || 'N/A'}`);
             continue;
           }
 
@@ -202,15 +210,16 @@ class MongoDBYouTubeMigration {
           
           if (channelInfo.handle || channelInfo.channelUrl) {
             // MongoDB 업데이트
-            await Video.findByIdAndUpdate(video._id, {
-              youtubeHandle: channelInfo.handle || '',
-              channelUrl: channelInfo.channelUrl || ''
-            });
+            const updateData = {};
+            updateData[FieldMapper.get('YOUTUBE_HANDLE')] = channelInfo.handle || '';
+            updateData[FieldMapper.get('CHANNEL_URL')] = channelInfo.channelUrl || '';
+            
+            await Video.findByIdAndUpdate(video._id, updateData);
 
             this.updatedCount++;
-            ServerLogger.info(`✅ [${i + 1}/${youtubeVideos.length}] ${video.title || video.account} → @${channelInfo.handle}`);
+            ServerLogger.info(`✅ [${i + 1}/${youtubeVideos.length}] ${video[FieldMapper.get('TITLE')] || video[FieldMapper.get('CHANNEL_NAME')] || 'N/A'} → @${channelInfo.handle}`);
           } else {
-            ServerLogger.warn(`⚠️ [${i + 1}/${youtubeVideos.length}] ${video.title || video.account} → 핸들명 없음`);
+            ServerLogger.warn(`⚠️ [${i + 1}/${youtubeVideos.length}] ${video[FieldMapper.get('TITLE')] || video[FieldMapper.get('CHANNEL_NAME')] || 'N/A'} → 핸들명 없음`);
           }
 
           this.processedCount++;
@@ -223,7 +232,7 @@ class MongoDBYouTubeMigration {
 
         } catch (error) {
           this.errors.push(`비디오 ${video._id}: ${error.message}`);
-          ServerLogger.error(`❌ [${i + 1}/${youtubeVideos.length}] ${video.title || video.account} → 실패: ${error.message}`);
+          ServerLogger.error(`❌ [${i + 1}/${youtubeVideos.length}] ${video[FieldMapper.get('TITLE')] || video[FieldMapper.get('CHANNEL_NAME')] || 'N/A'} → 실패: ${error.message}`);
         }
       }
 

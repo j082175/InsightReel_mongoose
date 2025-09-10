@@ -262,20 +262,20 @@ class SheetsManager {
         analysis.mentions?.join(' ') || metadata.mentions?.join(' ') || '', // 멘션 (@username)
         metadata[FieldMapper.get('DESCRIPTION')] || metadata.description || '',  // 설명 (FieldMapper 표준)
         analysis.summary || '',                      // 분석내용 (영상 분석 결과)
-        metadata[FieldMapper.get('COMMENTS')] || metadata.comments || '',  // 댓글 (FieldMapper 표준)
-        metadata[FieldMapper.get('LIKES')] || metadata.likes || '0',        // 좋아요 (FieldMapper 표준)
-        metadata[FieldMapper.get('COMMENTS_COUNT')] || metadata.commentsCount || '0',  // 댓글수 (FieldMapper 표준)
-        metadata[FieldMapper.get('VIEWS')] || metadata.views || '0',        // 조회수 (FieldMapper 표준)
-        metadata[FieldMapper.get('DURATION')] || metadata.duration || metadata.durationFormatted || '', // 영상길이 (FieldMapper 표준)
-        metadata[FieldMapper.get('SUBSCRIBERS')] || metadata.subscribers || '0',    // 구독자수 (FieldMapper 표준)
-        metadata[FieldMapper.get('CHANNEL_VIDEOS')] || metadata.channelVideos || '0', // 채널동영상수 (FieldMapper 표준)
+        metadata[FieldMapper.get('COMMENTS')] || '',  // 댓글 (FieldMapper 표준)
+        metadata[FieldMapper.get('LIKES')] || '0',        // 좋아요 (FieldMapper 표준)
+        metadata[FieldMapper.get('COMMENTS_COUNT')] || '0',  // 댓글수 (FieldMapper 표준)
+        metadata[FieldMapper.get('VIEWS')] || '0',        // 조회수 (FieldMapper 표준)
+        metadata[FieldMapper.get('DURATION')] || '', // 영상길이 (FieldMapper 표준)
+        metadata[FieldMapper.get('SUBSCRIBERS')] || '0',    // 구독자수 (FieldMapper 표준)
+        metadata[FieldMapper.get('CHANNEL_VIDEOS')] || '0', // 채널동영상수 (FieldMapper 표준)
         metadata.monetized || 'N',                 // 수익화여부
         metadata.youtubeCategory || metadata.category || '',  // YouTube 카테고리
         metadata.license || 'youtube',             // 라이센스
         metadata.definition || 'sd',               // 화질
         metadata.language || '',                   // 언어
         postUrl,                                   // URL
-        metadata[FieldMapper.get('THUMBNAIL_URL')] || metadata.thumbnailUrl || '', // 썸네일URL (FieldMapper 표준)
+        metadata[FieldMapper.get('THUMBNAIL_URL')] || '', // 썸네일URL (FieldMapper 표준)
         (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
         analysis.aiModel || '수동',                  // 분석상태 (AI 모델 정보)
         analysis.categoryMatch ? `${analysis.categoryMatch.matchScore}%` : '', // 카테고리일치율
@@ -744,8 +744,8 @@ class SheetsManager {
               description: analysis.content || analysis.description || '',
               thumbnailPath: thumbnailPath,
               thumbnailUrl: thumbnailPath,
-              [FieldMapper.get('LIKES')]: metadata[FieldMapper.get('LIKES')] || metadata.likes || 0,
-              [FieldMapper.get('VIEWS')]: metadata[FieldMapper.get('VIEWS')] || metadata.views || 0
+              [FieldMapper.get('LIKES')]: metadata[FieldMapper.get('LIKES')] || 0,
+              [FieldMapper.get('VIEWS')]: metadata[FieldMapper.get('VIEWS')] || 0
             }
           );
           ServerLogger.info(`📊 Video 모델 동기화 완료: ${normalizedUrl}`);
@@ -848,13 +848,13 @@ class SheetsManager {
             author: videoInfo.channel,
             description: videoInfo.description,
             uploadDate: videoInfo.publishedAt,
-            [FieldMapper.get('LIKES')]: videoInfo[FieldMapper.get('LIKES')] || videoInfo.likes,
+            [FieldMapper.get('LIKES')]: videoInfo[FieldMapper.get('LIKES')],
             comments: videoInfo.comments,
-            [FieldMapper.get('VIEWS')]: videoInfo[FieldMapper.get('VIEWS')] || videoInfo.views,
+            [FieldMapper.get('VIEWS')]: videoInfo[FieldMapper.get('VIEWS')],
             duration: videoInfo.duration,
             durationFormatted: this.formatDuration(videoInfo.duration),
-            [FieldMapper.get('SUBSCRIBERS')]: videoInfo[FieldMapper.get('SUBSCRIBERS')] || videoInfo.subscribers,
-            [FieldMapper.get('CHANNEL_VIDEOS')]: videoInfo[FieldMapper.get('CHANNEL_VIDEOS')] || videoInfo.channelVideos,
+            [FieldMapper.get('SUBSCRIBERS')]: videoInfo[FieldMapper.get('SUBSCRIBERS')],
+            [FieldMapper.get('CHANNEL_VIDEOS')]: videoInfo[FieldMapper.get('CHANNEL_VIDEOS')],
             channelViews: videoInfo.channelViews,
             channelCountry: videoInfo.channelCountry,
             channelDescription: videoInfo.channelDescription,
@@ -1042,12 +1042,12 @@ class SheetsManager {
         categoryDepth,                               // 카테고리깊이
         analysis.keywords?.join(', ') || '',         // 키워드
         analysis.content || '',                      // 분석내용
-        metadata[FieldMapper.get('LIKES')] || metadata.likes || '0', // 좋아요 (FieldMapper 표준)
-        metadata[FieldMapper.get('COMMENTS_COUNT')] || metadata.commentsCount || '0', // 댓글수 (FieldMapper 표준)
-        metadata[FieldMapper.get('VIEWS')] || metadata.views || '0', // 조회수 (FieldMapper 표준)
-        metadata[FieldMapper.get('DURATION')] || metadata.durationFormatted || '', // 영상길이 (FieldMapper 표준)
-        metadata[FieldMapper.get('SUBSCRIBERS')] || metadata.subscribers || '0',    // 구독자수 (FieldMapper 표준)
-        metadata[FieldMapper.get('CHANNEL_VIDEOS')] || metadata.channelVideos || '0', // 채널동영상수 (FieldMapper 표준)
+        metadata[FieldMapper.get('LIKES')] || '0', // 좋아요 (FieldMapper 표준)
+        metadata[FieldMapper.get('COMMENTS_COUNT')] || '0', // 댓글수 (FieldMapper 표준)
+        metadata[FieldMapper.get('VIEWS')] || '0', // 조회수 (FieldMapper 표준)
+        metadata[FieldMapper.get('DURATION')] || '', // 영상길이 (FieldMapper 표준)
+        metadata[FieldMapper.get('SUBSCRIBERS')] || '0',    // 구독자수 (FieldMapper 표준)
+        metadata[FieldMapper.get('CHANNEL_VIDEOS')] || '0', // 채널동영상수 (FieldMapper 표준)
         metadata.monetized || 'N',                 // 수익화여부
         metadata.youtubeCategory || '',            // YouTube카테고리
         metadata.license || 'youtube',             // 라이센스
@@ -1075,8 +1075,8 @@ class SheetsManager {
         categoryDepth,                               // 카테고리깊이
         analysis.keywords?.join(', ') || '',         // 키워드
         analysis.content || '',                      // 분석내용
-        metadata[FieldMapper.get('LIKES')] || metadata.likes || '0', // 좋아요 (FieldMapper 표준)
-        metadata[FieldMapper.get('COMMENTS_COUNT')] || metadata.commentsCount || '0', // 댓글수 (FieldMapper 표준)
+        metadata[FieldMapper.get('LIKES')] || '0', // 좋아요 (FieldMapper 표준)
+        metadata[FieldMapper.get('COMMENTS_COUNT')] || '0', // 댓글수 (FieldMapper 표준)
         analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그
         postUrl,                                     // URL
         videoPath ? path.basename(videoPath) : '',  // 파일경로

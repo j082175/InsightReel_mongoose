@@ -104,10 +104,10 @@ class HybridDataConverter {
         contentType: 'Video',
         isShortForm: false,
         tags: [],
-        views: '0',
-        likes: '0', 
+        [FieldMapper.get('VIEWS')]: '0',
+        [FieldMapper.get('LIKES')]: '0', 
         [FieldMapper.get('COMMENTS_COUNT')]: '0',
-        subscribers: '0',
+        [FieldMapper.get('SUBSCRIBERS')]: '0',
         extractionMethod: 'hybrid-fallback',
         error: error.message
       };

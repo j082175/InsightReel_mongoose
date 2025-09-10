@@ -1,3 +1,5 @@
+const path = require('path');
+
 /**
  * 유연한 깊이의 카테고리 관리 시스템
  * 무한 depth 지원 + 태그 시스템

@@ -1,5 +1,6 @@
 const axios = require('axios');
 const { ServerLogger } = require('../utils/logger');
+const { FieldMapper } = require('../types/field-mapper');
 const fs = require('fs').promises;
 const path = require('path');
 
@@ -275,36 +276,37 @@ class YouTubeBatchProcessor {
         const hashtags = this.extractHashtags(snippet.description);
         const mentions = this.extractMentions(snippet.description);
 
+        // 🚀 FieldMapper 완전 자동화된 데이터 구조
         return {
           videoId: video.id,
-          title: snippet.title,
-          description: snippet.description,
-          channel: snippet.channelTitle,
-          channelId: snippet.channelId,
-          publishedAt: snippet.publishedAt,
-          thumbnailUrl: snippet.thumbnails.medium?.url || snippet.thumbnails.default.url,
-          youtubeCategory: categoryName,
-          categoryId: snippet.categoryId,
-          duration: duration,
-          isShortForm: duration <= 60,
-          tags: snippet.tags || [],
-          views: statistics.viewCount || '0',
-          likes: statistics.likeCount || '0',
-          comments: statistics.commentCount || '0',
-          subscribers: channelInfo?.statistics?.subscriberCount || '0',
-          channelVideos: channelInfo?.statistics?.videoCount || '0',
-          channelViews: channelInfo?.statistics?.viewCount || '0',
-          channelCountry: channelInfo?.snippet?.country || '',
-          channelDescription: channelInfo?.snippet?.description || '',
-          youtubeHandle: this.extractYouTubeHandle(channelInfo?.snippet?.customUrl),
-          channelUrl: this.buildChannelUrl(channelInfo?.snippet?.customUrl, snippet.channelId),
-          definition: contentDetails?.definition || 'sd',
-          language: snippet.defaultLanguage || snippet.defaultAudioLanguage || '',
-          liveBroadcast: snippet.liveBroadcastContent || 'none',
-          // 새로운 필드들
-          hashtags: hashtags,
-          mentions: mentions,
-          topComments: '' // 배치에서는 댓글 수집 제외 (API 할당량 절약)
+          [FieldMapper.get('TITLE')]: snippet.title,
+          [FieldMapper.get('DESCRIPTION')]: snippet.description,
+          [FieldMapper.get('CHANNEL_NAME')]: snippet.channelTitle,
+          [FieldMapper.get('CHANNEL_ID')]: snippet.channelId,
+          [FieldMapper.get('UPLOAD_DATE')]: snippet.publishedAt,
+          [FieldMapper.get('THUMBNAIL_URL')]: snippet.thumbnails.medium?.url || snippet.thumbnails.default.url,
+          [FieldMapper.get('YOUTUBE_CATEGORY')]: categoryName,
+          [FieldMapper.get('CATEGORY_ID')]: snippet.categoryId,
+          [FieldMapper.get('DURATION')]: duration,
+          [FieldMapper.get('IS_SHORT_FORM')]: duration <= 60,
+          [FieldMapper.get('TAGS')]: snippet.tags || [],
+          [FieldMapper.get('VIEWS')]: statistics.viewCount || '0',
+          [FieldMapper.get('LIKES')]: statistics.likeCount || '0',
+          [FieldMapper.get('COMMENTS_COUNT')]: statistics.commentCount || '0',
+          [FieldMapper.get('SUBSCRIBERS')]: channelInfo?.statistics?.subscriberCount || '0',
+          [FieldMapper.get('CHANNEL_VIDEOS')]: channelInfo?.statistics?.videoCount || '0',
+          [FieldMapper.get('CHANNEL_VIEWS')]: channelInfo?.statistics?.viewCount || '0',
+          [FieldMapper.get('CHANNEL_COUNTRY')]: channelInfo?.snippet?.country || '',
+          [FieldMapper.get('CHANNEL_DESCRIPTION')]: channelInfo?.snippet?.description || '',
+          [FieldMapper.get('YOUTUBE_HANDLE')]: this.extractYouTubeHandle(channelInfo?.snippet?.customUrl),
+          [FieldMapper.get('CHANNEL_URL')]: this.buildChannelUrl(channelInfo?.snippet?.customUrl, snippet.channelId),
+          [FieldMapper.get('QUALITY')]: contentDetails?.definition || 'sd',
+          [FieldMapper.get('LANGUAGE')]: snippet.defaultLanguage || snippet.defaultAudioLanguage || '',
+          [FieldMapper.get('LIVE_BROADCAST')]: snippet.liveBroadcastContent || 'none',
+          // 새로운 필드들 (FieldMapper 표준)
+          [FieldMapper.get('HASHTAGS')]: hashtags,
+          [FieldMapper.get('MENTIONS')]: mentions,
+          [FieldMapper.get('TOP_COMMENTS')]: '' // 배치에서는 댓글 수집 제외 (API 할당량 절약)
         };
       });
 

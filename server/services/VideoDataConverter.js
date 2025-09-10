@@ -80,35 +80,33 @@ class VideoDataConverter {
       // YouTube 전용 33개 필드 (FieldMapper 자동화)
       [FieldMapper.get('UPLOAD_DATE')]: uploadDate,
       [FieldMapper.get('PLATFORM')]: (platform || 'youtube').toUpperCase(),
-      [FieldMapper.get('CHANNEL_NAME')]: metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.author || '',
-      [FieldMapper.get('TITLE')]: metadata[FieldMapper.get('TITLE')] || metadata.title || '',
-      [FieldMapper.get('YOUTUBE_HANDLE')]: metadata.youtubeHandle || metadata[FieldMapper.get('YOUTUBE_HANDLE')] || '',
-      [FieldMapper.get('CHANNEL_URL')]: metadata.channelUrl || metadata[FieldMapper.get('CHANNEL_URL')] || '',
+      [FieldMapper.get('CHANNEL_NAME')]: metadata[FieldMapper.get('CHANNEL_NAME')] || '',
+      [FieldMapper.get('TITLE')]: metadata[FieldMapper.get('TITLE')] || '',
+      [FieldMapper.get('YOUTUBE_HANDLE')]: metadata[FieldMapper.get('YOUTUBE_HANDLE')] || '',
+      [FieldMapper.get('CHANNEL_URL')]: metadata[FieldMapper.get('CHANNEL_URL')] || '',
       [FieldMapper.get('MAIN_CATEGORY')]: analysis.mainCategory || '미분류',
       [FieldMapper.get('MIDDLE_CATEGORY')]: analysis.middleCategory || '',
       [FieldMapper.get('FULL_CATEGORY_PATH')]: fullCategoryPath,
       [FieldMapper.get('CATEGORY_DEPTH')]: categoryDepth,
       [FieldMapper.get('KEYWORDS')]: analysis.keywords?.join(', ') || '',
-      [FieldMapper.get('HASHTAGS')]: analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '',
+      [FieldMapper.get('HASHTAGS')]: analysis.hashtags?.join(' ') || '',
       [FieldMapper.get('MENTIONS')]: analysis.mentions?.join(' ') || '',
-      [FieldMapper.get('DESCRIPTION')]: metadata[FieldMapper.get('DESCRIPTION')] || metadata.description || '',
+      [FieldMapper.get('DESCRIPTION')]: metadata[FieldMapper.get('DESCRIPTION')] || '',
       [FieldMapper.get('ANALYSIS_CONTENT')]: analysis.analysisContent || analysis.summary || analysis.description || analysis.content || '',
-      [FieldMapper.get('COMMENTS')]: metadata.comments || '',
-      [FieldMapper.get('LIKES')]: this.parseNumber(metadata[FieldMapper.get('LIKES')] || metadata.likes),
-      [FieldMapper.get('COMMENTS_COUNT')]: this.parseNumber(metadata[FieldMapper.get('COMMENTS_COUNT')] || metadata.commentsCount),
-      [FieldMapper.get('VIEWS')]: this.parseNumber(metadata[FieldMapper.get('VIEWS')] || metadata.views),
-      [FieldMapper.get('DURATION')]: metadata[FieldMapper.get('DURATION')] || metadata.durationFormatted || '',
-      [FieldMapper.get('SUBSCRIBERS')]: this.parseNumber(metadata.subscribers) || this.parseNumber(metadata[FieldMapper.get('SUBSCRIBERS')]),
-      [FieldMapper.get('CHANNEL_VIDEOS')]: this.parseNumber(metadata.channelVideos) || this.parseNumber(metadata[FieldMapper.get('CHANNEL_VIDEOS')]),
-      [FieldMapper.get('MONETIZED')]: metadata.monetized || 'N',
-      [FieldMapper.get('YOUTUBE_CATEGORY')]: metadata.youtubeCategory || '',
-      [FieldMapper.get('LICENSE')]: metadata.license || 'youtube',
-      [FieldMapper.get('QUALITY')]: metadata.definition || 'sd',
-      [FieldMapper.get('LANGUAGE')]: (metadata.language && metadata.language.trim() !== '') ? metadata.language :
-                                     (metadata.defaultLanguage && metadata.defaultLanguage.trim() !== '') ? metadata.defaultLanguage :
-                                     (metadata.defaultAudioLanguage && metadata.defaultAudioLanguage.trim() !== '') ? metadata.defaultAudioLanguage : null,
+      [FieldMapper.get('COMMENTS')]: metadata[FieldMapper.get('COMMENTS')] || '',
+      [FieldMapper.get('LIKES')]: this.parseNumber(metadata[FieldMapper.get('LIKES')]),
+      [FieldMapper.get('COMMENTS_COUNT')]: this.parseNumber(metadata[FieldMapper.get('COMMENTS_COUNT')]),
+      [FieldMapper.get('VIEWS')]: this.parseNumber(metadata[FieldMapper.get('VIEWS')]),
+      [FieldMapper.get('DURATION')]: metadata[FieldMapper.get('DURATION')] || '',
+      [FieldMapper.get('SUBSCRIBERS')]: this.parseNumber(metadata[FieldMapper.get('SUBSCRIBERS')]),
+      [FieldMapper.get('CHANNEL_VIDEOS')]: this.parseNumber(metadata[FieldMapper.get('CHANNEL_VIDEOS')]),
+      [FieldMapper.get('MONETIZED')]: metadata[FieldMapper.get('MONETIZED')] || 'N',
+      [FieldMapper.get('YOUTUBE_CATEGORY')]: metadata[FieldMapper.get('YOUTUBE_CATEGORY')] || '',
+      [FieldMapper.get('LICENSE')]: metadata[FieldMapper.get('LICENSE')] || 'youtube',
+      [FieldMapper.get('QUALITY')]: metadata[FieldMapper.get('QUALITY')] || 'sd',
+      [FieldMapper.get('LANGUAGE')]: metadata[FieldMapper.get('LANGUAGE')] || null,
       [FieldMapper.get('URL')]: url || '',
-      [FieldMapper.get('THUMBNAIL_URL')]: metadata[FieldMapper.get('THUMBNAIL_URL')] || metadata.thumbnailUrl || '',
+      [FieldMapper.get('THUMBNAIL_URL')]: metadata[FieldMapper.get('THUMBNAIL_URL')] || '',
       [FieldMapper.get('CONFIDENCE')]: this.formatConfidence(analysis.confidence),
       [FieldMapper.get('ANALYSIS_STATUS')]: analysis.aiModel || '수동',
       [FieldMapper.get('CATEGORY_MATCH_RATE')]: analysis.categoryMatch ? `${analysis.categoryMatch.matchScore}%` : '',
@@ -158,31 +156,32 @@ class VideoDataConverter {
     }
 
     // Instagram 20개 필드 변환
+    // 🚀 FieldMapper 완전 자동화된 데이터 구조
     return {
       // 자동 생성 필드
-      rowNumber: rowNumber,
+      [FieldMapper.get('ROW_NUMBER')]: rowNumber,
       
-      // Instagram 전용 19개 필드 (Google Sheets 헤더 순서대로)
-      uploadDate: uploadDate,                                 // 업로드날짜
-      platform: (platform || 'instagram').toUpperCase(),      // 플랫폼
-      channelName: metadata[FieldMapper.get('CHANNEL_NAME')] || '',     // 채널이름
-      channelUrl: metadata[FieldMapper.get('CHANNEL_URL')] || '',      // 채널URL
-      mainCategory: analysis.mainCategory || '미분류',         // 대카테고리
-      middleCategory: analysis.middleCategory || '',           // 중카테고리
-      fullCategoryPath: fullCategoryPath,                      // 전체카테고리경로
-      categoryDepth: categoryDepth,                            // 카테고리깊이
-      keywords: analysis.keywords?.join(', ') || '',           // 키워드
-      hashtags: analysis.hashtags?.join(' ') || metadata.hashtags?.join(' ') || '', // 해시태그
-      mentions: analysis.mentions?.join(' ') || '',            // 멘션
-      description: metadata[FieldMapper.get('DESCRIPTION')] || metadata.description || '', // 설명 (FieldMapper 표준)
-      analysisContent: analysis.summary || '',                 // 분석내용
-      likes: this.parseNumber(metadata[FieldMapper.get('LIKES')] || metadata.likes), // 좋아요 (FieldMapper 표준)
-      commentsCount: this.parseNumber(metadata[FieldMapper.get('COMMENTS_COUNT')] || metadata.commentsCount), // 댓글수 (FieldMapper 표준)
-      url: url || '',                                           // ⭐ URL (표준화 완료)
-      thumbnailUrl: metadata[FieldMapper.get('THUMBNAIL_URL')] || metadata.thumbnailUrl || '', // 썸네일URL (FieldMapper 표준)
-      confidence: this.formatConfidence(analysis.confidence),  // 신뢰도
-      analysisStatus: analysis.aiModel || '수동',              // 분석상태
-      collectionTime: new Date()                                // 수집시간
+      // Instagram 전용 19개 필드 (FieldMapper 자동화)
+      [FieldMapper.get('UPLOAD_DATE')]: uploadDate,
+      [FieldMapper.get('PLATFORM')]: (platform || 'instagram').toUpperCase(),
+      [FieldMapper.get('CHANNEL_NAME')]: metadata[FieldMapper.get('CHANNEL_NAME')] || '',
+      [FieldMapper.get('CHANNEL_URL')]: metadata[FieldMapper.get('CHANNEL_URL')] || '',
+      [FieldMapper.get('MAIN_CATEGORY')]: analysis.mainCategory || '미분류',
+      [FieldMapper.get('MIDDLE_CATEGORY')]: analysis.middleCategory || '',
+      [FieldMapper.get('FULL_CATEGORY_PATH')]: fullCategoryPath,
+      [FieldMapper.get('CATEGORY_DEPTH')]: categoryDepth,
+      [FieldMapper.get('KEYWORDS')]: analysis.keywords?.join(', ') || '',
+      [FieldMapper.get('HASHTAGS')]: analysis.hashtags?.join(' ') || '',
+      [FieldMapper.get('MENTIONS')]: analysis.mentions?.join(' ') || '',
+      [FieldMapper.get('DESCRIPTION')]: metadata[FieldMapper.get('DESCRIPTION')] || '',
+      [FieldMapper.get('ANALYSIS_CONTENT')]: analysis.summary || '',
+      [FieldMapper.get('LIKES')]: this.parseNumber(metadata[FieldMapper.get('LIKES')]),
+      [FieldMapper.get('COMMENTS_COUNT')]: this.parseNumber(metadata[FieldMapper.get('COMMENTS_COUNT')]),
+      [FieldMapper.get('URL')]: url || '',
+      [FieldMapper.get('THUMBNAIL_URL')]: metadata[FieldMapper.get('THUMBNAIL_URL')] || '',
+      [FieldMapper.get('CONFIDENCE')]: this.formatConfidence(analysis.confidence),
+      [FieldMapper.get('ANALYSIS_STATUS')]: analysis.aiModel || '수동',
+      collectionTime: new Date()
     };
   }
 
@@ -244,72 +243,74 @@ class VideoDataConverter {
 
   /**
    * YouTube Google Sheets 행을 MongoDB 문서로 변환
+   * 🚀 FieldMapper 완전 자동화된 데이터 구조
    */
   static convertYouTubeRowToDocument(rowData) {
     return {
-      rowNumber: this.parseNumber(rowData[0]),
-      uploadDate: rowData[1] || '',
-      platform: rowData[2] || 'YOUTUBE',
-      channelName: rowData[3] || '',
-      youtubeHandle: rowData[4] || '',
-      channelUrl: rowData[5] || '',
-      mainCategory: rowData[6] || '',
-      middleCategory: rowData[7] || '',
-      fullCategoryPath: rowData[8] || '',
-      categoryDepth: this.parseNumber(rowData[9]),
-      keywords: rowData[10] || '',
-      hashtags: rowData[11] || '',
-      mentions: rowData[12] || '',
-      description: rowData[13] || '',
-      analysisContent: rowData[14] || '',
-      comments: rowData[15] || '',
-      likes: this.parseNumber(rowData[16]),
-      commentsCount: this.parseNumber(rowData[17]),
-      views: this.parseNumber(rowData[18]),
-      duration: rowData[19] || '',
-      subscribers: this.parseNumber(rowData[20]),
-      channelVideos: this.parseNumber(rowData[21]),
-      monetized: rowData[22] || 'N',
-      youtubeCategory: rowData[23] || '',
-      license: rowData[24] || 'youtube',
-      quality: rowData[25] || 'sd',
-      language: rowData[26] || '',
-      url: rowData[27] || '',
-      thumbnailUrl: rowData[28] || '',
-      confidence: rowData[29] || '0%',
-      analysisStatus: rowData[30] || '수동',
-      categoryMatchRate: rowData[31] || '',
-      matchType: rowData[32] || '',
-      matchReason: rowData[33] || '',
+      [FieldMapper.get('ROW_NUMBER')]: this.parseNumber(rowData[0]),
+      [FieldMapper.get('UPLOAD_DATE')]: rowData[1] || '',
+      [FieldMapper.get('PLATFORM')]: rowData[2] || 'YOUTUBE',
+      [FieldMapper.get('CHANNEL_NAME')]: rowData[3] || '',
+      [FieldMapper.get('YOUTUBE_HANDLE')]: rowData[4] || '',
+      [FieldMapper.get('CHANNEL_URL')]: rowData[5] || '',
+      [FieldMapper.get('MAIN_CATEGORY')]: rowData[6] || '',
+      [FieldMapper.get('MIDDLE_CATEGORY')]: rowData[7] || '',
+      [FieldMapper.get('FULL_CATEGORY_PATH')]: rowData[8] || '',
+      [FieldMapper.get('CATEGORY_DEPTH')]: this.parseNumber(rowData[9]),
+      [FieldMapper.get('KEYWORDS')]: rowData[10] || '',
+      [FieldMapper.get('HASHTAGS')]: rowData[11] || '',
+      [FieldMapper.get('MENTIONS')]: rowData[12] || '',
+      [FieldMapper.get('DESCRIPTION')]: rowData[13] || '',
+      [FieldMapper.get('ANALYSIS_CONTENT')]: rowData[14] || '',
+      [FieldMapper.get('COMMENTS')]: rowData[15] || '',
+      [FieldMapper.get('LIKES')]: this.parseNumber(rowData[16]),
+      [FieldMapper.get('COMMENTS_COUNT')]: this.parseNumber(rowData[17]),
+      [FieldMapper.get('VIEWS')]: this.parseNumber(rowData[18]),
+      [FieldMapper.get('DURATION')]: rowData[19] || '',
+      [FieldMapper.get('SUBSCRIBERS')]: this.parseNumber(rowData[20]),
+      [FieldMapper.get('CHANNEL_VIDEOS')]: this.parseNumber(rowData[21]),
+      [FieldMapper.get('MONETIZED')]: rowData[22] || 'N',
+      [FieldMapper.get('YOUTUBE_CATEGORY')]: rowData[23] || '',
+      [FieldMapper.get('LICENSE')]: rowData[24] || 'youtube',
+      [FieldMapper.get('QUALITY')]: rowData[25] || 'sd',
+      [FieldMapper.get('LANGUAGE')]: rowData[26] || '',
+      [FieldMapper.get('URL')]: rowData[27] || '',
+      [FieldMapper.get('THUMBNAIL_URL')]: rowData[28] || '',
+      [FieldMapper.get('CONFIDENCE')]: rowData[29] || '0%',
+      [FieldMapper.get('ANALYSIS_STATUS')]: rowData[30] || '수동',
+      [FieldMapper.get('CATEGORY_MATCH_RATE')]: rowData[31] || '',
+      [FieldMapper.get('MATCH_TYPE')]: rowData[32] || '',
+      [FieldMapper.get('MATCH_REASON')]: rowData[33] || '',
       collectionTime: new Date()
     };
   }
 
   /**
    * Instagram Google Sheets 행을 MongoDB 문서로 변환
+   * 🚀 FieldMapper 완전 자동화된 데이터 구조
    */
   static convertInstagramRowToDocument(rowData) {
     return {
-      rowNumber: this.parseNumber(rowData[0]),
-      uploadDate: rowData[1] || '',
-      platform: rowData[2] || 'INSTAGRAM',
-      channelName: rowData[3] || '',
-      channelUrl: rowData[4] || '',
-      mainCategory: rowData[5] || '',
-      middleCategory: rowData[6] || '',
-      fullCategoryPath: rowData[7] || '',
-      categoryDepth: this.parseNumber(rowData[8]),
-      keywords: rowData[9] || '',
-      hashtags: rowData[10] || '',
-      mentions: rowData[11] || '',
-      description: rowData[12] || '',
-      analysisContent: rowData[13] || '',
-      likes: this.parseNumber(rowData[14]),
-      commentsCount: this.parseNumber(rowData[15]),
-      url: rowData[16] || '',
-      thumbnailUrl: rowData[17] || '',
-      confidence: rowData[18] || '0%',
-      analysisStatus: rowData[19] || '수동',
+      [FieldMapper.get('ROW_NUMBER')]: this.parseNumber(rowData[0]),
+      [FieldMapper.get('UPLOAD_DATE')]: rowData[1] || '',
+      [FieldMapper.get('PLATFORM')]: rowData[2] || 'INSTAGRAM',
+      [FieldMapper.get('CHANNEL_NAME')]: rowData[3] || '',
+      [FieldMapper.get('CHANNEL_URL')]: rowData[4] || '',
+      [FieldMapper.get('MAIN_CATEGORY')]: rowData[5] || '',
+      [FieldMapper.get('MIDDLE_CATEGORY')]: rowData[6] || '',
+      [FieldMapper.get('FULL_CATEGORY_PATH')]: rowData[7] || '',
+      [FieldMapper.get('CATEGORY_DEPTH')]: this.parseNumber(rowData[8]),
+      [FieldMapper.get('KEYWORDS')]: rowData[9] || '',
+      [FieldMapper.get('HASHTAGS')]: rowData[10] || '',
+      [FieldMapper.get('MENTIONS')]: rowData[11] || '',
+      [FieldMapper.get('DESCRIPTION')]: rowData[12] || '',
+      [FieldMapper.get('ANALYSIS_CONTENT')]: rowData[13] || '',
+      [FieldMapper.get('LIKES')]: this.parseNumber(rowData[14]),
+      [FieldMapper.get('COMMENTS_COUNT')]: this.parseNumber(rowData[15]),
+      [FieldMapper.get('URL')]: rowData[16] || '',
+      [FieldMapper.get('THUMBNAIL_URL')]: rowData[17] || '',
+      [FieldMapper.get('CONFIDENCE')]: rowData[18] || '0%',
+      [FieldMapper.get('ANALYSIS_STATUS')]: rowData[19] || '수동',
       collectionTime: new Date()
     };
   }
@@ -339,71 +340,73 @@ class VideoDataConverter {
 
   /**
    * YouTube MongoDB 문서를 Google Sheets 행으로 역변환
+   * 🚀 FieldMapper 완전 자동화된 데이터 구조
    */
   static convertYouTubeDocumentToRow(document) {
     return [
-      document.rowNumber || 0,
-      document.uploadDate || '',
-      document.platform || 'YOUTUBE',
-      document.channelName || '',
-      document.youtubeHandle || '',
-      document.channelUrl || '',
-      document.mainCategory || '',
-      document.middleCategory || '',
-      document.fullCategoryPath || '',
-      document.categoryDepth || 0,
-      document.keywords || '',
-      document.hashtags || '',
-      document.mentions || '',
-      document.description || '',
-      document.analysisContent || '',
-      document.comments || '',
-      document.likes || 0,
-      document.commentsCount || 0,
-      document.views || 0,
-      document.duration || '',
-      document.subscribers || 0,
-      document.channelVideos || 0,
-      document.monetized || 'N',
-      document.youtubeCategory || '',
-      document.license || 'youtube',
-      document.quality || 'sd',
-      document.language || '',
-      document.url || '',
-      document.thumbnailUrl || '',
-      document.confidence || '0%',
-      document.analysisStatus || '수동',
-      document.categoryMatchRate || '',
-      document.matchType || '',
-      document.matchReason || ''
+      document[FieldMapper.get('ROW_NUMBER')] || 0,
+      document[FieldMapper.get('UPLOAD_DATE')] || '',
+      document[FieldMapper.get('PLATFORM')] || 'YOUTUBE',
+      document[FieldMapper.get('CHANNEL_NAME')] || '',
+      document[FieldMapper.get('YOUTUBE_HANDLE')] || '',
+      document[FieldMapper.get('CHANNEL_URL')] || '',
+      document[FieldMapper.get('MAIN_CATEGORY')] || '',
+      document[FieldMapper.get('MIDDLE_CATEGORY')] || '',
+      document[FieldMapper.get('FULL_CATEGORY_PATH')] || '',
+      document[FieldMapper.get('CATEGORY_DEPTH')] || 0,
+      document[FieldMapper.get('KEYWORDS')] || '',
+      document[FieldMapper.get('HASHTAGS')] || '',
+      document[FieldMapper.get('MENTIONS')] || '',
+      document[FieldMapper.get('DESCRIPTION')] || '',
+      document[FieldMapper.get('ANALYSIS_CONTENT')] || '',
+      document[FieldMapper.get('COMMENTS')] || '',
+      document[FieldMapper.get('LIKES')] || 0,
+      document[FieldMapper.get('COMMENTS_COUNT')] || 0,
+      document[FieldMapper.get('VIEWS')] || 0,
+      document[FieldMapper.get('DURATION')] || '',
+      document[FieldMapper.get('SUBSCRIBERS')] || 0,
+      document[FieldMapper.get('CHANNEL_VIDEOS')] || 0,
+      document[FieldMapper.get('MONETIZED')] || 'N',
+      document[FieldMapper.get('YOUTUBE_CATEGORY')] || '',
+      document[FieldMapper.get('LICENSE')] || 'youtube',
+      document[FieldMapper.get('QUALITY')] || 'sd',
+      document[FieldMapper.get('LANGUAGE')] || '',
+      document[FieldMapper.get('URL')] || '',
+      document[FieldMapper.get('THUMBNAIL_URL')] || '',
+      document[FieldMapper.get('CONFIDENCE')] || '0%',
+      document[FieldMapper.get('ANALYSIS_STATUS')] || '수동',
+      document[FieldMapper.get('CATEGORY_MATCH_RATE')] || '',
+      document[FieldMapper.get('MATCH_TYPE')] || '',
+      document[FieldMapper.get('MATCH_REASON')] || ''
     ];
   }
 
   /**
    * Instagram MongoDB 문서를 Google Sheets 행으로 역변환
+   * 🚀 FieldMapper 완전 자동화된 데이터 구조
    */
   static convertInstagramDocumentToRow(document) {
     return [
-      document.rowNumber || 0,
-      document.uploadDate || '',
-      document.platform || 'INSTAGRAM',
-      document.channelName || '',
-      document.channelUrl || '',
-      document.mainCategory || '',
-      document.middleCategory || '',
-      document.fullCategoryPath || '',
-      document.categoryDepth || 0,
-      document.keywords || '',
-      document.hashtags || '',
-      document.mentions || '',
-      document.description || '',
-      document.analysisContent || '',
-      document.likes || 0,
-      document.commentsCount || 0,
-      document.url || '',
-      document.thumbnailUrl || '',
-      document.confidence || '0%',
-      document.analysisStatus || '수동'
+      document[FieldMapper.get('ROW_NUMBER')] || 0,
+      document[FieldMapper.get('UPLOAD_DATE')] || '',
+      document[FieldMapper.get('PLATFORM')] || 'INSTAGRAM',
+      document[FieldMapper.get('CHANNEL_NAME')] || '',
+      document[FieldMapper.get('CHANNEL_URL')] || '',
+      document[FieldMapper.get('MAIN_CATEGORY')] || '',
+      document[FieldMapper.get('MIDDLE_CATEGORY')] || '',
+      document[FieldMapper.get('FULL_CATEGORY_PATH')] || '',
+      document[FieldMapper.get('CATEGORY_DEPTH')] || 0,
+      document[FieldMapper.get('KEYWORDS')] || '',
+      document[FieldMapper.get('HASHTAGS')] || '',
+      document[FieldMapper.get('MENTIONS')] || '',
+      document[FieldMapper.get('DESCRIPTION')] || '',
+      document[FieldMapper.get('ANALYSIS_CONTENT')] || '',
+      document[FieldMapper.get('LIKES')] || 0,
+      document[FieldMapper.get('COMMENTS_COUNT')] || 0,
+      document[FieldMapper.get('URL')] || '',
+      document[FieldMapper.get('THUMBNAIL_URL')] || '',
+      document[FieldMapper.get('CONFIDENCE')] || '0%',
+      document[FieldMapper.get('ANALYSIS_STATUS')] || '수동'
     ];
   }
 

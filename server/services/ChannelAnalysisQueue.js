@@ -221,7 +221,7 @@ class ChannelAnalysisQueue extends EventEmitter {
       result: job.result ? {
         id: job.result.id,
         name: job.result.name,
-        [FieldMapper.get('SUBSCRIBERS')]: job.result[FieldMapper.get('SUBSCRIBERS')] || job.result.subscribers,
+        [FieldMapper.get('SUBSCRIBERS')]: job.result[FieldMapper.get('SUBSCRIBERS')],
         aiTags: job.result.aiTags
       } : null
     };

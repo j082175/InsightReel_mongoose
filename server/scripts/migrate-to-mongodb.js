@@ -77,7 +77,7 @@ class DataMigrator {
         [FieldMapper.get('HASHTAGS')]: this.parseHashtags(tags),
         
         // Google Sheets 원본 데이터 보존
-        sheets_row_data: {
+        [FieldMapper.get('SHEETS_ROW_DATA')]: {
           id,
           mainCategory,
           middleCategory, 
@@ -241,7 +241,7 @@ class DataMigrator {
 
         if (existing) {
           this.migrationStats.duplicates++;
-          ServerLogger.info(`⚠️ 중복 데이터 건너뜀: ${videoData.title}`, 'MIGRATION');
+          ServerLogger.info(`⚠️ 중복 데이터 건너뜀: ${videoData[FieldMapper.get('TITLE')]}`, 'MIGRATION');
           continue;
         }
 

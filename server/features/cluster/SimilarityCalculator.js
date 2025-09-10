@@ -48,9 +48,9 @@ class SimilarityCalculator {
    */
   calculateWeightedSimilarity(channel1, channel2, weights = {}) {
     const defaultWeights = {
-      tags: 0.6,           // 태그 유사도 60%
+      [FieldMapper.get('ALL_TAGS')]: 0.6,           // 태그 유사도 60%
       [FieldMapper.get('SUBSCRIBERS')]: 0.2,     // 구독자 규모 20%
-      platform: 0.1,       // 플랫폼 10%
+      [FieldMapper.get('PLATFORM')]: 0.1,       // 플랫폼 10%
       [FieldMapper.get('DESCRIPTION')]: 0.1      // 설명 유사도 10%
     };
 
@@ -62,7 +62,7 @@ class SimilarityCalculator {
       channel1[FieldMapper.get('ALL_TAGS')] || [],
       channel2[FieldMapper.get('ALL_TAGS')] || []
     );
-    totalSimilarity += tagSimilarity * finalWeights.tags;
+    totalSimilarity += tagSimilarity * finalWeights[FieldMapper.get('ALL_TAGS')];
 
     // 2. 구독자 규모 유사도
     const subscriberSimilarity = this.calculateSubscriberSimilarity(
@@ -72,8 +72,8 @@ class SimilarityCalculator {
     totalSimilarity += subscriberSimilarity * finalWeights[FieldMapper.get('SUBSCRIBERS')];
 
     // 3. 플랫폼 유사도
-    const platformSimilarity = (channel1.platform === channel2.platform) ? 1 : 0;
-    totalSimilarity += platformSimilarity * finalWeights.platform;
+    const platformSimilarity = (channel1[FieldMapper.get('PLATFORM')] === channel2[FieldMapper.get('PLATFORM')]) ? 1 : 0;
+    totalSimilarity += platformSimilarity * finalWeights[FieldMapper.get('PLATFORM')];
 
     // 4. 설명 유사도
     const descriptionSimilarity = this.calculateTextSimilarity(

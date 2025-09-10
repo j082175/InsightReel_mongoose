@@ -389,54 +389,56 @@ class YouTubeDataProcessor {
       const duration = contentDetails.duration ? 
         this.parseYouTubeDuration(contentDetails.duration) : 0;
 
+      // 🚀 FieldMapper 완전 자동화된 메타데이터 구조
       return {
-        // 기본 정보
-        videoId: videoId,
-        title: snippet.title || '제목 없음',
-        [FieldMapper.get('DESCRIPTION')]: snippet[FieldMapper.get('DESCRIPTION')] || snippet.description || '',
-        thumbnailUrl: this.buildThumbnailUrl(videoId),
+        // 기본 정보 (FieldMapper 표준)
+        [FieldMapper.get('VIDEO_ID')]: videoId,
+        [FieldMapper.get('TITLE')]: snippet.title || '제목 없음',
+        [FieldMapper.get('DESCRIPTION')]: snippet.description || '',
+        [FieldMapper.get('THUMBNAIL_URL')]: this.buildThumbnailUrl(videoId),
         
-        // 채널 정보
-        channelId: snippet.channelId,
-        channelTitle: snippet.channelTitle,
-        channelUrl: this.buildChannelUrl(snippet.customUrl, snippet.channelId),
-        youtubeHandle: this.extractYouTubeHandle(snippet.customUrl),
+        // 채널 정보 (FieldMapper 표준)
+        [FieldMapper.get('CHANNEL_ID')]: snippet.channelId,
+        [FieldMapper.get('CHANNEL_NAME')]: snippet.channelTitle,
+        [FieldMapper.get('CHANNEL_URL')]: this.buildChannelUrl(snippet.customUrl, snippet.channelId),
+        [FieldMapper.get('YOUTUBE_HANDLE')]: this.extractYouTubeHandle(snippet.customUrl),
         
-        // 통계
-        viewCount: parseInt(statistics.viewCount) || 0,
-        likeCount: parseInt(statistics.likeCount) || 0,
-        commentCount: parseInt(statistics.commentCount) || 0,
+        // 통계 (FieldMapper 표준)
+        [FieldMapper.get('VIEWS')]: parseInt(statistics.viewCount) || 0,
+        [FieldMapper.get('LIKES')]: parseInt(statistics.likeCount) || 0,
+        [FieldMapper.get('COMMENTS_COUNT')]: parseInt(statistics.commentCount) || 0,
         
-        // 시간 정보
-        duration: duration,
-        durationFormatted: this.formatDuration(duration),
-        publishedAt: snippet.publishedAt,
+        // 시간 정보 (FieldMapper 표준)
+        [FieldMapper.get('DURATION')]: duration,
+        [FieldMapper.get('DURATION_FORMATTED')]: this.formatDuration(duration),
+        [FieldMapper.get('UPLOAD_DATE')]: snippet.publishedAt,
         
-        // 카테고리
-        categoryId: snippet.categoryId,
-        youtubeCategory: this.getCategoryName(snippet.categoryId),
+        // 카테고리 (FieldMapper 표준)
+        [FieldMapper.get('CATEGORY_ID')]: snippet.categoryId,
+        [FieldMapper.get('YOUTUBE_CATEGORY')]: this.getCategoryName(snippet.categoryId),
         
-        // 콘텐츠 분석
-        contentType: this.getContentType(rawData.url, duration),
-        hashtags: this.extractHashtags(snippet[FieldMapper.get('DESCRIPTION')] || snippet.description),
-        mentions: this.extractMentions(snippet[FieldMapper.get('DESCRIPTION')] || snippet.description),
-        keywords: this.extractKeywords(snippet.title, snippet[FieldMapper.get('DESCRIPTION')] || snippet.description, snippet.tags),
+        // 콘텐츠 분석 (FieldMapper 표준)
+        [FieldMapper.get('CONTENT_TYPE')]: this.getContentType(rawData.url, duration),
+        [FieldMapper.get('HASHTAGS')]: this.extractHashtags(snippet.description),
+        [FieldMapper.get('MENTIONS')]: this.extractMentions(snippet.description),
+        [FieldMapper.get('KEYWORDS')]: this.extractKeywords(snippet.title, snippet.description, snippet.tags),
         
-        // 기타
-        defaultLanguage: snippet.defaultLanguage,
-        tags: snippet.tags || [],
+        // 기타 (FieldMapper 표준)
+        [FieldMapper.get('LANGUAGE')]: snippet.defaultLanguage,
+        [FieldMapper.get('TAGS')]: snippet.tags || [],
         
-        // 포맷된 숫자들
-        viewsFormatted: this.formatNumber(statistics.viewCount),
-        likesFormatted: this.formatNumber(statistics.likeCount),
-        commentsFormatted: this.formatNumber(statistics.commentCount)
+        // 포맷된 숫자들 (FieldMapper 표준)
+        [FieldMapper.get('VIEWS_FORMATTED')]: this.formatNumber(statistics.viewCount),
+        [FieldMapper.get('LIKES_FORMATTED')]: this.formatNumber(statistics.likeCount),
+        [FieldMapper.get('COMMENTS_FORMATTED')]: this.formatNumber(statistics.commentCount)
       };
 
     } catch (error) {
       ServerLogger.error('메타데이터 처리 실패', error, 'YOUTUBE_PROCESSOR');
+      // 🚀 FieldMapper 표준화된 오류 응답
       return {
-        videoId: null,
-        title: '처리 실패',
+        [FieldMapper.get('VIDEO_ID')]: null,
+        [FieldMapper.get('TITLE')]: '처리 실패',
         error: error.message
       };
     }
@@ -453,15 +455,16 @@ class YouTubeDataProcessor {
     return videoList.map((video, index) => {
       try {
         const processed = this.processVideoMetadata(video);
-        processed.batchIndex = index;
-        processed.processingTime = new Date().toISOString();
+        processed[FieldMapper.get('BATCH_INDEX')] = index;
+        processed[FieldMapper.get('PROCESSING_TIME')] = new Date().toISOString();
         return processed;
       } catch (error) {
         ServerLogger.error(`배치 처리 실패 (인덱스: ${index})`, error, 'YOUTUBE_PROCESSOR');
+        // 🚀 FieldMapper 표준화된 배치 오류 응답
         return {
-          batchIndex: index,
+          [FieldMapper.get('BATCH_INDEX')]: index,
           error: error.message,
-          originalData: video
+          [FieldMapper.get('ORIGINAL_DATA')]: video
         };
       }
     });

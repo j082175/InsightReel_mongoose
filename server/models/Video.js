@@ -101,7 +101,7 @@ const schemaDefinition = {
   [FieldMapper.get('PROCESSED_AT')]: { type: Date, required: false },
   
   // Google Sheets 원본 데이터 (디버깅용)
-  sheets_row_data: mongoose.Schema.Types.Mixed
+  [FieldMapper.get('SHEETS_ROW_DATA')]: mongoose.Schema.Types.Mixed
 };
 
 const videoSchema = new mongoose.Schema(schemaDefinition, {
@@ -251,21 +251,21 @@ videoSchema.statics.createOrUpdateFromVideoUrl = async function(videoUrlData, me
   // VideoOptimized 표준에 맞춘 데이터 구조
   const videoData = {
     // 기본 필드 (표준화 적용)
-    platform: platform,
-    channelName: channelName || '알 수 없는 채널',
-    url: originalUrl,                                      // ⭐ 표준화: originalUrl → url
-    uploadDate: originalPublishDate || new Date(),        // ⭐ 표준화: originalPublishDate → uploadDate
+    [FieldMapper.get('PLATFORM')]: platform,
+    [FieldMapper.get('CHANNEL_NAME')]: channelName || '알 수 없는 채널',
+    [FieldMapper.get('URL')]: originalUrl,                                      // ⭐ 표준화: originalUrl → url
+    [FieldMapper.get('UPLOAD_DATE')]: originalPublishDate || new Date(),        // ⭐ 표준화: originalPublishDate → uploadDate
     
     // AI 분석 필드
-    mainCategory: metadata.mainCategory || metadata.category || '미분류',
-    middleCategory: metadata.middleCategory || '',
-    fullCategoryPath: metadata.fullCategoryPath || '',
-    categoryDepth: metadata.categoryDepth || 0,
-    keywords: Array.isArray(metadata.keywords) ? metadata.keywords.join(', ') : (metadata.keywords || ''),
-    hashtags: Array.isArray(metadata.hashtags) ? metadata.hashtags.join(', ') : (metadata.hashtags || ''),
-    mentions: Array.isArray(metadata.mentions) ? metadata.mentions.join(', ') : (metadata.mentions || ''),
-    description: metadata[FieldMapper.get('DESCRIPTION')] || metadata.description || '',
-    analysisContent: metadata.analysisContent || metadata.ai_description || '',
+    [FieldMapper.get('MAIN_CATEGORY')]: metadata[FieldMapper.get('MAIN_CATEGORY')] || metadata.mainCategory || metadata.category || '미분류',
+    [FieldMapper.get('MIDDLE_CATEGORY')]: metadata[FieldMapper.get('MIDDLE_CATEGORY')] || metadata.middleCategory || '',
+    [FieldMapper.get('FULL_CATEGORY_PATH')]: metadata[FieldMapper.get('FULL_CATEGORY_PATH')] || metadata.fullCategoryPath || '',
+    [FieldMapper.get('CATEGORY_DEPTH')]: metadata[FieldMapper.get('CATEGORY_DEPTH')] || metadata.categoryDepth || 0,
+    [FieldMapper.get('KEYWORDS')]: Array.isArray(metadata[FieldMapper.get('KEYWORDS')] || metadata.keywords) ? (metadata[FieldMapper.get('KEYWORDS')] || metadata.keywords).join(', ') : (metadata[FieldMapper.get('KEYWORDS')] || metadata.keywords || ''),
+    [FieldMapper.get('HASHTAGS')]: Array.isArray(metadata[FieldMapper.get('HASHTAGS')] || metadata.hashtags) ? (metadata[FieldMapper.get('HASHTAGS')] || metadata.hashtags).join(', ') : (metadata[FieldMapper.get('HASHTAGS')] || metadata.hashtags || ''),
+    [FieldMapper.get('MENTIONS')]: Array.isArray(metadata[FieldMapper.get('MENTIONS')] || metadata.mentions) ? (metadata[FieldMapper.get('MENTIONS')] || metadata.mentions).join(', ') : (metadata[FieldMapper.get('MENTIONS')] || metadata.mentions || ''),
+    [FieldMapper.get('DESCRIPTION')]: metadata[FieldMapper.get('DESCRIPTION')] || metadata.description || '',
+    [FieldMapper.get('ANALYSIS_CONTENT')]: metadata[FieldMapper.get('ANALYSIS_CONTENT')] || metadata.analysisContent || metadata.ai_description || '',
     
     // 성과 지표 (FieldMapper 완전 표준화)
     [FieldMapper.get('LIKES')]: metadata[FieldMapper.get('LIKES')] || metadata.likes || 0,
@@ -273,38 +273,42 @@ videoSchema.statics.createOrUpdateFromVideoUrl = async function(videoUrlData, me
     [FieldMapper.get('VIEWS')]: metadata[FieldMapper.get('VIEWS')] || metadata.views || 0,
     
     // URL 및 메타데이터
-    thumbnailUrl: metadata[FieldMapper.get('THUMBNAIL_URL')] || metadata.thumbnailUrl || metadata.thumbnailPath || '',
-    channelUrl: metadata.channelUrl || '',
-    confidence: metadata.confidence || '',
-    analysisStatus: metadata.analysisStatus || 'completed',
-    collectionTime: new Date(),
+    [FieldMapper.get('THUMBNAIL_URL')]: metadata[FieldMapper.get('THUMBNAIL_URL')] || metadata.thumbnailUrl || metadata.thumbnailPath || '',
+    [FieldMapper.get('CHANNEL_URL')]: metadata[FieldMapper.get('CHANNEL_URL')] || metadata.channelUrl || '',
+    [FieldMapper.get('CONFIDENCE')]: metadata[FieldMapper.get('CONFIDENCE')] || metadata.confidence || '',
+    [FieldMapper.get('ANALYSIS_STATUS')]: metadata[FieldMapper.get('ANALYSIS_STATUS')] || metadata.analysisStatus || 'completed',
+    [FieldMapper.get('COLLECTION_TIME')]: new Date(),
     
     // YouTube 전용 필드
-    youtubeHandle: metadata.youtubeHandle || '',
-    comments: metadata.commentText || '',
-    duration: metadata[FieldMapper.get('DURATION')] || metadata.duration || '',
+    [FieldMapper.get('YOUTUBE_HANDLE')]: metadata[FieldMapper.get('YOUTUBE_HANDLE')] || metadata.youtubeHandle || '',
+    [FieldMapper.get('COMMENTS')]: metadata[FieldMapper.get('COMMENTS')] || metadata.commentText || '',
+    [FieldMapper.get('DURATION')]: metadata[FieldMapper.get('DURATION')] || metadata.duration || '',
     [FieldMapper.get('SUBSCRIBERS')]: metadata[FieldMapper.get('SUBSCRIBERS')] || metadata.subscribers || 0,
     [FieldMapper.get('CHANNEL_VIDEOS')]: metadata[FieldMapper.get('CHANNEL_VIDEOS')] || metadata.channelVideos || 0,
-    monetized: metadata.monetized || '',
-    youtubeCategory: metadata.youtubeCategory || '',
-    license: metadata.license || '',
-    quality: metadata.quality || '',
-    language: metadata.language || '',
-    categoryMatchRate: metadata.categoryMatchRate || '',
-    matchType: metadata.matchType || '',
-    matchReason: metadata.matchReason || '',
+    [FieldMapper.get('MONETIZED')]: metadata[FieldMapper.get('MONETIZED')] || metadata.monetized || '',
+    [FieldMapper.get('YOUTUBE_CATEGORY')]: metadata[FieldMapper.get('YOUTUBE_CATEGORY')] || metadata.youtubeCategory || '',
+    [FieldMapper.get('LICENSE')]: metadata[FieldMapper.get('LICENSE')] || metadata.license || '',
+    [FieldMapper.get('QUALITY')]: metadata[FieldMapper.get('QUALITY')] || metadata.quality || '',
+    [FieldMapper.get('LANGUAGE')]: metadata[FieldMapper.get('LANGUAGE')] || metadata.language || '',
+    [FieldMapper.get('CATEGORY_MATCH_RATE')]: metadata[FieldMapper.get('CATEGORY_MATCH_RATE')] || metadata.categoryMatchRate || '',
+    [FieldMapper.get('MATCH_TYPE')]: metadata[FieldMapper.get('MATCH_TYPE')] || metadata.matchType || '',
+    [FieldMapper.get('MATCH_REASON')]: metadata[FieldMapper.get('MATCH_REASON')] || metadata.matchReason || '',
     
     // 레거시 호환성 필드
-    title: metadata[FieldMapper.get('TITLE')] || originalUrl.split('/').pop() || '미분류',
-    shares: metadata.shares || 0,
-    timestamp: originalPublishDate || new Date(),     // 레거시 호환
-    processedAt: processedAt || new Date(),
-    topComments: metadata.topComments || ''
+    [FieldMapper.get('TITLE')]: metadata[FieldMapper.get('TITLE')] || originalUrl.split('/').pop() || '미분류',
+    [FieldMapper.get('SHARES')]: metadata[FieldMapper.get('SHARES')] || metadata.shares || 0,
+    [FieldMapper.get('TIMESTAMP')]: originalPublishDate || new Date(),     // 레거시 호환
+    [FieldMapper.get('PROCESSED_AT')]: processedAt || new Date(),
+    [FieldMapper.get('TOP_COMMENTS')]: metadata[FieldMapper.get('TOP_COMMENTS')] || metadata.topComments || ''
   };
   
   // upsert: 있으면 업데이트, 없으면 생성 (표준화된 url 필드 사용)
+  const query = {};
+  query[FieldMapper.get('URL')] = originalUrl;
+  query[FieldMapper.get('PLATFORM')] = platform;
+  
   return this.findOneAndUpdate(
-    { url: originalUrl, platform: platform },  // ⭐ 표준화: originalUrl → url
+    query,  // ⭐ 표준화: originalUrl → url
     { $set: videoData },
     { upsert: true, new: true }
   );

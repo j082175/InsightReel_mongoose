@@ -259,24 +259,26 @@ router.post('/check-duplicate', async (req, res) => {
       }
       
       // 2. MongoDB에서 채널 ID로 중복 검사
-      const existingChannel = await Channel.findOne({ id: channelId }).lean();
+      const query = {};
+      query[FieldMapper.get('ID')] = channelId;
+      const existingChannel = await Channel.findOne(query).lean();
       
       if (existingChannel) {
         duplicateInfo = {
           isDuplicate: true,
           existingChannel: {
-            id: existingChannel.id,
-            name: existingChannel.name,
-            url: existingChannel.url,
-            [FieldMapper.get('SUBSCRIBERS')]: existingChannel[FieldMapper.get('SUBSCRIBERS')] || existingChannel.subscribers,
-            platform: existingChannel.platform,
-            collectedAt: existingChannel.collectedAt,
-            lastAnalyzedAt: existingChannel.lastAnalyzedAt
+            [FieldMapper.get('ID')]: existingChannel[FieldMapper.get('ID')],
+            [FieldMapper.get('NAME')]: existingChannel[FieldMapper.get('NAME')],
+            [FieldMapper.get('URL')]: existingChannel[FieldMapper.get('URL')],
+            [FieldMapper.get('SUBSCRIBERS')]: existingChannel[FieldMapper.get('SUBSCRIBERS')],
+            [FieldMapper.get('PLATFORM')]: existingChannel[FieldMapper.get('PLATFORM')],
+            [FieldMapper.get('COLLECTED_AT')]: existingChannel[FieldMapper.get('COLLECTED_AT')],
+            [FieldMapper.get('LAST_ANALYZED_AT')]: existingChannel[FieldMapper.get('LAST_ANALYZED_AT')]
           },
-          message: `채널 "${existingChannel.name}"은 이미 분석되었습니다.`
+          message: `채널 "${existingChannel[FieldMapper.get('NAME')]}"은 이미 분석되었습니다.`
         };
         
-        ServerLogger.warn(`⚠️ 중복 채널 발견: ${existingChannel.name} (${existingChannel.id})`);
+        ServerLogger.warn(`⚠️ 중복 채널 발견: ${existingChannel[FieldMapper.get('NAME')]} (${existingChannel[FieldMapper.get('ID')]})`);
       } else {
         duplicateInfo = {
           isDuplicate: false,

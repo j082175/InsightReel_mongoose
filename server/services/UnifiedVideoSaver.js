@@ -35,7 +35,7 @@ class UnifiedVideoSaver {
       
       ServerLogger.info(`🚀 통합 저장 시작: ${platform.toUpperCase()}`, {
         [urlField]: videoData[urlField] || videoData.url || videoData.postUrl,
-        [channelNameField]: videoData[channelNameField] || videoData.channelName || videoData.metadata?.channelName || videoData.metadata?.author
+        [channelNameField]: videoData[channelNameField]
       }, 'UNIFIED_SAVER');
 
       // 1단계: Google Sheets 저장 비활성화 확인 (먼저 체크)
@@ -312,7 +312,7 @@ class UnifiedVideoSaver {
       ServerLogger.info(`✅ MongoDB 새 문서 저장: ${savedDoc._id}`, {
         platform: platform,
         url: convertedData.url,
-        channelName: convertedData.channelName
+        [FieldMapper.get('CHANNEL_NAME')]: convertedData[FieldMapper.get('CHANNEL_NAME')]
       }, 'UNIFIED_SAVER');
       
       return savedDoc;
@@ -332,7 +332,7 @@ class UnifiedVideoSaver {
    */
   async rollbackMongoDB(platform, documentId) {
     try {
-      const Model = getModelByPlatform(platform);
+      const Model = Video;
       const deletedDoc = await Model.findByIdAndDelete(documentId);
       
       if (deletedDoc) {
@@ -353,7 +353,7 @@ class UnifiedVideoSaver {
    */
   async rollbackBatchMongoDB(platform, successResults) {
     try {
-      const Model = getModelByPlatform(platform);
+      const Model = Video;
       const documentIds = successResults.map(r => r.data._id);
       
       if (documentIds.length === 0) {
@@ -405,7 +405,7 @@ class UnifiedVideoSaver {
 
       if (platform) {
         // 특정 플랫폼 통계
-        const Model = getModelByPlatform(platform);
+        const Model = Video;
         const mongoCount = await Model.countDocuments();
         
         stats.mongodb[platform] = mongoCount;
@@ -417,7 +417,7 @@ class UnifiedVideoSaver {
         
         for (const plt of platforms) {
           try {
-            const Model = getModelByPlatform(plt);
+            const Model = Video;
             const mongoCount = await Model.countDocuments();
             stats.mongodb[plt] = mongoCount;
             stats.total[plt] = mongoCount;
@@ -453,7 +453,7 @@ class UnifiedVideoSaver {
       const sheetRows = response.data.values || [];
       
       // MongoDB 데이터 조회
-      const Model = getModelByPlatform(platform);
+      const Model = Video;
       const mongoDocs = await Model.find({}).limit(limit).sort({ createdAt: -1 });
       
       // 일관성 검증

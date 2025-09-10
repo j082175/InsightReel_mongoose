@@ -23,6 +23,7 @@ const MASTER_FIELD_NAMES = {
   PROCESSED_AT: 'processedAt',
   CREATED_AT: 'createdAt',
   UPDATED_AT: 'updatedAt',
+  LAST_ANALYZED_AT: 'lastAnalyzedAt',
   
   // 채널 정보
   CHANNEL_NAME: 'channelName',         // ✅ 자동화 테스트 완료: 전체 시스템 동기화 확인

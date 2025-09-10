@@ -1208,7 +1208,7 @@ JSON 형식으로 답변:
 
 추가 정보:
 - 캡션: "${metadata.caption || ''}"
-- 작성자: "${metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.channelName || ''}" // 🚀 자동화
+- 작성자: "${metadata[FieldMapper.get('CHANNEL_NAME')] || ''}" // 🚀 자동화
 - 플랫폼: ${metadata.platform || 'unknown'}`;
   }
 
@@ -1458,7 +1458,7 @@ JSON 형식으로 답변:
       
       // 🎯 YouTube categoryId가 있는 경우 우선 사용
       if (metadata.categoryId) {
-        const youtubeMappedCategory = this.mapYouTubeCategoryToKorean(metadata.categoryId, metadata.title, metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.channelName);
+        const youtubeMappedCategory = this.mapYouTubeCategoryToKorean(metadata.categoryId, metadata.title, metadata[FieldMapper.get('CHANNEL_NAME')]);
         if (youtubeMappedCategory.main !== '엔터테인먼트' || metadata.categoryId === '24') {
           ServerLogger.info(`🎬 YouTube 카테고리 우선 적용: ${youtubeMappedCategory.main}/${youtubeMappedCategory.middle}`);
           finalMainCategory = youtubeMappedCategory.main;
@@ -1984,10 +1984,10 @@ JSON 형식으로 답변:
     ServerLogger.info('🔄 지능형 폴백 콘텐츠 생성 시작...');
     
     const title = metadata.title || metadata.caption || '제목 없음';
-    const channelName = metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.channelName || metadata.author || '채널 정보 없음';
+    const channelName = metadata[FieldMapper.get('CHANNEL_NAME')] || '채널 정보 없음';
     const description = metadata.description || metadata.caption || '';
-    const viewCount = metadata[FieldMapper.get('VIEWS')] || metadata.viewCount || metadata.views || 0;
-    const likeCount = metadata[FieldMapper.get('LIKES')] || metadata.likeCount || metadata.likes || 0;
+    const viewCount = metadata[FieldMapper.get('VIEWS')] || 0;
+    const likeCount = metadata[FieldMapper.get('LIKES')] || 0;
     
     // 카테고리 기반 분석 생성
     const categoryContext = this.getCategoryAnalysisContext(urlBasedCategory.mainCategory, urlBasedCategory.middleCategory);
@@ -2104,8 +2104,8 @@ JSON 형식으로 답변:
     }
     
     // 채널명 추가
-    if (metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.channelName || metadata.author) {
-      keywords.add(metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.channelName || metadata.author);
+    if (metadata[FieldMapper.get('CHANNEL_NAME')]) {
+      keywords.add(metadata[FieldMapper.get('CHANNEL_NAME')]);
     }
     
     // 기본 키워드 추가
@@ -2141,13 +2141,13 @@ JSON 형식으로 답변:
    */
   generateFallbackSummary(metadata) {
     const title = metadata.title || metadata.caption || '영상';
-    const channelName = metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.channelName || metadata.author || '채널';
+    const channelName = metadata[FieldMapper.get('CHANNEL_NAME')] || '채널';
     return `${channelName}의 "${title}"`;
   }
 
   generateFallbackContent(metadata) {
     const title = metadata.title || '제목 없음';
-    const channelName = metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.channelName || metadata.author || '작성자';
+    const channelName = metadata[FieldMapper.get('CHANNEL_NAME')] || '작성자';
     const description = metadata.description || metadata.caption || '';
     
     if (description && description.length > 20) {
@@ -2158,8 +2158,8 @@ JSON 형식으로 답변:
 
   generateFallbackAnalysisContent(metadata, mainCategory, middleCategory) {
     const title = metadata.title || '영상';
-    const channelName = metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.channelName || metadata.author || '채널';
-    const viewCount = metadata[FieldMapper.get('VIEWS')] || metadata.viewCount || metadata.views || 0;
+    const channelName = metadata[FieldMapper.get('CHANNEL_NAME')] || '채널';
+    const viewCount = metadata[FieldMapper.get('VIEWS')] || 0;
     
     const popularityLevel = viewCount > 1000000 ? '인기' : viewCount > 100000 ? '관심을 받는' : '새로운';
     
@@ -2173,7 +2173,7 @@ JSON 형식으로 답변:
     }
     
     const title = metadata.title || '영상';
-    const channelName = metadata[FieldMapper.get('CHANNEL_NAME')] || metadata.channelName || metadata.author || '채널';
+    const channelName = metadata[FieldMapper.get('CHANNEL_NAME')] || '채널';
     
     return `${channelName}에서 제작한 "${title}" 콘텐츠입니다. 시청자들에게 유익한 정보와 재미를 제공합니다.`;
   }

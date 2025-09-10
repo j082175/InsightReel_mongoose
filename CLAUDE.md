@@ -5,7 +5,7 @@
 ### **❗ 절대 규칙 (위반 시 시스템 오류 발생)**
 1. **항상 FieldMapper 사용할 것**: 모든 데이터베이스 필드 접근은 `FieldMapper.get('FIELD_NAME')` 사용 필수
 2. **레거시 호환성 하지 말 것**: `|| metadata.channelName` 같은 fallback 패턴 절대 사용 금지
-3. **절대 하드코딩 하지 말 것**: `channelName:`, `subscribers:`, `views:` 등 직접 필드명 사용 금지
+3. **절대 하드코딩 하지 말 것**: `channelName:`, `subscribers:`, `views:` 등 직접 필드명 사용 금지 (매직넘버도 포함됨)
 
 ### **✅ 올바른 패턴:**
 ```javascript
