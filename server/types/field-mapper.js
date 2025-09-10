@@ -110,6 +110,9 @@ const MASTER_FIELD_NAMES = {
   IS_ACTIVE: 'isActive',
   VERSION: 'version',
   
+  // Google Sheets 관련
+  SHEETS_ROW_DATA: 'sheetsRowData',
+  
   // 레거시 호환
   TITLE: 'title',
   CATEGORY: 'category'

@@ -46,7 +46,7 @@ export class YouTubeHandler extends BasePlatformHandler {
     
     this.log('info', `페이지 타입 감지: ${this.isShorts ? 'Shorts' : '일반 영상'}`, {
       url,
-      videoId: this.videoId
+[FieldMapper.get('VIDEO_ID')]: this.videoId
     });
   }
 
@@ -260,14 +260,19 @@ export class YouTubeHandler extends BasePlatformHandler {
       const videoUrl = this.getCurrentVideoUrl();
       
       this.log('info', 'YouTube 영상 분석 시작', {
-        videoId: this.videoId,
+  [FieldMapper.get('VIDEO_ID')]: this.videoId,
         videoUrl,
-        isShorts: this.isShorts,
+  isShorts: this.isShorts,
         metadata
       });
 
-      // FieldMapper를 사용한 서버 전송 데이터 생성
-      const requestData = FieldMapper.createRequestData('youtube', videoUrl, metadata);
+      // 서버 전송 데이터 생성
+      const requestData = {
+[FieldMapper.get('PLATFORM')]: CONSTANTS.PLATFORMS.YOUTUBE,
+        videoUrl,
+[FieldMapper.get('URL')]: videoUrl,
+        metadata
+      };
       
       const result = await this.callApiWithDuplicateCheck(
         this.apiClient.processVideo,
@@ -305,9 +310,9 @@ export class YouTubeHandler extends BasePlatformHandler {
    */
   extractMetadata() {
     const metadata = {
-      platform: 'youtube',
-      isShorts: this.isShorts,
-      videoId: this.videoId
+      [FieldMapper.get('PLATFORM')]: CONSTANTS.PLATFORMS.YOUTUBE,
+isShorts: this.isShorts,
+[FieldMapper.get('VIDEO_ID')]: this.videoId
     };
 
     try {

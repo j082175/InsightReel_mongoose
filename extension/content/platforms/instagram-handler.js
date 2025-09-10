@@ -703,6 +703,7 @@ export class InstagramHandler extends BasePlatformHandler {
     // XMLHttpRequest 후킹 (Instagram downloader의 핵심 방식)
     const originalXHROpen = XMLHttpRequest.prototype.open;
     const originalXHRSend = XMLHttpRequest.prototype.send;
+    const instagramHandler = this; // Instagram 핸들러 인스턴스 참조
     
     XMLHttpRequest.prototype.open = function(method, url, ...rest) {
       this._url = url;
@@ -710,28 +711,28 @@ export class InstagramHandler extends BasePlatformHandler {
     };
     
     XMLHttpRequest.prototype.send = function(data) {
-      this.addEventListener('load', () => {
+      this.addEventListener('load', function() {
         if (this.status >= 200 && this.status < 300) {
           try {
             // Instagram API 응답 감지 및 처리
             if (this.responseURL.includes('/graphql/query')) {
               const responseData = JSON.parse(this.responseText);
-              this.processGraphQLResponse(responseData);
+              instagramHandler.processGraphQLResponse(responseData);
             } else if (this.responseURL.includes('/api/v1/media/') && this.responseURL.includes('/info/')) {
               const responseData = JSON.parse(this.responseText);
-              this.processMediaInfoResponse(responseData);
+              instagramHandler.processMediaInfoResponse(responseData);
             } else if (this.responseURL.includes('/api/v1/feed/')) {
               const responseData = JSON.parse(this.responseText);
-              this.processFeedResponse(responseData);
+              instagramHandler.processFeedResponse(responseData);
             }
           } catch (error) {
             // JSON 파싱 실패는 무시
           }
         }
-      }.bind(this));
+      });
       
       return originalXHRSend.apply(this, arguments);
-    }.bind(this);
+    };
 
     // JSON Script 태그에서 초기 데이터 추출
     this.extractFromPageData();
