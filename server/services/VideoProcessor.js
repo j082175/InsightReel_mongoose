@@ -663,6 +663,14 @@ class VideoProcessor {
       const statistics = video.statistics;
       const contentDetails = video.contentDetails;
       const status = video.status;
+      
+      // 🔍 DEBUG: 실제 API 응답에서 description 확인
+      ServerLogger.info(`🔍 YouTube API snippet.description 원본 확인:`, {
+        hasDescription: !!snippet.description,
+        descriptionLength: snippet.description?.length || 0,
+        descriptionPreview: snippet.description?.substring(0, 200) || '',
+        descriptionType: typeof snippet.description
+      });
 
       // 채널 정보 추가 수집 (구독자 수)
       let channelInfo = null;
@@ -762,6 +770,7 @@ class VideoProcessor {
 
       ServerLogger.info(`✅ YouTube 정보 수집 완료:`);
       ServerLogger.info(`📺 제목: ${videoInfo[FieldMapper.get('TITLE')]}`);
+      ServerLogger.info(`📝 설명: "${videoInfo[FieldMapper.get('DESCRIPTION')]?.substring(0, 100)}${videoInfo[FieldMapper.get('DESCRIPTION')]?.length > 100 ? '...' : ''}" (${videoInfo[FieldMapper.get('DESCRIPTION')]?.length || 0}자)`);
       ServerLogger.info(`👤 채널: ${videoInfo[FieldMapper.get('CHANNEL_NAME')]}${videoInfo[FieldMapper.get('YOUTUBE_HANDLE')] ? ` (@${videoInfo[FieldMapper.get('YOUTUBE_HANDLE')]})` : ''} (구독자: ${videoInfo[FieldMapper.get('SUBSCRIBERS')]})`);
       ServerLogger.info(`🏷️ 카테고리: ${videoInfo[FieldMapper.get('CATEGORY')]}`);
       ServerLogger.info(`⏱️ 길이: ${videoInfo[FieldMapper.get('DURATION_FORMATTED')]} (${videoInfo[FieldMapper.get('CONTENT_TYPE')]})`);

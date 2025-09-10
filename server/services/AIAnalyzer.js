@@ -440,7 +440,7 @@ class AIAnalyzer {
     return {
       summary: result.summary || '영상 분석 내용',
       mainCategory: result.mainCategory,
-      middleCategory: result.middleCategory || result.categoryPath?.[1] || '일반',
+      middleCategory: result.middleCategory,
       fullPath: result.fullPath,
       depth: result.depth,
       keywords: result.keywords,

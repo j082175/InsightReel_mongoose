@@ -1,0 +1,57 @@
+{
+  "name": "field-mapper-converter",
+  "version": "1.0.0",
+  "description": "InsightReel 프로젝트용 FieldMapper 자동 변환 도구 - 3단계 AI 지원 시스템",
+  "main": "FieldMapperConverter.js",
+  "bin": {
+    "field-mapper-converter": "./cli.js"
+  },
+  "scripts": {
+    "start": "node cli.js",
+    "test": "node test.js",
+    "help": "node cli.js --help",
+    "scan": "node cli.js --scan .",
+    "dry-run": "node cli.js --dry-run",
+    "convert": "node cli.js --interactive",
+    "auto-convert": "node cli.js --auto-approve"
+  },
+  "keywords": [
+    "fieldmapper",
+    "code-conversion",
+    "automated-refactoring",
+    "javascript",
+    "claude-ai",
+    "insightreel"
+  ],
+  "author": "JUNSOOCHO <InsightReel Team>",
+  "license": "Private",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "files": [
+    "*.js",
+    "README.md",
+    "package.json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "InsightReel Project Internal Tool"
+  },
+  "preferGlobal": false,
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "config": {
+    "default_backup_dir": ".field-mapper-backups",
+    "max_file_size_mb": 10,
+    "max_processing_time_ms": 60000
+  }
+}

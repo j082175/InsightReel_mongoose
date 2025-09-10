@@ -152,6 +152,8 @@ class HybridYouTubeExtractor {
         
         const details = info.videoDetails;
         
+        ServerLogger.info(`🔍 ytdl-core description 확인: "${details.description?.substring(0, 100)}${details.description?.length > 100 ? '...' : ''}" (${details.description?.length || 0}자)`);
+        
         resolve({
           // 기본 정보 (ytdl-core 강점)
           title: details.title,

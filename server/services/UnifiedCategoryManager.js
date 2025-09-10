@@ -749,7 +749,10 @@ ${categories.map((cat, index) => `${index + 1}. ${cat}`).join('\n')}
       let finalCategory = parsedResponse.category || parsedResponse.main_category || '미분류';
       let fullPath = parsedResponse.full_path || finalCategory;
       let mainCategory = fullPath.split(' > ')[0] || fullPath;
-      let middleCategory = fullPath.split(' > ')[1] || '일반';
+      
+      // middleCategory는 2번째부터 마지막까지의 전체 경로
+      const pathParts = fullPath.split(' > ');
+      let middleCategory = pathParts.length > 1 ? pathParts.slice(1).join(' > ') : '일반';
       
       // fullPath에서 depth 계산
       let depth = parsedResponse.depth;
@@ -774,16 +777,12 @@ ${categories.map((cat, index) => `${index + 1}. ${cat}`).join('\n')}
         depth = 1;
         ServerLogger.warn(`⚠️ 일관성 부족으로 대카테고리만 지정: ${mainCategory} (${consistencyReason})`);
       } else if (consistencyLevel === 'medium') {
-        // 일관성 중간: 대카테고리 + 중카테고리까지만 (최대 2단계)
-        const parts = fullPath.split(' > ').slice(0, 2);
-        fullPath = parts.join(' > ');
-        depth = Math.min(depth, 2);
-        if (depth === 1) {
-          fullPath = `${mainCategory} > 일반`;
-          middleCategory = '일반';
-          depth = 2;
-        }
-        ServerLogger.info(`ℹ️ 일관성 중간으로 중카테고리까지만: ${fullPath} (${consistencyReason})`);
+        // 일관성 중간: AI가 제안한 전체 카테고리 사용 (제한 없음)
+        // middleCategory 재계산 (2번째부터 마지막까지)
+        const pathParts = fullPath.split(' > ');
+        middleCategory = pathParts.length > 1 ? pathParts.slice(1).join(' > ') : '일반';
+        
+        ServerLogger.info(`✅ 일관성 중간: 전체 카테고리 사용: ${fullPath} (${consistencyReason})`);
       } else {
         // 일관성 높음: 기존 로직 유지 (3-6단계)
         if (depth < 3) {
@@ -799,6 +798,11 @@ ${categories.map((cat, index) => `${index + 1}. ${cat}`).join('\n')}
           fullPath = parts.join(' > ');
           depth = 6;
         }
+        
+        // middleCategory 재계산 (2번째부터 마지막까지)
+        const pathParts = fullPath.split(' > ');
+        middleCategory = pathParts.length > 1 ? pathParts.slice(1).join(' > ') : '일반';
+        
         ServerLogger.success(`✅ 일관성 높음으로 세부 카테고리 생성: ${fullPath} (${consistencyReason})`);
       }
       
