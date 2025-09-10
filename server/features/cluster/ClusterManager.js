@@ -41,12 +41,12 @@ class ClusterManager {
    */
   async collectChannel(channelData, userKeywords = [], contentType = 'longform') {
     try {
-      ServerLogger.info('📊 채널 수집 시작', { name: channelData.name });
+      ServerLogger.info('📊 채널 수집 시작', { [FieldMapper.get('NAME')]: channelData[FieldMapper.get('NAME')] });
       
       // 1. 기본 채널 정보 저장
-      ServerLogger.info('🔧 STEP 1: saveChannelInfo 시작', { name: channelData.name });
+      ServerLogger.info('🔧 STEP 1: saveChannelInfo 시작', { [FieldMapper.get('NAME')]: channelData[FieldMapper.get('NAME')] });
       const channel = await this.saveChannelInfo(channelData);
-      ServerLogger.info('✅ STEP 1 완료: saveChannelInfo', { channelId: channel.id });
+      ServerLogger.info('✅ STEP 1 완룈: saveChannelInfo', { channelId: channel[FieldMapper.get('ID')] });
       
       // 2. AI 태그 추출 (보조 기능)
       ServerLogger.info('🔧 STEP 2: AI 태그 추출 시작');
@@ -66,15 +66,15 @@ class ClusterManager {
       // 5. 채널 저장
       const savedChannel = await ChannelModel.createOrUpdate({
         ...channel,
-        keywords: userKeywords,
-        aiTags: aiTags,
-        allTags: allTags,
-        contentType: contentType,
-        collectedAt: new Date()
+        [FieldMapper.get('KEYWORDS')]: userKeywords,
+        [FieldMapper.get('AI_TAGS')]: aiTags,
+        [FieldMapper.get('ALL_TAGS')]: allTags,
+        [FieldMapper.get('CONTENT_TYPE')]: contentType,
+        [FieldMapper.get('COLLECTED_AT')]: new Date()
       });
 
       ServerLogger.success('✅ 채널 수집 완료', { 
-        channelId: savedChannel.id,
+        channelId: savedChannel[FieldMapper.get('ID')],
         keywords: userKeywords.length,
         suggestions: clusterSuggestions.length
       });
@@ -126,14 +126,14 @@ class ClusterManager {
     for (const cluster of existingClusters) {
       const similarity = this.similarityCalculator.calculateTagSimilarity(
         tags,
-        cluster.commonTags
+        cluster[FieldMapper.get('COMMON_TAGS')]
       );
 
       if (similarity > 0.5) { // 50% 이상 유사하면 추천
         suggestions.push({
           cluster,
           similarity,
-          reason: this.generateSuggestionReason(tags, cluster.commonTags)
+          reason: this.generateSuggestionReason(tags, cluster[FieldMapper.get('COMMON_TAGS')])
         });
       }
     }
@@ -162,7 +162,7 @@ class ClusterManager {
 
       // 빈도 계산
       recentChannels.forEach(channel => {
-        channel.keywords.forEach(keyword => {
+        channel[FieldMapper.get('KEYWORDS')].forEach(keyword => {
           keywordFreq.set(keyword, (keywordFreq.get(keyword) || 0) + 1);
         });
       });
@@ -196,7 +196,7 @@ class ClusterManager {
       return clusterSuggestions.map(group => ({
         suggestedName: this.generateClusterName(group.channels),
         channels: group.channels,
-        commonTags: group.commonTags,
+        [FieldMapper.get('COMMON_TAGS')]: group[FieldMapper.get('COMMON_TAGS')],
         confidence: group.confidence
       }));
 
@@ -213,7 +213,7 @@ class ClusterManager {
     // 가장 많이 나타나는 키워드 찾기
     const keywordFreq = new Map();
     channels.forEach(channel => {
-      channel.allTags.forEach(tag => {
+      channel[FieldMapper.get('ALL_TAGS')].forEach(tag => {
         keywordFreq.set(tag, (keywordFreq.get(tag) || 0) + 1);
       });
     });
@@ -257,11 +257,11 @@ class ClusterManager {
     const clusters = await ClusterModel.getAll();
 
     channels.forEach(channel => {
-      this.channelCache.set(channel.id, channel);
+      this.channelCache.set(channel[FieldMapper.get('ID')], channel);
     });
 
     clusters.forEach(cluster => {
-      this.clusterCache.set(cluster.id, cluster);
+      this.clusterCache.set(cluster[FieldMapper.get('ID')], cluster);
     });
 
     ServerLogger.info('📚 캐시 로드 완료', {
@@ -275,14 +275,14 @@ class ClusterManager {
    */
   async saveChannelInfo(channelData) {
     return {
-      id: channelData.channelId || this.generateChannelId(channelData.url),
-      name: channelData.name || channelData.channelTitle,
-      url: channelData.url || channelData.channelUrl,
-      platform: channelData.platform || 'youtube',
-      [FieldMapper.get('SUBSCRIBERS')]: channelData[FieldMapper.get('SUBSCRIBERS')] || channelData.subscribers || 0,
-      [FieldMapper.get('DESCRIPTION')]: channelData[FieldMapper.get('DESCRIPTION')] || channelData.description || '',
-      [FieldMapper.get('THUMBNAIL_URL')]: channelData[FieldMapper.get('THUMBNAIL_URL')] || channelData.thumbnailUrl || '',
-      customUrl: channelData.customUrl || channelData.youtubeHandle || ''
+      [FieldMapper.get('ID')]: channelData[FieldMapper.get('CHANNEL_ID')] || this.generateChannelId(channelData[FieldMapper.get('URL')]),
+      [FieldMapper.get('NAME')]: channelData[FieldMapper.get('NAME')] || channelData[FieldMapper.get('CHANNEL_TITLE')],
+      [FieldMapper.get('URL')]: channelData[FieldMapper.get('URL')] || channelData[FieldMapper.get('CHANNEL_URL')],
+      [FieldMapper.get('PLATFORM')]: channelData[FieldMapper.get('PLATFORM')] || 'youtube',
+      [FieldMapper.get('SUBSCRIBERS')]: channelData[FieldMapper.get('SUBSCRIBERS')] || 0,
+      [FieldMapper.get('DESCRIPTION')]: channelData[FieldMapper.get('DESCRIPTION')] || '',
+      [FieldMapper.get('THUMBNAIL_URL')]: channelData[FieldMapper.get('THUMBNAIL_URL')] || '',
+      [FieldMapper.get('CUSTOM_URL')]: channelData[FieldMapper.get('CUSTOM_URL')] || channelData[FieldMapper.get('YOUTUBE_HANDLE')] || ''
     };
   }
 

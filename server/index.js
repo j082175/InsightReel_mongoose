@@ -181,12 +181,12 @@ app.get('/api/database/test', async (req, res) => {
     const testVideo = new Video({
       platform: 'youtube',
       timestamp: new Date(),
-      channelName: 'TestChannel',
+      [FieldMapper.get('CHANNEL_NAME')]: 'TestChannel',
       title: 'MongoDB 연결 테스트 비디오',
       [FieldMapper.get('URL')]: 'https://www.youtube.com/watch?v=test123',  // 🚀 FieldMapper 자동화
       [FieldMapper.get('COMMENTS_COUNT')]: 0,  // 🚀 FieldMapper 자동화
-      likes: 100,
-      views: 1000,
+      [FieldMapper.get('LIKES')]: 100,
+      [FieldMapper.get('VIEWS')]: 1000,
       category: 'Technology',
       ai_description: 'MongoDB Atlas 연결 테스트용 비디오입니다'
     });
@@ -425,7 +425,7 @@ app.get('/api/test-youtube-sheet', async (req, res) => {
       id: row[0],
       timestamp: row[1], 
       platform: row[2],
-      channelName: row[3],
+      [FieldMapper.get('CHANNEL_NAME')]: row[3],
       title: row[9]?.substring(0, 50) + '...' || 'N/A'
     }));
     
@@ -744,7 +744,7 @@ app.post('/api/process-video', async (req, res) => {
             hashtags: youtubeInfo.hashtags || [],
             mentions: youtubeInfo.mentions || [],
             topComments: youtubeInfo.topComments || '',
-            commentsCount: youtubeInfo[FieldMapper.get('COMMENTS_COUNT')] || youtubeInfo.commentsCount || 0,
+            [FieldMapper.get('COMMENTS_COUNT')]: youtubeInfo[FieldMapper.get('COMMENTS_COUNT')] || youtubeInfo.commentsCount || 0,
             [FieldMapper.get('THUMBNAIL_URL')]: youtubeInfo[FieldMapper.get('THUMBNAIL_URL')] || youtubeInfo.thumbnailUrl || ''
           });
           
@@ -955,11 +955,11 @@ app.post('/api/process-video', async (req, res) => {
             ...enrichedMetadata,
             // 🆕 상세 메타데이터 추가
             title: enrichedMetadata.title || youtubeInfo?.title || '',
-            publishedAt: enrichedMetadata.uploadDate || enrichedMetadata.publishedAt || '',
+            [FieldMapper.get('UPLOAD_DATE')]: enrichedMetadata[FieldMapper.get('UPLOAD_DATE')] || enrichedMetadata.uploadDate || enrichedMetadata.publishedAt || '',
             channelId: youtubeInfo?.channelId || '',
             videoId: youtubeInfo?.videoId || videoUrl?.match(/[?&]v=([^&]+)/)?.[1] || '',
-            channelName: enrichedMetadata.channelName || youtubeInfo?.channelName || '',
-            channelUrl: enrichedMetadata.channelUrl || youtubeInfo?.channelUrl || '',
+            [FieldMapper.get('CHANNEL_NAME')]: enrichedMetadata[FieldMapper.get('CHANNEL_NAME')] || enrichedMetadata.channelName || youtubeInfo?.channelName || '',
+            [FieldMapper.get('CHANNEL_URL')]: enrichedMetadata[FieldMapper.get('CHANNEL_URL')] || enrichedMetadata.channelUrl || youtubeInfo?.channelUrl || '',
             tags: enrichedMetadata.tags || youtubeInfo?.tags || [],
             language: (enrichedMetadata.language && enrichedMetadata.language.trim() !== '') ? enrichedMetadata.language : 
                      (enrichedMetadata.defaultLanguage && enrichedMetadata.defaultLanguage.trim() !== '') ? enrichedMetadata.defaultLanguage :
@@ -972,10 +972,10 @@ app.post('/api/process-video', async (req, res) => {
             videoUrl: videoUrl || '',
             topComments: enrichedMetadata.topComments || enrichedMetadata.comments || '',
             // 📈 통계 정보 추가
-            likeRatio: enrichedMetadata.likes && enrichedMetadata.views ? 
-              ((parseInt(enrichedMetadata.likes) / parseInt(enrichedMetadata.views)) * 100).toFixed(2) + '%' : '',
-            engagementRate: enrichedMetadata.likes && enrichedMetadata.comments && enrichedMetadata.views ?
-              (((parseInt(enrichedMetadata.likes) + parseInt(enrichedMetadata.commentsCount || 0)) / parseInt(enrichedMetadata.views)) * 100).toFixed(2) + '%' : ''
+            likeRatio: enrichedMetadata[FieldMapper.get('LIKES')] && enrichedMetadata[FieldMapper.get('VIEWS')] ? 
+              ((parseInt(enrichedMetadata[FieldMapper.get('LIKES')]) / parseInt(enrichedMetadata[FieldMapper.get('VIEWS')])) * 100).toFixed(2) + '%' : '',
+            engagementRate: enrichedMetadata[FieldMapper.get('LIKES')] && enrichedMetadata[FieldMapper.get('COMMENTS')] && enrichedMetadata[FieldMapper.get('VIEWS')] ?
+              (((parseInt(enrichedMetadata[FieldMapper.get('LIKES')]) + parseInt(enrichedMetadata[FieldMapper.get('COMMENTS_COUNT')] || 0)) / parseInt(enrichedMetadata[FieldMapper.get('VIEWS')])) * 100).toFixed(2) + '%' : ''
           },
           analysis: {
             category: analysis.category || analysis.mainCategory || '미분류',
@@ -999,7 +999,7 @@ app.post('/api/process-video', async (req, res) => {
             matchReason: analysis.categoryMatch ? analysis.categoryMatch.matchReason : (analysis.matchReason || (analysis.source ? `${analysis.source} 분석 결과` : null))
           },
           // 🆕 누락된 필드들 추가
-          commentsCount: enrichedMetadata.commentsCount || 0,
+          [FieldMapper.get('COMMENTS_COUNT')]: enrichedMetadata[FieldMapper.get('COMMENTS_COUNT')] || enrichedMetadata.commentsCount || 0,
           comments: enrichedMetadata[FieldMapper.get('TOP_COMMENTS')] || enrichedMetadata.topComments || '',
           url: enrichedMetadata.url || videoUrl || postUrl || '',
           files: {
@@ -1166,7 +1166,7 @@ app.get('/api/videos', async (req, res) => {
         thumbnail: thumbnailUrl, // 레거시 호환
         channelAvatarUrl: '',
         channelAvatar: '',
-        viewCount: video.views,
+        viewCount: video[FieldMapper.get('VIEWS')] || video.views,
         daysAgo: 0,
         isTrending: false
       };
@@ -1545,11 +1545,11 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
       }
       
       ServerLogger.info('🔑 FieldMapper로 접근한 메타데이터 값들:', {
-        channelName: metadata[FieldMapper.get('CHANNEL_NAME')] || 'null',
-        channelUrl: metadata[FieldMapper.get('CHANNEL_URL')] || 'null',
-        description: metadata[FieldMapper.get('DESCRIPTION')] || 'null',
-        likes: metadata[FieldMapper.get('LIKES')] || 'null',
-        commentsCount: metadata[FieldMapper.get('COMMENTS_COUNT')] || 'null'
+        [FieldMapper.get('CHANNEL_NAME')]: metadata[FieldMapper.get('CHANNEL_NAME')] || 'null',
+        [FieldMapper.get('CHANNEL_URL')]: metadata[FieldMapper.get('CHANNEL_URL')] || 'null',
+        [FieldMapper.get('DESCRIPTION')]: metadata[FieldMapper.get('DESCRIPTION')] || 'null',
+        [FieldMapper.get('LIKES')]: metadata[FieldMapper.get('LIKES')] || 'null',
+        [FieldMapper.get('COMMENTS_COUNT')]: metadata[FieldMapper.get('COMMENTS_COUNT')] || 'null'
       });
     } catch (error) {
       ServerLogger.error('❌ FieldMapper 디버깅 실패:', error.message);

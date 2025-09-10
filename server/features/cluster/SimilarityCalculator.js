@@ -49,9 +49,9 @@ class SimilarityCalculator {
   calculateWeightedSimilarity(channel1, channel2, weights = {}) {
     const defaultWeights = {
       tags: 0.6,           // 태그 유사도 60%
-      subscribers: 0.2,     // 구독자 규모 20%
+      [FieldMapper.get('SUBSCRIBERS')]: 0.2,     // 구독자 규모 20%
       platform: 0.1,       // 플랫폼 10%
-      description: 0.1      // 설명 유사도 10%
+      [FieldMapper.get('DESCRIPTION')]: 0.1      // 설명 유사도 10%
     };
 
     const finalWeights = { ...defaultWeights, ...weights };
@@ -59,17 +59,17 @@ class SimilarityCalculator {
 
     // 1. 태그 유사도
     const tagSimilarity = this.calculateTagSimilarity(
-      channel1.allTags || [],
-      channel2.allTags || []
+      channel1[FieldMapper.get('ALL_TAGS')] || [],
+      channel2[FieldMapper.get('ALL_TAGS')] || []
     );
     totalSimilarity += tagSimilarity * finalWeights.tags;
 
     // 2. 구독자 규모 유사도
     const subscriberSimilarity = this.calculateSubscriberSimilarity(
-      channel1[FieldMapper.get('SUBSCRIBERS')] || channel1.subscribers || 0,
-      channel2[FieldMapper.get('SUBSCRIBERS')] || channel2.subscribers || 0
+      channel1[FieldMapper.get('SUBSCRIBERS')] || 0,
+      channel2[FieldMapper.get('SUBSCRIBERS')] || 0
     );
-    totalSimilarity += subscriberSimilarity * (finalWeights[FieldMapper.get('SUBSCRIBERS')] || finalWeights.subscribers);
+    totalSimilarity += subscriberSimilarity * finalWeights[FieldMapper.get('SUBSCRIBERS')];
 
     // 3. 플랫폼 유사도
     const platformSimilarity = (channel1.platform === channel2.platform) ? 1 : 0;
@@ -77,10 +77,10 @@ class SimilarityCalculator {
 
     // 4. 설명 유사도
     const descriptionSimilarity = this.calculateTextSimilarity(
-      channel1[FieldMapper.get('DESCRIPTION')] || channel1.description || '',
-      channel2[FieldMapper.get('DESCRIPTION')] || channel2.description || ''
+      channel1[FieldMapper.get('DESCRIPTION')] || '',
+      channel2[FieldMapper.get('DESCRIPTION')] || ''
     );
-    totalSimilarity += descriptionSimilarity * (finalWeights[FieldMapper.get('DESCRIPTION')] || finalWeights.description);
+    totalSimilarity += descriptionSimilarity * finalWeights[FieldMapper.get('DESCRIPTION')];
 
     return Math.round(totalSimilarity * 100) / 100;
   }
@@ -151,8 +151,8 @@ class SimilarityCalculator {
 
     // 1. 태그 매칭 점수 (가장 중요)
     const tagScore = this.calculateTagSimilarity(
-      channel.allTags || [],
-      cluster.commonTags || []
+      channel[FieldMapper.get('ALL_TAGS')] || [],
+      cluster[FieldMapper.get('COMMON_TAGS')] || []
     );
     scores.push({ type: 'tags', score: tagScore, weight: 0.7 });
 
@@ -224,7 +224,7 @@ class SimilarityCalculator {
         groups.push({
           channels: group,
           size: group.length,
-          commonTags: this.extractCommonTags(group),
+          [FieldMapper.get('COMMON_TAGS')]: this.extractCommonTags(group),
           avgSimilarity: this.calculateGroupCohesion(group)
         });
       }
@@ -242,7 +242,7 @@ class SimilarityCalculator {
 
     // 태그 빈도 계산
     channels.forEach(channel => {
-      (channel.allTags || []).forEach(tag => {
+      (channel[FieldMapper.get('ALL_TAGS')] || []).forEach(tag => {
         tagCounts.set(tag, (tagCounts.get(tag) || 0) + 1);
       });
     });

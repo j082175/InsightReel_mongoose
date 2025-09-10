@@ -18,6 +18,7 @@ const MASTER_FIELD_NAMES = {
   // 시간 필드  
   UPLOAD_DATE: 'uploadDate',           // VideoOptimized 표준
   COLLECTION_TIME: 'collectionTime',
+  COLLECTED_AT: 'collectedAt',
   TIMESTAMP: 'timestamp',
   PROCESSED_AT: 'processedAt',
   CREATED_AT: 'createdAt',
@@ -32,6 +33,7 @@ const MASTER_FIELD_NAMES = {
   CHANNEL_COUNTRY: 'channelCountry',   // 채널 국가
   CHANNEL_DESCRIPTION: 'channelDescription', // 채널 설명
   NAME: 'name',                        // 채널명 (Channel 모델용)
+  CUSTOM_URL: 'customUrl',             // 채널 커스텀 URL
   
   // 성과 지표
   LIKES: 'likes',
@@ -58,6 +60,13 @@ const MASTER_FIELD_NAMES = {
   
   // 콘텐츠
   KEYWORDS: 'keywords',
+  AI_TAGS: 'aiTags',
+  ALL_TAGS: 'allTags',
+  COMMON_TAGS: 'commonTags',
+  CLUSTER_IDS: 'clusterIds',
+  CHANNEL_IDS: 'channelIds',
+  CHANNEL_COUNT: 'channelCount',
+  KEYWORD_PATTERNS: 'keywordPatterns',
   HASHTAGS: 'hashtags',
   MENTIONS: 'mentions',
   DESCRIPTION: 'description',
@@ -88,6 +97,17 @@ const MASTER_FIELD_NAMES = {
   // 메타 정보
   CONFIDENCE: 'confidence',
   ANALYSIS_STATUS: 'analysisStatus',
+  
+  // 클러스터 전용 필드
+  TOTAL_SUBSCRIBERS: 'totalSubscribers',
+  AVG_SUBSCRIBERS: 'avgSubscribers', 
+  AVG_CHANNEL_SIZE: 'avgChannelSize',
+  AUTO_ADD: 'autoAdd',
+  THRESHOLD: 'threshold',
+  COLOR: 'color',
+  CREATED_BY: 'createdBy',
+  IS_ACTIVE: 'isActive',
+  VERSION: 'version',
   
   // 레거시 호환
   TITLE: 'title',

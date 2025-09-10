@@ -134,7 +134,7 @@ class ChannelModel {
     try {
       // MongoDB upsert (존재하면 업데이트, 없으면 생성)
       const result = await Channel.findOneAndUpdate(
-        { id: channelData.id },
+        { [FieldMapper.get('ID')]: channelData[FieldMapper.get('ID')] },
         channelData,
         { 
           upsert: true, 
@@ -144,9 +144,9 @@ class ChannelModel {
       );
       
       ServerLogger.debug('🍃 MongoDB 채널 저장 완료', {
-        channelId: channelData.id,
-        name: channelData.name,
-        isNew: !result.updatedAt || result.createdAt.getTime() === result.updatedAt.getTime()
+        channelId: channelData[FieldMapper.get('ID')],
+        [FieldMapper.get('NAME')]: channelData[FieldMapper.get('NAME')],
+        isNew: !result[FieldMapper.get('UPDATED_AT')] || result[FieldMapper.get('CREATED_AT')].getTime() === result[FieldMapper.get('UPDATED_AT')].getTime()
       });
       
       return result;
@@ -173,21 +173,21 @@ class ChannelModel {
       }
       
       // 🚨 중복검사 - 리소스 사용 전에 즉시 확인
-      const existing = await Channel.findOne({ id: youtubeData.id });
+      const existing = await Channel.findOne({ [FieldMapper.get('ID')]: youtubeData[FieldMapper.get('ID')] });
       if (existing) {
-        ServerLogger.warn(`⚠️ 중복 분석 차단: 채널 ${youtubeData.name}은 이미 분석되었습니다.`);
-        throw new Error(`채널 ${youtubeData.name}은 이미 분석되었습니다.`);
+        ServerLogger.warn(`⚠️ 중복 분석 차단: 채널 ${youtubeData[FieldMapper.get('NAME')]}은 이미 분석되었습니다.`);
+        throw new Error(`채널 ${youtubeData[FieldMapper.get('NAME')]}은 이미 분석되었습니다.`);
       }
       
       ServerLogger.info('🆕 새 채널 - 분석 진행', { 
-        id: youtubeData.id, 
-        name: youtubeData.name 
+        [FieldMapper.get('ID')]: youtubeData[FieldMapper.get('ID')], 
+        [FieldMapper.get('NAME')]: youtubeData[FieldMapper.get('NAME')] 
       });
       
       let analysisData = null;
       
       // 2. 상세 분석 수행 (선택적)
-      ServerLogger.info(`🔍 ChannelModel DEBUG: includeAnalysis = ${includeAnalysis}, skipAIAnalysis = ${skipAIAnalysis}, channelId = ${youtubeData.id}`);
+      ServerLogger.info(`🔍 ChannelModel DEBUG: includeAnalysis = ${includeAnalysis}, skipAIAnalysis = ${skipAIAnalysis}, channelId = ${youtubeData[FieldMapper.get('ID')]}`);
       if (includeAnalysis) {
         try {
           // skipAIAnalysis가 true면 AI 콘텐츠 분석만 건너뛰고 기본 통계는 수집
@@ -195,7 +195,7 @@ class ChannelModel {
           
           // 향상된 분석 수행
           const analysisResult = await this.youtubeAnalyzer.analyzeChannelEnhanced(
-            youtubeData.id, 
+            youtubeData[FieldMapper.get('ID')], 
             200, 
             enableContentAnalysis // AI 분석 여부
           );
@@ -225,16 +225,16 @@ class ChannelModel {
       
       // 3. 채널 데이터 구성
       const channelData = {
-        id: youtubeData.id,
-        name: youtubeData.name,
-        url: youtubeData.url,
-        platform: 'youtube',
+        [FieldMapper.get('ID')]: youtubeData[FieldMapper.get('ID')],
+        [FieldMapper.get('NAME')]: youtubeData[FieldMapper.get('NAME')],
+        [FieldMapper.get('URL')]: youtubeData[FieldMapper.get('URL')],
+        [FieldMapper.get('PLATFORM')]: 'youtube',
         
         // YouTube API 기본 정보
-        [FieldMapper.get('SUBSCRIBERS')]: youtubeData[FieldMapper.get('SUBSCRIBERS')] || youtubeData.subscribers,
-        [FieldMapper.get('DESCRIPTION')]: youtubeData[FieldMapper.get('DESCRIPTION')] || youtubeData.description,
-        [FieldMapper.get('THUMBNAIL_URL')]: youtubeData[FieldMapper.get('THUMBNAIL_URL')] || youtubeData.thumbnailUrl,
-        customUrl: youtubeData.customUrl,
+        [FieldMapper.get('SUBSCRIBERS')]: youtubeData[FieldMapper.get('SUBSCRIBERS')],
+        [FieldMapper.get('DESCRIPTION')]: youtubeData[FieldMapper.get('DESCRIPTION')],
+        [FieldMapper.get('THUMBNAIL_URL')]: youtubeData[FieldMapper.get('THUMBNAIL_URL')],
+        [FieldMapper.get('CUSTOM_URL')]: youtubeData[FieldMapper.get('CUSTOM_URL')],
         
         // 상세 분석 정보 (요청한 6가지 + α)
         ...(analysisData && {
@@ -269,7 +269,7 @@ class ChannelModel {
         }),
         
         // 사용자 입력 정보
-        keywords: Array.isArray(userKeywords) ? userKeywords : [],
+        [FieldMapper.get('KEYWORDS')]: Array.isArray(userKeywords) ? userKeywords : [],
         
         // AI 태그 (향상된 분석에서 추출 또는 빈 배열)
         aiTags: skipAIAnalysis ? [] : (() => {
@@ -285,13 +285,13 @@ class ChannelModel {
           return extractedTags;
         })(),
         deepInsightTags: [], // 일단 빈 배열로 초기화, 나중에 재해석으로 채움
-        allTags: skipAIAnalysis ? 
+        [FieldMapper.get('ALL_TAGS')]: skipAIAnalysis ? 
           [...(userKeywords || [])] : 
           [
             ...(userKeywords || []),
             ...(analysisData?.enhancedAnalysis?.channelIdentity?.channelTags || [])
           ].filter((tag, index, arr) => arr.indexOf(tag) === index), // 중복 제거
-        clusterIds: [],
+        [FieldMapper.get('CLUSTER_IDS')]: [],
         suggestedClusters: [],
         contentType: analysisData?.shortFormRatio > 70 ? 'shortform' : 
                      analysisData?.shortFormRatio < 30 ? 'longform' : 
@@ -325,7 +325,7 @@ class ChannelModel {
             channelData.deepInsightTags = deepInsightTags;
             
             // allTags 업데이트 (사용자 키워드 + 재해석 태그 + 기존 AI 태그)
-            channelData.allTags = [
+            channelData[FieldMapper.get('ALL_TAGS')] = [
               ...(userKeywords || []),
               ...deepInsightTags,
               ...channelData.aiTags
@@ -364,37 +364,37 @@ class ChannelModel {
       }
       
       // 🚨 중복검사 - 리소스 사용 전에 즉시 확인
-      const existing = await Channel.findOne({ id: youtubeData.id });
+      const existing = await Channel.findOne({ [FieldMapper.get('ID')]: youtubeData[FieldMapper.get('ID')] });
       if (existing) {
-        ServerLogger.warn(`⚠️ 중복 분석 차단: 채널 ${youtubeData.name}은 이미 분석되었습니다.`);
-        throw new Error(`채널 ${youtubeData.name}은 이미 분석되었습니다.`);
+        ServerLogger.warn(`⚠️ 중복 분석 차단: 채널 ${youtubeData[FieldMapper.get('NAME')]}은 이미 분석되었습니다.`);
+        throw new Error(`채널 ${youtubeData[FieldMapper.get('NAME')]}은 이미 분석되었습니다.`);
       }
       
       ServerLogger.info('🆕 새 채널 - 분석 진행', { 
-        id: youtubeData.id, 
-        name: youtubeData.name 
+        [FieldMapper.get('ID')]: youtubeData[FieldMapper.get('ID')], 
+        [FieldMapper.get('NAME')]: youtubeData[FieldMapper.get('NAME')] 
       });
       
       // 채널 데이터 구성
       const channelData = {
-        id: youtubeData.id,
-        name: youtubeData.name,
-        url: youtubeData.url,
-        platform: 'youtube',
+        [FieldMapper.get('ID')]: youtubeData[FieldMapper.get('ID')],
+        [FieldMapper.get('NAME')]: youtubeData[FieldMapper.get('NAME')],
+        [FieldMapper.get('URL')]: youtubeData[FieldMapper.get('URL')],
+        [FieldMapper.get('PLATFORM')]: 'youtube',
         
         // YouTube API에서 가져온 정보
-        [FieldMapper.get('SUBSCRIBERS')]: youtubeData[FieldMapper.get('SUBSCRIBERS')] || youtubeData.subscribers,
-        [FieldMapper.get('DESCRIPTION')]: youtubeData[FieldMapper.get('DESCRIPTION')] || youtubeData.description,
-        [FieldMapper.get('THUMBNAIL_URL')]: youtubeData[FieldMapper.get('THUMBNAIL_URL')] || youtubeData.thumbnailUrl,
-        customUrl: youtubeData.customUrl,
+        [FieldMapper.get('SUBSCRIBERS')]: youtubeData[FieldMapper.get('SUBSCRIBERS')],
+        [FieldMapper.get('DESCRIPTION')]: youtubeData[FieldMapper.get('DESCRIPTION')],
+        [FieldMapper.get('THUMBNAIL_URL')]: youtubeData[FieldMapper.get('THUMBNAIL_URL')],
+        [FieldMapper.get('CUSTOM_URL')]: youtubeData[FieldMapper.get('CUSTOM_URL')],
         
         // 사용자 입력 키워드
-        keywords: Array.isArray(userKeywords) ? userKeywords : [],
+        [FieldMapper.get('KEYWORDS')]: Array.isArray(userKeywords) ? userKeywords : [],
         
         // 기본값들
         aiTags: [],
-        allTags: userKeywords || [],
-        clusterIds: [],
+        [FieldMapper.get('ALL_TAGS')]: userKeywords || [],
+        [FieldMapper.get('CLUSTER_IDS')]: [],
         suggestedClusters: [],
         contentType: 'mixed'
       };
@@ -414,28 +414,28 @@ class ChannelModel {
   async createOrUpdate(channelData) {
     try {
       const channel = {
-        id: channelData.id,
-        name: channelData.name,
-        url: channelData.url,
-        platform: channelData.platform || 'youtube',
+        [FieldMapper.get('ID')]: channelData[FieldMapper.get('ID')],
+        [FieldMapper.get('NAME')]: channelData[FieldMapper.get('NAME')],
+        [FieldMapper.get('URL')]: channelData[FieldMapper.get('URL')],
+        [FieldMapper.get('PLATFORM')]: channelData[FieldMapper.get('PLATFORM')] || 'youtube',
         
         // 기본 정보
-        [FieldMapper.get('SUBSCRIBERS')]: channelData[FieldMapper.get('SUBSCRIBERS')] || channelData.subscribers || 0,
-        [FieldMapper.get('DESCRIPTION')]: channelData[FieldMapper.get('DESCRIPTION')] || channelData.description || '',
-        [FieldMapper.get('THUMBNAIL_URL')]: channelData[FieldMapper.get('THUMBNAIL_URL')] || channelData.thumbnailUrl || '',
-        customUrl: channelData.customUrl || '',
+        [FieldMapper.get('SUBSCRIBERS')]: channelData[FieldMapper.get('SUBSCRIBERS')] || 0,
+        [FieldMapper.get('DESCRIPTION')]: channelData[FieldMapper.get('DESCRIPTION')] || '',
+        [FieldMapper.get('THUMBNAIL_URL')]: channelData[FieldMapper.get('THUMBNAIL_URL')] || '',
+        [FieldMapper.get('CUSTOM_URL')]: channelData[FieldMapper.get('CUSTOM_URL')] || '',
         
         // 콘텐츠 타입 정보
         contentType: channelData.contentType || 'mixed',  // longform, shortform, mixed
         
         // 태그 정보
-        keywords: channelData.keywords || [],        // 사용자 입력 키워드
+        [FieldMapper.get('KEYWORDS')]: channelData[FieldMapper.get('KEYWORDS')] || [],        // 사용자 입력 키워드
         aiTags: channelData.aiTags || [],           // AI 추출 태그
         deepInsightTags: channelData.deepInsightTags || [], // AI 재해석 태그 (사용자 카테고리 기반)
-        allTags: channelData.allTags || [],         // 통합 태그
+        [FieldMapper.get('ALL_TAGS')]: channelData[FieldMapper.get('ALL_TAGS')] || [],         // 통합 태그
         
         // 클러스터 정보
-        clusterIds: channelData.clusterIds || [],
+        [FieldMapper.get('CLUSTER_IDS')]: channelData[FieldMapper.get('CLUSTER_IDS')] || [],
         suggestedClusters: channelData.suggestedClusters || [],
         
         // 상세 분석 정보 (있는 경우에만 포함)
@@ -474,8 +474,8 @@ class ChannelModel {
         }),
         
         // 메타데이터
-        collectedAt: channelData.collectedAt || new Date(),
-        updatedAt: new Date(),
+        [FieldMapper.get('COLLECTED_AT')]: channelData[FieldMapper.get('COLLECTED_AT')] || new Date(),
+        [FieldMapper.get('UPDATED_AT')]: new Date(),
         version: 1
       };
 
@@ -503,7 +503,7 @@ class ChannelModel {
   async findById(channelId) {
     try {
       // MongoDB에서 직접 조회
-      const channel = await Channel.findOne({ id: channelId }).lean();
+      const channel = await Channel.findOne({ [FieldMapper.get('ID')]: channelId }).lean();
       return channel || null;
     } catch (error) {
       ServerLogger.warn('⚠️ MongoDB 조회 실패', error);
@@ -518,7 +518,7 @@ class ChannelModel {
     try {
       // MongoDB에서 직접 검색 (대소문자 구분 없이)
       const results = await Channel.find({
-        name: { $regex: name, $options: 'i' }
+        [FieldMapper.get('NAME')]: { $regex: name, $options: 'i' }
       }).lean();
       
       return results;
@@ -535,7 +535,7 @@ class ChannelModel {
     try {
       // MongoDB에서 직접 검색
       const results = await Channel.find({
-        allTags: { $regex: tag, $options: 'i' }
+        [FieldMapper.get('ALL_TAGS')]: { $regex: tag, $options: 'i' }
       }).lean();
       
       return results;
@@ -564,7 +564,7 @@ class ChannelModel {
   async getRecent(limit = 20) {
     try {
       const channels = await Channel.find({})
-        .sort({ collectedAt: -1 })
+        .sort({ [FieldMapper.get('COLLECTED_AT')]: -1 })
         .limit(limit)
         .lean();
       return channels;
@@ -581,8 +581,8 @@ class ChannelModel {
     try {
       const channels = await Channel.find({
         $or: [
-          { clusterIds: { $exists: false } },
-          { clusterIds: { $size: 0 } }
+          { [FieldMapper.get('CLUSTER_IDS')]: { $exists: false } },
+          { [FieldMapper.get('CLUSTER_IDS')]: { $size: 0 } }
         ]
       }).lean();
       return channels;
@@ -612,8 +612,8 @@ class ChannelModel {
     try {
       const count = await Channel.countDocuments({
         $or: [
-          { clusterIds: { $exists: false } },
-          { clusterIds: { $size: 0 } }
+          { [FieldMapper.get('CLUSTER_IDS')]: { $exists: false } },
+          { [FieldMapper.get('CLUSTER_IDS')]: { $size: 0 } }
         ]
       });
       return count;
@@ -630,9 +630,9 @@ class ChannelModel {
     try {
       // MongoDB aggregation 사용
       const stats = await Channel.aggregate([
-        { $unwind: '$keywords' },
+        { $unwind: `$${FieldMapper.get('KEYWORDS')}` },
         { $group: {
-          _id: '$keywords',
+          _id: `$${FieldMapper.get('KEYWORDS')}`,
           count: { $sum: 1 }
         }},
         { $sort: { count: -1 }},
@@ -655,7 +655,7 @@ class ChannelModel {
   async delete(channelId) {
     try {
       // MongoDB에서 삭제
-      const result = await Channel.findOneAndDelete({ id: channelId });
+      const result = await Channel.findOneAndDelete({ [FieldMapper.get('ID')]: channelId });
       
       if (result) {
         // 백업 파일 업데이트 (비동기)
@@ -664,8 +664,8 @@ class ChannelModel {
         });
         
         ServerLogger.info('🗑️ 채널 삭제 완료', { 
-          id: channelId, 
-          name: result.name 
+          [FieldMapper.get('ID')]: channelId, 
+          [FieldMapper.get('NAME')]: result[FieldMapper.get('NAME')] 
         });
         
         return true;
@@ -685,10 +685,10 @@ class ChannelModel {
     try {
       // MongoDB에서 직접 업데이트
       const channel = await Channel.findOneAndUpdate(
-        { id: channelId },
+        { [FieldMapper.get('ID')]: channelId },
         { 
-          $addToSet: { clusterIds: clusterId },
-          $set: { updatedAt: new Date() }
+          $addToSet: { [FieldMapper.get('CLUSTER_IDS')]: clusterId },
+          $set: { [FieldMapper.get('UPDATED_AT')]: new Date() }
         },
         { new: true }
       );
@@ -721,10 +721,10 @@ class ChannelModel {
     try {
       // MongoDB에서 직접 업데이트
       const channel = await Channel.findOneAndUpdate(
-        { id: channelId },
+        { [FieldMapper.get('ID')]: channelId },
         { 
-          $pull: { clusterIds: clusterId },
-          $set: { updatedAt: new Date() }
+          $pull: { [FieldMapper.get('CLUSTER_IDS')]: clusterId },
+          $set: { [FieldMapper.get('UPDATED_AT')]: new Date() }
         },
         { new: true }
       );
@@ -758,10 +758,10 @@ class ChannelModel {
       // MongoDB aggregation 사용
       const stats = await Channel.aggregate([
         { $group: {
-          _id: '$platform',
+          _id: `$${FieldMapper.get('PLATFORM')}`,
           count: { $sum: 1 },
-          totalSubscribers: { $sum: '$subscribers' },
-          avgSubscribers: { $avg: '$subscribers' }
+          totalSubscribers: { $sum: `$${FieldMapper.get('SUBSCRIBERS')}` },
+          avgSubscribers: { $avg: `$${FieldMapper.get('SUBSCRIBERS')}` }
         }}
       ]);
       
@@ -790,34 +790,34 @@ class ChannelModel {
       
       // 플랫폼 필터
       if (filters.platform) {
-        query.platform = filters.platform;
+        query[FieldMapper.get('PLATFORM')] = filters.platform;
       }
       
       // 구독자 수 범위 필터
       if (filters.minSubscribers || filters.maxSubscribers) {
-        query.subscribers = {};
+        query[FieldMapper.get('SUBSCRIBERS')] = {};
         if (filters.minSubscribers) {
-          query.subscribers.$gte = filters.minSubscribers;
+          query[FieldMapper.get('SUBSCRIBERS')].$gte = filters.minSubscribers;
         }
         if (filters.maxSubscribers) {
-          query.subscribers.$lte = filters.maxSubscribers;
+          query[FieldMapper.get('SUBSCRIBERS')].$lte = filters.maxSubscribers;
         }
       }
       
       // 태그 필터
       if (filters.tags && filters.tags.length > 0) {
-        query.allTags = {
+        query[FieldMapper.get('ALL_TAGS')] = {
           $in: filters.tags.map(tag => new RegExp(tag, 'i'))
         };
       }
       
       // 클러스터 상태 필터
       if (filters.clustered === true) {
-        query.clusterIds = { $exists: true, $ne: [] };
+        query[FieldMapper.get('CLUSTER_IDS')] = { $exists: true, $ne: [] };
       } else if (filters.clustered === false) {
         query.$or = [
-          { clusterIds: { $exists: false } },
-          { clusterIds: { $size: 0 } }
+          { [FieldMapper.get('CLUSTER_IDS')]: { $exists: false } },
+          { [FieldMapper.get('CLUSTER_IDS')]: { $size: 0 } }
         ];
       }
       
@@ -829,13 +829,13 @@ class ChannelModel {
         const sortOptions = {};
         switch (filters.sortBy) {
           case 'subscribers':
-            sortOptions.subscribers = -1;
+            sortOptions[FieldMapper.get('SUBSCRIBERS')] = -1;
             break;
           case 'name':
-            sortOptions.name = 1;
+            sortOptions[FieldMapper.get('NAME')] = 1;
             break;
           case 'collectedAt':
-            sortOptions.collectedAt = -1;
+            sortOptions[FieldMapper.get('COLLECTED_AT')] = -1;
             break;
         }
         queryBuilder = queryBuilder.sort(sortOptions);
@@ -864,16 +864,16 @@ class ChannelModel {
       
       // MongoDB에서 빈 정보가 있는 채널들 찾기
       const channelsToUpdate = await Channel.find({
-        platform: 'youtube',
+        [FieldMapper.get('PLATFORM')]: 'youtube',
         $or: [
-          { description: { $exists: false } },
-          { description: '' },
-          { thumbnailUrl: { $exists: false } },
-          { thumbnailUrl: '' },
-          { subscribers: { $exists: false } },
-          { subscribers: 0 }
+          { [FieldMapper.get('DESCRIPTION')]: { $exists: false } },
+          { [FieldMapper.get('DESCRIPTION')]: '' },
+          { [FieldMapper.get('THUMBNAIL_URL')]: { $exists: false } },
+          { [FieldMapper.get('THUMBNAIL_URL')]: '' },
+          { [FieldMapper.get('SUBSCRIBERS')]: { $exists: false } },
+          { [FieldMapper.get('SUBSCRIBERS')]: 0 }
         ]
-      }, { id: 1, name: 1, keywords: 1 }).lean();
+      }, { [FieldMapper.get('ID')]: 1, [FieldMapper.get('NAME')]: 1, [FieldMapper.get('KEYWORDS')]: 1 }).lean();
       
       if (channelsToUpdate.length === 0) {
         ServerLogger.info('✅ 모든 채널 정보가 완전합니다.');
@@ -888,17 +888,17 @@ class ChannelModel {
       // 각 채널을 개별적으로 업데이트
       for (const channelInfo of channelsToUpdate) {
         try {
-          ServerLogger.info(`🔄 채널 업데이트 중: ${channelInfo.name}`);
+          ServerLogger.info(`🔄 채널 업데이트 중: ${channelInfo[FieldMapper.get('NAME')]}`);
           
           // YouTube API에서 정보 가져와서 업데이트
-          await this.createOrUpdateFromYouTube(channelInfo.name, channelInfo.keywords);
+          await this.createOrUpdateFromYouTube(channelInfo[FieldMapper.get('NAME')], channelInfo[FieldMapper.get('KEYWORDS')]);
           updated++;
           
           // API 호출 간격 (Rate Limit 방지)
           await new Promise(resolve => setTimeout(resolve, 100));
           
         } catch (error) {
-          ServerLogger.error(`❌ 채널 업데이트 실패: ${channelInfo.name}`, error);
+          ServerLogger.error(`❌ 채널 업데이트 실패: ${channelInfo[FieldMapper.get('NAME')]}`, error);
           failed++;
         }
       }
@@ -921,17 +921,17 @@ class ChannelModel {
       const total = await Channel.countDocuments();
       
       const missingFields = await Promise.all([
-        Channel.countDocuments({ $or: [{ description: { $exists: false } }, { description: '' }] }),
-        Channel.countDocuments({ $or: [{ thumbnailUrl: { $exists: false } }, { thumbnailUrl: '' }] }),
-        Channel.countDocuments({ $or: [{ subscribers: { $exists: false } }, { subscribers: 0 }] }),
-        Channel.countDocuments({ $or: [{ customUrl: { $exists: false } }, { customUrl: '' }] })
+        Channel.countDocuments({ $or: [{ [FieldMapper.get('DESCRIPTION')]: { $exists: false } }, { [FieldMapper.get('DESCRIPTION')]: '' }] }),
+        Channel.countDocuments({ $or: [{ [FieldMapper.get('THUMBNAIL_URL')]: { $exists: false } }, { [FieldMapper.get('THUMBNAIL_URL')]: '' }] }),
+        Channel.countDocuments({ $or: [{ [FieldMapper.get('SUBSCRIBERS')]: { $exists: false } }, { [FieldMapper.get('SUBSCRIBERS')]: 0 }] }),
+        Channel.countDocuments({ $or: [{ [FieldMapper.get('CUSTOM_URL')]: { $exists: false } }, { [FieldMapper.get('CUSTOM_URL')]: '' }] })
       ]);
       
       const complete = await Channel.countDocuments({
-        description: { $exists: true, $ne: '' },
-        thumbnailUrl: { $exists: true, $ne: '' },
-        subscribers: { $exists: true, $ne: 0 },
-        customUrl: { $exists: true, $ne: '' }
+        [FieldMapper.get('DESCRIPTION')]: { $exists: true, $ne: '' },
+        [FieldMapper.get('THUMBNAIL_URL')]: { $exists: true, $ne: '' },
+        [FieldMapper.get('SUBSCRIBERS')]: { $exists: true, $ne: 0 },
+        [FieldMapper.get('CUSTOM_URL')]: { $exists: true, $ne: '' }
       });
       
       return {
@@ -939,10 +939,10 @@ class ChannelModel {
         complete: complete,
         incomplete: total - complete,
         missingFields: {
-          description: missingFields[0],
-          thumbnailUrl: missingFields[1],
-          subscribers: missingFields[2],
-          customUrl: missingFields[3]
+          [FieldMapper.get('DESCRIPTION')]: missingFields[0],
+          [FieldMapper.get('THUMBNAIL_URL')]: missingFields[1],
+          [FieldMapper.get('SUBSCRIBERS')]: missingFields[2],
+          [FieldMapper.get('CUSTOM_URL')]: missingFields[3]
         }
       };
     } catch (error) {
@@ -951,7 +951,7 @@ class ChannelModel {
         total: 0,
         complete: 0,
         incomplete: 0,
-        missingFields: { description: 0, thumbnailUrl: 0, subscribers: 0, customUrl: 0 }
+        missingFields: { [FieldMapper.get('DESCRIPTION')]: 0, [FieldMapper.get('THUMBNAIL_URL')]: 0, [FieldMapper.get('SUBSCRIBERS')]: 0, [FieldMapper.get('CUSTOM_URL')]: 0 }
       };
     }
   }

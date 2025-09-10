@@ -42,7 +42,7 @@ class ClusterModel {
       const clustersArray = JSON.parse(data);
       
       clustersArray.forEach(cluster => {
-        this.clusters.set(cluster.id, cluster);
+        this.clusters.set(cluster[FieldMapper.get('ID')], cluster);
       });
       
       ServerLogger.info('📚 클러스터 데이터 로드 완료', {
@@ -85,42 +85,42 @@ class ClusterModel {
   async create(clusterData) {
     try {
       const cluster = {
-        id: clusterData.id || this.generateClusterId(),
-        name: clusterData.name,
-        [FieldMapper.get('DESCRIPTION')]: clusterData[FieldMapper.get('DESCRIPTION')] || clusterData.description || '',
+        [FieldMapper.get('ID')]: clusterData[FieldMapper.get('ID')] || this.generateClusterId(),
+        [FieldMapper.get('NAME')]: clusterData[FieldMapper.get('NAME')],
+        [FieldMapper.get('DESCRIPTION')]: clusterData[FieldMapper.get('DESCRIPTION')] || '',
         
         // 태그 정보
-        commonTags: clusterData.commonTags || [],
-        keywordPatterns: clusterData.keywordPatterns || [],
+        [FieldMapper.get('COMMON_TAGS')]: clusterData[FieldMapper.get('COMMON_TAGS')] || [],
+        [FieldMapper.get('KEYWORD_PATTERNS')]: clusterData[FieldMapper.get('KEYWORD_PATTERNS')] || [],
         
         // 채널 정보
-        channelIds: clusterData.channelIds || [],
-        channelCount: 0,
+        [FieldMapper.get('CHANNEL_IDS')]: clusterData[FieldMapper.get('CHANNEL_IDS')] || [],
+        [FieldMapper.get('CHANNEL_COUNT')]: 0,
         
         // 통계
-        totalSubscribers: 0,
-        avgSubscribers: 0,
-        avgChannelSize: 0,
+        [FieldMapper.get('TOTAL_SUBSCRIBERS')]: 0,
+        [FieldMapper.get('AVG_SUBSCRIBERS')]: 0,
+        [FieldMapper.get('AVG_CHANNEL_SIZE')]: 0,
         
         // 설정
-        autoAdd: clusterData.autoAdd || false,        // 자동 추가 허용
-        threshold: clusterData.threshold || 0.6,      // 자동 추가 임계값
-        color: clusterData.color || '#007bff',        // UI 색상
+        [FieldMapper.get('AUTO_ADD')]: clusterData[FieldMapper.get('AUTO_ADD')] || false,        // 자동 추가 허용
+        [FieldMapper.get('THRESHOLD')]: clusterData[FieldMapper.get('THRESHOLD')] || 0.6,      // 자동 추가 임계값
+        [FieldMapper.get('COLOR')]: clusterData[FieldMapper.get('COLOR')] || '#007bff',        // UI 색상
         
         // 메타데이터
-        createdBy: clusterData.createdBy || 'user',   // user or ai
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        isActive: true,
-        version: 1
+        [FieldMapper.get('CREATED_BY')]: clusterData[FieldMapper.get('CREATED_BY')] || 'user',   // user or ai
+        [FieldMapper.get('CREATED_AT')]: new Date(),
+        [FieldMapper.get('UPDATED_AT')]: new Date(),
+        [FieldMapper.get('IS_ACTIVE')]: true,
+        [FieldMapper.get('VERSION')]: 1
       };
 
-      this.clusters.set(cluster.id, cluster);
+      this.clusters.set(cluster[FieldMapper.get('ID')], cluster);
       await this.saveClusters();
 
       ServerLogger.info('🆕 새 클러스터 생성', { 
-        id: cluster.id, 
-        name: cluster.name 
+        [FieldMapper.get('ID')]: cluster[FieldMapper.get('ID')], 
+        [FieldMapper.get('NAME')]: cluster[FieldMapper.get('NAME')] 
       });
 
       return cluster;
@@ -142,8 +142,8 @@ class ClusterModel {
 
     // 업데이트 가능한 필드들
     const updatableFields = [
-      'name', 'description', 'commonTags', 'keywordPatterns',
-      'autoAdd', 'threshold', 'color', 'isActive'
+      FieldMapper.get('NAME'), FieldMapper.get('DESCRIPTION'), FieldMapper.get('COMMON_TAGS'), FieldMapper.get('KEYWORD_PATTERNS'),
+      FieldMapper.get('AUTO_ADD'), FieldMapper.get('THRESHOLD'), FieldMapper.get('COLOR'), FieldMapper.get('IS_ACTIVE')
     ];
 
     updatableFields.forEach(field => {
@@ -152,14 +152,14 @@ class ClusterModel {
       }
     });
 
-    cluster.updatedAt = new Date();
-    cluster.version++;
+    cluster[FieldMapper.get('UPDATED_AT')] = new Date();
+    cluster[FieldMapper.get('VERSION')]++;
 
     await this.saveClusters();
 
     ServerLogger.info('🔄 클러스터 업데이트', { 
       id: clusterId, 
-      name: cluster.name 
+      [FieldMapper.get('NAME')]: cluster[FieldMapper.get('NAME')] 
     });
 
     return cluster;
@@ -184,7 +184,7 @@ class ClusterModel {
    */
   async getAllActive() {
     const clusters = Array.from(this.clusters.values());
-    return clusters.filter(cluster => cluster.isActive);
+    return clusters.filter(cluster => cluster[FieldMapper.get('IS_ACTIVE')]);
   }
 
   /**
@@ -200,7 +200,7 @@ class ClusterModel {
   async findByName(name) {
     const results = [];
     for (const cluster of this.clusters.values()) {
-      if (cluster.name.toLowerCase().includes(name.toLowerCase())) {
+      if (cluster[FieldMapper.get('NAME')].toLowerCase().includes(name.toLowerCase())) {
         results.push(cluster);
       }
     }
@@ -213,7 +213,7 @@ class ClusterModel {
   async findByTag(tag) {
     const results = [];
     for (const cluster of this.clusters.values()) {
-      if (cluster.commonTags.some(t => t.toLowerCase().includes(tag.toLowerCase()))) {
+      if (cluster[FieldMapper.get('COMMON_TAGS')].some(t => t.toLowerCase().includes(tag.toLowerCase()))) {
         results.push(cluster);
       }
     }
@@ -229,17 +229,17 @@ class ClusterModel {
       throw new Error(`클러스터를 찾을 수 없습니다: ${clusterId}`);
     }
 
-    if (!cluster.channelIds.includes(channelId)) {
-      cluster.channelIds.push(channelId);
-      cluster.channelCount = cluster.channelIds.length;
-      cluster.updatedAt = new Date();
+    if (!cluster[FieldMapper.get('CHANNEL_IDS')].includes(channelId)) {
+      cluster[FieldMapper.get('CHANNEL_IDS')].push(channelId);
+      cluster[FieldMapper.get('CHANNEL_COUNT')] = cluster[FieldMapper.get('CHANNEL_IDS')].length;
+      cluster[FieldMapper.get('UPDATED_AT')] = new Date();
       
       await this.saveClusters();
       
       ServerLogger.info('➕ 클러스터에 채널 추가', { 
         clusterId, 
         channelId,
-        totalChannels: cluster.channelCount
+        totalChannels: cluster[FieldMapper.get('CHANNEL_COUNT')]
       });
     }
 
@@ -255,16 +255,16 @@ class ClusterModel {
       throw new Error(`클러스터를 찾을 수 없습니다: ${clusterId}`);
     }
 
-    cluster.channelIds = cluster.channelIds.filter(id => id !== channelId);
-    cluster.channelCount = cluster.channelIds.length;
-    cluster.updatedAt = new Date();
+    cluster[FieldMapper.get('CHANNEL_IDS')] = cluster[FieldMapper.get('CHANNEL_IDS')].filter(id => id !== channelId);
+    cluster[FieldMapper.get('CHANNEL_COUNT')] = cluster[FieldMapper.get('CHANNEL_IDS')].length;
+    cluster[FieldMapper.get('UPDATED_AT')] = new Date();
 
     await this.saveClusters();
 
     ServerLogger.info('➖ 클러스터에서 채널 제거', { 
       clusterId, 
       channelId,
-      totalChannels: cluster.channelCount
+      totalChannels: cluster[FieldMapper.get('CHANNEL_COUNT')]
     });
 
     return cluster;
@@ -278,23 +278,23 @@ class ClusterModel {
     if (!cluster) return;
 
     const channelData = channels.filter(ch => 
-      cluster.channelIds.includes(ch.id)
+      cluster[FieldMapper.get('CHANNEL_IDS')].includes(ch[FieldMapper.get('ID')])
     );
 
     if (channelData.length === 0) {
-      cluster.totalSubscribers = 0;
-      cluster.avgSubscribers = 0;
-      cluster.avgChannelSize = 0;
+      cluster[FieldMapper.get('TOTAL_SUBSCRIBERS')] = 0;
+      cluster[FieldMapper.get('AVG_SUBSCRIBERS')] = 0;
+      cluster[FieldMapper.get('AVG_CHANNEL_SIZE')] = 0;
     } else {
-      cluster.totalSubscribers = channelData.reduce((sum, ch) => sum + (ch[FieldMapper.get('SUBSCRIBERS')] || ch.subscribers || 0), 0);
-      cluster.avgSubscribers = Math.round(cluster.totalSubscribers / channelData.length);
-      cluster.avgChannelSize = Math.round(
+      cluster[FieldMapper.get('TOTAL_SUBSCRIBERS')] = channelData.reduce((sum, ch) => sum + (ch[FieldMapper.get('SUBSCRIBERS')] || 0), 0);
+      cluster[FieldMapper.get('AVG_SUBSCRIBERS')] = Math.round(cluster[FieldMapper.get('TOTAL_SUBSCRIBERS')] / channelData.length);
+      cluster[FieldMapper.get('AVG_CHANNEL_SIZE')] = Math.round(
         channelData.reduce((sum, ch) => sum + (ch.videoCount || 0), 0) / channelData.length
       );
     }
 
-    cluster.channelCount = channelData.length;
-    cluster.updatedAt = new Date();
+    cluster[FieldMapper.get('CHANNEL_COUNT')] = channelData.length;
+    cluster[FieldMapper.get('UPDATED_AT')] = new Date();
 
     await this.saveClusters();
 
@@ -312,7 +312,7 @@ class ClusterModel {
       
       ServerLogger.info('🗑️ 클러스터 삭제', { 
         id: clusterId, 
-        name: cluster.name 
+        [FieldMapper.get('NAME')]: cluster[FieldMapper.get('NAME')] 
       });
       
       return true;
@@ -332,23 +332,23 @@ class ClusterModel {
     }
 
     // 채널 병합
-    targetCluster.channelIds = [
-      ...new Set([...targetCluster.channelIds, ...sourceCluster.channelIds])
+    targetCluster[FieldMapper.get('CHANNEL_IDS')] = [
+      ...new Set([...targetCluster[FieldMapper.get('CHANNEL_IDS')], ...sourceCluster[FieldMapper.get('CHANNEL_IDS')]])
     ];
 
     // 태그 병합
-    targetCluster.commonTags = [
-      ...new Set([...targetCluster.commonTags, ...sourceCluster.commonTags])
+    targetCluster[FieldMapper.get('COMMON_TAGS')] = [
+      ...new Set([...targetCluster[FieldMapper.get('COMMON_TAGS')], ...sourceCluster[FieldMapper.get('COMMON_TAGS')]])
     ];
 
     // 이름 변경 (옵션)
     if (newName) {
-      targetCluster.name = newName;
+      targetCluster[FieldMapper.get('NAME')] = newName;
     }
 
-    targetCluster.channelCount = targetCluster.channelIds.length;
-    targetCluster.updatedAt = new Date();
-    targetCluster.version++;
+    targetCluster[FieldMapper.get('CHANNEL_COUNT')] = targetCluster[FieldMapper.get('CHANNEL_IDS')].length;
+    targetCluster[FieldMapper.get('UPDATED_AT')] = new Date();
+    targetCluster[FieldMapper.get('VERSION')]++;
 
     // 소스 클러스터 삭제
     this.clusters.delete(sourceClusterId);
@@ -356,9 +356,9 @@ class ClusterModel {
     await this.saveClusters();
 
     ServerLogger.info('🔗 클러스터 병합 완료', { 
-      source: sourceCluster.name,
-      target: targetCluster.name,
-      totalChannels: targetCluster.channelCount
+      source: sourceCluster[FieldMapper.get('NAME')],
+      target: targetCluster[FieldMapper.get('NAME')],
+      totalChannels: targetCluster[FieldMapper.get('CHANNEL_COUNT')]
     });
 
     return targetCluster;
@@ -375,24 +375,24 @@ class ClusterModel {
 
     // 새 클러스터 생성
     const newCluster = await this.create({
-      name: newClusterName,
-      channelIds: channelIdsForNewCluster,
-      commonTags: [...originalCluster.commonTags],
-      createdBy: 'user'
+      [FieldMapper.get('NAME')]: newClusterName,
+      [FieldMapper.get('CHANNEL_IDS')]: channelIdsForNewCluster,
+      [FieldMapper.get('COMMON_TAGS')]: [...originalCluster[FieldMapper.get('COMMON_TAGS')]],
+      [FieldMapper.get('CREATED_BY')]: 'user'
     });
 
     // 원본 클러스터에서 채널 제거
-    originalCluster.channelIds = originalCluster.channelIds.filter(
+    originalCluster[FieldMapper.get('CHANNEL_IDS')] = originalCluster[FieldMapper.get('CHANNEL_IDS')].filter(
       id => !channelIdsForNewCluster.includes(id)
     );
-    originalCluster.channelCount = originalCluster.channelIds.length;
-    originalCluster.updatedAt = new Date();
+    originalCluster[FieldMapper.get('CHANNEL_COUNT')] = originalCluster[FieldMapper.get('CHANNEL_IDS')].length;
+    originalCluster[FieldMapper.get('UPDATED_AT')] = new Date();
 
     await this.saveClusters();
 
     ServerLogger.info('✂️ 클러스터 분할 완료', { 
-      original: originalCluster.name,
-      new: newCluster.name,
+      original: originalCluster[FieldMapper.get('NAME')],
+      new: newCluster[FieldMapper.get('NAME')],
       movedChannels: channelIdsForNewCluster.length
     });
 
@@ -408,7 +408,7 @@ class ClusterModel {
       '#6f42c1', '#e83e8c', '#fd7e14', '#20c997', '#6610f2'
     ];
     
-    const usedColors = Array.from(this.clusters.values()).map(c => c.color);
+    const usedColors = Array.from(this.clusters.values()).map(c => c[FieldMapper.get('COLOR')]);
     const availableColors = colors.filter(color => !usedColors.includes(color));
     
     return availableColors.length > 0 
@@ -431,22 +431,22 @@ class ClusterModel {
 
     // 활성 상태 필터
     if (filters.isActive !== undefined) {
-      results = results.filter(cluster => cluster.isActive === filters.isActive);
+      results = results.filter(cluster => cluster[FieldMapper.get('IS_ACTIVE')] === filters.isActive);
     }
 
     // 채널 수 범위 필터
     if (filters.minChannels) {
-      results = results.filter(cluster => cluster.channelCount >= filters.minChannels);
+      results = results.filter(cluster => cluster[FieldMapper.get('CHANNEL_COUNT')] >= filters.minChannels);
     }
     if (filters.maxChannels) {
-      results = results.filter(cluster => cluster.channelCount <= filters.maxChannels);
+      results = results.filter(cluster => cluster[FieldMapper.get('CHANNEL_COUNT')] <= filters.maxChannels);
     }
 
     // 태그 필터
     if (filters.tags && filters.tags.length > 0) {
       results = results.filter(cluster => 
         filters.tags.some(tag => 
-          cluster.commonTags.some(clusterTag => 
+          cluster[FieldMapper.get('COMMON_TAGS')].some(clusterTag => 
             clusterTag.toLowerCase().includes(tag.toLowerCase())
           )
         )
@@ -455,7 +455,7 @@ class ClusterModel {
 
     // 생성자 필터
     if (filters.createdBy) {
-      results = results.filter(cluster => cluster.createdBy === filters.createdBy);
+      results = results.filter(cluster => cluster[FieldMapper.get('CREATED_BY')] === filters.createdBy);
     }
 
     // 정렬
@@ -463,13 +463,13 @@ class ClusterModel {
       results.sort((a, b) => {
         switch (filters.sortBy) {
           case 'channelCount':
-            return b.channelCount - a.channelCount;
+            return b[FieldMapper.get('CHANNEL_COUNT')] - a[FieldMapper.get('CHANNEL_COUNT')];
           case 'name':
-            return a.name.localeCompare(b.name);
+            return a[FieldMapper.get('NAME')].localeCompare(b[FieldMapper.get('NAME')]);
           case 'createdAt':
-            return new Date(b.createdAt) - new Date(a.createdAt);
+            return new Date(b[FieldMapper.get('CREATED_AT')]) - new Date(a[FieldMapper.get('CREATED_AT')]);
           case 'totalSubscribers':
-            return b.totalSubscribers - a.totalSubscribers;
+            return b[FieldMapper.get('TOTAL_SUBSCRIBERS')] - a[FieldMapper.get('TOTAL_SUBSCRIBERS')];
           default:
             return 0;
         }
@@ -489,19 +489,19 @@ class ClusterModel {
    */
   async getOverallStatistics() {
     const clusters = Array.from(this.clusters.values());
-    const activeClusters = clusters.filter(c => c.isActive);
+    const activeClusters = clusters.filter(c => c[FieldMapper.get('IS_ACTIVE')]);
 
     return {
       total: clusters.length,
       active: activeClusters.length,
       inactive: clusters.length - activeClusters.length,
-      totalChannels: clusters.reduce((sum, c) => sum + c.channelCount, 0),
+      totalChannels: clusters.reduce((sum, c) => sum + c[FieldMapper.get('CHANNEL_COUNT')], 0),
       avgChannelsPerCluster: clusters.length > 0 
-        ? Math.round(clusters.reduce((sum, c) => sum + c.channelCount, 0) / clusters.length)
+        ? Math.round(clusters.reduce((sum, c) => sum + c[FieldMapper.get('CHANNEL_COUNT')], 0) / clusters.length)
         : 0,
       largestCluster: clusters.reduce((max, c) => 
-        c.channelCount > max.channelCount ? c : max, 
-        { channelCount: 0, name: 'none' }
+        c[FieldMapper.get('CHANNEL_COUNT')] > max[FieldMapper.get('CHANNEL_COUNT')] ? c : max, 
+        { [FieldMapper.get('CHANNEL_COUNT')]: 0, [FieldMapper.get('NAME')]: 'none' }
       )
     };
   }
