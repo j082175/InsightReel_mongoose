@@ -140,7 +140,7 @@ app.get('/health', async (req, res) => {
     ResponseHandler.health(res, {
       useGemini: process.env.USE_GEMINI === 'true',
       useMongoDB: process.env.USE_MONGODB === 'true',
-      database: { status: 'error', message: error.message },
+      database: { [FieldMapper.get('STATUS')]: 'error', message: error.message },
       version: '1.0.0'
     });
   }
@@ -164,10 +164,10 @@ app.get('/api/database/health', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      [FieldMapper.get('ERROR')]: error.message,
       database: {
         type: 'MongoDB Atlas',
-        status: 'error'
+        [FieldMapper.get('STATUS')]: 'error'
       },
       message: '데이터베이스 연결 확인 실패'
     });
@@ -213,7 +213,7 @@ app.get('/api/database/test', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      [FieldMapper.get('ERROR')]: error.message,
       message: 'MongoDB 테스트 실패'
     });
   }
@@ -240,7 +240,7 @@ app.get('/api/database/collections', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      [FieldMapper.get('ERROR')]: error.message,
       message: '컬렉션 상태 조회 실패'
     });
   }
@@ -272,7 +272,7 @@ app.get('/api/database/collections', async (req, res) => {
 //     ServerLogger.error('❌ 마이그레이션 API 실패', error.message, 'API');
 //     res.status(500).json({
 //       success: false,
-//       error: error.message,
+//       [FieldMapper.get('ERROR')]: error.message,
 //       message: '마이그레이션 실패'
 //     });
 //   }
@@ -296,7 +296,7 @@ app.delete('/api/database/reset', async (req, res) => {
     ServerLogger.error('❌ 데이터 초기화 실패', error.message, 'API');
     res.status(500).json({
       success: false,
-      error: error.message,
+      [FieldMapper.get('ERROR')]: error.message,
       message: 'MongoDB 데이터 초기화 실패'
     });
   }
@@ -324,13 +324,13 @@ app.delete('/api/database/reset', async (req, res) => {
 //       success: success,
 //       message: success ? 'MongoDB 데이터 검증 완료!' : '데이터 검증 실패',
 //       verification_output: output,
-// //       timestamp: new Date()
+// //       [FieldMapper.get('TIMESTAMP')]: new Date()
 //     });
 //     
 //   } catch (error) {
 //     res.status(500).json({
 //       success: false,
-//       error: error.message,
+//       [FieldMapper.get('ERROR')]: error.message,
 //       message: '데이터 검증 API 실패'
 //     });
 //   }
@@ -361,7 +361,7 @@ app.get('/api/database/migration-status', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: error.message,
+      [FieldMapper.get('ERROR')]: error.message,
       message: '마이그레이션 상태 조회 실패'
     });
   }
@@ -422,7 +422,7 @@ app.get('/api/test-youtube-sheet', async (req, res) => {
     
     const data = response.data.values || [];
     const sampleData = data.slice(0, 3).map(row => ({
-      id: row[0],
+      [FieldMapper.get('ID')]: row[0],
       [FieldMapper.get('TIMESTAMP')]: row[1], 
       [FieldMapper.get('PLATFORM')]: row[2],
       [FieldMapper.get('CHANNEL_NAME')]: row[3],
@@ -439,7 +439,7 @@ app.get('/api/test-youtube-sheet', async (req, res) => {
   } catch (error) {
     res.json({ 
       success: false, 
-      error: error.message,
+      [FieldMapper.get('ERROR')]: error.message,
       range: 'YouTube!A2:S10'
     });
   }
@@ -452,7 +452,7 @@ app.get('/api/test-sheet-structure', async (req, res) => {
       spreadsheetId: sheetsManager.spreadsheetId
     });
     const sheetInfo = response.data.sheets.map(sheet => ({
-      title: sheet.properties.title,
+      [FieldMapper.get('TITLE')]: sheet.properties[FieldMapper.get('TITLE')],
       sheetId: sheet.properties.sheetId,
       rowCount: sheet.properties.gridProperties.rowCount,
       columnCount: sheet.properties.gridProperties.columnCount
@@ -460,12 +460,12 @@ app.get('/api/test-sheet-structure', async (req, res) => {
     
     res.json({ 
       success: true,
-      spreadsheetTitle: response.data.properties.title,
+      spreadsheetTitle: response.data.properties[FieldMapper.get('TITLE')],
       sheetInfo,
       totalSheets: sheetInfo.length 
     });
   } catch (error) {
-    res.json({ success: false, error: error.message });
+    res.json({ success: false, [FieldMapper.get('ERROR')]: error.message });
   }
 });
 
@@ -485,13 +485,13 @@ app.get('/api/test-all-sheets-count', async (req, res) => {
         const count = (response.data.values?.length || 1) - 1; // 헤더 제외
         results[sheetName] = { success: true, count, range };
       } catch (error) {
-        results[sheetName] = { success: false, error: error.message, count: 0 };
+        results[sheetName] = { success: false, [FieldMapper.get('ERROR')]: error.message, count: 0 };
       }
     }
     
     res.json({ success: true, results });
   } catch (error) {
-    res.json({ success: false, error: error.message });
+    res.json({ success: false, [FieldMapper.get('ERROR')]: error.message });
   }
 });
 
@@ -520,11 +520,11 @@ app.get('/api/test-instagram-latest', async (req, res) => {
       success: true,
       range,
       totalRows: data.length,
-      latestDates: sortedData.map(row => ({ id: row[0], date: row[1] })),
+      latestDates: sortedData.map(row => ({ [FieldMapper.get('ID')]: row[0], date: row[1] })),
       message: `Instagram 시트에서 ${data.length}개 행 조회, 최신 10개 날짜 정렬 완료`
     });
   } catch (error) {
-    res.json({ success: false, error: error.message });
+    res.json({ success: false, [FieldMapper.get('ERROR')]: error.message });
   }
 });
 
@@ -532,7 +532,7 @@ app.get('/api/test-instagram-latest', async (req, res) => {
 app.get('/api/config/health', (req, res) => {
   try {
     const healthStatus = config.healthCheck();
-    const isHealthy = healthStatus.status === 'healthy';
+    const isHealthy = healthStatus[FieldMapper.get('STATUS')] === 'healthy';
     
     if (isHealthy) {
       ResponseHandler.success(res, healthStatus, API_MESSAGES.CONNECTION.CONFIG_VALID);
@@ -551,7 +551,7 @@ app.get('/api/config/health', (req, res) => {
 // 비디오 처리 메인 엔드포인트
 app.post('/api/process-video', async (req, res) => {
   try {
-    const { platform, videoUrl, postUrl, url, metadata, analysisType = 'quick', useAI = true, mode = 'immediate' } = req.body;
+    const { [FieldMapper.get('PLATFORM')]: platform, [FieldMapper.get('VIDEO_URL')]: videoUrl, [FieldMapper.get('POST_URL')]: postUrl, [FieldMapper.get('URL')]: url, [FieldMapper.get('METADATA')]: metadata, [FieldMapper.get('ANALYSIS_TYPE')]: analysisType = 'quick', [FieldMapper.get('USE_AI')]: useAI = true, mode = 'immediate' } = req.body;
     
     // 🔍 디버그: 받은 메타데이터 로깅
     ServerLogger.info('📡 /api/process-video 엔드포인트에서 metadata 수신:', {
@@ -582,7 +582,7 @@ app.post('/api/process-video', async (req, res) => {
         if (duplicateCheck.isDuplicate) {
           let errorMessage;
           
-          if (duplicateCheck.isProcessing) {
+          if (duplicateCheck[FieldMapper.get('IS_PROCESSING')]) {
             errorMessage = `🔄 처리 중인 URL: 같은 URL이 현재 처리되고 있습니다 (${duplicateCheck.existingPlatform})`;
           } else {
             errorMessage = `⚠️ 중복 URL: 이미 ${duplicateCheck.existingPlatform} 시트의 ${duplicateCheck.existingColumn}${duplicateCheck.existingRow}행에 존재합니다`;
@@ -592,15 +592,15 @@ app.post('/api/process-video', async (req, res) => {
           
           return res.status(409).json({
             success: false,
-            error: 'DUPLICATE_URL',
+            [FieldMapper.get('ERROR')]: 'DUPLICATE_URL',
             message: errorMessage,
             duplicate_info: {
               [FieldMapper.get('PLATFORM')]: duplicateCheck.existingPlatform,
               [FieldMapper.get('ROW')]: duplicateCheck.existingRow,
               [FieldMapper.get('COLUMN')]: duplicateCheck.existingColumn,
               [FieldMapper.get('NORMALIZED_URL')]: sheetsManager.normalizeVideoUrl(checkUrl),
-              [FieldMapper.get('IS_PROCESSING')]: duplicateCheck.isProcessing || false,
-              [FieldMapper.get('STATUS')]: duplicateCheck.status
+              [FieldMapper.get('IS_PROCESSING')]: duplicateCheck[FieldMapper.get('IS_PROCESSING')] || false,
+              [FieldMapper.get('STATUS')]: duplicateCheck[FieldMapper.get('STATUS')]
             }
           });
         }
@@ -620,7 +620,7 @@ app.post('/api/process-video', async (req, res) => {
           videoUrlDoc = registerResult.document;
           ServerLogger.info(`✅ URL processing 상태 등록: ${normalizedUrl} (${finalPlatform})`);
         } else {
-          ServerLogger.warn(`⚠️ URL processing 상태 등록 실패: ${registerResult.error}`);
+          ServerLogger.warn(`⚠️ URL processing 상태 등록 실패: ${registerResult[FieldMapper.get('ERROR')]}`);
         }
         
         ServerLogger.info(`✅ URL 중복 검사 통과: ${checkUrl}`, 'API_DUPLICATE');
@@ -647,7 +647,7 @@ app.post('/api/process-video', async (req, res) => {
         const batchResult = await youtubeBatchProcessor.addToBatch(finalVideoUrl, options);
         
         ServerLogger.info(`📦 YouTube 배치 모드: 큐에 추가됨`, {
-          [FieldMapper.get('BATCH_ID')]: batchResult.batchId,
+          [FieldMapper.get('BATCH_ID')]: batchResult[FieldMapper.get('BATCH_ID')],
           [FieldMapper.get('QUEUE_POSITION')]: batchResult.queuePosition,
           [FieldMapper.get('ESTIMATED_WAIT_TIME')]: batchResult.estimatedWaitTime
         });
@@ -858,7 +858,7 @@ app.post('/api/process-video', async (req, res) => {
               skippedSaving: true
             },
             [FieldMapper.get('ANALYSIS')]: {
-              [FieldMapper.get('CATEGORY')]: analysis.category,
+              [FieldMapper.get('CATEGORY')]: analysis[FieldMapper.get('CATEGORY')],
               [FieldMapper.get('MAIN_CATEGORY')]: analysis.mainCategory,
               [FieldMapper.get('MIDDLE_CATEGORY')]: analysis.middleCategory,
               [FieldMapper.get('KEYWORDS')]: analysis.keywords,
@@ -890,16 +890,16 @@ app.post('/api/process-video', async (req, res) => {
         // 통합 저장 결과 확인
         if (!result.success) {
           // Google Sheets 인증 문제는 경고로 처리하고 계속 진행
-          if (result.error && result.error.includes('invalid_grant')) {
-            ServerLogger.warn(`⚠️ Google Sheets 인증 실패로 시트 저장 건너뜀: ${result.error}`);
+          if (result[FieldMapper.get('ERROR')] && result[FieldMapper.get('ERROR')].includes('invalid_grant')) {
+            ServerLogger.warn(`⚠️ Google Sheets 인증 실패로 시트 저장 건너뜀: ${result[FieldMapper.get('ERROR')]}`);
             // MongoDB 저장이 성공했다면 계속 진행
             if (result.mongodb && result.mongodb.success) {
               ServerLogger.info('✅ MongoDB 저장은 성공, Google Sheets 실패는 무시하고 계속 진행');
             } else {
-              throw new Error(`통합 저장 실패: ${result.error}`);
+              throw new Error(`통합 저장 실패: ${result[FieldMapper.get('ERROR')]}`);
             }
           } else {
-            throw new Error(`통합 저장 실패: ${result.error}`);
+            throw new Error(`통합 저장 실패: ${result[FieldMapper.get('ERROR')]}`);
           }
         }
         
@@ -953,7 +953,7 @@ app.post('/api/process-video', async (req, res) => {
             [FieldMapper.get('START_TIME')]: new Date().toISOString(),
             [FieldMapper.get('END_TIME')]: new Date().toISOString(),
             [FieldMapper.get('TOTAL_TIME')]: `${totalProcessingTime}ms`,
-            [FieldMapper.get('AI_PROCESSING_TIME')]: analysis.processingTime || 'N/A'
+            [FieldMapper.get('AI_PROCESSING_TIME')]: analysis[FieldMapper.get('PROCESSING_TIME')] || 'N/A'
           },
           [FieldMapper.get('METADATA')]: {
             ...enrichedMetadata,
@@ -991,25 +991,25 @@ app.post('/api/process-video', async (req, res) => {
               (((parseInt(enrichedMetadata[FieldMapper.get('LIKES')]) + parseInt(enrichedMetadata[FieldMapper.get('COMMENTS_COUNT')] || 0)) / parseInt(enrichedMetadata[FieldMapper.get('VIEWS')])) * 100).toFixed(2) + '%' : ''
           },
           [FieldMapper.get('ANALYSIS')]: {
-            [FieldMapper.get('CATEGORY')]: analysis.category || analysis.mainCategory || '미분류',
+            [FieldMapper.get('CATEGORY')]: analysis[FieldMapper.get('CATEGORY')] || analysis.mainCategory || '미분류',
             [FieldMapper.get('MAIN_CATEGORY')]: analysis.mainCategory,
             [FieldMapper.get('MIDDLE_CATEGORY')]: analysis.middleCategory,
             [FieldMapper.get('KEYWORDS')]: analysis.keywords,
             [FieldMapper.get('HASHTAGS')]: analysis.hashtags,
             [FieldMapper.get('CONFIDENCE')]: analysis.confidence,
             // 🆕 AI 분석 상세 내용 추가 (폴백 시스템 신뢰)
-            [FieldMapper.get('SUMMARY')]: analysis.summary,
-            [FieldMapper.get('DESCRIPTION')]: analysis.description,
-            [FieldMapper.get('CONTENT')]: analysis.content,
-            [FieldMapper.get('ANALYSIS_CONTENT')]: analysis.analysisContent || analysis.summary || analysis.description || analysis.content || null,
-            [FieldMapper.get('SOURCE')]: analysis.source || 'gemini',
+            [FieldMapper.get('SUMMARY')]: analysis[FieldMapper.get('SUMMARY')],
+            [FieldMapper.get('DESCRIPTION')]: analysis[FieldMapper.get('DESCRIPTION')],
+            [FieldMapper.get('CONTENT')]: analysis[FieldMapper.get('CONTENT')],
+            [FieldMapper.get('ANALYSIS_CONTENT')]: analysis[FieldMapper.get('ANALYSIS_CONTENT')] || analysis[FieldMapper.get('SUMMARY')] || analysis[FieldMapper.get('DESCRIPTION')] || analysis[FieldMapper.get('CONTENT')] || null,
+            [FieldMapper.get('SOURCE')]: analysis[FieldMapper.get('SOURCE')] || 'gemini',
             [FieldMapper.get('AI_MODEL')]: analysis.aiModel || 'gemini-2.5-flash-lite',
-            [FieldMapper.get('PROCESSING_TIME')]: analysis.processingTime || 'N/A',
+            [FieldMapper.get('PROCESSING_TIME')]: analysis[FieldMapper.get('PROCESSING_TIME')] || 'N/A',
             // 🏷️ 카테고리 매칭 상세
             [FieldMapper.get('FULL_CATEGORY_PATH')]: analysis.fullCategoryPath || `${analysis.mainCategory}/${analysis.middleCategory}`,
             [FieldMapper.get('CATEGORY_MATCH_RATE')]: analysis.categoryMatch ? `${analysis.categoryMatch.matchScore}%` : (analysis.categoryMatchRate || null),
-            [FieldMapper.get('MATCH_TYPE')]: analysis.categoryMatch ? analysis.categoryMatch.matchType : (analysis.matchType || (analysis.source ? `${analysis.source}-analysis` : null)),
-            [FieldMapper.get('MATCH_REASON')]: analysis.categoryMatch ? analysis.categoryMatch.matchReason : (analysis.matchReason || (analysis.source ? `${analysis.source} 분석 결과` : null))
+            [FieldMapper.get('MATCH_TYPE')]: analysis.categoryMatch ? analysis.categoryMatch.matchType : (analysis.matchType || (analysis[FieldMapper.get('SOURCE')] ? `${analysis[FieldMapper.get('SOURCE')]}-analysis` : null)),
+            [FieldMapper.get('MATCH_REASON')]: analysis.categoryMatch ? analysis.categoryMatch.matchReason : (analysis.matchReason || (analysis[FieldMapper.get('SOURCE')] ? `${analysis[FieldMapper.get('SOURCE')]} 분석 결과` : null))
           },
           // 🆕 누락된 필드들 추가
           [FieldMapper.get('COMMENTS_COUNT')]: enrichedMetadata[FieldMapper.get('COMMENTS_COUNT')] || 0,
@@ -1041,7 +1041,7 @@ app.post('/api/process-video', async (req, res) => {
     ServerLogger.error('비디오 처리 실패:', error);
     
     // ❌ 처리 실패 시 MongoDB에서 URL 상태를 failed로 업데이트
-    const { videoUrl: errorVideoUrl, postUrl: errorPostUrl } = req.body;
+    const { [FieldMapper.get('VIDEO_URL')]: errorVideoUrl, [FieldMapper.get('POST_URL')]: errorPostUrl } = req.body;
     const checkUrl = errorVideoUrl || errorPostUrl;
     if (checkUrl) {
       try {
@@ -1069,7 +1069,7 @@ app.get('/api/videos', async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const sortBy = req.query.sortBy || 'timestamp'; // timestamp는 이제 원본 게시일
     const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
-    const platform = req.query.platform; // 플랫폼 필터 (선택적)
+    const platform = req.query[FieldMapper.get('PLATFORM')]; // 플랫폼 필터 (선택적)
     
     ServerLogger.info(`📡 MongoDB API 요청: /api/videos (limit=${limit}, sortBy=${sortBy}, platform=${platform})`, 'DEBUG');
     
@@ -1130,7 +1130,7 @@ app.get('/api/videos', async (req, res) => {
             thumbnailUrl = `http://localhost:3000/downloads/${relativePath}`;
           } else {
             // 파일이 없으면 플랫폼별 placeholder
-            const platform = video.platform;
+            const platform = video[FieldMapper.get('PLATFORM')];
             if (platform === 'instagram') {
               thumbnailUrl = 'https://placehold.co/400x600/E4405F/FFFFFF?text=IG';
             } else if (platform === 'tiktok') {
@@ -1141,7 +1141,7 @@ app.get('/api/videos', async (req, res) => {
           }
         } catch (err) {
           // 에러 발생시 placeholder 사용
-          const platform = video.platform;
+          const platform = video[FieldMapper.get('PLATFORM')];
           if (platform === 'instagram') {
             thumbnailUrl = 'https://placehold.co/400x600/E4405F/FFFFFF?text=IG';
           } else if (platform === 'tiktok') {
@@ -1152,7 +1152,7 @@ app.get('/api/videos', async (req, res) => {
         }
       } else if (!thumbnailUrl) {
         // 썸네일이 없으면 플랫폼별 placeholder 제공
-        const platform = video.platform;
+        const platform = video[FieldMapper.get('PLATFORM')];
         if (platform === 'instagram') {
           thumbnailUrl = 'https://placehold.co/400x600/E4405F/FFFFFF?text=IG';
         } else if (platform === 'tiktok') {
@@ -1188,7 +1188,7 @@ app.get('/api/videos', async (req, res) => {
     // 플랫폼별 비디오 수 분석
     const platformCounts = {};
     enhancedVideos.forEach(v => {
-      const platform = v.platform || 'unknown';
+      const platform = v[FieldMapper.get('PLATFORM')] || 'unknown';
       platformCounts[platform] = (platformCounts[platform] || 0) + 1;
     });
     
@@ -1218,7 +1218,7 @@ app.get('/api/channels', async (req, res) => {
     
     const limit = parseInt(req.query.limit) || 20;
     const sortBy = req.query.sortBy || 'subscribers'; // subscribers, totalViews, lastAnalyzedAt
-    const platform = req.query.platform; // 플랫폼 필터
+    const platform = req.query[FieldMapper.get('PLATFORM')]; // 플랫폼 필터
     const clustered = req.query.clustered; // true/false/undefined
     const search = req.query.search; // 검색어
     
@@ -1231,7 +1231,7 @@ app.get('/api/channels', async (req, res) => {
     };
     
     if (platform) {
-      filters.platform = platform.toLowerCase();
+      filters[FieldMapper.get('PLATFORM')] = platform.toLowerCase();
     }
     
     if (clustered !== undefined) {
@@ -1239,7 +1239,7 @@ app.get('/api/channels', async (req, res) => {
     }
     
     if (search) {
-      filters.tags = [search]; // 태그 검색
+      filters[FieldMapper.get('TAGS')] = [search]; // 태그 검색
     }
     
     // ChannelModel을 통해 검색
@@ -1346,7 +1346,7 @@ app.post('/api/cache/clear', async (req, res) => {
       message: '캐시가 무효화되었습니다. 다음 조회부터 새로운 데이터를 가져옵니다.' 
     });
   } catch (error) {
-    res.json({ success: false, error: error.message });
+    res.json({ success: false, [FieldMapper.get('ERROR')]: error.message });
   }
 });
 
@@ -1354,7 +1354,7 @@ app.post('/api/cache/clear', async (req, res) => {
 app.get('/api/cache/status', async (req, res) => {
   try {
     const cacheInfo = {
-      cacheSize: sheetsManager.cache.size,
+      cacheSize: sheetsManager.cache[FieldMapper.get('SIZE')],
       keys: Array.from(sheetsManager.cache.keys()),
       ttl: sheetsManager.cacheTTL,
       entries: {}
@@ -1362,7 +1362,7 @@ app.get('/api/cache/status', async (req, res) => {
     
     // 각 캐시 엔트리의 나이 계산
     for (const [key, value] of sheetsManager.cache.entries()) {
-      const age = Date.now() - value.timestamp;
+      const age = Date.now() - value[FieldMapper.get('TIMESTAMP')];
       cacheInfo.entries[key] = {
         age: `${age}ms`,
         isValid: age < sheetsManager.cacheTTL,
@@ -1429,7 +1429,7 @@ app.post('/api/check-duplicate', async (req, res) => {
     if (!url) {
       return res.status(400).json({
         success: false,
-        error: 'URL_REQUIRED',
+        [FieldMapper.get('ERROR')]: 'URL_REQUIRED',
         message: 'URL이 필요합니다.'
       });
     }
@@ -1459,7 +1459,7 @@ app.post('/api/check-duplicate', async (req, res) => {
         data: {
           [FieldMapper.get('ORIGINAL_URL')]: url,
           [FieldMapper.get('NORMALIZED_URL')]: sheetsManager.normalizeVideoUrl(url),
-          error: duplicateCheck.error || null
+          [FieldMapper.get('ERROR')]: duplicateCheck[FieldMapper.get('ERROR')] || null
         }
       });
     }
@@ -1468,7 +1468,7 @@ app.post('/api/check-duplicate', async (req, res) => {
     ServerLogger.error('URL 중복 검사 API 실패', error.message, 'API_DUPLICATE_CHECK');
     res.status(500).json({
       success: false,
-      error: 'DUPLICATE_CHECK_FAILED',
+      [FieldMapper.get('ERROR')]: 'DUPLICATE_CHECK_FAILED',
       message: '중복 검사 중 오류가 발생했습니다.'
     });
   }
@@ -1492,7 +1492,7 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
       [FieldMapper.get('FILE')]: {
         [FieldMapper.get('NAME')]: req.file.filename,
         [FieldMapper.get('ORIGINAL_NAME')]: req.file.originalname,
-        [FieldMapper.get('SIZE')]: req.file.size,
+        [FieldMapper.get('SIZE')]: req.file[FieldMapper.get('SIZE')],
         [FieldMapper.get('MIMETYPE')]: req.file.mimetype
       },
       [FieldMapper.get('THUMBNAIL')]: thumbnailPath,
@@ -1515,20 +1515,20 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
   
   try {
     const { platform, analysisType = 'quick', useAI = true } = req.body;
-    postUrl = req.body.postUrl;  // 명시적으로 할당
+    postUrl = req.body[FieldMapper.get('POST_URL')];  // 명시적으로 할당
     // 🚨 중요: FormData로 전송된 metadata는 JSON 문자열이므로 파싱 필요!
     let metadata = {};
     try {
-      metadata = req.body.metadata ? JSON.parse(req.body.metadata) : {};
+      metadata = req.body[FieldMapper.get('METADATA')] ? JSON.parse(req.body[FieldMapper.get('METADATA')]) : {};
     } catch (error) {
-      ServerLogger.warn('❌ metadata JSON 파싱 실패:', req.body.metadata);
+      ServerLogger.warn('❌ metadata JSON 파싱 실패:', req.body[FieldMapper.get('METADATA')]);
       metadata = {};
     }
     
     // 🔍 디버그: blob 엔드포인트에서 metadata 수신 로깅
     ServerLogger.info('📡 /api/process-video-blob 엔드포인트에서 metadata 수신:', {
       platform,
-      rawMetadata: req.body.metadata,
+      rawMetadata: req.body[FieldMapper.get('METADATA')],
       hasMetadata: !!metadata && Object.keys(metadata).length > 0,
       metadataKeys: Object.keys(metadata),
       metadataPreview: JSON.stringify(metadata).substring(0, 200) + '...'
@@ -1569,7 +1569,7 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
     }
     
     ServerLogger.info(`🎬 Processing ${platform} blob video from:`, postUrl);
-    ServerLogger.info(`📁 Uploaded file: ${req.file ? `${req.file.filename} (${req.file.size} bytes)` : 'None'}`);
+    ServerLogger.info(`📁 Uploaded file: ${req.file ? `${req.file.filename} (${req.file[FieldMapper.get('SIZE')]} bytes)` : 'None'}`);
     ServerLogger.info(`🔍 Analysis type: ${analysisType}, AI 분석: ${useAI ? '활성화' : '비활성화'}`);
     
     // 🔍 URL 중복 검사 (Blob 처리에서도 공통 적용)
@@ -1581,9 +1581,9 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
         if (duplicateCheck.isDuplicate) {
           let errorMessage;
           
-          if (duplicateCheck.isProcessing) {
+          if (duplicateCheck[FieldMapper.get('IS_PROCESSING')]) {
             // ⚠️ 임시 해결책: processing 상태가 10분 이상 된 경우 재처리 허용
-            const createdAt = new Date(duplicateCheck.createdAt);
+            const createdAt = new Date(duplicateCheck[FieldMapper.get('CREATED_AT')]);
             const now = new Date();
             const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
             
@@ -1594,7 +1594,7 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
               try {
                 const VideoUrl = require('./models/VideoUrl');
                 const normalizedUrl = sheetsManager.normalizeVideoUrl(postUrl);
-                await VideoUrl.deleteOne({ normalizedUrl, status: 'processing' });
+                await VideoUrl.deleteOne({ normalizedUrl, [FieldMapper.get('STATUS')]: 'processing' });
                 ServerLogger.info(`🗑️ 오래된 processing 레코드 삭제: ${normalizedUrl}`);
               } catch (cleanupError) {
                 ServerLogger.warn(`⚠️ 오래된 processing 레코드 삭제 실패: ${cleanupError.message}`);
@@ -1605,14 +1605,14 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
               
               return res.status(409).json({
                 success: false,
-                error: 'DUPLICATE_URL_PROCESSING',
+                [FieldMapper.get('ERROR')]: 'DUPLICATE_URL_PROCESSING',
                 message: errorMessage,
                 duplicate_info: {
                   [FieldMapper.get('PLATFORM')]: duplicateCheck.existingPlatform,
                   [FieldMapper.get('NORMALIZED_URL')]: sheetsManager.normalizeVideoUrl(postUrl),
                   [FieldMapper.get('IS_PROCESSING')]: true,
-                  [FieldMapper.get('STATUS')]: duplicateCheck.status,
-                  [FieldMapper.get('CREATED_AT')]: duplicateCheck.createdAt
+                  [FieldMapper.get('STATUS')]: duplicateCheck[FieldMapper.get('STATUS')],
+                  [FieldMapper.get('CREATED_AT')]: duplicateCheck[FieldMapper.get('CREATED_AT')]
                 }
               });
             }
@@ -1623,7 +1623,7 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
             
             return res.status(409).json({
               success: false,
-              error: 'DUPLICATE_URL_COMPLETED',
+              [FieldMapper.get('ERROR')]: 'DUPLICATE_URL_COMPLETED',
               message: errorMessage,
               duplicate_info: {
                 [FieldMapper.get('PLATFORM')]: duplicateCheck.existingPlatform,
@@ -1631,7 +1631,7 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
                 [FieldMapper.get('COLUMN')]: duplicateCheck.existingColumn,
                 [FieldMapper.get('NORMALIZED_URL')]: sheetsManager.normalizeVideoUrl(postUrl),
                 [FieldMapper.get('IS_PROCESSING')]: false,
-                [FieldMapper.get('STATUS')]: duplicateCheck.status
+                [FieldMapper.get('STATUS')]: duplicateCheck[FieldMapper.get('STATUS')]
               }
             });
           }
@@ -1658,7 +1658,7 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
           videoUrlDoc = registerResult.document;
           ServerLogger.info(`✅ URL processing 상태 등록 (Blob): ${normalizedUrl} (${finalPlatform})`);
         } else {
-          ServerLogger.warn(`⚠️ URL processing 상태 등록 실패 (Blob): ${registerResult.error}`);
+          ServerLogger.warn(`⚠️ URL processing 상태 등록 실패 (Blob): ${registerResult[FieldMapper.get('ERROR')]}`);
         }
         
         ServerLogger.info(`✅ URL 중복 검사 통과 (Blob): ${postUrl}`, 'API_DUPLICATE_BLOB');
@@ -1741,7 +1741,7 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
               [FieldMapper.get('SOURCE')]: 'blob-upload'
             },
             [FieldMapper.get('ANALYSIS')]: {
-              [FieldMapper.get('CATEGORY')]: analysis.category,
+              [FieldMapper.get('CATEGORY')]: analysis[FieldMapper.get('CATEGORY')],
               [FieldMapper.get('MAIN_CATEGORY')]: analysis.mainCategory,
               [FieldMapper.get('MIDDLE_CATEGORY')]: analysis.middleCategory,
               [FieldMapper.get('KEYWORDS')]: analysis.keywords,
@@ -1773,16 +1773,16 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
         // 통합 저장 결과 확인
         if (!result.success) {
           // Google Sheets 인증 문제는 경고로 처리하고 계속 진행
-          if (result.error && result.error.includes('invalid_grant')) {
-            ServerLogger.warn(`⚠️ Google Sheets 인증 실패로 시트 저장 건너뜀: ${result.error}`);
+          if (result[FieldMapper.get('ERROR')] && result[FieldMapper.get('ERROR')].includes('invalid_grant')) {
+            ServerLogger.warn(`⚠️ Google Sheets 인증 실패로 시트 저장 건너뜀: ${result[FieldMapper.get('ERROR')]}`);
             // MongoDB 저장이 성공했다면 계속 진행
             if (result.mongodb && result.mongodb.success) {
               ServerLogger.info('✅ MongoDB 저장은 성공, Google Sheets 실패는 무시하고 계속 진행');
             } else {
-              throw new Error(`통합 저장 실패: ${result.error}`);
+              throw new Error(`통합 저장 실패: ${result[FieldMapper.get('ERROR')]}`);
             }
           } else {
-            throw new Error(`통합 저장 실패: ${result.error}`);
+            throw new Error(`통합 저장 실패: ${result[FieldMapper.get('ERROR')]}`);
           }
         }
         
@@ -1831,7 +1831,7 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
             [FieldMapper.get('SOURCE')]: 'blob-upload'
           },
           [FieldMapper.get('ANALYSIS')]: {
-            [FieldMapper.get('CATEGORY')]: analysis.category,
+            [FieldMapper.get('CATEGORY')]: analysis[FieldMapper.get('CATEGORY')],
             [FieldMapper.get('MAIN_CATEGORY')]: analysis.mainCategory,
             [FieldMapper.get('MIDDLE_CATEGORY')]: analysis.middleCategory,
             [FieldMapper.get('KEYWORDS')]: analysis.keywords,
@@ -1907,7 +1907,7 @@ app.post('/api/youtube-batch', async (req, res) => {
         [FieldMapper.get('REQUEST_ID')]: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         [FieldMapper.get('TIMESTAMP')]: new Date().toISOString()
       },
-      [FieldMapper.get('METADATA')]: req.body.metadata || {}
+      [FieldMapper.get('METADATA')]: req.body[FieldMapper.get('METADATA')] || {}
     };
 
     if (mode === 'immediate') {
@@ -2167,12 +2167,12 @@ app.get('/api/api-keys', async (req, res) => {
       };
       
       geminiKeys.push({
-        id: 'gemini-main',
+        [FieldMapper.get('ID')]: 'gemini-main',
         name: 'Gemini API (Main)',
         apiKey: process.env.GOOGLE_API_KEY,
         type: 'gemini',
         usage: geminiUsage,
-        source: 'env'
+        [FieldMapper.get('SOURCE')]: 'env'
       });
     }
     
@@ -2182,7 +2182,7 @@ app.get('/api/api-keys', async (req, res) => {
       ServerLogger.warn('⚠️ 등록된 API 키가 없습니다');
       return ResponseHandler.success(res, {
         apiKeys: [],
-        summary: { total: 0, active: 0, warning: 0, error: 0 }
+        [FieldMapper.get('SUMMARY')]: { total: 0, active: 0, warning: 0, [FieldMapper.get('ERROR')]: 0 }
       }, '등록된 API 키가 없습니다.');
     }
 
@@ -2220,7 +2220,7 @@ app.get('/api/api-keys', async (req, res) => {
           else if (usagePercent >= 75) status = 'warning';
           
           return {
-            id: key.id,
+            [FieldMapper.get('ID')]: key[FieldMapper.get('ID')],
             name: key.name,
             maskedKey: ApiKeyManager.maskApiKey(key.apiKey),
             type: 'gemini',
@@ -2229,21 +2229,21 @@ app.get('/api/api-keys', async (req, res) => {
             errors: 0,
             lastUsed: realUsage.total.used > 0 ? '방금 전' : '미사용',
             resetTime: '오후 4시 (한국시간)',
-            source: key.source
+            [FieldMapper.get('SOURCE')]: key[FieldMapper.get('SOURCE')]
           };
         } catch (error) {
           ServerLogger.warn('⚠️ Gemini 사용량 조회 실패:', error.message);
           return {
-            id: key.id,
+            [FieldMapper.get('ID')]: key[FieldMapper.get('ID')],
             name: key.name,
             maskedKey: ApiKeyManager.maskApiKey(key.apiKey),
             type: 'gemini',
-            status: 'active',
+            [FieldMapper.get('STATUS')]: 'active',
             usage: { pro: { used: 0, limit: 50 }, flash: { used: 0, limit: 250 }, flashLite: { used: 0, limit: 1000 }, total: { used: 0, limit: 1300 } },
             errors: 0,
             lastUsed: '미사용',
             resetTime: '오후 4시 (한국시간)',
-            source: key.source
+            [FieldMapper.get('SOURCE')]: key[FieldMapper.get('SOURCE')]
           };
         }
       }
@@ -2297,13 +2297,13 @@ app.get('/api/api-keys', async (req, res) => {
       }
 
       // 상태 결정 로직
-      let status = key.status || 'active';
+      let status = key[FieldMapper.get('STATUS')] || 'active';
       const usagePercent = (realUsage.total.used / realUsage.total.limit) * 100;
       if (usagePercent >= 90) status = 'error';
       else if (usagePercent >= 75) status = 'warning';
 
       return {
-        id: key.id,
+        [FieldMapper.get('ID')]: key[FieldMapper.get('ID')],
         name: key.name,
         maskedKey: ApiKeyManager.maskApiKey(key.apiKey),
         type: 'youtube',
@@ -2312,17 +2312,17 @@ app.get('/api/api-keys', async (req, res) => {
         errors: 0,
         lastUsed: quotaStatus?.used > 0 ? '방금 전' : '미사용',
         resetTime: '오후 4시 (한국시간)',
-        source: key.source
+        [FieldMapper.get('SOURCE')]: key[FieldMapper.get('SOURCE')]
       };
     }));
 
     ResponseHandler.success(res, {
       apiKeys,
-      summary: {
+      [FieldMapper.get('SUMMARY')]: {
         total: apiKeys.length,
-        active: apiKeys.filter(k => k.status === 'active').length,
-        warning: apiKeys.filter(k => k.status === 'warning').length,
-        error: apiKeys.filter(k => k.status === 'error').length
+        active: apiKeys.filter(k => k[FieldMapper.get('STATUS')] === 'active').length,
+        warning: apiKeys.filter(k => k[FieldMapper.get('STATUS')] === 'warning').length,
+        [FieldMapper.get('ERROR')]: apiKeys.filter(k => k[FieldMapper.get('STATUS')] === 'error').length
       }
     }, `${apiKeys.length}개의 API 키 정보를 조회했습니다.`);
     
@@ -2347,10 +2347,10 @@ app.post('/api/api-keys', async (req, res) => {
     const newKey = await ApiKeyManager.addApiKey(name, apiKey);
     
     ResponseHandler.success(res, {
-      id: newKey.id,
+      [FieldMapper.get('ID')]: newKey[FieldMapper.get('ID')],
       name: newKey.name,
       maskedKey: ApiKeyManager.maskApiKey(newKey.apiKey),
-      status: newKey.status
+      [FieldMapper.get('STATUS')]: newKey[FieldMapper.get('STATUS')]
     }, 'API 키가 성공적으로 추가되었습니다.');
     
   } catch (error) {
@@ -2412,7 +2412,7 @@ app.get('/api/proxy-image', async (req, res) => {
     });
     
     if (!imageResponse.ok) {
-      throw new Error(`이미지 로드 실패: ${imageResponse.status}`);
+      throw new Error(`이미지 로드 실패: ${imageResponse[FieldMapper.get('STATUS')]}`);
     }
     
     // Content-Type 설정
@@ -2479,7 +2479,7 @@ app.post('/api/get-instagram-thumbnail', async (req, res) => {
       [FieldMapper.get('URL')]: url  // 🚀 FieldMapper 자동화
     }, 'Instagram 썸네일 URL을 생성했습니다.');
     
-    ServerLogger.info('✅ Instagram 썸네일 URL 생성 완료:', { mediaId, url: thumbnailUrls[0] });
+    ServerLogger.info('✅ Instagram 썸네일 URL 생성 완료:', { mediaId, [FieldMapper.get('URL')]: thumbnailUrls[0] });
     
   } catch (error) {
     ServerLogger.error('❌ Instagram 썸네일 추출 실패:', error);
@@ -2494,10 +2494,10 @@ app.get('/api/mongodb/url-stats', async (req, res) => {
     
     const stats = await VideoUrl.getStats();
     
-    if (stats.error) {
+    if (stats[FieldMapper.get('ERROR')]) {
       return ResponseHandler.serverError(res, {
         code: 'STATS_QUERY_FAILED',
-        message: stats.error
+        message: stats[FieldMapper.get('ERROR')]
       }, 'MongoDB URL 통계 조회 실패');
     }
     
@@ -2505,7 +2505,7 @@ app.get('/api/mongodb/url-stats', async (req, res) => {
       ...stats,
       cleanupInfo: {
         staleThresholdMinutes: 10,
-        description: '10분 이상 processing 상태인 레코드는 자동 정리됩니다',
+        [FieldMapper.get('DESCRIPTION')]: '10분 이상 processing 상태인 레코드는 자동 정리됩니다',
         nextCleanup: '매 10분마다 자동 실행'
       }
     }, 'MongoDB URL 상태 통계 조회 성공');
@@ -2535,7 +2535,7 @@ app.post('/api/mongodb/cleanup', async (req, res) => {
     } else {
       ResponseHandler.serverError(res, {
         code: 'CLEANUP_FAILED',
-        message: result.error
+        message: result[FieldMapper.get('ERROR')]
       }, '정리 작업 실패');
     }
     
@@ -2592,7 +2592,7 @@ app.get('/api/unified-saver/validate/:platform', async (req, res) => {
     
     ResponseHandler.success(res, validationResult, `${platform} 데이터 일관성 검증 완료`);
   } catch (error) {
-    ServerLogger.error(`데이터 일관성 검증 실패: ${req.params.platform}`, error.message, 'UNIFIED_SAVER_API');
+    ServerLogger.error(`데이터 일관성 검증 실패: ${req.params[FieldMapper.get('PLATFORM')]}`, error.message, 'UNIFIED_SAVER_API');
     ResponseHandler.serverError(res, error, '데이터 일관성 검증 실패');
   }
 });
