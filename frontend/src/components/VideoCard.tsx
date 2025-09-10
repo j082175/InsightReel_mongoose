@@ -63,15 +63,15 @@ const VideoCard: React.FC<VideoCardProps> = ({
 
   const handleClick = (e: React.MouseEvent) => {
     if (isSelectMode && onSelectToggle) {
-      onSelectToggle(video.id);
+      onSelectToggle(FieldMapper.getTypedField<number>(video, 'ID') || 0);
       return;
     }
 
     // 유튜브는 모달로, 다른 플랫폼은 직접 링크 열기
-    if (video.platform === 'YouTube' && onClick) {
+    if (FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'YouTube' && onClick) {
       onClick(video);
-    } else if (video.originalUrl) {
-      window.open(video.originalUrl, '_blank', 'noopener,noreferrer');
+    } else if (FieldMapper.getTypedField<string>(video, 'URL')) {
+      window.open(FieldMapper.getTypedField<string>(video, 'URL') || '', '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -98,7 +98,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
   const handleSelectToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (onSelectToggle) {
-      onSelectToggle(video.id);
+      onSelectToggle(FieldMapper.getTypedField<number>(video, 'ID') || 0);
     }
   };
 
@@ -136,7 +136,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
       <div className="relative w-full aspect-[9/16]">
         <img 
           className="w-full h-full object-cover" 
-          src={video.thumbnailUrl} 
+          src={FieldMapper.getTypedField<string>(video, 'THUMBNAIL_URL') || ''} 
           alt={FieldMapper.getTypedField<string>(video, 'TITLE') || ''} 
         />
 
@@ -150,8 +150,8 @@ const VideoCard: React.FC<VideoCardProps> = ({
         )}
 
         {/* 플랫폼 배지 (우상단) */}
-        <div className={`absolute top-2 right-2 ${platformStyles[video.platform as keyof typeof platformStyles]?.bg || 'bg-gray-500'} text-white text-xs font-bold px-2 py-1 rounded-full flex items-center`}>
-          <span>{video.platform}</span>
+        <div className={`absolute top-2 right-2 ${platformStyles[FieldMapper.getTypedField<string>(video, 'PLATFORM') as keyof typeof platformStyles]?.bg || 'bg-gray-500'} text-white text-xs font-bold px-2 py-1 rounded-full flex items-center`}>
+          <span>{FieldMapper.getTypedField<string>(video, 'PLATFORM') || ''}</span>
         </div>
 
         {/* 버튼들 (hover 시, 선택 모드가 아닐 때) */}
@@ -202,14 +202,14 @@ const VideoCard: React.FC<VideoCardProps> = ({
       <div className="p-4 flex-grow flex flex-col">
         {/* 제목 */}
         <h3 className="text-md font-semibold text-gray-800 h-12 overflow-hidden">
-          {video.isTrending && <span className="mr-1">🔥</span>}
+          {FieldMapper.getTypedField<boolean>(video, 'IS_TRENDING') && <span className="mr-1">🔥</span>}
           {FieldMapper.getTypedField<string>(video, 'TITLE') || ''}
         </h3>
 
         {/* 채널 정보 */}
         <div className="flex items-center mt-2 text-sm text-gray-500">
           <img 
-            src={video.channelAvatarUrl} 
+            src={FieldMapper.getTypedField<string>(video, 'CHANNEL_AVATAR_URL') || ''} 
             className="w-6 h-6 rounded-full mr-2 object-cover"
             alt={FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || ''}
           />
@@ -229,45 +229,45 @@ const VideoCard: React.FC<VideoCardProps> = ({
         </div>
 
         {/* 아카이브 정보 (옵션) */}
-        {showArchiveInfo && video.archivedAt && (
+        {showArchiveInfo && FieldMapper.getTypedField<string>(video, 'ARCHIVED_AT') && (
           <div className="text-xs text-gray-500 mt-2">
-            보관: {formatDate(video.archivedAt)}
+            보관: {formatDate(FieldMapper.getTypedField<string>(video, 'ARCHIVED_AT') || '')}
           </div>
         )}
 
         {/* 태그 또는 키워드 */}
-        {showArchiveInfo && video.tags && video.tags.length > 0 && (
+        {showArchiveInfo && FieldMapper.getTypedField<string[]>(video, 'TAGS') && FieldMapper.getTypedField<string[]>(video, 'TAGS')!.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
-            {video.tags.slice(0, 2).map((tag, index) => (
+            {FieldMapper.getTypedField<string[]>(video, 'TAGS')!.slice(0, 2).map((tag, index) => (
               <span key={index} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
                 #{tag}
               </span>
             ))}
-            {video.tags.length > 2 && (
+            {FieldMapper.getTypedField<string[]>(video, 'TAGS')!.length > 2 && (
               <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
-                +{video.tags.length - 2}
+                +{FieldMapper.getTypedField<string[]>(video, 'TAGS')!.length - 2}
               </span>
             )}
           </div>
         )}
 
         {/* 카테고리 (아카이브용) */}
-        {showArchiveInfo && video.category && (
+        {showArchiveInfo && FieldMapper.getTypedField<string>(video, 'CATEGORY') && (
           <div className="text-xs text-indigo-600 font-medium mt-2">
-            {video.category}
+            {FieldMapper.getTypedField<string>(video, 'CATEGORY')}
           </div>
         )}
 
         {/* 조회수와 날짜 (하단 고정) */}
         <div className="mt-auto pt-3 text-sm text-gray-600 font-medium">
           <span>
-            {video.platform === 'Instagram' ? '좋아요' : '조회수'} {formatViews(FieldMapper.getTypedField<number>(video, 'VIEWS') || 0)}회
+            {FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'Instagram' ? '좋아요' : '조회수'} {formatViews(FieldMapper.getTypedField<number>(video, 'VIEWS') || 0)}회
           </span>
           <span className="mx-1">•</span>
           <span>
-            {showArchiveInfo && video.archivedAt ? 
-              formatDate(video.archivedAt) : 
-              formatDaysAgo(video.daysAgo)
+            {showArchiveInfo && FieldMapper.getTypedField<string>(video, 'ARCHIVED_AT') ? 
+              formatDate(FieldMapper.getTypedField<string>(video, 'ARCHIVED_AT') || '') : 
+              formatDaysAgo(FieldMapper.getTypedField<number>(video, 'DAYS_AGO') || 0)
             }
           </span>
         </div>

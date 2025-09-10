@@ -1,5 +1,30 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../services/api';
+import { Video, Channel } from '../types';
+
+// API 응답 타입 정의
+interface PlatformStats {
+  youtube?: number;
+  instagram?: number;
+  tiktok?: number;
+}
+
+interface ResponseMeta {
+  page?: number;
+  totalPages?: number;
+  hasMore?: boolean;
+}
+
+interface VideosResponse {
+  videos: Video[];
+  total?: number;
+  platform_stats?: PlatformStats;
+}
+
+interface ChannelsResponse {
+  channels: Channel[];
+  meta?: ResponseMeta;
+}
 
 // 영상 목록 조회
 export const useVideos = () => {
@@ -11,7 +36,8 @@ export const useVideos = () => {
         console.log('🎬 Videos API 응답:', response);
         
         // 백엔드 응답 구조: { data: { videos: [...], total: ..., platform_stats: {...} } }
-        const videos = response?.data?.videos || response?.data || [];
+        const data = response?.data as unknown as VideosResponse;
+        const videos = data?.videos || (response?.data as unknown as Video[]) || [];
         console.log('📊 파싱된 영상 수:', videos.length);
         console.log('🔍 첫 번째 영상 샘플:', videos[0]);
         
@@ -73,7 +99,8 @@ export const useChannels = () => {
         const response = await apiClient.getChannels();
         console.log('🔍 Channels API 응답:', response);
         // 백엔드 응답 구조: { data: { channels: [...], meta: {...} } }
-        const channels = response?.data?.channels || response?.data || [];
+        const data = response?.data as unknown as ChannelsResponse;
+        const channels = data?.channels || (response?.data as unknown as Channel[]) || [];
         console.log('📊 파싱된 채널 수:', channels.length);
         return channels;
       } catch (error) {

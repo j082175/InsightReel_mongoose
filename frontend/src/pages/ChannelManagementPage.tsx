@@ -1,38 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useChannels } from '../hooks/useApi';
 import { CollectionBatch } from '../types';
+import { FieldMapper } from '../types/field-mapper';
 import { useAppContext } from '../App';
 import ChannelAnalysisModal from '../components/ChannelAnalysisModal';
 import VideoAnalysisModal from '../components/VideoAnalysisModal';
 import BulkCollectionModal from '../components/BulkCollectionModal';
 
-interface Channel {
-  id: string;
-  name: string;
-  platform: 'youtube' | 'tiktok' | 'instagram';
-  url?: string;
-  subscribers?: number;
-  totalVideos?: number;
-  lastAnalyzedAt?: string;
-  status: 'active' | 'inactive' | 'error';
-  autoCollect: boolean;
-  collectInterval: string;
-  thumbnailUrl?: string;
-  description?: string;
-  totalViews?: number;
-  avgDurationFormatted?: string;
-  contentType?: 'shortform' | 'longform' | 'mixed';
-  keywords?: string[];
-  aiTags?: string[];
-}
+// LocalChannel 인터페이스 제거 - 직접 FieldMapper 사용
 
 const ChannelManagementPage: React.FC = () => {
-  const [channels, setChannels] = useState<Channel[]>([]);
+  const [channels, setChannels] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [platformFilter, setPlatformFilter] = useState('All');
   const [showAddModal, setShowAddModal] = useState(false);
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
-  const [selectedChannels, setSelectedChannels] = useState<Set<number>>(new Set());
+  const [selectedChannels, setSelectedChannels] = useState<Set<string>>(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   const [showCollectionModal, setShowCollectionModal] = useState(false);
@@ -41,105 +24,79 @@ const ChannelManagementPage: React.FC = () => {
   const { data: apiChannels = [], isLoading, error } = useChannels();
   const { addCollectionBatch } = useAppContext();
 
-  // Mock 데이터
-  const mockChannels: Channel[] = [
+  // Mock 데이터 - FieldMapper와 호환되도록 수정
+  const mockChannels: any[] = [
     {
-      id: 1,
-      name: '개발왕 김코딩',
-      platform: 'YouTube',
-      url: 'https://youtube.com/@kimcoding',
-      subscriberCount: 1250000,
-      videoCount: 342,
-      lastChecked: '2024-01-15T10:30:00',
-      status: 'active',
-      autoCollect: true,
-      collectInterval: '매일',
-      avatar: 'https://placehold.co/100x100/3B82F6/FFFFFF?text=K'
+      [FieldMapper.get('ID')]: 1,
+      [FieldMapper.get('CHANNEL_NAME')]: '개발왕 김코딩',
+      [FieldMapper.get('PLATFORM')]: 'YouTube',
+      [FieldMapper.get('CHANNEL_URL')]: 'https://youtube.com/@kimcoding',
+      [FieldMapper.get('SUBSCRIBERS')]: 1250000,
+      [FieldMapper.get('CHANNEL_VIDEOS')]: 342,
+      [FieldMapper.get('UPDATED_AT')]: '2024-01-15T10:30:00',
+      [FieldMapper.get('ANALYSIS_STATUS')]: 'active',
+      [FieldMapper.get('THUMBNAIL_URL')]: 'https://placehold.co/100x100/3B82F6/FFFFFF?text=K'
     },
     {
-      id: 2,
-      name: '요리하는 남자',
-      platform: 'TikTok',
-      url: 'https://tiktok.com/@cookingman',
-      subscriberCount: 3450000,
-      videoCount: 567,
-      lastChecked: '2024-01-15T09:15:00',
-      status: 'active',
-      autoCollect: true,
-      collectInterval: '6시간마다',
-      avatar: 'https://placehold.co/100x100/F43F5E/FFFFFF?text=C'
+      [FieldMapper.get('ID')]: 2,
+      [FieldMapper.get('CHANNEL_NAME')]: '요리하는 남자',
+      [FieldMapper.get('PLATFORM')]: 'TikTok',
+      [FieldMapper.get('CHANNEL_URL')]: 'https://tiktok.com/@cookingman',
+      [FieldMapper.get('SUBSCRIBERS')]: 3450000,
+      [FieldMapper.get('CHANNEL_VIDEOS')]: 567,
+      [FieldMapper.get('UPDATED_AT')]: '2024-01-15T09:15:00',
+      [FieldMapper.get('ANALYSIS_STATUS')]: 'active',
+      [FieldMapper.get('THUMBNAIL_URL')]: 'https://placehold.co/100x100/F43F5E/FFFFFF?text=C'
     },
     {
-      id: 3,
-      name: '카페찾아 삼만리',
-      platform: 'Instagram',
-      url: 'https://instagram.com/cafe_explorer',
-      subscriberCount: 89000,
-      videoCount: 124,
-      lastChecked: '2024-01-14T18:00:00',
-      status: 'inactive',
-      autoCollect: false,
-      collectInterval: '주간',
-      avatar: 'https://placehold.co/100x100/8B5CF6/FFFFFF?text=T'
+      [FieldMapper.get('ID')]: 3,
+      [FieldMapper.get('CHANNEL_NAME')]: '카페찾아 삼만리',
+      [FieldMapper.get('PLATFORM')]: 'Instagram',
+      [FieldMapper.get('CHANNEL_URL')]: 'https://instagram.com/cafe_explorer',
+      [FieldMapper.get('SUBSCRIBERS')]: 89000,
+      [FieldMapper.get('CHANNEL_VIDEOS')]: 124,
+      [FieldMapper.get('UPDATED_AT')]: '2024-01-14T18:00:00',
+      [FieldMapper.get('ANALYSIS_STATUS')]: 'inactive',
+      [FieldMapper.get('THUMBNAIL_URL')]: 'https://placehold.co/100x100/8B5CF6/FFFFFF?text=T'
     },
     {
-      id: 4,
-      name: '냥냥펀치',
-      platform: 'YouTube',
-      url: 'https://youtube.com/@nyangpunch',
-      subscriberCount: 567000,
-      videoCount: 89,
-      lastChecked: '2024-01-15T11:00:00',
-      status: 'error',
-      autoCollect: true,
-      collectInterval: '매일',
-      avatar: 'https://placehold.co/100x100/F97316/FFFFFF?text=P'
+      [FieldMapper.get('ID')]: 4,
+      [FieldMapper.get('CHANNEL_NAME')]: '냥냥펀치',
+      [FieldMapper.get('PLATFORM')]: 'YouTube',
+      [FieldMapper.get('CHANNEL_URL')]: 'https://youtube.com/@nyangpunch',
+      [FieldMapper.get('SUBSCRIBERS')]: 567000,
+      [FieldMapper.get('CHANNEL_VIDEOS')]: 89,
+      [FieldMapper.get('UPDATED_AT')]: '2024-01-15T11:00:00',
+      [FieldMapper.get('ANALYSIS_STATUS')]: 'error',
+      [FieldMapper.get('THUMBNAIL_URL')]: 'https://placehold.co/100x100/F97316/FFFFFF?text=P'
     },
     {
-      id: 5,
-      name: '캠핑은 장비빨',
-      platform: 'YouTube',
-      url: 'https://youtube.com/@campinggear',
-      subscriberCount: 234000,
-      videoCount: 156,
-      lastChecked: '2024-01-15T08:45:00',
-      status: 'active',
-      autoCollect: true,
-      collectInterval: '매일',
-      avatar: 'https://placehold.co/100x100/22C55E/FFFFFF?text=C'
+      [FieldMapper.get('ID')]: 5,
+      [FieldMapper.get('CHANNEL_NAME')]: '캠핑은 장비빨',
+      [FieldMapper.get('PLATFORM')]: 'YouTube',
+      [FieldMapper.get('CHANNEL_URL')]: 'https://youtube.com/@campinggear',
+      [FieldMapper.get('SUBSCRIBERS')]: 234000,
+      [FieldMapper.get('CHANNEL_VIDEOS')]: 156,
+      [FieldMapper.get('UPDATED_AT')]: '2024-01-15T08:45:00',
+      [FieldMapper.get('ANALYSIS_STATUS')]: 'active',
+      [FieldMapper.get('THUMBNAIL_URL')]: 'https://placehold.co/100x100/22C55E/FFFFFF?text=C'
     }
   ];
 
   useEffect(() => {
     // API 데이터가 있으면 사용, 없으면 mock 데이터 사용
     if (apiChannels.length > 0) {
-      setChannels(apiChannels.map((ch: any) => ({
-        id: ch.id || ch._id,
-        name: ch.name,
-        platform: ch.platform,
-        url: ch.url || `https://${ch.platform}.com/@${ch.name}`,
-        subscribers: ch.subscribers || 0,
-        totalVideos: ch.totalVideos || 0,
-        lastAnalyzedAt: ch.lastAnalyzedAt || ch.updatedAt,
-        status: ch.lastAnalyzedAt ? 'active' : 'inactive',
-        autoCollect: true, // DB에서 관리하지 않으므로 기본값
-        collectInterval: '매일', // DB에서 관리하지 않으므로 기본값
-        thumbnailUrl: ch.thumbnailUrl || `https://placehold.co/100x100/3B82F6/FFFFFF?text=${ch.name?.charAt(0)}`,
-        description: ch.description,
-        totalViews: ch.totalViews,
-        avgDurationFormatted: ch.avgDurationFormatted,
-        contentType: ch.contentType,
-        keywords: ch.keywords || [],
-        aiTags: ch.aiTags || []
-      })));
+      setChannels(apiChannels);
     } else {
       setChannels(mockChannels);
     }
   }, [apiChannels]);
 
   const filteredChannels = channels.filter(channel => {
-    const matchesSearch = channel.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPlatform = platformFilter === 'All' || channel.platform === platformFilter;
+    const channelName = FieldMapper.getTypedField<string>(channel, 'CHANNEL_NAME') || '';
+    const channelPlatform = FieldMapper.getTypedField<string>(channel, 'PLATFORM') || '';
+    const matchesSearch = channelName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesPlatform = platformFilter === 'All' || channelPlatform.toLowerCase() === platformFilter.toLowerCase();
     return matchesSearch && matchesPlatform;
   });
 
@@ -160,7 +117,7 @@ const ChannelManagementPage: React.FC = () => {
     return `${Math.floor(diff / 86400)}일 전`;
   };
 
-  const handleSelectToggle = (channelId: number) => {
+  const handleSelectToggle = (channelId: string) => {
     const newSelection = new Set(selectedChannels);
     if (newSelection.has(channelId)) {
       newSelection.delete(channelId);
@@ -174,7 +131,7 @@ const ChannelManagementPage: React.FC = () => {
     if (selectedChannels.size === filteredChannels.length) {
       setSelectedChannels(new Set());
     } else {
-      setSelectedChannels(new Set(filteredChannels.map(ch => ch.id)));
+      setSelectedChannels(new Set(filteredChannels.map(ch => String(FieldMapper.getTypedField<number>(ch, 'ID') || FieldMapper.getTypedField<string>(ch, 'ID')))));
     }
   };
 
@@ -188,8 +145,8 @@ const ChannelManagementPage: React.FC = () => {
 
   const AddChannelModal: React.FC = () => {
     const [newChannel, setNewChannel] = useState({
-      url: '',
-      platform: 'YouTube',
+      [FieldMapper.get('CHANNEL_URL')]: '',
+      [FieldMapper.get('PLATFORM')]: 'YouTube',
       autoCollect: true,
       collectInterval: '매일'
     });
@@ -216,8 +173,8 @@ const ChannelManagementPage: React.FC = () => {
               </label>
               <input
                 type="url"
-                value={newChannel.url}
-                onChange={(e) => setNewChannel({...newChannel, url: e.target.value})}
+                value={(newChannel[FieldMapper.get('CHANNEL_URL')] as string) || ''}
+                onChange={(e) => setNewChannel({...newChannel, [FieldMapper.get('CHANNEL_URL')]: e.target.value})}
                 placeholder="https://youtube.com/@channel"
                 className="w-full border-gray-300 rounded-md shadow-sm"
               />
@@ -228,8 +185,8 @@ const ChannelManagementPage: React.FC = () => {
                 플랫폼
               </label>
               <select
-                value={newChannel.platform}
-                onChange={(e) => setNewChannel({...newChannel, platform: e.target.value})}
+                value={(newChannel[FieldMapper.get('PLATFORM')] as string) || 'YouTube'}
+                onChange={(e) => setNewChannel({...newChannel, [FieldMapper.get('PLATFORM')]: e.target.value})}
                 className="w-full border-gray-300 rounded-md shadow-sm"
               >
                 <option value="YouTube">YouTube</option>
@@ -303,21 +260,21 @@ const ChannelManagementPage: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-500">활성 채널</h3>
           <p className="mt-2 text-3xl font-bold text-gray-900">
-            {channels.filter(ch => ch.status === 'active').length}
+            {channels.filter(ch => FieldMapper.getTypedField<string>(ch, 'ANALYSIS_STATUS') === 'active' || FieldMapper.getTypedField<string>(ch, 'UPDATED_AT')).length}
           </p>
           <p className="mt-1 text-sm text-gray-600">자동 수집 중</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-500">오류 채널</h3>
           <p className="mt-2 text-3xl font-bold text-red-600">
-            {channels.filter(ch => ch.status === 'error').length}
+            {channels.filter(ch => FieldMapper.getTypedField<string>(ch, 'ANALYSIS_STATUS') === 'error').length}
           </p>
           <p className="mt-1 text-sm text-red-600">확인 필요</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-500">총 구독자</h3>
           <p className="mt-2 text-3xl font-bold text-gray-900">
-            {formatNumber(channels.reduce((sum, ch) => sum + (ch.subscribers || 0), 0))}
+            {formatNumber(channels.reduce((sum, ch) => sum + (FieldMapper.getTypedField<number>(ch, 'SUBSCRIBERS') || 0), 0))}
           </p>
           <p className="mt-1 text-sm text-gray-600">전체 도달 범위</p>
         </div>
@@ -417,13 +374,13 @@ const ChannelManagementPage: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredChannels.map((channel) => (
-                <tr key={channel.id} className="hover:bg-gray-50">
+                <tr key={FieldMapper.getTypedField<number>(channel, 'ID') || FieldMapper.getTypedField<string>(channel, 'ID')} className="hover:bg-gray-50">
                   {isSelectMode && (
                     <td className="px-6 py-4">
                       <input
                         type="checkbox"
-                        checked={selectedChannels.has(channel.id)}
-                        onChange={() => handleSelectToggle(channel.id)}
+                        checked={selectedChannels.has(String(FieldMapper.getTypedField<number>(channel, 'ID') || FieldMapper.getTypedField<string>(channel, 'ID')))}
+                        onChange={() => handleSelectToggle(String(FieldMapper.getTypedField<number>(channel, 'ID') || FieldMapper.getTypedField<string>(channel, 'ID')))}
                         className="rounded border-gray-300"
                       />
                     </td>
@@ -431,21 +388,21 @@ const ChannelManagementPage: React.FC = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center">
                       <img 
-                        src={channel.thumbnailUrl || `https://placehold.co/100x100/3B82F6/FFFFFF?text=${channel.name.charAt(0)}`} 
-                        alt={channel.name}
+                        src={FieldMapper.getTypedField<string>(channel, 'THUMBNAIL_URL') || `https://placehold.co/100x100/3B82F6/FFFFFF?text=${(FieldMapper.getTypedField<string>(channel, 'CHANNEL_NAME') || 'C').charAt(0)}`} 
+                        alt={FieldMapper.getTypedField<string>(channel, 'CHANNEL_NAME') || ''}
                         className="w-10 h-10 rounded-full mr-3"
                       />
                       <div>
                         <button
-                          onClick={() => setChannelToAnalyze(channel.name)}
+                          onClick={() => setChannelToAnalyze(FieldMapper.getTypedField<string>(channel, 'CHANNEL_NAME') || '')}
                           className="text-sm font-medium text-gray-900 hover:text-indigo-600"
                         >
-                          {channel.name}
+                          {FieldMapper.getTypedField<string>(channel, 'CHANNEL_NAME')}
                         </button>
-                        <div className="text-xs text-gray-500">{channel.url || 'URL 없음'}</div>
-                        {channel.keywords && channel.keywords.length > 0 && (
+                        <div className="text-xs text-gray-500">{FieldMapper.getTypedField<string>(channel, 'CHANNEL_URL') || 'URL 없음'}</div>
+                        {FieldMapper.getTypedField<string[]>(channel, 'KEYWORDS') && FieldMapper.getTypedField<string[]>(channel, 'KEYWORDS')!.length > 0 && (
                           <div className="text-xs text-blue-500 mt-1">
-                            키워드: {channel.keywords.slice(0, 3).join(', ')}{channel.keywords.length > 3 ? '...' : ''}
+                            키워드: {FieldMapper.getTypedField<string[]>(channel, 'KEYWORDS')!.slice(0, 3).join(', ')}{FieldMapper.getTypedField<string[]>(channel, 'KEYWORDS')!.length > 3 ? '...' : ''}
                           </div>
                         )}
                       </div>
@@ -453,44 +410,41 @@ const ChannelManagementPage: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                      channel.platform === 'youtube' ? 'bg-red-100 text-red-700' :
-                      channel.platform === 'tiktok' ? 'bg-pink-100 text-pink-700' :
+                      FieldMapper.getTypedField<string>(channel, 'PLATFORM') === 'YouTube' ? 'bg-red-100 text-red-700' :
+                      FieldMapper.getTypedField<string>(channel, 'PLATFORM') === 'TikTok' ? 'bg-pink-100 text-pink-700' :
                       'bg-purple-100 text-purple-700'
                     }`}>
-                      {channel.platform === 'youtube' ? 'YouTube' : 
-                       channel.platform === 'tiktok' ? 'TikTok' : 
-                       channel.platform === 'instagram' ? 'Instagram' : 
-                       channel.platform}
+                      {FieldMapper.getTypedField<string>(channel, 'PLATFORM')}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {formatNumber(channel.subscribers || 0)}
+                    {formatNumber(FieldMapper.getTypedField<number>(channel, 'SUBSCRIBERS') || 0)}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {channel.totalVideos || 0}
+                    {FieldMapper.getTypedField<number>(channel, 'CHANNEL_VIDEOS') || 0}
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                      channel.status === 'active' ? 'bg-green-100 text-green-700' :
-                      channel.status === 'error' ? 'bg-red-100 text-red-700' :
+                      FieldMapper.getTypedField<string>(channel, 'ANALYSIS_STATUS') === 'active' || FieldMapper.getTypedField<string>(channel, 'UPDATED_AT') ? 'bg-green-100 text-green-700' :
+                      FieldMapper.getTypedField<string>(channel, 'ANALYSIS_STATUS') === 'error' ? 'bg-red-100 text-red-700' :
                       'bg-gray-100 text-gray-700'
                     }`}>
-                      {channel.status === 'active' ? '활성' : 
-                       channel.status === 'error' ? '오류' : '비활성'}
+                      {FieldMapper.getTypedField<string>(channel, 'ANALYSIS_STATUS') === 'active' || FieldMapper.getTypedField<string>(channel, 'UPDATED_AT') ? '활성' : 
+                       FieldMapper.getTypedField<string>(channel, 'ANALYSIS_STATUS') === 'error' ? '오류' : '비활성'}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    {channel.lastAnalyzedAt ? formatLastChecked(channel.lastAnalyzedAt) : '미분석'}
+                    {FieldMapper.getTypedField<string>(channel, 'UPDATED_AT') ? formatLastChecked(FieldMapper.getTypedField<string>(channel, 'UPDATED_AT')!) : '미분석'}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center">
                       <input
                         type="checkbox"
-                        checked={channel.autoCollect}
+                        checked={true}
                         onChange={() => {}}
                         className="rounded border-gray-300 text-indigo-600 mr-2"
                       />
-                      <span className="text-xs text-gray-500">{channel.collectInterval}</span>
+                      <span className="text-xs text-gray-500">매일</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm">
@@ -567,17 +521,19 @@ const ChannelManagementPage: React.FC = () => {
       />
       <VideoAnalysisModal
         isOpen={showAnalysisModal}
-        selectedChannels={Array.from(selectedChannels).map(id => 
-          channels.find(ch => ch.id === id)?.name || ''
-        ).filter(name => name)}
+        selectedChannels={Array.from(selectedChannels).map(id => {
+          const channel = channels.find(ch => String(FieldMapper.getTypedField<number>(ch, 'ID') || FieldMapper.getTypedField<string>(ch, 'ID')) === id);
+          return channel ? FieldMapper.getTypedField<string>(channel, 'CHANNEL_NAME') || '' : '';
+        }).filter(name => name)}
         onClose={() => setShowAnalysisModal(false)}
       />
       <BulkCollectionModal
         isOpen={showCollectionModal}
-        selectedChannels={Array.from(selectedChannels).map(id => 
-          channels.find(ch => ch.id === id)?.name || ''
-        ).filter(name => name)}
-        allVisibleChannels={filteredChannels.map(ch => ch.name)}
+        selectedChannels={Array.from(selectedChannels).map(id => {
+          const channel = channels.find(ch => String(FieldMapper.getTypedField<number>(ch, 'ID') || FieldMapper.getTypedField<string>(ch, 'ID')) === id);
+          return channel ? FieldMapper.getTypedField<string>(channel, 'CHANNEL_NAME') || '' : '';
+        }).filter(name => name)}
+        allVisibleChannels={filteredChannels.map(ch => FieldMapper.getTypedField<string>(ch, 'CHANNEL_NAME') || '')}
         onClose={() => setShowCollectionModal(false)}
         onCollectionComplete={handleCollectionComplete}
       />

@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useVideos, useTrendingStats, useQuotaStatus, useServerStatus, useCollectTrending } from '../hooks/useApi';
 import { Video, FilterState } from '../types';
+import { FieldMapper } from '../types/field-mapper';
 import { useAppContext } from '../App';
 import VideoModal from '../components/VideoModal';
 import VideoOnlyModal from '../components/VideoOnlyModal';
@@ -31,91 +32,91 @@ const DashboardPage: React.FC = () => {
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
 
   // API 훅들
-  const { data: apiVideos = [], isLoading: videosLoading, error: videosError } = useVideos();
-  const { data: trendingStats, isLoading: trendingLoading } = useTrendingStats();
-  const { data: quotaStatus, isLoading: quotaLoading } = useQuotaStatus();
-  const { data: serverStatus, isLoading: serverLoading } = useServerStatus();
+  const { data: apiVideos = [] } = useVideos();
+  const { data: trendingStats } = useTrendingStats();
+  const { data: quotaStatus } = useQuotaStatus();
+  const { data: serverStatus } = useServerStatus();
   const collectTrendingMutation = useCollectTrending();
   
   // 전역 상태에서 수집된 영상과 배치 정보 가져오기
   const { collectedVideos, collectionBatches } = useAppContext();
 
-  // Mock 데이터 (실제 API가 없을 때를 위한 fallback)
-  const mockVideos: Video[] = [
+  // Mock 데이터 - FieldMapper와 호환되도록 수정
+  const mockVideos: any[] = [
     { 
-      id: 1, 
-      platform: 'YouTube', 
-      title: '초보자를 위한 React 2025년 최신 가이드 (롱폼)', 
-      channelName: '개발왕 김코딩', 
-      views: 150000, 
-      daysAgo: 0, 
-      thumbnailUrl: 'https://placehold.co/600x400/3B82F6/FFFFFF?text=React', 
-      channelAvatarUrl: 'https://placehold.co/100x100/3B82F6/FFFFFF?text=K', 
-      isTrending: true, 
-      originalUrl: 'https://www.youtube.com/watch?v=t-piB91ftwA', 
-      aspectRatio: '16:9' as const, 
-      keywords: ['React', 'JavaScript', '코딩'],
-      createdAt: new Date().toISOString()
+      [FieldMapper.get('ID')]: 1, 
+      [FieldMapper.get('PLATFORM')]: 'YouTube', 
+      [FieldMapper.get('TITLE')]: '초보자를 위한 React 2025년 최신 가이드 (롱폼)', 
+      [FieldMapper.get('CHANNEL_NAME')]: '개발왕 김코딩', 
+      [FieldMapper.get('VIEWS')]: 150000, 
+      [FieldMapper.get('DAYS_AGO')]: 0, 
+      [FieldMapper.get('THUMBNAIL_URL')]: 'https://placehold.co/600x400/3B82F6/FFFFFF?text=React', 
+      [FieldMapper.get('CHANNEL_AVATAR_URL')]: 'https://placehold.co/100x100/3B82F6/FFFFFF?text=K', 
+      [FieldMapper.get('IS_TRENDING')]: true, 
+      [FieldMapper.get('URL')]: 'https://www.youtube.com/watch?v=t-piB91ftwA', 
+      [FieldMapper.get('ASPECT_RATIO')]: '16:9' as const, 
+      [FieldMapper.get('KEYWORDS')]: ['React', 'JavaScript', '코딩'],
+      [FieldMapper.get('CREATED_AT')]: new Date().toISOString()
     },
     { 
-      id: 2, 
-      platform: 'TikTok', 
-      title: '1분 만에 따라하는 제육볶음 황금 레시피', 
-      channelName: '요리하는 남자', 
-      views: 2350000, 
-      daysAgo: 2, 
-      thumbnailUrl: 'https://placehold.co/400x600/F43F5E/FFFFFF?text=Food', 
-      channelAvatarUrl: 'https://placehold.co/100x100/F43F5E/FFFFFF?text=C', 
-      isTrending: true, 
-      originalUrl: 'https://www.tiktok.com', 
-      aspectRatio: '9:16' as const, 
-      keywords: ['요리', '레시피', '맛집'],
-      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+      [FieldMapper.get('ID')]: 2, 
+      [FieldMapper.get('PLATFORM')]: 'TikTok', 
+      [FieldMapper.get('TITLE')]: '1분 만에 따라하는 제육볶음 황금 레시피', 
+      [FieldMapper.get('CHANNEL_NAME')]: '요리하는 남자', 
+      [FieldMapper.get('VIEWS')]: 2350000, 
+      [FieldMapper.get('DAYS_AGO')]: 2, 
+      [FieldMapper.get('THUMBNAIL_URL')]: 'https://placehold.co/400x600/F43F5E/FFFFFF?text=Food', 
+      [FieldMapper.get('CHANNEL_AVATAR_URL')]: 'https://placehold.co/100x100/F43F5E/FFFFFF?text=C', 
+      [FieldMapper.get('IS_TRENDING')]: true, 
+      [FieldMapper.get('URL')]: 'https://www.tiktok.com', 
+      [FieldMapper.get('ASPECT_RATIO')]: '9:16' as const, 
+      [FieldMapper.get('KEYWORDS')]: ['요리', '레시피', '맛집'],
+      [FieldMapper.get('CREATED_AT')]: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
     },
     { 
-      id: 3, 
-      platform: 'Instagram', 
-      title: '요즘 유행하는 한남동 카페 BEST 5', 
-      channelName: '카페찾아 삼만리', 
-      views: 52000, 
-      daysAgo: 0, 
-      thumbnailUrl: 'https://placehold.co/400x600/8B5CF6/FFFFFF?text=Cafe', 
-      channelAvatarUrl: 'https://placehold.co/100x100/8B5CF6/FFFFFF?text=T', 
-      isTrending: false, 
-      originalUrl: 'https://www.instagram.com', 
-      aspectRatio: '9:16' as const, 
-      keywords: ['여행', '카페', '감성'],
-      createdAt: new Date().toISOString()
+      [FieldMapper.get('ID')]: 3, 
+      [FieldMapper.get('PLATFORM')]: 'Instagram', 
+      [FieldMapper.get('TITLE')]: '요즘 유행하는 한남동 카페 BEST 5', 
+      [FieldMapper.get('CHANNEL_NAME')]: '카페찾아 삼만리', 
+      [FieldMapper.get('VIEWS')]: 52000, 
+      [FieldMapper.get('DAYS_AGO')]: 0, 
+      [FieldMapper.get('THUMBNAIL_URL')]: 'https://placehold.co/400x600/8B5CF6/FFFFFF?text=Cafe', 
+      [FieldMapper.get('CHANNEL_AVATAR_URL')]: 'https://placehold.co/100x100/8B5CF6/FFFFFF?text=T', 
+      [FieldMapper.get('IS_TRENDING')]: false, 
+      [FieldMapper.get('URL')]: 'https://www.instagram.com', 
+      [FieldMapper.get('ASPECT_RATIO')]: '9:16' as const, 
+      [FieldMapper.get('KEYWORDS')]: ['여행', '카페', '감성'],
+      [FieldMapper.get('CREATED_AT')]: new Date().toISOString()
     },
     { 
-      id: 4, 
-      platform: 'YouTube', 
-      title: '우리집 고양이가 천재인 이유 (숏폼)', 
-      channelName: '냥냥펀치', 
-      views: 320000, 
-      daysAgo: 1, 
-      thumbnailUrl: 'https://placehold.co/400x600/F97316/FFFFFF?text=Cat', 
-      channelAvatarUrl: 'https://placehold.co/100x100/F97316/FFFFFF?text=P', 
-      isTrending: false, 
-      originalUrl: 'https://www.youtube.com/shorts/MPV2METPeJU', 
-      aspectRatio: '9:16' as const, 
-      keywords: ['고양이', '동물', '반려동물'],
-      createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+      [FieldMapper.get('ID')]: 4, 
+      [FieldMapper.get('PLATFORM')]: 'YouTube', 
+      [FieldMapper.get('TITLE')]: '우리집 고양이가 천재인 이유 (숏폼)', 
+      [FieldMapper.get('CHANNEL_NAME')]: '냥냥펀치', 
+      [FieldMapper.get('VIEWS')]: 320000, 
+      [FieldMapper.get('DAYS_AGO')]: 1, 
+      [FieldMapper.get('THUMBNAIL_URL')]: 'https://placehold.co/400x600/F97316/FFFFFF?text=Cat', 
+      [FieldMapper.get('CHANNEL_AVATAR_URL')]: 'https://placehold.co/100x100/F97316/FFFFFF?text=P', 
+      [FieldMapper.get('IS_TRENDING')]: false, 
+      [FieldMapper.get('URL')]: 'https://www.youtube.com/shorts/MPV2METPeJU', 
+      [FieldMapper.get('ASPECT_RATIO')]: '9:16' as const, 
+      [FieldMapper.get('KEYWORDS')]: ['고양이', '동물', '반려동물'],
+      [FieldMapper.get('CREATED_AT')]: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
     },
     { 
-      id: 5, 
-      platform: 'YouTube', 
-      title: '우중 캠핑 VLOG | 빗소리 들으며 휴식', 
-      channelName: '캠핑은 장비빨', 
-      views: 88000, 
-      daysAgo: 3, 
-      thumbnailUrl: 'https://placehold.co/400x600/22C55E/FFFFFF?text=Camping', 
-      channelAvatarUrl: 'https://placehold.co/100x100/22C55E/FFFFFF?text=C', 
-      isTrending: false, 
-      originalUrl: 'https://www.youtube.com/shorts/ARq1t2402p4', 
-      aspectRatio: '9:16' as const, 
-      keywords: ['캠핑', '여행', 'VLOG'],
-      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+      [FieldMapper.get('ID')]: 5, 
+      [FieldMapper.get('PLATFORM')]: 'YouTube', 
+      [FieldMapper.get('TITLE')]: '우중 캠핑 VLOG | 빗소리 들으며 휴식', 
+      [FieldMapper.get('CHANNEL_NAME')]: '캠핑은 장비빨', 
+      [FieldMapper.get('VIEWS')]: 88000, 
+      [FieldMapper.get('DAYS_AGO')]: 3, 
+      [FieldMapper.get('THUMBNAIL_URL')]: 'https://placehold.co/400x600/22C55E/FFFFFF?text=Camping', 
+      [FieldMapper.get('CHANNEL_AVATAR_URL')]: 'https://placehold.co/100x100/22C55E/FFFFFF?text=C', 
+      [FieldMapper.get('IS_TRENDING')]: false, 
+      [FieldMapper.get('URL')]: 'https://www.youtube.com/shorts/ARq1t2402p4', 
+      [FieldMapper.get('ASPECT_RATIO')]: '9:16' as const, 
+      [FieldMapper.get('KEYWORDS')]: ['캠핑', '여행', 'VLOG'],
+      [FieldMapper.get('CREATED_AT')]: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
     },
   ];
 
@@ -123,11 +124,11 @@ const DashboardPage: React.FC = () => {
   const getAllVideos = useMemo(() => {
     const apiMappedVideos = apiVideos.length > 0 ? apiVideos.map((v: any, index: number) => ({
       ...v,
-      id: v._id || v.id || (Date.now() + index), // ID 충돌 방지
-      thumbnailUrl: v.thumbnailUrl || v.thumbnail,
-      channelAvatarUrl: v.channelAvatarUrl || v.channelAvatar,
-      views: v.views || v.viewCount || 0,
-      daysAgo: Math.floor((Date.now() - new Date(v.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+      [FieldMapper.get('ID')]: FieldMapper.getTypedField<number>(v, 'ID') || (Date.now() + index),
+      [FieldMapper.get('THUMBNAIL_URL')]: FieldMapper.getTypedField<string>(v, 'THUMBNAIL_URL') || '',
+      [FieldMapper.get('CHANNEL_AVATAR_URL')]: FieldMapper.getTypedField<string>(v, 'CHANNEL_AVATAR_URL') || '',
+      [FieldMapper.get('VIEWS')]: FieldMapper.getTypedField<number>(v, 'VIEWS') || 0,
+      [FieldMapper.get('DAYS_AGO')]: Math.floor((Date.now() - new Date(FieldMapper.getTypedField<string>(v, 'CREATED_AT') || new Date().toISOString()).getTime()) / (1000 * 60 * 60 * 24))
     })) : mockVideos;
 
     return [
@@ -182,11 +183,11 @@ const DashboardPage: React.FC = () => {
 
   const videos = useMemo(() => {
     let filtered = allVideos.filter(v => 
-      v.daysAgo <= parseInt(filters.days) && 
-      v.views >= parseInt(filters.views)
+      (FieldMapper.getTypedField<number>(v, 'DAYS_AGO') || 0) <= parseInt(filters.days) && 
+      (FieldMapper.getTypedField<number>(v, 'VIEWS') || 0) >= parseInt(filters.views)
     );
     if (filters.platform !== 'All') {
-      filtered = filtered.filter(v => v.platform === filters.platform);
+      filtered = filtered.filter(v => (FieldMapper.getTypedField<string>(v, 'PLATFORM') || '') === filters.platform);
     }
     return filtered;
   }, [filters, allVideos]);
@@ -210,7 +211,7 @@ const DashboardPage: React.FC = () => {
     if (selectedVideos.size === videos.length) {
       setSelectedVideos(new Set());
     } else {
-      setSelectedVideos(new Set(videos.map(v => v.id)));
+      setSelectedVideos(new Set(videos.map(v => FieldMapper.getTypedField<number>(v, 'ID') || 0)));
     }
   };
 
@@ -310,15 +311,15 @@ const DashboardPage: React.FC = () => {
                 <div className="text-sm text-gray-600">
                   <div className="flex items-center space-x-2">
                     <span>
-                      API 할당량: {quotaStatus.quota?.used || 0}/{quotaStatus.safetyMargin || 8000}
+                      API 할당량: {quotaStatus?.quota?.used || 0}/{quotaStatus?.safetyMargin || 8000}
                     </span>
                     <span className="text-xs text-blue-600">
-                      (안전 마진: {quotaStatus.safetyMargin || 8000})
+                      (안전 마진: {quotaStatus?.safetyMargin || 8000})
                     </span>
                   </div>
-                  {quotaStatus.quota?.allKeys && (
+                  {quotaStatus?.quota?.allKeys && (
                     <div className="text-xs text-gray-500 mt-1">
-                      키 현황: {quotaStatus.quota.allKeys.filter((k: any) => !k.exceeded).length}/{quotaStatus.quota.keyCount}개 사용 가능
+                      키 현황: {quotaStatus?.quota?.allKeys?.filter((k) => !k.exceeded)?.length || 0}/{quotaStatus?.quota?.keyCount || 0}개 사용 가능
                     </div>
                   )}
                 </div>
@@ -630,13 +631,13 @@ const BatchDetailModal: React.FC<{
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                 {batchVideos.map((video) => (
                   <VideoCard 
-                    key={video.id} 
+                    key={FieldMapper.getTypedField<number>(video, 'ID') || 0} 
                     video={video} 
                     onClick={(video) => {
-                      if (video.platform === 'YouTube') {
+                      if (FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'YouTube') {
                         onVideoPlay(video);
                       } else {
-                        window.open(video.originalUrl, '_blank', 'noopener,noreferrer');
+                        window.open(FieldMapper.getTypedField<string>(video, 'URL') || '', '_blank', 'noopener,noreferrer');
                       }
                     }}
                     onInfoClick={onVideoInfo}

@@ -88,19 +88,19 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
             </h2>
             <div className="flex items-center gap-3">
               <img 
-                src={video.channelAvatarUrl} 
+                src={FieldMapper.getTypedField<string>(video, 'CHANNEL_AVATAR_URL') || ''} 
                 alt={FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || ''}
                 className="w-8 h-8 rounded-full"
               />
               <span className="text-sm text-gray-600">{FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || ''}</span>
               <span className={`px-2 py-1 rounded-full text-xs ${
-                video.platform === 'YouTube' ? 'bg-red-100 text-red-700' :
-                video.platform === 'TikTok' ? 'bg-pink-100 text-pink-700' :
+                FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'YouTube' ? 'bg-red-100 text-red-700' :
+                FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'TikTok' ? 'bg-pink-100 text-pink-700' :
                 'bg-purple-100 text-purple-700'
               }`}>
-                {video.platform}
+                {FieldMapper.getTypedField<string>(video, 'PLATFORM')}
               </span>
-              {video.isTrending && (
+              {FieldMapper.getTypedField<boolean>(video, 'IS_TRENDING') && (
                 <span className="px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
                   🔥 인기
                 </span>
@@ -120,16 +120,16 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* 영상/썸네일 영역 */}
             <div className="space-y-4">
-              {video.platform === 'YouTube' ? (
+              {FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'YouTube' ? (
                 /* 유튜브 영상 iframe */
                 <div className={`relative overflow-hidden rounded-lg shadow-sm ${
-                  video.aspectRatio === '16:9' 
+                  FieldMapper.getTypedField<string>(video, 'ASPECT_RATIO') === '16:9' 
                     ? 'aspect-video' /* 16:9 롱폼 */
                     : 'aspect-[9/16] max-w-xs mx-auto' /* 9:16 숏폼 */
                 }`}>
                   <iframe
-                    src={getYouTubeEmbedUrl(video.originalUrl)}
-                    title={video.title}
+                    src={getYouTubeEmbedUrl(FieldMapper.getTypedField<string>(video, 'URL') || '')}
+                    title={FieldMapper.getTypedField<string>(video, 'TITLE') || ''}
                     className="absolute inset-0 w-full h-full"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -140,13 +140,13 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
                 /* 다른 플랫폼은 썸네일 + 링크 */
                 <div className="relative">
                   <img 
-                    src={video.thumbnailUrl} 
-                    alt={video.title}
+                    src={FieldMapper.getTypedField<string>(video, 'THUMBNAIL_URL') || ''} 
+                    alt={FieldMapper.getTypedField<string>(video, 'TITLE') || ''}
                     className="w-full rounded-lg shadow-sm"
                   />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <a
-                      href={video.originalUrl}
+                      href={FieldMapper.getTypedField<string>(video, 'URL') || ''}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="bg-black bg-opacity-75 text-white p-3 rounded-full hover:bg-opacity-90 transition-opacity"
@@ -162,7 +162,7 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
               {/* 액션 버튼들 */}
               <div className="flex flex-wrap gap-2">
                 <a
-                  href={video.originalUrl}
+                  href={FieldMapper.getTypedField<string>(video, 'URL') || ''}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
@@ -195,22 +195,22 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500">조회수</span>
-                    <span className="text-sm font-medium">{formatViews(video.views)}</span>
+                    <span className="text-sm font-medium">{formatViews(FieldMapper.getTypedField<number>(video, 'VIEWS') || 0)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500">업로드</span>
                     <span className="text-sm font-medium">
-                      {video.daysAgo === 0 ? '오늘' : `${video.daysAgo}일 전`}
+                      {FieldMapper.getTypedField<number>(video, 'DAYS_AGO') === 0 ? '오늘' : `${FieldMapper.getTypedField<number>(video, 'DAYS_AGO')}일 전`}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500">비율</span>
-                    <span className="text-sm font-medium">{video.aspectRatio}</span>
+                    <span className="text-sm font-medium">{FieldMapper.getTypedField<string>(video, 'ASPECT_RATIO')}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-500">수집일</span>
                     <span className="text-sm font-medium">
-                      {new Date(video.createdAt).toLocaleDateString()}
+                      {new Date(FieldMapper.getTypedField<string>(video, 'CREATED_AT') || '').toLocaleDateString()}
                     </span>
                   </div>
                 </div>
@@ -220,7 +220,7 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">키워드</h3>
                 <div className="flex flex-wrap gap-2">
-                  {video.keywords.map((keyword, index) => (
+                  {(FieldMapper.getTypedField<string[]>(video, 'KEYWORDS') || []).map((keyword, index) => (
                     <span 
                       key={index}
                       className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full"
@@ -232,31 +232,31 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
               </div>
 
               {/* AI 분석 결과 */}
-              {video.analysisResult && (
+              {FieldMapper.getTypedField<any>(video, 'ANALYSIS_RESULT') && (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">AI 분석</h3>
                   <div className="bg-gray-50 p-4 rounded-lg space-y-3">
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-500">카테고리</span>
-                      <span className="text-sm font-medium">{video.analysisResult.category}</span>
+                      <span className="text-sm font-medium">{FieldMapper.getTypedField<any>(video, 'ANALYSIS_RESULT')?.category}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-500">신뢰도</span>
-                      <span className="text-sm font-medium">{Math.round(video.analysisResult.confidence * 100)}%</span>
+                      <span className="text-sm font-medium">{Math.round((FieldMapper.getTypedField<any>(video, 'ANALYSIS_RESULT')?.confidence || 0) * 100)}%</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-500">감정</span>
                       <span className={`text-sm font-medium capitalize ${
-                        video.analysisResult.sentiment === 'positive' ? 'text-green-600' :
-                        video.analysisResult.sentiment === 'negative' ? 'text-red-600' :
+                        FieldMapper.getTypedField<any>(video, 'ANALYSIS_RESULT')?.sentiment === 'positive' ? 'text-green-600' :
+                        FieldMapper.getTypedField<any>(video, 'ANALYSIS_RESULT')?.sentiment === 'negative' ? 'text-red-600' :
                         'text-gray-600'
                       }`}>
-                        {video.analysisResult.sentiment || '중립'}
+                        {FieldMapper.getTypedField<any>(video, 'ANALYSIS_RESULT')?.sentiment || '중립'}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-sm text-gray-500">처리 시간</span>
-                      <span className="text-sm font-medium">{video.analysisResult.processingTime}ms</span>
+                      <span className="text-sm font-medium">{FieldMapper.getTypedField<any>(video, 'ANALYSIS_RESULT')?.processingTime}ms</span>
                     </div>
                   </div>
                 </div>

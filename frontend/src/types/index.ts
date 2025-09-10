@@ -88,6 +88,18 @@ export interface Video {
   
   // AI 분석 결과 (레거시 호환)
   analysisResult?: AIAnalysisResult;
+  
+  // 아카이브 전용 필드
+  archivedAt?: string;             // 아카이브 저장 시간
+  tags?: string[];                 // 아카이브 태그 배열
+  notes?: string;                  // 사용자 메모
+}
+
+// Extended Video Type for Archive Page
+export interface ExtendedVideo extends Video {
+  archivedAt?: string;
+  tags?: string[];
+  category?: string;
 }
 
 export interface CollectionBatch {
@@ -160,6 +172,44 @@ export interface QuotaStatus {
   used: number;
   daily: number;
   limit?: number;
+  quota?: {
+    used: number;
+    keyCount: number;
+    allKeys: Array<{
+      exceeded: boolean;
+      [key: string]: any;
+    }>;
+  };
+  safetyMargin?: number;
+}
+
+// API Types
+export interface TrendingCollectionResult {
+  videosCollected: number;
+  channelsProcessed: number;
+  success: boolean;
+  message: string;
+}
+
+export interface ApiKey {
+  id: string;
+  name: string;
+  key: string;
+  quotaUsed: number;
+  quotaLimit: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface ApiKeyCreateResult {
+  success: boolean;
+  apiKey: ApiKey;
+  message: string;
+}
+
+export interface ApiKeyDeleteResult {
+  success: boolean;
+  message: string;
 }
 
 // Hook Return Types

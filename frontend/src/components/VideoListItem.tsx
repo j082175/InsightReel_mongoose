@@ -26,9 +26,9 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
     return num.toLocaleString();
   };
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (_e: React.MouseEvent) => {
     if (isSelectMode) {
-      onSelectToggle(video.id);
+      onSelectToggle(FieldMapper.getTypedField<number>(video, 'ID') || 0);
     } else {
       onCardClick(video);
     }
@@ -59,7 +59,7 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
             <input
               type="checkbox"
               checked={isSelected}
-              onChange={() => onSelectToggle(video.id)}
+              onChange={() => onSelectToggle(FieldMapper.getTypedField<number>(video, 'ID') || 0)}
               className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
               onClick={(e) => e.stopPropagation()}
             />
@@ -69,8 +69,8 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
         {/* 썸네일 */}
         <div className="flex-shrink-0">
           <img 
-            src={video.thumbnailUrl} 
-            alt={video.title}
+            src={FieldMapper.getTypedField<string>(video, 'THUMBNAIL_URL') || ''} 
+            alt={FieldMapper.getTypedField<string>(video, 'TITLE') || ''}
             className="w-32 h-20 object-cover rounded"
           />
         </div>
@@ -80,12 +80,12 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
           <div className="flex justify-between items-start">
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-medium text-gray-900 truncate mb-1">
-                {video.title}
+                {FieldMapper.getTypedField<string>(video, 'TITLE') || ''}
               </h3>
               
               <div className="flex items-center gap-2 mb-2">
                 <img 
-                  src={video.channelAvatarUrl} 
+                  src={FieldMapper.getTypedField<string>(video, 'CHANNEL_AVATAR_URL') || ''} 
                   alt={FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || ''}
                   className="w-4 h-4 rounded-full"
                 />
@@ -93,16 +93,16 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
               </div>
 
               <div className="flex items-center gap-4 text-xs text-gray-500">
-                <span>{formatViews(video.views)} 조회수</span>
-                <span>{video.daysAgo === 0 ? '오늘' : `${video.daysAgo}일 전`}</span>
+                <span>{formatViews(FieldMapper.getTypedField<number>(video, 'VIEWS') || 0)} 조회수</span>
+                <span>{FieldMapper.getTypedField<number>(video, 'DAYS_AGO') === 0 ? '오늘' : `${FieldMapper.getTypedField<number>(video, 'DAYS_AGO')}일 전`}</span>
                 <span className={`px-2 py-1 rounded-full ${
-                  video.platform === 'YouTube' ? 'bg-red-100 text-red-700' :
-                  video.platform === 'TikTok' ? 'bg-pink-100 text-pink-700' :
+                  FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'YouTube' ? 'bg-red-100 text-red-700' :
+                  FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'TikTok' ? 'bg-pink-100 text-pink-700' :
                   'bg-purple-100 text-purple-700'
                 }`}>
-                  {video.platform}
+                  {FieldMapper.getTypedField<string>(video, 'PLATFORM')}
                 </span>
-                {video.isTrending && (
+                {FieldMapper.getTypedField<boolean>(video, 'IS_TRENDING') && (
                   <span className="px-2 py-1 rounded-full bg-orange-100 text-orange-700">
                     🔥 인기
                   </span>
@@ -111,7 +111,7 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
 
               {/* 키워드 */}
               <div className="mt-2 flex flex-wrap gap-1">
-                {video.keywords.slice(0, 3).map((keyword, index) => (
+                {(FieldMapper.getTypedField<string[]>(video, 'KEYWORDS') || []).slice(0, 3).map((keyword, index) => (
                   <span 
                     key={index}
                     className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded"
@@ -119,9 +119,9 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
                     #{keyword}
                   </span>
                 ))}
-                {video.keywords.length > 3 && (
+                {(FieldMapper.getTypedField<string[]>(video, 'KEYWORDS') || []).length > 3 && (
                   <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
-                    +{video.keywords.length - 3}
+                    +{(FieldMapper.getTypedField<string[]>(video, 'KEYWORDS') || []).length - 3}
                   </span>
                 )}
               </div>
@@ -154,7 +154,7 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
-                        window.open(video.originalUrl, '_blank');
+                        window.open(FieldMapper.getTypedField<string>(video, 'URL') || '', '_blank');
                         setMenuOpen(false);
                       }}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

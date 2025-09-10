@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CollectionBatch } from '../types';
+import { FieldMapper } from '../types/field-mapper';
 
 interface CollectionFilters {
   days: number;
@@ -166,24 +167,28 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
 
     // 수집된 영상들 생성 (mock)
     const collectedVideos = results.flatMap((result, batchIndex) => {
-      return Array.from({ length: result.collectedVideos }, (_, videoIndex) => ({
-        id: Date.now() + batchIndex * 1000 + videoIndex,
-        platform: result.platform,
-        title: `${result.channelName}의 수집된 영상 ${videoIndex + 1}`,
-        channelName: result.channelName,
-        views: Math.floor(Math.random() * 500000) + filters.minViews,
-        daysAgo: Math.floor(Math.random() * filters.days),
-        thumbnailUrl: `https://placehold.co/600x400/3B82F6/FFFFFF?text=${result.channelName}`,
-        channelAvatarUrl: `https://placehold.co/100x100/3B82F6/FFFFFF?text=${result.channelName.charAt(0)}`,
-        isTrending: Math.random() > 0.7,
-        originalUrl: `https://example.com/${result.channelName}/${videoIndex}`,
-        aspectRatio: '16:9' as const,
-        keywords: filters.keywords,
-        createdAt: new Date(Date.now() - Math.random() * filters.days * 24 * 60 * 60 * 1000).toISOString(),
-        batchIds: [batch.id],
-        collectedAt: batch.collectedAt,
-        isCollected: true
-      }));
+      return Array.from({ length: result.collectedVideos }, (_, videoIndex) => {
+        const videoData: any = {
+          id: Date.now() + batchIndex * 1000 + videoIndex,
+          platform: result.platform,
+          daysAgo: Math.floor(Math.random() * filters.days),
+          thumbnailUrl: `https://placehold.co/600x400/3B82F6/FFFFFF?text=${result.channelName}`,
+          channelAvatarUrl: `https://placehold.co/100x100/3B82F6/FFFFFF?text=${result.channelName.charAt(0)}`,
+          isTrending: Math.random() > 0.7,
+          aspectRatio: '16:9' as const,
+          keywords: filters.keywords,
+          createdAt: new Date(Date.now() - Math.random() * filters.days * 24 * 60 * 60 * 1000).toISOString(),
+          batchIds: [batch.id],
+        };
+        
+        // FieldMapper를 사용해서 표준화된 필드 설정
+        FieldMapper.setTypedField(videoData, 'TITLE', `${result.channelName}의 수집된 영상 ${videoIndex + 1}`);
+        FieldMapper.setTypedField(videoData, 'CHANNEL_NAME', result.channelName);
+        FieldMapper.setTypedField(videoData, 'VIEWS', Math.floor(Math.random() * 500000) + filters.minViews);
+        FieldMapper.setTypedField(videoData, 'URL', `https://example.com/${result.channelName}/${videoIndex}`);
+        
+        return videoData;
+      });
     });
 
     // 부모 컴포넌트에 결과 전달
