@@ -4,6 +4,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
 const { ServerLogger } = require('../utils/logger');
+const { FieldMapper } = require('../types/field-mapper');
 const youtubeBatchProcessor = require('./YouTubeBatchProcessor');
 const HybridYouTubeExtractor = require('./HybridYouTubeExtractor');
 const HybridDataConverter = require('./HybridDataConverter');
@@ -528,41 +529,41 @@ class VideoProcessor {
 
       if (!response.data.items || response.data.items.length === 0) {
         ServerLogger.info('💬 댓글이 없거나 비활성화된 영상');
-        return { comments: [], topComments: '' };
+        return { [FieldMapper.get('COMMENTS')]: [], [FieldMapper.get('TOP_COMMENTS')]: '' };
       }
 
       // 댓글 데이터 추출
       const comments = response.data.items.map(item => {
         const comment = item.snippet.topLevelComment.snippet;
         return {
-          text: comment.textDisplay,
-          author: comment.authorDisplayName,
-          likes: comment.likeCount,
-          publishedAt: comment.publishedAt
+          [FieldMapper.get('DESCRIPTION')]: comment.textDisplay,
+          [FieldMapper.get('CHANNEL_NAME')]: comment.authorDisplayName,
+          [FieldMapper.get('LIKES')]: comment.likeCount,
+          [FieldMapper.get('UPLOAD_DATE')]: comment.publishedAt
         };
       });
 
       // 모든 댓글을 텍스트로 저장 (스프레드시트용)
       const topComments = comments
-        .map((c, i) => `${i+1}. ${c.author}: ${c.text}`)
+        .map((c, i) => `${i+1}. ${c[FieldMapper.get('CHANNEL_NAME')]}: ${c[FieldMapper.get('DESCRIPTION')]}`)
         .join(' | ');
 
       ServerLogger.info(`✅ 댓글 수집 완료: ${comments.length}개`);
       
       return {
-        comments: comments,
-        topComments: topComments,
+        [FieldMapper.get('COMMENTS')]: comments,
+        [FieldMapper.get('TOP_COMMENTS')]: topComments,
         totalCount: comments.length
       };
 
     } catch (error) {
       if (error.response?.status === 403 && error.response?.data?.error?.errors?.[0]?.reason === 'commentsDisabled') {
         ServerLogger.info('💬 댓글이 비활성화된 영상');
-        return { comments: [], topComments: '댓글 비활성화', totalCount: 0 };
+        return { [FieldMapper.get('COMMENTS')]: [], [FieldMapper.get('TOP_COMMENTS')]: '댓글 비활성화', totalCount: 0 };
       }
       
       ServerLogger.warn(`⚠️ 댓글 수집 실패: ${error.message}`);
-      return { comments: [], topComments: '', totalCount: 0 };
+      return { [FieldMapper.get('COMMENTS')]: [], [FieldMapper.get('TOP_COMMENTS')]: '', totalCount: 0 };
     }
   }
 
@@ -699,59 +700,75 @@ class VideoProcessor {
       const mentions = this.extractMentions(snippet.description);
       
       // 댓글 수집 (최대 100개)
-      let commentData = { topComments: '', totalCount: 0 };
+      let commentData = { [FieldMapper.get('TOP_COMMENTS')]: '', totalCount: 0 };
       if (statistics.commentCount && statistics.commentCount !== '0') {
         commentData = await this.fetchYouTubeComments(videoId, 100);
       }
 
+      // FieldMapper 기반 videoInfo 객체 생성
       const videoInfo = {
+        // 기본 비디오 정보 (FieldMapper 표준)
         videoId: videoId,
-        title: snippet.title,
-        description: snippet.description,
-        channel: snippet.channelTitle,
-        channelId: snippet.channelId,
-        publishedAt: snippet.publishedAt,
-        uploadDate: snippet.publishedAt,  // uploadDate 매핑 추가
-        thumbnailUrl: snippet.thumbnails.medium?.url || snippet.thumbnails.default.url,
-        category: categoryName,
-        youtubeCategory: categoryName,    // youtubeCategory 매핑 추가
-        categoryId: categoryId,
-        duration: duration,
-        durationFormatted: this.formatDuration(duration),
-        contentType: contentType,
-        isShortForm: isShortForm,
-        tags: snippet.tags || [],
-        views: statistics.viewCount || '0',
-        likes: statistics.likeCount || '0',
-        comments: statistics.commentCount || '0',
-        // 새로 추가되는 정보들
-        subscribers: channelInfo?.statistics?.subscriberCount || '0', // 구독자 수
-        channelVideos: channelInfo?.statistics?.videoCount || '0',    // 채널 동영상 수
-        channelViews: channelInfo?.statistics?.viewCount || '0',      // 채널 총 조회수
-        channelCountry: channelInfo?.snippet?.country || '',          // 채널 국가
-        channelDescription: channelInfo?.snippet?.description || '',  // 채널 설명
-        youtubeHandle: this.extractYouTubeHandle(channelInfo?.snippet?.customUrl), // YouTube 핸들명
-        channelUrl: this.buildChannelUrl(channelInfo?.snippet?.customUrl, snippet.channelId), // 채널 URL
-        monetized: status?.madeForKids === false ? 'Y' : 'N',        // 수익화 가능 (키즈 콘텐츠가 아닌 경우)
-        ageRestricted: status?.contentRating ? 'Y' : 'N',            // 연령 제한
-        definition: contentDetails?.definition || 'sd',               // 화질 (hd/sd)
-        language: snippet.defaultLanguage || snippet.defaultAudioLanguage || '', // 언어
-        // 새로운 필드들
-        hashtags: hashtags,                          // 추출된 해시태그
-        mentions: mentions,                          // 추출된 멘션
-        topComments: commentData.topComments,        // 상위 댓글
-        liveBroadcast: snippet.liveBroadcastContent || 'none'         // 라이브 방송 여부
+        [FieldMapper.get('TITLE')]: snippet.title,
+        [FieldMapper.get('DESCRIPTION')]: snippet.description,
+        [FieldMapper.get('CHANNEL_NAME')]: snippet.channelTitle,
+        [FieldMapper.get('CHANNEL_ID')]: snippet.channelId,
+        [FieldMapper.get('UPLOAD_DATE')]: snippet.publishedAt,
+        [FieldMapper.get('THUMBNAIL_URL')]: snippet.thumbnails.medium?.url || snippet.thumbnails.default.url,
+        [FieldMapper.get('CATEGORY')]: categoryName,
+        [FieldMapper.get('YOUTUBE_CATEGORY')]: categoryName,
+        [FieldMapper.get('CATEGORY_ID')]: categoryId,
+        [FieldMapper.get('DURATION')]: duration,
+        [FieldMapper.get('DURATION_FORMATTED')]: this.formatDuration(duration),
+        [FieldMapper.get('CONTENT_TYPE')]: contentType,
+        [FieldMapper.get('IS_SHORT_FORM')]: isShortForm,
+        [FieldMapper.get('TAGS')]: snippet.tags || [],
+        
+        // 통계 정보 (FieldMapper 표준)
+        [FieldMapper.get('VIEWS')]: statistics.viewCount || '0',
+        [FieldMapper.get('LIKES')]: statistics.likeCount || '0',
+        [FieldMapper.get('COMMENTS_COUNT')]: statistics.commentCount || '0',
+        
+        // 채널 정보 (FieldMapper 표준)
+        [FieldMapper.get('SUBSCRIBERS')]: channelInfo?.statistics?.subscriberCount || '0',
+        [FieldMapper.get('CHANNEL_VIDEOS')]: channelInfo?.statistics?.videoCount || '0',
+        [FieldMapper.get('CHANNEL_VIEWS')]: channelInfo?.statistics?.viewCount || '0',
+        [FieldMapper.get('CHANNEL_COUNTRY')]: channelInfo?.snippet?.country || '',
+        [FieldMapper.get('CHANNEL_DESCRIPTION')]: channelInfo?.snippet?.description || '',
+        [FieldMapper.get('YOUTUBE_HANDLE')]: this.extractYouTubeHandle(channelInfo?.snippet?.customUrl),
+        [FieldMapper.get('CHANNEL_URL')]: this.buildChannelUrl(channelInfo?.snippet?.customUrl, snippet.channelId),
+        
+        // 메타데이터 (FieldMapper 표준)
+        [FieldMapper.get('MONETIZED')]: status?.madeForKids === false ? 'Y' : 'N',
+        [FieldMapper.get('AGE_RESTRICTED')]: status?.contentRating ? 'Y' : 'N',
+        [FieldMapper.get('DEFINITION')]: contentDetails?.definition || 'sd',
+        [FieldMapper.get('LANGUAGE')]: snippet.defaultLanguage || snippet.defaultAudioLanguage || '',
+        [FieldMapper.get('HASHTAGS')]: hashtags,
+        [FieldMapper.get('MENTIONS')]: mentions,
+        [FieldMapper.get('TOP_COMMENTS')]: commentData[FieldMapper.get('TOP_COMMENTS')],
+        [FieldMapper.get('LIVE_BROADCAST')]: snippet.liveBroadcastContent || 'none',
+        
+        // 레거시 호환용 필드들 (FieldMapper 표준으로 재매핑)
+        [FieldMapper.get('PROCESSED_AT')]: snippet.publishedAt,
+        [FieldMapper.get('UPLOAD_DATE')]: snippet.publishedAt,
+        [FieldMapper.get('CHANNEL_NAME')]: snippet.channelTitle,
+        [FieldMapper.get('LIKES')]: statistics.likeCount || '0',
+        [FieldMapper.get('COMMENTS_COUNT')]: statistics.commentCount || '0', 
+        [FieldMapper.get('VIEWS')]: statistics.viewCount || '0',
+        [FieldMapper.get('DURATION')]: duration,
+        [FieldMapper.get('DURATION_FORMATTED')]: this.formatDuration(duration),
+        [FieldMapper.get('CONTENT_TYPE')]: contentType
       };
 
       ServerLogger.info(`✅ YouTube 정보 수집 완료:`);
-      ServerLogger.info(`📺 제목: ${videoInfo.title}`);
-      ServerLogger.info(`👤 채널: ${videoInfo.channel}${videoInfo.youtubeHandle ? ` (@${videoInfo.youtubeHandle})` : ''} (구독자: ${videoInfo.subscribers})`);
-      ServerLogger.info(`🏷️ 카테고리: ${videoInfo.category}`);
-      ServerLogger.info(`⏱️ 길이: ${videoInfo.durationFormatted} (${contentType})`);
-      ServerLogger.info(`👀 조회수: ${videoInfo.views.toLocaleString()}`);
-      ServerLogger.info(`💰 수익화: ${videoInfo.monetized}, 🎞️ 화질: ${videoInfo.definition}`);
-      if (videoInfo.channelUrl) {
-        ServerLogger.info(`🔗 채널 URL: ${videoInfo.channelUrl}`);
+      ServerLogger.info(`📺 제목: ${videoInfo[FieldMapper.get('TITLE')]}`);
+      ServerLogger.info(`👤 채널: ${videoInfo[FieldMapper.get('CHANNEL_NAME')]}${videoInfo[FieldMapper.get('YOUTUBE_HANDLE')] ? ` (@${videoInfo[FieldMapper.get('YOUTUBE_HANDLE')]})` : ''} (구독자: ${videoInfo[FieldMapper.get('SUBSCRIBERS')]})`);
+      ServerLogger.info(`🏷️ 카테고리: ${videoInfo[FieldMapper.get('CATEGORY')]}`);
+      ServerLogger.info(`⏱️ 길이: ${videoInfo[FieldMapper.get('DURATION_FORMATTED')]} (${videoInfo[FieldMapper.get('CONTENT_TYPE')]})`);
+      ServerLogger.info(`👀 조회수: ${videoInfo[FieldMapper.get('VIEWS')].toLocaleString()}`);
+      ServerLogger.info(`💰 수익화: ${videoInfo[FieldMapper.get('MONETIZED')]}, 🎞️ 화질: ${videoInfo[FieldMapper.get('DEFINITION')]}`);
+      if (videoInfo[FieldMapper.get('CHANNEL_URL')]) {
+        ServerLogger.info(`🔗 채널 URL: ${videoInfo[FieldMapper.get('CHANNEL_URL')]}`);
       }
       
       return videoInfo;

@@ -1,3 +1,4 @@
+const path = require('path');
 const VideoProcessor = require('../services/VideoProcessor');
 const AIAnalyzer = require('../services/AIAnalyzer');
 const SheetsManager = require('../services/SheetsManager');
@@ -161,37 +162,7 @@ class VideoController {
         data: result
       };
     }, req, res, 'Video Processing');
-      
-      // 구체적인 에러 타입별 처리
-      if (error.message.includes('다운로드')) {
-        throw ErrorHandler.createError(
-          '비디오 다운로드에 실패했습니다. URL을 확인해주세요.',
-          400,
-          'VIDEO_DOWNLOAD_ERROR'
-        );
-      } else if (error.message.includes('썸네일')) {
-        throw ErrorHandler.createError(
-          '썸네일 생성에 실패했습니다. 비디오 파일을 확인해주세요.',
-          500,
-          'THUMBNAIL_GENERATION_ERROR'
-        );
-      } else if (error.message.includes('분석')) {
-        throw ErrorHandler.createError(
-          'AI 분석에 실패했습니다. Gemini API 상태를 확인해주세요.',
-          500,
-          'AI_ANALYSIS_ERROR'
-        );
-      } else if (error.message.includes('시트')) {
-        throw ErrorHandler.createError(
-          '구글 시트 저장에 실패했습니다. 권한을 확인해주세요.',
-          500,
-          'SHEETS_SAVE_ERROR'
-        );
-      }
-      
-      throw error;
-    }
-  });
+  };
 
   /**
    * 비디오 처리 (Blob 방식)
@@ -275,20 +246,20 @@ class VideoController {
             const youtubeInfo = await this.videoProcessor.getYouTubeVideoInfo(postUrl);
             enrichedMetadata = {
               ...enrichedMetadata,
-              author: youtubeInfo.channel,
-              [FieldMapper.get('LIKES')]: youtubeInfo[FieldMapper.get('LIKES')] || youtubeInfo.likes,
-              comments: youtubeInfo.comments,
-              [FieldMapper.get('VIEWS')]: youtubeInfo[FieldMapper.get('VIEWS')] || youtubeInfo.views,
-              uploadDate: youtubeInfo.publishedAt,
-              duration: youtubeInfo.duration,
-              durationFormatted: youtubeInfo.durationFormatted,
-              contentType: youtubeInfo.contentType
+              [FieldMapper.get('CHANNEL_NAME')]: youtubeInfo[FieldMapper.get('CHANNEL_NAME')],
+              [FieldMapper.get('LIKES')]: youtubeInfo[FieldMapper.get('LIKES')],
+              [FieldMapper.get('COMMENTS_COUNT')]: youtubeInfo[FieldMapper.get('COMMENTS_COUNT')],
+              [FieldMapper.get('VIEWS')]: youtubeInfo[FieldMapper.get('VIEWS')],
+              [FieldMapper.get('UPLOAD_DATE')]: youtubeInfo[FieldMapper.get('UPLOAD_DATE')],
+              [FieldMapper.get('DURATION')]: youtubeInfo[FieldMapper.get('DURATION')],
+              [FieldMapper.get('DURATION_FORMATTED')]: youtubeInfo[FieldMapper.get('DURATION_FORMATTED')],
+              [FieldMapper.get('CONTENT_TYPE')]: youtubeInfo[FieldMapper.get('CONTENT_TYPE')]
             };
             ServerLogger.info(`✅ YouTube 메타데이터 수집 완료:`);
-            ServerLogger.info(`👤 채널: ${youtubeInfo.channel}`);
-            ServerLogger.info(`👍 좋아요: ${youtubeInfo[FieldMapper.get('LIKES')] || youtubeInfo.likes}, 💬 댓글: ${youtubeInfo.comments}, 👀 조회수: ${youtubeInfo[FieldMapper.get('VIEWS')] || youtubeInfo.views}`);
-            ServerLogger.info(`⏱️ 영상길이: ${youtubeInfo.durationFormatted} (${youtubeInfo.duration}초)`);
-            ServerLogger.info(`📅 업로드: ${youtubeInfo.publishedAt}`);
+            ServerLogger.info(`👤 채널: ${enrichedMetadata[FieldMapper.get('CHANNEL_NAME')]}`);
+            ServerLogger.info(`👍 좋아요: ${enrichedMetadata[FieldMapper.get('LIKES')]}, 💬 댓글: ${enrichedMetadata[FieldMapper.get('COMMENTS_COUNT')]}, 👀 조회수: ${enrichedMetadata[FieldMapper.get('VIEWS')]}`);
+            ServerLogger.info(`⏱️ 영상길이: ${enrichedMetadata[FieldMapper.get('DURATION_FORMATTED')]} (${enrichedMetadata[FieldMapper.get('DURATION')]}초)`);
+            ServerLogger.info(`📅 업로드: ${enrichedMetadata[FieldMapper.get('UPLOAD_DATE')]}`);
           } catch (error) {
             ServerLogger.warn('⚠️ YouTube 메타데이터 수집 실패 (무시하고 계속):', error.message);
           }
@@ -340,9 +311,11 @@ class VideoController {
         // Instagram 필드는 이미 FieldMapper로 전달되므로 그대로 사용
         // processedMetadata에는 enrichedMetadata가 그대로 전달됨
         
-        if (enrichedMetadata._instagramAuthor) {
-          processedMetadata[FieldMapper.get('CHANNEL_NAME')] = enrichedMetadata._instagramAuthor;
-          ServerLogger.info('👤 Instagram 채널 정보 처리:', enrichedMetadata._instagramAuthor);
+        // Instagram 채널명이 임시 필드에 있는 경우 표준 필드로 이동
+        const tempChannelName = enrichedMetadata._instagramAuthor || enrichedMetadata.instagramAuthor;
+        if (tempChannelName && !processedMetadata[FieldMapper.get('CHANNEL_NAME')]) {
+          processedMetadata[FieldMapper.get('CHANNEL_NAME')] = tempChannelName;
+          ServerLogger.info('👤 Instagram 채널 정보 처리:', tempChannelName);
         }
         
         const sheetsResult = await this.sheetsManager.saveVideoData({
@@ -364,7 +337,7 @@ class VideoController {
           ServerLogger.error('❌ 구글 시트 저장 완전 실패:', sheetsResult.error);
         }
       } catch (error) {
-        console.warn('⚠️ 구글 시트 저장 실패 (무시하고 계속):', error.message);
+        ServerLogger.warn('⚠️ 구글 시트 저장 실패 (무시하고 계속):', error.message, 'VIDEO');
         // 구글 시트 저장 실패는 전체 처리를 중단시키지 않음
       }
       
@@ -420,7 +393,7 @@ class VideoController {
         }
       }
     } catch (cleanupError) {
-      console.warn('⚠️ 파이프라인 정리 중 오류:', cleanupError.message);
+      ServerLogger.warn('⚠️ 파이프라인 정리 중 오류:', cleanupError.message, 'VIDEO');
     }
   }
 

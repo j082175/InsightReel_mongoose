@@ -70,11 +70,20 @@ const MASTER_FIELD_NAMES = {
   
   // YouTube 전용
   DURATION: 'duration',
+  DURATION_FORMATTED: 'durationFormatted',
   MONETIZED: 'monetized',
   YOUTUBE_CATEGORY: 'youtubeCategory',
   LICENSE: 'license',
   QUALITY: 'quality',
   LANGUAGE: 'language',
+  TAGS: 'tags',
+  CATEGORY_ID: 'categoryId',
+  CHANNEL_ID: 'channelId',
+  CONTENT_TYPE: 'contentType',
+  IS_SHORT_FORM: 'isShortForm',
+  AGE_RESTRICTED: 'ageRestricted',
+  DEFINITION: 'definition',
+  LIVE_BROADCAST: 'liveBroadcast',
   
   // 메타 정보
   CONFIDENCE: 'confidence',
