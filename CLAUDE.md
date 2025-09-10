@@ -6,8 +6,11 @@
 1. **항상 FieldMapper 사용할 것**: 모든 데이터베이스 필드 접근은 `FieldMapper.get('FIELD_NAME')` 사용 필수
 2. **레거시 호환성 하지 말 것**: `|| metadata.channelName` 같은 fallback 패턴 절대 사용 금지
 3. **절대 하드코딩 하지 말 것**: `channelName:`, `subscribers:`, `views:` 등 직접 필드명 사용 금지 (매직넘버도 포함됨)
+4. **중간 인터페이스 금지**: LocalChannel, TransformedVideo 등 중간 변환 인터페이스 생성 금지
 
 ### **✅ 올바른 패턴:**
+
+**백엔드 (server/):**
 ```javascript
 // ✅ 항상 이렇게
 [FieldMapper.get('CHANNEL_NAME')]: value
@@ -17,6 +20,35 @@ metadata[FieldMapper.get('LIKES')] || 0
 channelName: value
 metadata[FieldMapper.get('LIKES')] || metadata.likes || 0
 ```
+
+**프론트엔드 (frontend/):**
+```typescript
+// ✅ 항상 이렇게 (TypeScript 타입 안전)
+const channelName = FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME');
+const views = FieldMapper.getTypedField<number>(video, 'VIEWS') || 0;
+
+// ✅ 객체 설정 시
+FieldMapper.setTypedField(videoData, 'TITLE', titleValue);
+
+// ✅ UI에서 직접 사용 (중간 변환 없이)
+{FieldMapper.getTypedField<string>(channel, 'CHANNEL_NAME')}
+{FieldMapper.getTypedField<string>(video, 'PLATFORM')}
+
+// ❌ 절대 이렇게 하지 말 것
+video.channelName
+video.views || 0
+videoData.title = titleValue
+
+// ❌ 중간 인터페이스 생성 금지
+interface LocalChannel { name: string; platform: string; }
+const transformedChannel: LocalChannel = { name: ch.name, platform: ch.platform };
+transformedChannel.name // 이후 직접 접근
+```
+
+### **🎉 표준화 완료 현황:**
+- ✅ **백엔드 (server/)**: 100% FieldMapper 표준화 완료
+- ✅ **프론트엔드 (frontend/)**: 100% FieldMapper 표준화 완료 (2025-01-14)
+- ✅ **Chrome 확장 (extension/)**: FieldMapper 적용 완료
 
 ---
 
@@ -97,7 +129,94 @@ PORT=3000
 - **성능 측정**: PerformanceLogger 클래스 활용
 - **비동기**: async/await 패턴 사용
 
-### 2. 필수 구현 패턴
+### 🚨 **TypeScript 필수 준수 규칙 (절대 금지 사항)**
+
+#### **❌ 절대 사용 금지**
+0. as 패턴 사용하지 말 것! (꼭 보고 실천하거라 클로드코드야)
+
+1. **`any` 타입 사용**: 타입 안전성 완전 포기
+   ```typescript
+   // ❌ 절대 금지
+   const data: any = fetchData();
+   
+   // ✅ 구체적 타입 정의
+   interface ApiData { id: number; name: string; }
+   const data: ApiData = fetchData();
+   ```
+
+2. **`@ts-ignore` 사용**: 타입 에러 숨기기
+   ```typescript
+   // ❌ 절대 금지
+   // @ts-ignore
+   const result = someFunction();
+   
+   // ✅ 타입 단언 또는 가드 사용
+   const result = someFunction() as ExpectedType;
+   ```
+
+3. **Non-null assertion (`!`) 남용**: undefined/null 에러 위험
+   ```typescript
+   // ❌ 위험한 사용
+   const user = getUser()!.name!;
+   
+   // ✅ 안전한 체크
+   const user = getUser();
+   const name = user?.name ?? 'Unknown';
+   ```
+
+4. **빈 인터페이스나 `Function` 타입**: 너무 광범위한 타입
+   ```typescript
+   // ❌ 의미 없는 타입
+   interface EmptyInterface {}
+   const callback: Function = () => {};
+   
+   // ✅ 구체적 타입
+   interface UserData { id: number; name: string; }
+   const callback: (id: number) => string = (id) => `User ${id}`;
+   ```
+
+#### **✅ 필수 사용 패턴**
+1. **구체적 타입 정의**: 모든 데이터에 명확한 타입
+2. **타입 가드 활용**: Union 타입 안전 처리
+3. **적절한 타입 단언**: `as unknown as TargetType` 패턴
+4. **제네릭 활용**: 재사용 가능한 타입 안전 코드
+
+#### **🎯 프로젝트 특수 사항**
+- **우리 프로젝트는 예외 없음**: 새 프로젝트 + 명확한 도메인
+- **FieldMapper와 연계**: 타입 안전한 필드 접근 필수
+- **API 응답 타입 정의**: 백엔드 응답 구조 명시적 타입화
+- **직접 FieldMapper 사용**: 중간 변환층 없이 UI에서 바로 FieldMapper 호출
+
+#### **💡 아키텍처 원칙**
+```typescript
+// ✅ 권장: 단일 레이어 아키텍처
+API Data → FieldMapper → UI 직접 사용
+
+// ❌ 금지: 다중 레이어 아키텍처  
+API Data → FieldMapper → LocalInterface → 직접 접근 → UI
+```
+
+**이유**: 
+- 일관성 유지 (모든 필드 접근이 FieldMapper를 통함)
+- 유지보수성 향상 (필드명 변경 시 FieldMapper만 수정)
+- 타입 안전성 보장 (컴파일 타임 체크)
+
+### 2. TypeScript 컴파일러 설정
+```json
+// tsconfig.json 필수 설정
+{
+  "compilerOptions": {
+    "strict": true,              // 모든 strict 검사 활성화
+    "noImplicitAny": true,      // any 추론 금지
+    "strictNullChecks": true,   // null/undefined 엄격 체크
+    "noImplicitReturns": true,  // 모든 경로에서 return 필수
+    "noUnusedLocals": true,     // 사용하지 않는 변수 금지
+    "noUnusedParameters": true  // 사용하지 않는 매개변수 경고
+  }
+}
+```
+
+### 3. 필수 구현 패턴
 
 #### **에러 처리 표준**
 ```javascript
