@@ -56,18 +56,34 @@ class VideoDataConverter {
     let fullCategoryPath = '';
     let categoryDepth = 0;
     
-    if (isDynamicMode && analysis.fullCategoryPath) {
-      fullCategoryPath = analysis.fullCategoryPath;
-      categoryDepth = analysis.depth || 0;
+    console.log(`🔍 VideoDataConverter - Analysis 체크:`, {
+      'FieldMapper.get(FULL_CATEGORY_PATH)': FieldMapper.get('FULL_CATEGORY_PATH'),
+      'FieldMapper.get(CATEGORY_DEPTH)': FieldMapper.get('CATEGORY_DEPTH'),
+      'analysis.fullCategoryPath': analysis[FieldMapper.get('FULL_CATEGORY_PATH')],
+      'analysis.categoryDepth': analysis[FieldMapper.get('CATEGORY_DEPTH')],
+      'analysis.fullPath': analysis.fullPath,
+      'analysis.depth': analysis.depth
+    });
+    
+    if (isDynamicMode && (analysis[FieldMapper.get('FULL_CATEGORY_PATH')] || analysis.fullPath || analysis.fullCategoryPath)) {
+      fullCategoryPath = analysis[FieldMapper.get('FULL_CATEGORY_PATH')] || analysis.fullPath || analysis.fullCategoryPath;
+      categoryDepth = analysis[FieldMapper.get('CATEGORY_DEPTH')] || analysis.depth || 0;
     } else {
-      const mainCat = analysis.mainCategory || '미분류';
-      const middleCat = analysis.middleCategory || '';
-      if (middleCat && middleCat !== '미분류') {
-        fullCategoryPath = `${mainCat} > ${middleCat}`;
-        categoryDepth = 2;
+      // 동적 카테고리에서 FieldMapper 표준 필드나 레거시 필드가 있으면 사용
+      if (analysis[FieldMapper.get('FULL_CATEGORY_PATH')] || analysis.fullPath || analysis.fullCategoryPath) {
+        fullCategoryPath = analysis[FieldMapper.get('FULL_CATEGORY_PATH')] || analysis.fullPath || analysis.fullCategoryPath;
+        categoryDepth = fullCategoryPath.split(' > ').length;
       } else {
-        fullCategoryPath = mainCat;
-        categoryDepth = 1;
+        // 기존 방식: mainCategory, middleCategory 조합
+        const mainCat = analysis.mainCategory || '미분류';
+        const middleCat = analysis.middleCategory || '';
+        if (middleCat && middleCat !== '미분류') {
+          fullCategoryPath = `${mainCat} > ${middleCat}`;
+          categoryDepth = 2;
+        } else {
+          fullCategoryPath = mainCat;
+          categoryDepth = 1;
+        }
       }
     }
 
@@ -106,6 +122,16 @@ class VideoDataConverter {
       [FieldMapper.get('QUALITY')]: metadata[FieldMapper.get('QUALITY')] || 'sd',
       [FieldMapper.get('LANGUAGE')]: metadata[FieldMapper.get('LANGUAGE')] || null,
       [FieldMapper.get('URL')]: url || '',
+      [FieldMapper.get('VIDEO_URL')]: (() => {
+        const videoUrlValue = metadata[FieldMapper.get('VIDEO_URL')] || url || '';
+        console.log(`🔍 VideoDataConverter - VIDEO_URL: "${videoUrlValue}"`);
+        return videoUrlValue;
+      })(),
+      [FieldMapper.get('TOP_COMMENTS')]: (() => {
+        const topCommentsValue = metadata[FieldMapper.get('TOP_COMMENTS')] || '';
+        console.log(`🔍 VideoDataConverter - TOP_COMMENTS: "${topCommentsValue?.substring(0, 100)}..."`);
+        return topCommentsValue;
+      })(),
       [FieldMapper.get('THUMBNAIL_URL')]: metadata[FieldMapper.get('THUMBNAIL_URL')] || '',
       [FieldMapper.get('CONFIDENCE')]: this.formatConfidence(analysis.confidence),
       [FieldMapper.get('ANALYSIS_STATUS')]: analysis.aiModel || '수동',
@@ -140,18 +166,34 @@ class VideoDataConverter {
     let fullCategoryPath = '';
     let categoryDepth = 0;
     
-    if (isDynamicMode && analysis.fullCategoryPath) {
-      fullCategoryPath = analysis.fullCategoryPath;
-      categoryDepth = analysis.depth || 0;
+    console.log(`🔍 VideoDataConverter - Analysis 체크:`, {
+      'FieldMapper.get(FULL_CATEGORY_PATH)': FieldMapper.get('FULL_CATEGORY_PATH'),
+      'FieldMapper.get(CATEGORY_DEPTH)': FieldMapper.get('CATEGORY_DEPTH'),
+      'analysis.fullCategoryPath': analysis[FieldMapper.get('FULL_CATEGORY_PATH')],
+      'analysis.categoryDepth': analysis[FieldMapper.get('CATEGORY_DEPTH')],
+      'analysis.fullPath': analysis.fullPath,
+      'analysis.depth': analysis.depth
+    });
+    
+    if (isDynamicMode && (analysis[FieldMapper.get('FULL_CATEGORY_PATH')] || analysis.fullPath || analysis.fullCategoryPath)) {
+      fullCategoryPath = analysis[FieldMapper.get('FULL_CATEGORY_PATH')] || analysis.fullPath || analysis.fullCategoryPath;
+      categoryDepth = analysis[FieldMapper.get('CATEGORY_DEPTH')] || analysis.depth || 0;
     } else {
-      const mainCat = analysis.mainCategory || '미분류';
-      const middleCat = analysis.middleCategory || '';
-      if (middleCat && middleCat !== '미분류') {
-        fullCategoryPath = `${mainCat} > ${middleCat}`;
-        categoryDepth = 2;
+      // 동적 카테고리에서 FieldMapper 표준 필드나 레거시 필드가 있으면 사용
+      if (analysis[FieldMapper.get('FULL_CATEGORY_PATH')] || analysis.fullPath || analysis.fullCategoryPath) {
+        fullCategoryPath = analysis[FieldMapper.get('FULL_CATEGORY_PATH')] || analysis.fullPath || analysis.fullCategoryPath;
+        categoryDepth = fullCategoryPath.split(' > ').length;
       } else {
-        fullCategoryPath = mainCat;
-        categoryDepth = 1;
+        // 기존 방식: mainCategory, middleCategory 조합
+        const mainCat = analysis.mainCategory || '미분류';
+        const middleCat = analysis.middleCategory || '';
+        if (middleCat && middleCat !== '미분류') {
+          fullCategoryPath = `${mainCat} > ${middleCat}`;
+          categoryDepth = 2;
+        } else {
+          fullCategoryPath = mainCat;
+          categoryDepth = 1;
+        }
       }
     }
 

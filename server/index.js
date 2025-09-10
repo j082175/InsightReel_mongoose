@@ -565,6 +565,7 @@ app.post('/api/process-video', async (req, res) => {
     const finalVideoUrl = videoUrl || url;
     const finalPostUrl = postUrl;
     
+    
     // 🆕 플랫폼 자동 감지 (platform이 없는 경우)
     const finalPlatform = platform || (finalVideoUrl ? 
       (finalVideoUrl.includes('youtube.com') || finalVideoUrl.includes('youtu.be') ? 'youtube' : 
@@ -982,8 +983,8 @@ app.post('/api/process-video', async (req, res) => {
             [FieldMapper.get('LICENSED_CONTENT')]: enrichedMetadata[FieldMapper.get('LICENSED_CONTENT')] || '',
             [FieldMapper.get('CATEGORY_ID')]: youtubeInfo?.[FieldMapper.get('CATEGORY_ID')] || 0,
             [FieldMapper.get('SHARES')]: enrichedMetadata[FieldMapper.get('SHARES')] || 0,
-            [FieldMapper.get('VIDEO_URL')]: videoUrl || '',
-            [FieldMapper.get('TOP_COMMENTS')]: enrichedMetadata[FieldMapper.get('TOP_COMMENTS')] || '',
+            [FieldMapper.get('VIDEO_URL')]: finalVideoUrl || postUrl || '',
+            [FieldMapper.get('TOP_COMMENTS')]: enrichedMetadata[FieldMapper.get('TOP_COMMENTS')] || youtubeInfo?.[FieldMapper.get('TOP_COMMENTS')] || '',
             // 📈 통계 정보 추가
             [FieldMapper.get('LIKE_RATIO')]: enrichedMetadata[FieldMapper.get('LIKES')] && enrichedMetadata[FieldMapper.get('VIEWS')] ? 
               ((parseInt(enrichedMetadata[FieldMapper.get('LIKES')]) / parseInt(enrichedMetadata[FieldMapper.get('VIEWS')])) * 100).toFixed(2) + '%' : '',
@@ -1668,6 +1669,12 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
         ServerLogger.warn(`중복 검사 실패하여 건너뜀 (Blob): ${duplicateError.message}`, 'API_DUPLICATE_BLOB');
       }
     }
+
+    // 🆕 플랫폼 자동 감지 (finalPlatform이 정의되지 않은 경우를 위해)
+    const finalPlatform = platform || (postUrl ? 
+      (postUrl.includes('youtube.com') || postUrl.includes('youtu.be') ? 'youtube' : 
+       postUrl.includes('instagram.com') ? 'instagram' : 
+       postUrl.includes('tiktok.com') ? 'tiktok' : 'unknown') : 'unknown');
     
     if (!req.file) {
       return ResponseHandler.clientError(res, {

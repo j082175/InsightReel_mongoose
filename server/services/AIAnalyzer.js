@@ -437,19 +437,27 @@ class AIAnalyzer {
     
     ServerLogger.info(`⏱️ 기본 동적 분석 총 소요시간: ${dynamicTotalDuration}ms (${(dynamicTotalDuration / 1000).toFixed(2)}초)`);
     
-    return {
-      summary: result.summary || '영상 분석 내용',
-      mainCategory: result.mainCategory,
-      middleCategory: result.middleCategory,
-      fullPath: result.fullPath,
-      depth: result.depth,
-      keywords: result.keywords,
-      hashtags: result.hashtags,
-      confidence: result.confidence,
-      source: result.source,
+    const returnData = {
+      [FieldMapper.get('SUMMARY')]: result.summary || '영상 분석 내용',
+      [FieldMapper.get('MAIN_CATEGORY')]: result.mainCategory,
+      [FieldMapper.get('MIDDLE_CATEGORY')]: result.middleCategory,
+      [FieldMapper.get('FULL_CATEGORY_PATH')]: result.fullPath,
+      [FieldMapper.get('CATEGORY_DEPTH')]: result.depth,
+      [FieldMapper.get('KEYWORDS')]: result.keywords,
+      [FieldMapper.get('HASHTAGS')]: result.hashtags,
+      [FieldMapper.get('CONFIDENCE')]: result.confidence,
+      [FieldMapper.get('SOURCE')]: result.source,
       isDynamicCategory: true,
-      aiModel: this.lastUsedModel || 'unknown'
+      [FieldMapper.get('AI_MODEL')]: this.lastUsedModel || 'unknown'
     };
+    
+    console.log(`🔍 AIAnalyzer 반환 데이터:`, {
+      categoryDepth: returnData[FieldMapper.get('CATEGORY_DEPTH')],
+      fullCategoryPath: returnData[FieldMapper.get('FULL_CATEGORY_PATH')],
+      원본depth: result.depth
+    });
+    
+    return returnData;
   }
 
   /**

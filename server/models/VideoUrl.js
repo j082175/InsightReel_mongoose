@@ -86,10 +86,10 @@ videoUrlSchema.index({ status: 1, createdAt: 1 });              // 상태별 처
 videoUrlSchema.index({ normalizedUrl: 1, status: 1 });          // URL + 상태 조합 검색
 videoUrlSchema.index({ originalPublishDate: -1 });              // 전체 게시일순 조회
 
-// 🔍 정적 메서드: URL 중복 검사 (초고속) - 처리 중인 것도 중복으로 처리
+// 🔍 정적 메서드: URL 중복 검사 (초고속) - failed는 재시도 가능하므로 제외
 videoUrlSchema.statics.checkDuplicate = async function(normalizedUrl) {
   try {
-    // processing 또는 completed 상태인 URL 검색 (failed는 제외)
+    // processing 또는 completed 상태인 URL만 중복으로 처리 (failed는 재시도 가능)
     const existing = await this.findOne({ 
       normalizedUrl,
       status: { $in: ['processing', 'completed'] }
@@ -112,11 +112,16 @@ videoUrlSchema.statics.checkDuplicate = async function(normalizedUrl) {
     
   } catch (error) {
     console.error('MongoDB URL 중복 검사 실패:', error.message);
+    // 🚨 MongoDB 연결 오류 시 안전을 위해 중복으로 처리 (false positive)
+    if (error.message.includes('buffering timed out') || error.message.includes('connection')) {
+      console.warn('⚠️ MongoDB 연결 불안정 - 안전을 위해 중복 처리');
+      return { isDuplicate: true, error: error.message, reason: 'connection_timeout' };
+    }
     return { isDuplicate: false, error: error.message };
   }
 };
 
-// 📝 정적 메서드: URL 등록 (새로운 URL 저장) - processing 상태로 시작
+// 📝 정적 메서드: URL 등록 (새로운 URL 저장 또는 failed 상태 URL 재시도)
 videoUrlSchema.statics.registerUrl = async function(normalizedUrl, originalUrl, platform, sheetLocation, originalPublishDate = null) {
   try {
     const urlDoc = new this({
@@ -137,10 +142,30 @@ videoUrlSchema.statics.registerUrl = async function(normalizedUrl, originalUrl, 
     return { success: true, document: urlDoc };
     
   } catch (error) {
-    // 중복 키 에러 (이미 존재하는 URL)
+    // 중복 키 에러 (이미 존재하는 URL) - failed 상태라면 재시도 허용
     if (error.code === 11000) {
-      console.warn(`⚠️ URL 이미 존재: ${normalizedUrl}`);
-      return { success: false, error: 'DUPLICATE_URL', message: 'URL이 이미 존재합니다.' };
+      try {
+        // failed 상태인지 확인
+        const existingDoc = await this.findOne({ normalizedUrl });
+        if (existingDoc && existingDoc.status === 'failed') {
+          // failed 상태라면 processing으로 업데이트하여 재시도
+          existingDoc.status = 'processing';
+          existingDoc.originalUrl = originalUrl;
+          existingDoc.platform = platform;
+          existingDoc.sheetLocation = sheetLocation;
+          existingDoc.originalPublishDate = originalPublishDate;
+          await existingDoc.save();
+          
+          console.log(`🔄 Failed URL 재시도: ${platform} - ${normalizedUrl}`);
+          return { success: true, document: existingDoc, retried: true };
+        } else {
+          console.warn(`⚠️ URL 이미 존재 (${existingDoc?.status || 'unknown'}): ${normalizedUrl}`);
+          return { success: false, error: 'DUPLICATE_URL', message: 'URL이 이미 존재합니다.' };
+        }
+      } catch (findError) {
+        console.error('기존 URL 조회 실패:', findError.message);
+        return { success: false, error: findError.message };
+      }
     }
     
     console.error('URL 등록 실패:', error.message);

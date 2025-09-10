@@ -606,6 +606,8 @@ class SheetsManager {
       }
 
       const { platform, postUrl, videoPath, thumbnailPath, metadata, analysis, timestamp } = videoData;
+      
+      console.log(`🔍 saveVideoData - Analysis 객체:`, JSON.stringify(analysis, null, 2));
 
       // 기존 스프레드시트의 헤더 업데이트 확인 및 적용
       await this.ensureUpdatedHeaders(platform);
@@ -645,15 +647,27 @@ class SheetsManager {
       let fullCategoryPath = '';
       let categoryDepth = 0;
       
-      if (isDynamicMode && analysis.fullPath) {
+      console.log(`🔍 FieldMapper Keys:`, {
+        'FULL_CATEGORY_PATH': FieldMapper.get('FULL_CATEGORY_PATH'),
+        'CATEGORY_DEPTH': FieldMapper.get('CATEGORY_DEPTH')
+      });
+      console.log(`🔍 Analysis 필드값:`, {
+        'analysis.categoryDepth': analysis.categoryDepth,
+        'analysis.fullCategoryPath': analysis.fullCategoryPath,
+        'analysis.depth': analysis.depth,
+        'analysis.fullPath': analysis.fullPath
+      });
+      
+      if (isDynamicMode && (analysis[FieldMapper.get('FULL_CATEGORY_PATH')] || analysis.fullPath)) {
         // 동적 카테고리 모드: AI가 생성한 전체 경로 사용
-        fullCategoryPath = analysis.fullPath;
-        categoryDepth = analysis.depth || 0;
+        fullCategoryPath = analysis[FieldMapper.get('FULL_CATEGORY_PATH')] || analysis.fullPath;
+        categoryDepth = analysis[FieldMapper.get('CATEGORY_DEPTH')] || analysis.depth || 0;
+        console.log(`🎯 동적 모드 - 선택된 값: categoryDepth=${categoryDepth}`);
         ServerLogger.info(`🎯 동적 카테고리 데이터: ${fullCategoryPath} (깊이: ${categoryDepth})`);
       } else {
         // 기존 모드: 대카테고리 > 중카테고리 형식으로 구성
-        const mainCat = analysis.mainCategory || '미분류';
-        const middleCat = analysis.middleCategory || '미분류';
+        const mainCat = analysis[FieldMapper.get('MAIN_CATEGORY')] || analysis.mainCategory || '미분류';
+        const middleCat = analysis[FieldMapper.get('MIDDLE_CATEGORY')] || analysis.middleCategory || '미분류';
         if (middleCat && middleCat !== '미분류') {
           fullCategoryPath = `${mainCat} > ${middleCat}`;
           categoryDepth = 2;
@@ -1012,18 +1026,37 @@ class SheetsManager {
     let fullCategoryPath = '';
     let categoryDepth = 0;
     
-    if (isDynamicMode && analysis.fullCategoryPath) {
-      fullCategoryPath = analysis.fullCategoryPath;
-      categoryDepth = analysis.depth || 0;
+    // AIAnalyzer가 반환하는 실제 필드를 확인
+    const analysisCategoryPath = analysis[FieldMapper.get('FULL_CATEGORY_PATH')] || analysis.fullCategoryPath;
+    const analysisCategoryDepth = analysis[FieldMapper.get('CATEGORY_DEPTH')] || analysis.categoryDepth;
+    
+    console.log(`🔍 Category Debug: isDynamicMode=${isDynamicMode}, categoryPath="${analysisCategoryPath}", depth=${analysisCategoryDepth}`);
+    console.log(`🔍 Analysis 객체 전체:`, JSON.stringify(analysis, null, 2));
+    
+    if (isDynamicMode && analysisCategoryPath) {
+      fullCategoryPath = analysisCategoryPath;
+      categoryDepth = analysisCategoryDepth || 0;
+      console.log(`✅ 동적 모드 사용: ${fullCategoryPath} → depth: ${categoryDepth}`);
     } else {
-      const mainCat = analysis.mainCategory || '미분류';
-      const middleCat = analysis.middleCategory || '';
-      if (middleCat && middleCat !== '미분류') {
-        fullCategoryPath = `${mainCat} > ${middleCat}`;
-        categoryDepth = 2;
+      // 동적 카테고리에서 FieldMapper 표준 필드나 레거시 필드가 있으면 사용
+      if (analysisCategoryPath) {
+        fullCategoryPath = analysisCategoryPath;
+        categoryDepth = fullCategoryPath.split(' > ').length;
+        console.log(`🔍 CategoryDepth 계산: ${fullCategoryPath} → depth: ${categoryDepth}`);
       } else {
-        fullCategoryPath = mainCat;
-        categoryDepth = 1;
+        // 기존 방식: mainCategory, middleCategory 조합
+        const mainCat = analysis[FieldMapper.get('MAIN_CATEGORY')] || '미분류';
+        const middleCat = analysis[FieldMapper.get('MIDDLE_CATEGORY')] || '';
+        console.log(`🔍 기존 방식: mainCat="${mainCat}", middleCat="${middleCat}"`);
+        if (middleCat && middleCat !== '미분류') {
+          fullCategoryPath = `${mainCat} > ${middleCat}`;
+          categoryDepth = 2;
+          console.log(`✅ 2단계 카테고리: ${fullCategoryPath} → depth: ${categoryDepth}`);
+        } else {
+          fullCategoryPath = mainCat;
+          categoryDepth = 1;
+          console.log(`✅ 1단계 카테고리: ${fullCategoryPath} → depth: ${categoryDepth}`);
+        }
       }
     }
 
@@ -1593,21 +1626,21 @@ class SheetsManager {
         // YouTube URL 정규화 - v= 파라미터만 유지
         if (normalized.includes('youtube.com/watch')) {
           // https://youtube.com/watch?v=VIDEO_ID&other=params → https://youtube.com/watch?v=VIDEO_ID
-          const videoIdMatch = normalized.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+          const videoIdMatch = normalized.match(/[?&]v=([a-zA-Z0-9_-]{11})/i);
           if (videoIdMatch) {
-            normalized = `https://youtube.com/watch?v=${videoIdMatch[1]}`;
+            normalized = `https://youtube.com/watch?v=${videoIdMatch[1].toLowerCase()}`;
           }
         } else if (normalized.includes('youtu.be/')) {
           // https://youtu.be/VIDEO_ID?params → https://youtube.com/watch?v=VIDEO_ID
-          const videoIdMatch = normalized.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/);
+          const videoIdMatch = normalized.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/i);
           if (videoIdMatch) {
-            normalized = `https://youtube.com/watch?v=${videoIdMatch[1]}`;
+            normalized = `https://youtube.com/watch?v=${videoIdMatch[1].toLowerCase()}`;
           }
         } else if (normalized.includes('/shorts/')) {
           // https://youtube.com/shorts/VIDEO_ID → https://youtube.com/watch?v=VIDEO_ID
-          const videoIdMatch = normalized.match(/\/shorts\/([a-zA-Z0-9_-]{11})/);
+          const videoIdMatch = normalized.match(/\/shorts\/([a-zA-Z0-9_-]{11})/i);
           if (videoIdMatch) {
-            normalized = `https://youtube.com/watch?v=${videoIdMatch[1]}`;
+            normalized = `https://youtube.com/watch?v=${videoIdMatch[1].toLowerCase()}`;
           }
         }
       } else if (normalized.includes('instagram.com')) {
