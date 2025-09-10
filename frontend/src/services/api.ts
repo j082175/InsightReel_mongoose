@@ -14,12 +14,12 @@ import { FieldMapper } from '../types/field-mapper';
 
 class APIClient {
   private client: AxiosInstance;
-  private readonly baseURL = 'http://localhost:3000';
+  private readonly baseURL = FieldMapper.getString('BASE_URL');
 
   constructor() {
     this.client = axios.create({
       baseURL: this.baseURL,
-      timeout: 30000,
+      timeout: FieldMapper.getNumber('API_TIMEOUT'),
       headers: {
         'Content-Type': 'application/json',
       },
@@ -53,7 +53,7 @@ class APIClient {
   // 재시도 로직이 포함된 요청 함수
   private async requestWithRetry<T>(
     config: AxiosRequestConfig,
-    retries: number = 3
+    retries: number = FieldMapper.getNumber('API_RETRY_COUNT')
   ): Promise<T> {
     try {
       const response = await this.client.request<T>(config);
@@ -61,7 +61,7 @@ class APIClient {
     } catch (error) {
       if (retries > 0) {
         console.warn(`⏳ API 요청 재시도 중... (남은 시도: ${retries})`);
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, FieldMapper.getNumber('API_RETRY_DELAY')));
         return this.requestWithRetry<T>(config, retries - 1);
       }
       throw error;

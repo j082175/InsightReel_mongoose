@@ -37,7 +37,7 @@ const mockSheetsManager = {
 const mockConfig = {
   get: jest.fn((key) => {
     const defaults = {
-      'PORT': 3001,
+      'PORT': 3000,
       'MAX_FILE_SIZE': '50mb',
       'CLEANUP_DAYS': 7
     };

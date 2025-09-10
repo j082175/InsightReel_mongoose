@@ -41,6 +41,7 @@ export const MASTER_FIELD_NAMES = {
   URL: 'url',                          // VideoOptimized 표준 (originalUrl → url)
   THUMBNAIL_URL: 'thumbnailUrl',
   VIDEO_URL: 'videoUrl',
+  VIDEO_ID: 'videoId',                 // YouTube 비디오 ID
   
   // 카테고리 (VideoOptimized 표준)
   MAIN_CATEGORY: 'mainCategory',
@@ -57,6 +58,8 @@ export const MASTER_FIELD_NAMES = {
   MENTIONS: 'mentions',
   DESCRIPTION: 'description',
   ANALYSIS_CONTENT: 'analysisContent',
+  SUMMARY: 'summary',                  // AI 생성 요약
+  CONTENT: 'content',                  // 일반 콘텐츠
   COMMENTS: 'comments',
   TOP_COMMENTS: 'topComments',
   TAGS: 'tags',
@@ -69,12 +72,22 @@ export const MASTER_FIELD_NAMES = {
   MONETIZED: 'monetized',
   YOUTUBE_CATEGORY: 'youtubeCategory',
   LICENSE: 'license',
+  LICENSED_CONTENT: 'licensedContent',  // YouTube 라이센스 콘텐츠
   QUALITY: 'quality',
+  VIDEO_QUALITY: 'videoQuality',       // 영상 화질
   LANGUAGE: 'language',
   
   // 메타 정보
   CONFIDENCE: 'confidence',
   ANALYSIS_STATUS: 'analysisStatus',
+  FRAME_COUNT: 'frameCount',           // 썸네일 프레임 수
+  AI_PROCESSING_TIME: 'processingTime', // AI 분석 처리 시간
+  PROCESSING_TIME: 'processingTime',   // 일반 처리 시간 
+  AI_DESCRIPTION: 'aiDescription',     // AI 생성 설명
+  AI_MODEL: 'aiModel',                 // 사용된 AI 모델명
+  NORMALIZED_URL: 'normalizedUrl',     // 정규화된 URL
+  DURATION_FORMATTED: 'durationFormatted', // 포맷된 영상 길이
+  SOURCE: 'source',                    // 데이터 소스 (gemini, blob-upload 등)
   
   // 레거시 호환 & UI 필드
   TITLE: 'title',
@@ -94,15 +107,23 @@ export const MASTER_FIELD_NAMES = {
   // Query parameter 필드
   PAGE: 'page',
   LIMIT: 'limit',
-  SEARCH: 'search'
+  SEARCH: 'search',
+  
+  // API 설정 필드
+  BASE_URL: 'http://localhost:3000',
+  API_TIMEOUT: 30000,
+  API_RETRY_COUNT: 3,
+  API_RETRY_DELAY: 1000
 } as const;
 
 // ===== TypeScript 타입 추론을 위한 키 타입 =====
 export type FieldKey = keyof typeof MASTER_FIELD_NAMES;
 export type FieldValue = typeof MASTER_FIELD_NAMES[FieldKey];
+export type StringFieldValue = Extract<FieldValue, string>;
+export type NumberFieldValue = Extract<FieldValue, number>;
 
 // ===== 레거시 매핑 (자동 마이그레이션용) =====
-export const LEGACY_FIELD_MAP: Record<string, FieldValue> = {
+export const LEGACY_FIELD_MAP: Record<string, string> = {
   'comments_count': MASTER_FIELD_NAMES.COMMENTS_COUNT,
   'originalUrl': MASTER_FIELD_NAMES.URL,
   'originalPublishDate': MASTER_FIELD_NAMES.UPLOAD_DATE,
@@ -121,6 +142,22 @@ export class FieldMapper {
       throw new Error(`Unknown field key: ${fieldKey}. Available keys: ${Object.keys(MASTER_FIELD_NAMES).join(', ')}`);
     }
     return fieldName;
+  }
+  
+  /**
+   * 문자열 필드 반환 (타입 안전)
+   */
+  static getString(fieldKey: FieldKey): string {
+    const value = this.get(fieldKey);
+    return String(value);
+  }
+  
+  /**
+   * 숫자 필드 반환 (타입 안전)
+   */
+  static getNumber(fieldKey: FieldKey): number {
+    const value = this.get(fieldKey);
+    return Number(value);
   }
   
   /**
@@ -169,7 +206,7 @@ export class FieldMapper {
    * 필드명 변경 시 영향도 체크
    */
   static getFieldUsage(fieldKey: FieldKey): { fieldName: string; usedIn: string[] } {
-    const fieldName = this.get(fieldKey);
+    const fieldName = this.getString(fieldKey);
     return {
       fieldName,
       usedIn: [

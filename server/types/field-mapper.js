@@ -49,6 +49,7 @@ const MASTER_FIELD_NAMES = {
   ORIGINAL_URL: 'originalUrl',         // 레거시 호환용
   THUMBNAIL_URL: 'thumbnailUrl',
   VIDEO_URL: 'videoUrl',
+  VIDEO_ID: 'videoId',                 // YouTube 비디오 ID
   
   // 카테고리 (VideoOptimized 표준)
   MAIN_CATEGORY: 'mainCategory',
@@ -71,6 +72,8 @@ const MASTER_FIELD_NAMES = {
   HASHTAGS: 'hashtags',
   MENTIONS: 'mentions',
   DESCRIPTION: 'description',
+  SUMMARY: 'summary',                  // AI 생성 요약
+  CONTENT: 'content',                  // 일반 콘텐츠
   ANALYSIS_CONTENT: 'analysisContent',
   COMMENTS: 'comments',
   TOP_COMMENTS: 'topComments',
@@ -84,7 +87,9 @@ const MASTER_FIELD_NAMES = {
   MONETIZED: 'monetized',
   YOUTUBE_CATEGORY: 'youtubeCategory',
   LICENSE: 'license',
+  LICENSED_CONTENT: 'licensedContent',  // YouTube 라이센스 콘텐츠
   QUALITY: 'quality',
+  VIDEO_QUALITY: 'videoQuality',       // 영상 화질
   LANGUAGE: 'language',
   TAGS: 'tags',
   CATEGORY_ID: 'categoryId',
@@ -98,6 +103,13 @@ const MASTER_FIELD_NAMES = {
   // 메타 정보
   CONFIDENCE: 'confidence',
   ANALYSIS_STATUS: 'analysisStatus',
+  FRAME_COUNT: 'frameCount',           // 썸네일 프레임 수
+  AI_PROCESSING_TIME: 'processingTime', // AI 분석 처리 시간
+  PROCESSING_TIME: 'processingTime',   // 일반 처리 시간
+  AI_DESCRIPTION: 'aiDescription',     // AI 생성 설명
+  AI_MODEL: 'aiModel',                 // 사용된 AI 모델명
+  NORMALIZED_URL: 'normalizedUrl',     // 정규화된 URL
+  SOURCE: 'source',                    // 데이터 소스 (gemini, blob-upload 등)
   
   // 클러스터 전용 필드
   TOTAL_SUBSCRIBERS: 'totalSubscribers',

@@ -12,7 +12,7 @@ global.console = {
 
 // 테스트용 환경 변수 설정
 process.env.NODE_ENV = 'test';
-process.env.PORT = '3001';
+process.env.PORT = '3000';
 process.env.USE_GEMINI = 'true'; // 테스트 시 Gemini 활성화
 process.env.GOOGLE_API_KEY = 'test-api-key';
 
