@@ -1,5 +1,16 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
-import { APIResponse, Video, TrendingStats, QuotaStatus } from '../types';
+import { 
+  APIResponse, 
+  Video, 
+  TrendingStats, 
+  QuotaStatus, 
+  Channel,
+  TrendingCollectionResult,
+  ApiKey,
+  ApiKeyCreateResult,
+  ApiKeyDeleteResult
+} from '../types';
+import { FieldMapper } from '../types/field-mapper';
 
 class APIClient {
   private client: AxiosInstance;
@@ -72,10 +83,17 @@ class APIClient {
     platform?: string;
     search?: string;
   }): Promise<APIResponse<Video[]>> {
+    const mappedParams = params ? {
+      [FieldMapper.get('PAGE')]: params.page,
+      [FieldMapper.get('LIMIT')]: params.limit,
+      [FieldMapper.get('PLATFORM')]: params.platform,
+      [FieldMapper.get('SEARCH')]: params.search,
+    } : undefined;
+    
     return this.requestWithRetry({
       url: '/api/videos',
       method: 'GET',
-      params,
+      params: mappedParams,
     });
   }
 
@@ -88,7 +106,7 @@ class APIClient {
   }
 
   // 트렌딩 영상 수집
-  async collectTrending(): Promise<APIResponse<any>> {
+  async collectTrending(): Promise<APIResponse<TrendingCollectionResult>> {
     return this.requestWithRetry({
       url: '/api/collect-trending',
       method: 'POST',
@@ -96,7 +114,7 @@ class APIClient {
   }
 
   // 채널 정보 조회
-  async getChannels(): Promise<APIResponse<any[]>> {
+  async getChannels(): Promise<APIResponse<Channel[]>> {
     return this.requestWithRetry({
       url: '/api/channels',
       method: 'GET',
@@ -112,7 +130,7 @@ class APIClient {
   }
 
   // 여러 API 키 정보 조회
-  async getApiKeys(): Promise<APIResponse<any>> {
+  async getApiKeys(): Promise<APIResponse<ApiKey[]>> {
     return this.requestWithRetry({
       url: '/api/api-keys',
       method: 'GET',
@@ -120,16 +138,19 @@ class APIClient {
   }
 
   // API 키 추가
-  async addApiKey(name: string, apiKey: string): Promise<APIResponse<any>> {
+  async addApiKey(name: string, apiKey: string): Promise<APIResponse<ApiKeyCreateResult>> {
     return this.requestWithRetry({
       url: '/api/api-keys',
       method: 'POST',
-      data: { name, apiKey },
+      data: { 
+        [FieldMapper.get('NAME')]: name, 
+        [FieldMapper.get('API_KEY')]: apiKey 
+      },
     });
   }
 
   // API 키 삭제
-  async deleteApiKey(keyId: string): Promise<APIResponse<any>> {
+  async deleteApiKey(keyId: string): Promise<APIResponse<ApiKeyDeleteResult>> {
     return this.requestWithRetry({
       url: `/api/api-keys/${keyId}`,
       method: 'DELETE',

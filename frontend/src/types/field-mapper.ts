@@ -21,10 +21,12 @@ export const MASTER_FIELD_NAMES = {
   PROCESSED_AT: 'processedAt',
   CREATED_AT: 'createdAt',
   UPDATED_AT: 'updatedAt',
+  ARCHIVED_AT: 'archivedAt',
   
   // 채널 정보
   CHANNEL_NAME: 'channelName',         // ✅ 서버와 동기화
   CHANNEL_URL: 'channelUrl',
+  CHANNEL_AVATAR_URL: 'channelAvatarUrl',
   YOUTUBE_HANDLE: 'youtubeHandle',
   
   // 성과 지표
@@ -57,6 +59,7 @@ export const MASTER_FIELD_NAMES = {
   ANALYSIS_CONTENT: 'analysisContent',
   COMMENTS: 'comments',
   TOP_COMMENTS: 'topComments',
+  TAGS: 'tags',
   
   // 플랫폼
   PLATFORM: 'platform',
@@ -73,9 +76,25 @@ export const MASTER_FIELD_NAMES = {
   CONFIDENCE: 'confidence',
   ANALYSIS_STATUS: 'analysisStatus',
   
-  // 레거시 호환
+  // 레거시 호환 & UI 필드
   TITLE: 'title',
-  CATEGORY: 'category'
+  CATEGORY: 'category',
+  IS_TRENDING: 'isTrending',
+  DAYS_AGO: 'daysAgo',
+  ASPECT_RATIO: 'aspectRatio',
+  ANALYSIS_RESULT: 'analysisResult',
+  
+  // 아카이브 전용 필드
+  NOTES: 'notes',
+  
+  // API 관련 필드
+  NAME: 'name',
+  API_KEY: 'apiKey',
+  
+  // Query parameter 필드
+  PAGE: 'page',
+  LIMIT: 'limit',
+  SEARCH: 'search'
 } as const;
 
 // ===== TypeScript 타입 추론을 위한 키 타입 =====

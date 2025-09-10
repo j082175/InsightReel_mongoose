@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Video } from '../types';
+import { Video, ExtendedVideo } from '../types';
 import { FieldMapper } from '../types/field-mapper'; // 🚀 FieldMapper 임포트
 import { useVideos } from '../hooks/useApi';
 import VideoModal from '../components/VideoModal';
@@ -9,16 +9,11 @@ import VideoListItem from '../components/VideoListItem';
 import ChannelAnalysisModal from '../components/ChannelAnalysisModal';
 import VideoCard from '../components/VideoCard';
 
-interface ArchivedVideo extends Video {
-  archivedAt: string;
-  tags: string[];
-  notes?: string;
-  category: string;
-}
+// ArchivedVideo 인터페이스 제거 - Video 타입 직접 사용
 
 const VideoArchivePage: React.FC = () => {
-  const [archivedVideos, setArchivedVideos] = useState<ArchivedVideo[]>([]);
-  const [filteredVideos, setFilteredVideos] = useState<ArchivedVideo[]>([]);
+  const [archivedVideos, setArchivedVideos] = useState<Partial<ExtendedVideo>[]>([]);
+  const [filteredVideos, setFilteredVideos] = useState<Partial<ExtendedVideo>[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTag, setSelectedTag] = useState('All');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -26,11 +21,11 @@ const VideoArchivePage: React.FC = () => {
   const [gridSize, setGridSize] = useState(2);
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
-  const [selectedVideo, setSelectedVideo] = useState<ArchivedVideo | null>(null);
-  const [selectedVideoForPlay, setSelectedVideoForPlay] = useState<ArchivedVideo | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  const [selectedVideoForPlay, setSelectedVideoForPlay] = useState<Video | null>(null);
   const [itemToDelete, setItemToDelete] = useState<{
     type: 'single' | 'bulk';
-    data?: ArchivedVideo;
+    data?: Video;
     count?: number;
   } | null>(null);
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
@@ -40,101 +35,101 @@ const VideoArchivePage: React.FC = () => {
   const { data: apiVideos = [], isLoading, error } = useVideos();
 
   // Mock 데이터
-  const mockArchivedVideos: ArchivedVideo[] = [
+  const mockArchivedVideos: Partial<ExtendedVideo>[] = [
     {
-      id: 101,
-      platform: 'YouTube',
-      title: 'React 18의 새로운 기능들 완벽 정리',
-      channelName: '개발왕 김코딩',
-      views: 350000,
-      daysAgo: 15,
-      thumbnailUrl: 'https://placehold.co/600x400/3B82F6/FFFFFF?text=React18',
-      channelAvatarUrl: 'https://placehold.co/100x100/3B82F6/FFFFFF?text=K',
-      isTrending: false,
-      url: 'https://www.youtube.com/watch?v=react18',  // ⭐ 표준화
-      aspectRatio: '16:9' as const,
-      keywords: ['React', 'JavaScript', '웹개발'],
-      createdAt: '2024-01-01T10:00:00',
-      archivedAt: '2024-01-10T14:30:00',
-      tags: ['개발', '프론트엔드', '튜토리얼'],
-      category: '개발/기술',
-      notes: 'React 18 업데이트 내용 정리용'
+      [FieldMapper.get('ID')]: 101,
+      [FieldMapper.get('PLATFORM')]: 'YouTube',
+      [FieldMapper.get('TITLE')]: 'React 18의 새로운 기능들 완벽 정리',
+      [FieldMapper.get('CHANNEL_NAME')]: '개발왕 김코딩',
+      [FieldMapper.get('VIEWS')]: 350000,
+      [FieldMapper.get('DAYS_AGO')]: 15,
+      [FieldMapper.get('THUMBNAIL_URL')]: 'https://placehold.co/600x400/3B82F6/FFFFFF?text=React18',
+      [FieldMapper.get('CHANNEL_AVATAR_URL')]: 'https://placehold.co/100x100/3B82F6/FFFFFF?text=K',
+      [FieldMapper.get('IS_TRENDING')]: false,
+      [FieldMapper.get('URL')]: 'https://www.youtube.com/watch?v=react18',  // ⭐ 표준화
+      [FieldMapper.get('ASPECT_RATIO')]: '16:9',
+      [FieldMapper.get('KEYWORDS')]: ['React', 'JavaScript', '웹개발'],
+      [FieldMapper.get('CREATED_AT')]: '2024-01-01T10:00:00',
+      [FieldMapper.get('ARCHIVED_AT')]: '2024-01-10T14:30:00',
+      [FieldMapper.get('TAGS')]: ['개발', '프론트엔드', '튜토리얼'],
+      [FieldMapper.get('CATEGORY')]: '개발/기술',
+      [FieldMapper.get('NOTES')]: 'React 18 업데이트 내용 정리용'
     },
     {
-      id: 102,
-      platform: 'TikTok',
-      title: '10분 만에 만드는 감동 브런치',
-      channelName: '요리하는 남자',
-      views: 1200000,
-      daysAgo: 7,
-      thumbnailUrl: 'https://placehold.co/400x600/F43F5E/FFFFFF?text=Brunch',
-      channelAvatarUrl: 'https://placehold.co/100x100/F43F5E/FFFFFF?text=C',
-      isTrending: false,
-      originalUrl: 'https://www.tiktok.com/@brunch',
-      aspectRatio: '9:16' as const,
-      keywords: ['요리', '브런치', '레시피'],
-      createdAt: '2024-01-08T09:00:00',
-      archivedAt: '2024-01-12T16:45:00',
-      tags: ['요리', '레시피', '간편식'],
-      category: '라이프스타일',
-      notes: '주말 브런치 아이디어'
+      [FieldMapper.get('ID')]: 102,
+      [FieldMapper.get('PLATFORM')]: 'TikTok',
+      [FieldMapper.get('TITLE')]: '10분 만에 만드는 감동 브런치',
+      [FieldMapper.get('CHANNEL_NAME')]: '요리하는 남자',
+      [FieldMapper.get('VIEWS')]: 1200000,
+      [FieldMapper.get('DAYS_AGO')]: 7,
+      [FieldMapper.get('THUMBNAIL_URL')]: 'https://placehold.co/400x600/F43F5E/FFFFFF?text=Brunch',
+      [FieldMapper.get('CHANNEL_AVATAR_URL')]: 'https://placehold.co/100x100/F43F5E/FFFFFF?text=C',
+      [FieldMapper.get('IS_TRENDING')]: false,
+      [FieldMapper.get('URL')]: 'https://www.tiktok.com/@brunch',
+      [FieldMapper.get('ASPECT_RATIO')]: '9:16',
+      [FieldMapper.get('KEYWORDS')]: ['요리', '브런치', '레시피'],
+      [FieldMapper.get('CREATED_AT')]: '2024-01-08T09:00:00',
+      [FieldMapper.get('ARCHIVED_AT')]: '2024-01-12T16:45:00',
+      [FieldMapper.get('TAGS')]: ['요리', '레시피', '간편식'],
+      [FieldMapper.get('CATEGORY')]: '라이프스타일',
+      [FieldMapper.get('NOTES')]: '주말 브런치 아이디어'
     },
     {
-      id: 103,
-      platform: 'Instagram',
-      title: '제주도 숨겨진 카페 TOP 10',
-      channelName: '카페찾아 삼만리',
-      views: 78000,
-      daysAgo: 3,
-      thumbnailUrl: 'https://placehold.co/400x600/8B5CF6/FFFFFF?text=Jeju+Cafe',
-      channelAvatarUrl: 'https://placehold.co/100x100/8B5CF6/FFFFFF?text=T',
-      isTrending: false,
-      originalUrl: 'https://www.instagram.com/jejucafe',
-      aspectRatio: '9:16' as const,
-      keywords: ['제주도', '카페', '여행'],
-      createdAt: '2024-01-12T11:00:00',
-      archivedAt: '2024-01-13T19:20:00',
-      tags: ['여행', '카페', '제주도'],
-      category: '여행/관광',
-      notes: '제주도 여행 계획할 때 참고'
+      [FieldMapper.get('ID')]: 103,
+      [FieldMapper.get('PLATFORM')]: 'Instagram',
+      [FieldMapper.get('TITLE')]: '제주도 숨겨진 카페 TOP 10',
+      [FieldMapper.get('CHANNEL_NAME')]: '카페찾아 삼만리',
+      [FieldMapper.get('VIEWS')]: 78000,
+      [FieldMapper.get('DAYS_AGO')]: 3,
+      [FieldMapper.get('THUMBNAIL_URL')]: 'https://placehold.co/400x600/8B5CF6/FFFFFF?text=Jeju+Cafe',
+      [FieldMapper.get('CHANNEL_AVATAR_URL')]: 'https://placehold.co/100x100/8B5CF6/FFFFFF?text=T',
+      [FieldMapper.get('IS_TRENDING')]: false,
+      [FieldMapper.get('URL')]: 'https://www.instagram.com/jejucafe',
+      [FieldMapper.get('ASPECT_RATIO')]: '9:16',
+      [FieldMapper.get('KEYWORDS')]: ['제주도', '카페', '여행'],
+      [FieldMapper.get('CREATED_AT')]: '2024-01-12T11:00:00',
+      [FieldMapper.get('ARCHIVED_AT')]: '2024-01-13T19:20:00',
+      [FieldMapper.get('TAGS')]: ['여행', '카페', '제주도'],
+      [FieldMapper.get('CATEGORY')]: '여행/관광',
+      [FieldMapper.get('NOTES')]: '제주도 여행 계획할 때 참고'
     },
     {
-      id: 104,
-      platform: 'YouTube',
-      title: '고양이 행동 심리학 - 우리 냥이가 하는 행동의 의미',
-      channelName: '냥냥펀치',
-      views: 450000,
-      daysAgo: 12,
-      thumbnailUrl: 'https://placehold.co/600x400/F97316/FFFFFF?text=Cat+Psychology',
-      channelAvatarUrl: 'https://placehold.co/100x100/F97316/FFFFFF?text=P',
-      isTrending: false,
-      originalUrl: 'https://www.youtube.com/watch?v=catpsych',
-      aspectRatio: '16:9' as const,
-      keywords: ['고양이', '동물', '심리학'],
-      createdAt: '2024-01-03T15:00:00',
-      archivedAt: '2024-01-08T11:15:00',
-      tags: ['동물', '교육', '펫케어'],
-      category: '동물/펫',
-      notes: '우리 고양이 이해하는데 도움됨'
+      [FieldMapper.get('ID')]: 104,
+      [FieldMapper.get('PLATFORM')]: 'YouTube',
+      [FieldMapper.get('TITLE')]: '고양이 행동 심리학 - 우리 냥이가 하는 행동의 의미',
+      [FieldMapper.get('CHANNEL_NAME')]: '냥냥펀치',
+      [FieldMapper.get('VIEWS')]: 450000,
+      [FieldMapper.get('DAYS_AGO')]: 12,
+      [FieldMapper.get('THUMBNAIL_URL')]: 'https://placehold.co/600x400/F97316/FFFFFF?text=Cat+Psychology',
+      [FieldMapper.get('CHANNEL_AVATAR_URL')]: 'https://placehold.co/100x100/F97316/FFFFFF?text=P',
+      [FieldMapper.get('IS_TRENDING')]: false,
+      [FieldMapper.get('URL')]: 'https://www.youtube.com/watch?v=catpsych',
+      [FieldMapper.get('ASPECT_RATIO')]: '16:9',
+      [FieldMapper.get('KEYWORDS')]: ['고양이', '동물', '심리학'],
+      [FieldMapper.get('CREATED_AT')]: '2024-01-03T15:00:00',
+      [FieldMapper.get('ARCHIVED_AT')]: '2024-01-08T11:15:00',
+      [FieldMapper.get('TAGS')]: ['동물', '교육', '펫케어'],
+      [FieldMapper.get('CATEGORY')]: '동물/펫',
+      [FieldMapper.get('NOTES')]: '우리 고양이 이해하는데 도움됨'
     },
     {
-      id: 105,
-      platform: 'YouTube',
-      title: '겨울 캠핑 장비 완벽 가이드 2024',
-      channelName: '캠핑은 장비빨',
-      views: 280000,
-      daysAgo: 20,
-      thumbnailUrl: 'https://placehold.co/600x400/22C55E/FFFFFF?text=Winter+Camping',
-      channelAvatarUrl: 'https://placehold.co/100x100/22C55E/FFFFFF?text=C',
-      isTrending: false,
-      originalUrl: 'https://www.youtube.com/watch?v=wintercamp',
-      aspectRatio: '16:9' as const,
-      keywords: ['캠핑', '장비', '겨울'],
-      createdAt: '2023-12-25T14:00:00',
-      archivedAt: '2024-01-05T10:30:00',
-      tags: ['캠핑', '아웃도어', '장비리뷰'],
-      category: '아웃도어/스포츠',
-      notes: '겨울 캠핑 준비물 체크리스트'
+      [FieldMapper.get('ID')]: 105,
+      [FieldMapper.get('PLATFORM')]: 'YouTube',
+      [FieldMapper.get('TITLE')]: '겨울 캠핑 장비 완벽 가이드 2024',
+      [FieldMapper.get('CHANNEL_NAME')]: '캠핑은 장비빨',
+      [FieldMapper.get('VIEWS')]: 280000,
+      [FieldMapper.get('DAYS_AGO')]: 20,
+      [FieldMapper.get('THUMBNAIL_URL')]: 'https://placehold.co/600x400/22C55E/FFFFFF?text=Winter+Camping',
+      [FieldMapper.get('CHANNEL_AVATAR_URL')]: 'https://placehold.co/100x100/22C55E/FFFFFF?text=C',
+      [FieldMapper.get('IS_TRENDING')]: false,
+      [FieldMapper.get('URL')]: 'https://www.youtube.com/watch?v=wintercamp',
+      [FieldMapper.get('ASPECT_RATIO')]: '16:9',
+      [FieldMapper.get('KEYWORDS')]: ['캠핑', '장비', '겨울'],
+      [FieldMapper.get('CREATED_AT')]: '2023-12-25T14:00:00',
+      [FieldMapper.get('ARCHIVED_AT')]: '2024-01-05T10:30:00',
+      [FieldMapper.get('TAGS')]: ['캠핑', '아웃도어', '장비리뷰'],
+      [FieldMapper.get('CATEGORY')]: '아웃도어/스포츠',
+      [FieldMapper.get('NOTES')]: '겨울 캠핑 준비물 체크리스트'
     }
   ];
 
@@ -238,6 +233,23 @@ const VideoArchivePage: React.FC = () => {
     }
   };
 
+  // Partial ExtendedVideo를 ExtendedVideo로 변환하는 헬퍼 함수
+  const ensureCompleteVideo = (partialVideo: Partial<ExtendedVideo>): ExtendedVideo => {
+    const defaultVideo: ExtendedVideo = {
+      uploadDate: '',
+      platform: 'YouTube',
+      channelName: '',
+      mainCategory: '',
+      keywords: [],
+      likes: 0,
+      commentsCount: 0,
+      url: '',
+      thumbnailUrl: '',
+      ...partialVideo
+    };
+    return defaultVideo;
+  };
+
   // 플랫폼별 기본 URL 생성
   const generateFallbackUrl = (platform: string, channelName?: string) => {
     const normalizedPlatform = platform.toLowerCase();
@@ -256,7 +268,7 @@ const VideoArchivePage: React.FC = () => {
   useEffect(() => {
     if (apiVideos.length > 0) {
       // DB 데이터를 ArchivedVideo 형식으로 변환
-      const convertedVideos: ArchivedVideo[] = apiVideos.map((video: any) => {
+      const convertedVideos: Partial<ExtendedVideo>[] = apiVideos.map((video: Video) => {
         // 🚀 FieldMapper 자동화된 필드 접근
         const uploadDate = FieldMapper.getTypedField<string>(video, 'UPLOAD_DATE');
         const timestamp = FieldMapper.getTypedField<string>(video, 'TIMESTAMP');
@@ -270,7 +282,7 @@ const VideoArchivePage: React.FC = () => {
         if (!url || !isValidUrl(url)) {
           const channelName = FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME');
           const youtubeHandle = FieldMapper.getTypedField<string>(video, 'YOUTUBE_HANDLE');
-          url = generateFallbackUrl(video.platform, channelName || youtubeHandle);
+          url = generateFallbackUrl(FieldMapper.getTypedField<string>(video, 'PLATFORM') || '', channelName || youtubeHandle);
           console.warn(`⚠️ 유효하지 않은 URL 발견, fallback 사용: ${FieldMapper.getTypedField<string>(video, 'TITLE')}`);
         }
 
@@ -278,38 +290,39 @@ const VideoArchivePage: React.FC = () => {
         const channelName = FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || '알 수 없는 채널';
         
         console.log('🔍 채널명 사용:', {
-          platform: video.platform,
-          channelName: FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME'),
-          youtubeHandle: video.youtubeHandle,
+          [FieldMapper.get('PLATFORM')]: FieldMapper.getTypedField<string>(video, 'PLATFORM') || '',
+          [FieldMapper.get('CHANNEL_NAME')]: FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME'),
+          youtubeHandle: FieldMapper.getTypedField<string>(video, 'YOUTUBE_HANDLE'),
           finalName: channelName
         });
           
         return {
-          id: video._id || video.id,
-          platform: video.platform === 'youtube' ? 'YouTube' : video.platform === 'tiktok' ? 'TikTok' : 'Instagram',
-          title: FieldMapper.getTypedField<string>(video, 'TITLE') || '',
-          channelName: channelName,
-          views: FieldMapper.getTypedField<number>(video, 'VIEWS') || 0,
-          daysAgo: daysAgo,
-          thumbnailUrl: video.thumbnailUrl,
-          channelAvatarUrl: `https://placehold.co/100x100/3B82F6/FFFFFF?text=${channelName.charAt(0).toUpperCase()}`,
-          isTrending: false,
-          url: url,  // ⭐ 표준화
-          aspectRatio: video.platform === 'youtube' ? '16:9' as const : '9:16' as const,
-          keywords: video.keywords || [],
-          createdAt: video.timestamp,
-          archivedAt: video.collectedAt || video.timestamp,
-          tags: [
-            ...(video.hashtags || []),
-            ...(video.keywords || [])
+          [FieldMapper.get('ID')]: FieldMapper.getTypedField<number>(video, 'ID') || Date.now(),
+          [FieldMapper.get('PLATFORM')]: FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'youtube' ? 'YouTube' : 
+                                        FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'tiktok' ? 'TikTok' : 'Instagram',
+          [FieldMapper.get('TITLE')]: FieldMapper.getTypedField<string>(video, 'TITLE') || '',
+          [FieldMapper.get('CHANNEL_NAME')]: channelName,
+          [FieldMapper.get('VIEWS')]: FieldMapper.getTypedField<number>(video, 'VIEWS') || 0,
+          [FieldMapper.get('DAYS_AGO')]: daysAgo,
+          [FieldMapper.get('THUMBNAIL_URL')]: FieldMapper.getTypedField<string>(video, 'THUMBNAIL_URL') || '',
+          [FieldMapper.get('CHANNEL_AVATAR_URL')]: `https://placehold.co/100x100/3B82F6/FFFFFF?text=${channelName.charAt(0).toUpperCase()}`,
+          [FieldMapper.get('IS_TRENDING')]: false,
+          [FieldMapper.get('URL')]: url,
+          [FieldMapper.get('ASPECT_RATIO')]: FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'youtube' ? '16:9' : '9:16',
+          [FieldMapper.get('KEYWORDS')]: FieldMapper.getTypedField<string[]>(video, 'KEYWORDS') || [],
+          [FieldMapper.get('CREATED_AT')]: FieldMapper.getTypedField<string>(video, 'CREATED_AT') || FieldMapper.getTypedField<string>(video, 'TIMESTAMP'),
+          [FieldMapper.get('ARCHIVED_AT')]: FieldMapper.getTypedField<string>(video, 'COLLECTION_TIME') || FieldMapper.getTypedField<string>(video, 'TIMESTAMP'),
+          [FieldMapper.get('TAGS')]: [
+            ...(FieldMapper.getTypedField<string[]>(video, 'HASHTAGS') || []),
+            ...(FieldMapper.getTypedField<string[]>(video, 'KEYWORDS') || [])
           ].filter(Boolean),
-          category: video.category || '미분류',
-          notes: video.ai_description
+          [FieldMapper.get('CATEGORY')]: FieldMapper.getTypedField<string>(video, 'MAIN_CATEGORY') || '미분류',
+          [FieldMapper.get('NOTES')]: FieldMapper.getTypedField<string>(video, 'ANALYSIS_CONTENT') || ''
         };
       });
       setArchivedVideos(convertedVideos);
       console.log('📊 변환된 영상 수:', convertedVideos.length);
-      console.log('🔍 첫 번째 영상 URL 샘플:', convertedVideos[0]?.url);  // ⭐ 표준화
+      console.log('🔍 첫 번째 영상 URL 샘플:', convertedVideos[0] ? FieldMapper.getTypedField<string>(convertedVideos[0], 'URL') : null);
     } else {
       // API 데이터가 없으면 mock 데이터 사용
       setArchivedVideos(mockArchivedVideos);
@@ -320,17 +333,17 @@ const VideoArchivePage: React.FC = () => {
     let filtered = archivedVideos.filter(video => {
       const matchesSearch = (FieldMapper.getTypedField<string>(video, 'TITLE') || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          video.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-      const matchesTag = selectedTag === 'All' || video.tags.includes(selectedTag);
-      const matchesCategory = selectedCategory === 'All' || video.category === selectedCategory;
+                          (FieldMapper.getTypedField<string[]>(video, 'TAGS') || []).some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesTag = selectedTag === 'All' || (FieldMapper.getTypedField<string[]>(video, 'TAGS') || []).includes(selectedTag);
+      const matchesCategory = selectedCategory === 'All' || FieldMapper.getTypedField<string>(video, 'CATEGORY') === selectedCategory;
       return matchesSearch && matchesTag && matchesCategory;
     });
     setFilteredVideos(filtered);
   }, [archivedVideos, searchTerm, selectedTag, selectedCategory]);
 
   // 모든 태그와 카테고리 추출
-  const allTags = Array.from(new Set(archivedVideos.flatMap(video => video.tags)));
-  const allCategories = Array.from(new Set(archivedVideos.map(video => video.category)));
+  const allTags = Array.from(new Set(archivedVideos.flatMap(video => FieldMapper.getTypedField<string[]>(video, 'TAGS') || [])));
+  const allCategories = Array.from(new Set(archivedVideos.map(video => FieldMapper.getTypedField<string>(video, 'CATEGORY') || '미분류')));
 
   const formatViews = (num: number) => {
     if (num >= 10000) return (num / 10000).toFixed(0) + '만';
@@ -346,12 +359,13 @@ const VideoArchivePage: React.FC = () => {
     });
   };
 
-  const handleSelectToggle = (videoId: string) => {
+  const handleSelectToggle = (videoId: string | number) => {
     const newSelection = new Set(selectedVideos);
-    if (newSelection.has(videoId)) {
-      newSelection.delete(videoId);
+    const stringId = String(videoId);
+    if (newSelection.has(stringId)) {
+      newSelection.delete(stringId);
     } else {
-      newSelection.add(videoId);
+      newSelection.add(stringId);
     }
     setSelectedVideos(newSelection);
   };
@@ -360,7 +374,7 @@ const VideoArchivePage: React.FC = () => {
     if (selectedVideos.size === filteredVideos.length) {
       setSelectedVideos(new Set());
     } else {
-      setSelectedVideos(new Set(filteredVideos.map(v => v.id)));
+      setSelectedVideos(new Set(filteredVideos.map(v => FieldMapper.getTypedField<string>(v, 'ID') || String(FieldMapper.getTypedField<number>(v, 'ID')))));
     }
   };
 
@@ -370,16 +384,18 @@ const VideoArchivePage: React.FC = () => {
 
   const handleDeleteConfirm = () => {
     if (itemToDelete?.type === 'single' && itemToDelete.data) {
-      setArchivedVideos(archivedVideos.filter(v => v.id !== itemToDelete.data!.id));
+      if (itemToDelete.data) {
+        setArchivedVideos(archivedVideos.filter(v => FieldMapper.getTypedField<number>(v, 'ID') !== FieldMapper.getTypedField<number>(itemToDelete.data, 'ID')));
+      }
     } else if (itemToDelete?.type === 'bulk') {
-      setArchivedVideos(archivedVideos.filter(v => !selectedVideos.has(v.id)));
+      setArchivedVideos(archivedVideos.filter(v => !selectedVideos.has(String(FieldMapper.getTypedField<number>(v, 'ID')))));
       setSelectedVideos(new Set());
       setIsSelectMode(false);
     }
     setItemToDelete(null);
   };
 
-  const gridLayouts = { 
+  const gridLayouts: Record<number, string> = { 
     1: 'grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8', 
     2: 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6', 
     3: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' 
@@ -500,7 +516,7 @@ const VideoArchivePage: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-500">총 조회수</h3>
           <p className="mt-2 text-3xl font-bold text-gray-900">
-            {formatViews(archivedVideos.reduce((sum, v) => sum + v.views, 0))}
+            {formatViews(archivedVideos.reduce((sum, v) => sum + (FieldMapper.getTypedField<number>(v, 'VIEWS') || 0), 0))}
           </p>
           <p className="mt-1 text-sm text-gray-600">보관된 콘텐츠</p>
         </div>
@@ -570,21 +586,21 @@ const VideoArchivePage: React.FC = () => {
             </div>
           ) : filteredVideos.length > 0 ? (
             viewMode === 'grid' ? (
-              <div className={`grid ${gridLayouts[gridSize as keyof typeof gridLayouts]} gap-6`}>
+              <div className={`grid ${gridLayouts[gridSize] || gridLayouts[2]} gap-6`}>
                 {filteredVideos.map(video => (
                   <VideoCard 
-                    key={video.id} 
-                    video={video}
+                    key={FieldMapper.getTypedField<number>(video, 'ID') || 0} 
+                    video={ensureCompleteVideo(video)}
                     onClick={(video) => {
                       if (!isSelectMode) {
                         // URL 유효성 검증 후 실행
-                        if (video.platform === 'YouTube') {
+                        if (FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'YouTube') {
                           setSelectedVideoForPlay(video);
-                        } else if (video.url && video.url !== '#') {  // ⭐ 표준화
-                          console.log('🔗 영상 링크 열기:', video.url);
-                          window.open(video.url, '_blank', 'noopener,noreferrer');
+                        } else if (FieldMapper.getTypedField<string>(video, 'URL') && FieldMapper.getTypedField<string>(video, 'URL') !== '#') {  // ⭐ 표준화
+                          console.log('🔗 영상 링크 열기:', FieldMapper.getTypedField<string>(video, 'URL'));
+                          window.open(FieldMapper.getTypedField<string>(video, 'URL') || '', '_blank', 'noopener,noreferrer');
                         } else {
-                          console.warn('⚠️ 유효하지 않은 URL:', video.url);  // ⭐ 표준화
+                          console.warn('⚠️ 유효하지 않은 URL:', FieldMapper.getTypedField<string>(video, 'URL'));  // ⭐ 표준화
                           alert('죄송합니다. 이 영상의 링크를 찾을 수 없습니다.');
                         }
                       }
@@ -592,7 +608,7 @@ const VideoArchivePage: React.FC = () => {
                     onInfoClick={(video) => !isSelectMode && setSelectedVideo(video)}
                     onChannelClick={setChannelToAnalyze}
                     isSelectMode={isSelectMode}
-                    isSelected={selectedVideos.has(video.id)}
+                    isSelected={selectedVideos.has(String(FieldMapper.getTypedField<number>(video, 'ID')))}
                     onSelectToggle={handleSelectToggle}
                     showArchiveInfo={true}
                   />
@@ -602,12 +618,12 @@ const VideoArchivePage: React.FC = () => {
               <div className="space-y-4">
                 {filteredVideos.map(video => (
                   <VideoListItem 
-                    key={video.id} 
-                    video={video}
+                    key={FieldMapper.getTypedField<number>(video, 'ID') || 0} 
+                    video={ensureCompleteVideo(video)}
                     onCardClick={setSelectedVideo}
                     onDeleteClick={handleDeleteClick}
                     isSelectMode={isSelectMode}
-                    isSelected={selectedVideos.has(video.id)}
+                    isSelected={selectedVideos.has(String(FieldMapper.getTypedField<number>(video, 'ID')))}
                     onSelectToggle={handleSelectToggle}
                   />
                 ))}
