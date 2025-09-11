@@ -28,9 +28,9 @@ const ChannelManagementPage: React.FC = () => {
   const mockChannels: any[] = [
     {
       [FieldMapper.get('ID')]: 1,
-      [FieldMapper.get('CHANNEL_NAME')]: '개발왕 김코딩',
+      [FieldMapper.get('NAME')]: '개발왕 김코딩',
       [FieldMapper.get('PLATFORM')]: 'YouTube',
-      [FieldMapper.get('CHANNEL_URL')]: 'https://youtube.com/@kimcoding',
+      [FieldMapper.get('URL')]: 'https://youtube.com/@kimcoding',
       [FieldMapper.get('SUBSCRIBERS')]: 1250000,
       [FieldMapper.get('CHANNEL_VIDEOS')]: 342,
       [FieldMapper.get('UPDATED_AT')]: '2024-01-15T10:30:00',
@@ -39,9 +39,9 @@ const ChannelManagementPage: React.FC = () => {
     },
     {
       [FieldMapper.get('ID')]: 2,
-      [FieldMapper.get('CHANNEL_NAME')]: '요리하는 남자',
+      [FieldMapper.get('NAME')]: '요리하는 남자',
       [FieldMapper.get('PLATFORM')]: 'TikTok',
-      [FieldMapper.get('CHANNEL_URL')]: 'https://tiktok.com/@cookingman',
+      [FieldMapper.get('URL')]: 'https://tiktok.com/@cookingman',
       [FieldMapper.get('SUBSCRIBERS')]: 3450000,
       [FieldMapper.get('CHANNEL_VIDEOS')]: 567,
       [FieldMapper.get('UPDATED_AT')]: '2024-01-15T09:15:00',
@@ -50,9 +50,9 @@ const ChannelManagementPage: React.FC = () => {
     },
     {
       [FieldMapper.get('ID')]: 3,
-      [FieldMapper.get('CHANNEL_NAME')]: '카페찾아 삼만리',
+      [FieldMapper.get('NAME')]: '카페찾아 삼만리',
       [FieldMapper.get('PLATFORM')]: 'Instagram',
-      [FieldMapper.get('CHANNEL_URL')]: 'https://instagram.com/cafe_explorer',
+      [FieldMapper.get('URL')]: 'https://instagram.com/cafe_explorer',
       [FieldMapper.get('SUBSCRIBERS')]: 89000,
       [FieldMapper.get('CHANNEL_VIDEOS')]: 124,
       [FieldMapper.get('UPDATED_AT')]: '2024-01-14T18:00:00',
@@ -61,9 +61,9 @@ const ChannelManagementPage: React.FC = () => {
     },
     {
       [FieldMapper.get('ID')]: 4,
-      [FieldMapper.get('CHANNEL_NAME')]: '냥냥펀치',
+      [FieldMapper.get('NAME')]: '냥냥펀치',
       [FieldMapper.get('PLATFORM')]: 'YouTube',
-      [FieldMapper.get('CHANNEL_URL')]: 'https://youtube.com/@nyangpunch',
+      [FieldMapper.get('URL')]: 'https://youtube.com/@nyangpunch',
       [FieldMapper.get('SUBSCRIBERS')]: 567000,
       [FieldMapper.get('CHANNEL_VIDEOS')]: 89,
       [FieldMapper.get('UPDATED_AT')]: '2024-01-15T11:00:00',
@@ -72,9 +72,9 @@ const ChannelManagementPage: React.FC = () => {
     },
     {
       [FieldMapper.get('ID')]: 5,
-      [FieldMapper.get('CHANNEL_NAME')]: '캠핑은 장비빨',
+      [FieldMapper.get('NAME')]: '캠핑은 장비빨',
       [FieldMapper.get('PLATFORM')]: 'YouTube',
-      [FieldMapper.get('CHANNEL_URL')]: 'https://youtube.com/@campinggear',
+      [FieldMapper.get('URL')]: 'https://youtube.com/@campinggear',
       [FieldMapper.get('SUBSCRIBERS')]: 234000,
       [FieldMapper.get('CHANNEL_VIDEOS')]: 156,
       [FieldMapper.get('UPDATED_AT')]: '2024-01-15T08:45:00',
@@ -93,7 +93,7 @@ const ChannelManagementPage: React.FC = () => {
   }, [apiChannels]);
 
   const filteredChannels = channels.filter(channel => {
-    const channelName = FieldMapper.getTypedField<string>(channel, 'CHANNEL_NAME') || '';
+    const channelName = FieldMapper.getTypedField<string>(channel, 'NAME') || '';
     const channelPlatform = FieldMapper.getTypedField<string>(channel, 'PLATFORM') || '';
     const matchesSearch = channelName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPlatform = platformFilter === 'All' || channelPlatform.toLowerCase() === platformFilter.toLowerCase();
@@ -145,7 +145,7 @@ const ChannelManagementPage: React.FC = () => {
 
   const AddChannelModal: React.FC = () => {
     const [newChannel, setNewChannel] = useState({
-      [FieldMapper.get('CHANNEL_URL')]: '',
+      [FieldMapper.get('URL')]: '',
       [FieldMapper.get('PLATFORM')]: 'YouTube',
       autoCollect: true,
       collectInterval: '매일'
@@ -173,8 +173,8 @@ const ChannelManagementPage: React.FC = () => {
               </label>
               <input
                 type="url"
-                value={(newChannel[FieldMapper.get('CHANNEL_URL')] as string) || ''}
-                onChange={(e) => setNewChannel({...newChannel, [FieldMapper.get('CHANNEL_URL')]: e.target.value})}
+                value={(newChannel[FieldMapper.get('URL')] as string) || ''}
+                onChange={(e) => setNewChannel({...newChannel, [FieldMapper.get('URL')]: e.target.value})}
                 placeholder="https://youtube.com/@channel"
                 className="w-full border-gray-300 rounded-md shadow-sm"
               />
@@ -388,18 +388,18 @@ const ChannelManagementPage: React.FC = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center">
                       <img 
-                        src={FieldMapper.getTypedField<string>(channel, 'THUMBNAIL_URL') || `https://placehold.co/100x100/3B82F6/FFFFFF?text=${(FieldMapper.getTypedField<string>(channel, 'CHANNEL_NAME') || 'C').charAt(0)}`} 
-                        alt={FieldMapper.getTypedField<string>(channel, 'CHANNEL_NAME') || ''}
+                        src={FieldMapper.getTypedField<string>(channel, 'THUMBNAIL_URL') || `https://placehold.co/100x100/3B82F6/FFFFFF?text=${(FieldMapper.getTypedField<string>(channel, 'NAME') || 'C').charAt(0)}`} 
+                        alt={FieldMapper.getTypedField<string>(channel, 'NAME') || ''}
                         className="w-10 h-10 rounded-full mr-3"
                       />
                       <div>
                         <button
-                          onClick={() => setChannelToAnalyze(FieldMapper.getTypedField<string>(channel, 'CHANNEL_NAME') || '')}
+                          onClick={() => setChannelToAnalyze(FieldMapper.getTypedField<string>(channel, 'NAME') || '')}
                           className="text-sm font-medium text-gray-900 hover:text-indigo-600"
                         >
-                          {FieldMapper.getTypedField<string>(channel, 'CHANNEL_NAME')}
+                          {FieldMapper.getTypedField<string>(channel, 'NAME')}
                         </button>
-                        <div className="text-xs text-gray-500">{FieldMapper.getTypedField<string>(channel, 'CHANNEL_URL') || 'URL 없음'}</div>
+                        <div className="text-xs text-gray-500">{FieldMapper.getTypedField<string>(channel, 'URL') || 'URL 없음'}</div>
                         {FieldMapper.getTypedField<string[]>(channel, 'KEYWORDS') && FieldMapper.getTypedField<string[]>(channel, 'KEYWORDS')!.length > 0 && (
                           <div className="text-xs text-blue-500 mt-1">
                             키워드: {FieldMapper.getTypedField<string[]>(channel, 'KEYWORDS')!.slice(0, 3).join(', ')}{FieldMapper.getTypedField<string[]>(channel, 'KEYWORDS')!.length > 3 ? '...' : ''}
@@ -523,7 +523,7 @@ const ChannelManagementPage: React.FC = () => {
         isOpen={showAnalysisModal}
         selectedChannels={Array.from(selectedChannels).map(id => {
           const channel = channels.find(ch => String(FieldMapper.getTypedField<number>(ch, 'ID') || FieldMapper.getTypedField<string>(ch, 'ID')) === id);
-          return channel ? FieldMapper.getTypedField<string>(channel, 'CHANNEL_NAME') || '' : '';
+          return channel ? FieldMapper.getTypedField<string>(channel, 'NAME') || '' : '';
         }).filter(name => name)}
         onClose={() => setShowAnalysisModal(false)}
       />
@@ -531,9 +531,9 @@ const ChannelManagementPage: React.FC = () => {
         isOpen={showCollectionModal}
         selectedChannels={Array.from(selectedChannels).map(id => {
           const channel = channels.find(ch => String(FieldMapper.getTypedField<number>(ch, 'ID') || FieldMapper.getTypedField<string>(ch, 'ID')) === id);
-          return channel ? FieldMapper.getTypedField<string>(channel, 'CHANNEL_NAME') || '' : '';
+          return channel ? FieldMapper.getTypedField<string>(channel, 'NAME') || '' : '';
         }).filter(name => name)}
-        allVisibleChannels={filteredChannels.map(ch => FieldMapper.getTypedField<string>(ch, 'CHANNEL_NAME') || '')}
+        allVisibleChannels={filteredChannels.map(ch => FieldMapper.getTypedField<string>(ch, 'NAME') || '')}
         onClose={() => setShowCollectionModal(false)}
         onCollectionComplete={handleCollectionComplete}
       />
