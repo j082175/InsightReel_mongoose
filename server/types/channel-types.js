@@ -6,7 +6,7 @@
 // 공통 옵션
 const commonFieldOptions = { type: String, default: '' };
 const numberFieldOptions = { type: Number, default: 0 };
-const dateFieldOptions = { type: Date, default: Date.now };
+const dateFieldOptions = { type: String, default: () => new Date().toISOString() };
 
 // ===== 기본 채널 정보 =====
 const ChannelCore = {
@@ -29,7 +29,7 @@ const ChannelCore = {
   platform: {
     type: String,
     required: true,
-    enum: ['youtube', 'instagram', 'tiktok'],
+    enum: ['YOUTUBE', 'INSTAGRAM', 'TIKTOK'],
     index: true
   },
   
@@ -168,15 +168,16 @@ const ChannelStats = {
 // ===== 메타데이터 =====
 const ChannelMetadata = {
   lastAnalyzedAt: {
-    type: Date,
+    type: String,
     required: false,
-    index: true
+    index: true,
+    default: () => new Date().toISOString()
   },
   
   analysisVersion: commonFieldOptions,
-  collectedAt: { type: Date, required: false },
-  createdAt: { type: Date, required: false },
-  updatedAt: { type: Date, required: false },
+  collectedAt: { type: String, required: false, default: () => new Date().toISOString() },
+  createdAt: { type: String, required: false, default: () => new Date().toISOString() },
+  updatedAt: { type: String, required: false, default: () => new Date().toISOString() },
   version: numberFieldOptions
 };
 

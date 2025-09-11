@@ -6,7 +6,7 @@
 // 공통 옵션
 const commonFieldOptions = { type: String, default: '' };
 const numberFieldOptions = { type: Number, default: 0 };
-const dateFieldOptions = { type: Date, default: Date.now };
+const dateFieldOptions = { type: String, default: () => new Date().toISOString() };
 
 // ===== 기본 비디오 정보 =====
 const VideoCore = {
@@ -22,10 +22,10 @@ const VideoCore = {
     index: true
   },
   
-  // 콘텐츠 분석 필드
-  keywords: commonFieldOptions,
-  hashtags: commonFieldOptions,
-  mentions: commonFieldOptions,
+  // 콘텐츠 분석 필드  
+  keywords: [{ type: String }], // 배열로 변경
+  hashtags: [{ type: String }], // 배열로 변경
+  mentions: [{ type: String }], // 배열로 변경
   description: commonFieldOptions,
   analysisContent: commonFieldOptions,
   
@@ -89,7 +89,7 @@ const YouTubeSpecific = {
 const SystemMetadata = {
   collectionTime: dateFieldOptions,
   timestamp: dateFieldOptions,
-  processedAt: { type: Date, required: false },
+  processedAt: { type: String, required: false, default: () => new Date().toISOString() },
   sheetsRowData: { type: Object, required: false } // Google Sheets 원본 데이터
 };
 
