@@ -151,12 +151,16 @@ class ChannelAnalysisService {
                 },
             );
 
+            // 안전한 날짜 비교 (Date 객체 변환)
+            const createdAt = result.createdAt instanceof Date ? result.createdAt : new Date(result.createdAt);
+            const updatedAt = result.updatedAt instanceof Date ? result.updatedAt : new Date(result.updatedAt);
+            
             ServerLogger.debug('🍃 MongoDB 채널 저장 완료', {
                 channelId: channelData.id,
                 name: channelData.name,
                 isNew:
                     !result.updatedAt ||
-                    result.createdAt.getTime() === result.updatedAt.getTime(),
+                    createdAt.getTime() === updatedAt.getTime(),
             });
 
             return result;
@@ -177,18 +181,21 @@ class ChannelAnalysisService {
         skipAIAnalysis = false,
     ) {
         try {
+            // URL 디코딩 처리
+            const decodedChannelIdentifier = decodeURIComponent(channelIdentifier);
+            
             ServerLogger.info(
-                `🔍 YouTube 채널 상세 분석: ${channelIdentifier}`,
+                `🔍 YouTube 채널 상세 분석: ${decodedChannelIdentifier}`,
             );
 
             // 1. 기본 채널 정보 가져오기 (채널 ID 확인용)
             const youtubeData = await this.youtubeService.getChannelInfo(
-                channelIdentifier,
+                decodedChannelIdentifier,
             );
 
             if (!youtubeData) {
                 throw new Error(
-                    `YouTube에서 채널을 찾을 수 없음: ${channelIdentifier}`,
+                    `YouTube에서 채널을 찾을 수 없음: ${decodedChannelIdentifier}`,
                 );
             }
 
@@ -198,16 +205,16 @@ class ChannelAnalysisService {
             });
             if (existing) {
                 ServerLogger.warn(
-                    `⚠️ 중복 분석 차단: 채널 ${youtubeData.name}은 이미 분석되었습니다.`,
+                    `⚠️ 중복 분석 차단: 채널 ${youtubeData.channelName}은 이미 분석되었습니다.`,
                 );
                 throw new Error(
-                    `채널 ${youtubeData.name}은 이미 분석되었습니다.`,
+                    `채널 ${youtubeData.channelName}은 이미 분석되었습니다.`,
                 );
             }
 
             ServerLogger.info('🆕 새 채널 - 분석 진행', {
                 id: youtubeData.id,
-                name: youtubeData.name,
+                name: youtubeData.channelName,
             });
 
             let analysisData = null;
@@ -268,8 +275,8 @@ class ChannelAnalysisService {
             // 3. 채널 데이터 구성
             const channelData = {
                 id: youtubeData.id,
-                name: youtubeData.name,
-                url: youtubeData.url,
+                name: youtubeData.channelName,
+                url: youtubeData.channelUrl,
                 platform: 'YOUTUBE',
 
                 // YouTube API 기본 정보
@@ -395,7 +402,7 @@ class ChannelAnalysisService {
                         channelData.deepInsightTags = deepInsightTags;
 
                         // allTags 업데이트 (사용자 키워드 + 재해석 태그 + 기존 AI 태그)
-                        channelDataallTags = [
+                        channelData.allTags = [
                             ...(userKeywords || []),
                             ...deepInsightTags,
                             ...channelData.aiTags,
@@ -418,8 +425,9 @@ class ChannelAnalysisService {
             // 기존 createOrUpdate 메서드 호출
             return await this.createOrUpdate(channelData);
         } catch (error) {
+            const decodedChannelIdentifier = decodeURIComponent(channelIdentifier);
             ServerLogger.error(
-                `❌ YouTube 채널 상세 분석 실패: ${channelIdentifier}`,
+                `❌ YouTube 채널 상세 분석 실패: ${decodedChannelIdentifier}`,
                 error,
             );
             throw error;
@@ -431,18 +439,21 @@ class ChannelAnalysisService {
      */
     async createOrUpdateFromYouTube(channelIdentifier, userKeywords = []) {
         try {
+            // URL 디코딩 처리
+            const decodedChannelIdentifier = decodeURIComponent(channelIdentifier);
+            
             ServerLogger.info(
-                `🔍 YouTube에서 채널 정보 수집: ${channelIdentifier}`,
+                `🔍 YouTube에서 채널 정보 수집: ${decodedChannelIdentifier}`,
             );
 
             // YouTube API에서 채널 정보 가져오기
             const youtubeData = await this.youtubeService.getChannelInfo(
-                channelIdentifier,
+                decodedChannelIdentifier,
             );
 
             if (!youtubeData) {
                 throw new Error(
-                    `YouTube에서 채널을 찾을 수 없음: ${channelIdentifier}`,
+                    `YouTube에서 채널을 찾을 수 없음: ${decodedChannelIdentifier}`,
                 );
             }
 
@@ -452,23 +463,23 @@ class ChannelAnalysisService {
             });
             if (existing) {
                 ServerLogger.warn(
-                    `⚠️ 중복 분석 차단: 채널 ${youtubeData.name}은 이미 분석되었습니다.`,
+                    `⚠️ 중복 분석 차단: 채널 ${youtubeData.channelName}은 이미 분석되었습니다.`,
                 );
                 throw new Error(
-                    `채널 ${youtubeData.name}은 이미 분석되었습니다.`,
+                    `채널 ${youtubeData.channelName}은 이미 분석되었습니다.`,
                 );
             }
 
             ServerLogger.info('🆕 새 채널 - 분석 진행', {
                 id: youtubeData.id,
-                name: youtubeData.name,
+                name: youtubeData.channelName,
             });
 
             // 채널 데이터 구성
             const channelData = {
                 id: youtubeData.id,
-                name: youtubeData.name,
-                url: youtubeData.url,
+                name: youtubeData.channelName,
+                url: youtubeData.channelUrl,
                 platform: 'YOUTUBE',
 
                 // YouTube API에서 가져온 정보
@@ -491,8 +502,9 @@ class ChannelAnalysisService {
             // 기존 createOrUpdate 메서드 호출
             return await this.createOrUpdate(channelData);
         } catch (error) {
+            const decodedChannelIdentifier = decodeURIComponent(channelIdentifier);
             ServerLogger.error(
-                `❌ YouTube 채널 정보 수집 실패: ${channelIdentifier}`,
+                `❌ YouTube 채널 정보 수집 실패: ${decodedChannelIdentifier}`,
                 error,
             );
             throw error;
@@ -520,13 +532,13 @@ class ChannelAnalysisService {
                 contentType: channelData.contentType || 'mixed', // longform, shortform, mixed
 
                 // 태그 정보
-                keywords: channelDatakeywords || [], // 사용자 입력 키워드
+                keywords: channelData.keywords || [], // 사용자 입력 키워드
                 aiTags: channelData.aiTags || [], // AI 추출 태그
                 deepInsightTags: channelData.deepInsightTags || [], // AI 재해석 태그 (사용자 카테고리 기반)
-                allTags: channelDataallTags || [], // 통합 태그
+                allTags: channelData.allTags || [], // 통합 태그
 
                 // 클러스터 정보
-                clusterIds: channelDataclusterIds || [],
+                clusterIds: channelData.clusterIds || [],
                 suggestedClusters: channelData.suggestedClusters || [],
 
                 // 상세 분석 정보 (있는 경우에만 포함)

@@ -55,6 +55,16 @@ class VideoDataConverter {
             uploadDate = new Date(timestamp).toLocaleString('ko-KR');
         }
 
+        // 🚨 디버깅: 입력 데이터 체크
+        ServerLogger.warn(`🔍 DEBUG - 입력 데이터:`, {
+            'metadata keys': Object.keys(metadata),
+            'analysis keys': Object.keys(analysis),
+            'metadata.channelName': metadata.channelName,
+            'metadata.title': metadata.title,
+            'analysis.mainCategory': analysis.mainCategory,
+            'analysis.keywords': analysis.keywords
+        }, 'DATA_CONVERTER');
+
         // 동적 카테고리 처리 (기존 로직)
         const isDynamicMode = process.env.USE_DYNAMIC_CATEGORIES === 'true';
         let fullCategoryPath = '';
@@ -103,7 +113,12 @@ class VideoDataConverter {
             // YouTube 전용 33개 필드
             uploadDate: uploadDate,
             platform: (platform || 'YOUTUBE').toUpperCase(),
-            channelName: metadata.channelName || '',
+            channelName: metadata.channelName || 
+                        metadata.channel || 
+                        metadata.channelTitle || 
+                        metadata.author || 
+                        metadata.account || 
+                        '',
             title: metadata.title || '',
             youtubeHandle: metadata.youtubeHandle || '',
             channelUrl: metadata.channelUrl || '',
@@ -244,6 +259,20 @@ class VideoDataConverter {
             }
         }
 
+        // 🔍 DEBUG 로깅 - Instagram 데이터 변환 전 확인
+        ServerLogger.warn(`🔍 DEBUG - Instagram 입력 데이터:`, {
+            'metadata keys': Object.keys(metadata),
+            'analysis keys': Object.keys(analysis),
+            'metadata.channelName': metadata.channelName,
+            'metadata.channel': metadata.channel,
+            'metadata.channelTitle': metadata.channelTitle,
+            'metadata.author': metadata.author,
+            'metadata.account': metadata.account,
+            'metadata.title': metadata.title,
+            'analysis.mainCategory': analysis.mainCategory,
+            'analysis.keywords': analysis.keywords
+        }, 'INSTAGRAM_DATA_CONVERTER');
+
         // Instagram 20개 필드 변환
         // video-types.js 인터페이스 표준 데이터 구조
         return {
@@ -253,7 +282,12 @@ class VideoDataConverter {
             // Instagram 전용 19개 필드
             uploadDate: uploadDate,
             platform: (platform || 'INSTAGRAM').toUpperCase(),
-            channelName: metadata.channelName || '',
+            channelName: metadata.channelName || 
+                        metadata.channel || 
+                        metadata.channelTitle || 
+                        metadata.author || 
+                        metadata.account || 
+                        '',
             channelUrl: metadata.channelUrl || '',
             mainCategory: analysis.mainCategory || '미분류',
             middleCategory: analysis.middleCategory || '',
