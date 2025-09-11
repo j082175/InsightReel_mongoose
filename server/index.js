@@ -666,11 +666,11 @@ app.post('/api/process-video', async (req, res) => {
             (finalVideoUrl
                 ? finalVideoUrl.includes('youtube.com') ||
                   finalVideoUrl.includes('youtu.be')
-                    ? 'youtube'
+                    ? 'YOUTUBE'
                     : finalVideoUrl.includes('instagram.com')
-                    ? 'instagram'
+                    ? 'INSTAGRAM'
                     : finalVideoUrl.includes('tiktok.com')
-                    ? 'tiktok'
+                    ? 'TIKTOK'
                     : 'unknown'
                 : 'unknown');
 
@@ -745,7 +745,7 @@ app.post('/api/process-video', async (req, res) => {
         }
 
         // 🆕 YouTube 배치 모드 처리
-        if (finalPlatform === 'youtube' && mode === 'batch') {
+        if (finalPlatform === 'YOUTUBE' && mode === 'batch') {
             try {
                 const options = {
                     priority: req.body.priority || 'normal',
@@ -2069,11 +2069,11 @@ app.post(
                         (postUrl
                             ? postUrl.includes('youtube.com') ||
                               postUrl.includes('youtu.be')
-                                ? 'youtube'
+                                ? 'YOUTUBE'
                                 : postUrl.includes('instagram.com')
-                                ? 'instagram'
+                                ? 'INSTAGRAM'
                                 : postUrl.includes('tiktok.com')
-                                ? 'tiktok'
+                                ? 'TIKTOK'
                                 : 'unknown'
                             : 'unknown');
 
@@ -2121,11 +2121,11 @@ app.post(
                 (postUrl
                     ? postUrl.includes('youtube.com') ||
                       postUrl.includes('youtu.be')
-                        ? 'youtube'
+                        ? 'YOUTUBE'
                         : postUrl.includes('instagram.com')
-                        ? 'instagram'
+                        ? 'INSTAGRAM'
                         : postUrl.includes('tiktok.com')
-                        ? 'tiktok'
+                        ? 'TIKTOK'
                         : 'unknown'
                     : 'unknown');
 
@@ -2955,7 +2955,7 @@ app.get('/api/api-keys', async (req, res) => {
                     id: key.id,
                     name: key.name,
                     maskedKey: ApiKeyManager.maskApiKey(key.apiKey),
-                    type: 'youtube',
+                    type: 'YOUTUBE',
                     status,
                     usage: realUsage,
                     errors: 0,
