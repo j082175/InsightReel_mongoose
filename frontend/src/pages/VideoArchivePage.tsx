@@ -129,18 +129,27 @@ const VideoArchivePage: React.FC = () => {
           keywordsArray = video.keywords;
         }
 
+        // 해시태그 처리 - 배열 형태로 통일
+        let hashtagsArray: string[] = [];
+        if (typeof video.hashtags === 'string') {
+          hashtagsArray = video.hashtags.split(',').map(h => h.trim()).filter(h => h.length > 0);
+        } else if (Array.isArray(video.hashtags)) {
+          hashtagsArray = video.hashtags;
+        }
+
         const extendedVideo: ExtendedVideo = {
           ...video,
           id: video._id || video.id || String(Date.now()),
-          platform: video.platform === 'youtube' ? 'YOUTUBE' : 
-                   video.platform === 'tiktok' ? 'TIKTOK' : 
-                   video.platform === 'instagram' ? 'INSTAGRAM' : 'YOUTUBE',
+          platform: (video.platform?.toUpperCase() === 'YOUTUBE' || video.platform === 'YOUTUBE') ? 'YOUTUBE' : 
+                   (video.platform?.toUpperCase() === 'TIKTOK' || video.platform === 'TIKTOK') ? 'TIKTOK' : 
+                   (video.platform?.toUpperCase() === 'INSTAGRAM' || video.platform === 'INSTAGRAM') ? 'INSTAGRAM' : 'YOUTUBE',
           url: url,
           keywords: keywordsArray,
+          hashtags: hashtagsArray,
           daysAgo: daysAgo,
           aspectRatio: video.platform === 'YOUTUBE' ? '16:9' : '9:16',
           archivedAt: video.collectionTime || video.processedAt || new Date().toISOString(),
-          tags: [...(video.hashtags?.split(',') || []), ...keywordsArray].filter(Boolean),
+          tags: [...hashtagsArray, ...keywordsArray].filter(Boolean),
           category: video.mainCategory || '미분류',
           notes: video.analysisContent || ''
         };
