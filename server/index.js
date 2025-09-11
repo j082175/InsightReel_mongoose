@@ -21,14 +21,14 @@ const VideoUrl = require('./models/VideoUrl');
 const VideoProcessor = require('./services/VideoProcessor');
 const AIAnalyzer = require('./services/AIAnalyzer');
 const SheetsManager = require('./services/SheetsManager');
-const UnifiedVideoSaver = require('./services/UnifiedVideoSaver');
+// const UnifiedVideoSaver = require('./services/UnifiedVideoSaver'); // TODO: FieldMapper 제거 후 새 인터페이스로 업데이트 필요
 // const youtubeBatchProcessor = require('./services/YouTubeBatchProcessor');
 const HighViewCollector = require('./services/HighViewCollector');
 const YouTubeChannelDataCollector = require('./services/YouTubeChannelDataCollector');
 const { ServerLogger } = require('./utils/logger');
 const ResponseHandler = require('./utils/response-handler');
 const ApiKeyManager = require('./services/ApiKeyManager');
-const { API_MESSAGES, ERROR_CODES } = require('./config/api-messages');
+const { API_MESSAGES, ERROR_CODES, HTTP_STATUS_CODES } = require('./config/api-messages');
 const videoQueue = require('./utils/VideoQueue');
 
 const app = express();
@@ -114,7 +114,7 @@ const sheetsManager = new SheetsManager();
 // Blob 처리 API를 위해 필요한 서비스들 추가
 const videoProcessor = new VideoProcessor();
 const aiAnalyzer = new AIAnalyzer();
-const unifiedVideoSaver = new UnifiedVideoSaver(sheetsManager, aiAnalyzer);
+// const unifiedVideoSaver = new UnifiedVideoSaver(sheetsManager, aiAnalyzer); // TODO: FieldMapper 제거 후 활성화
 
 // 서비스 초기화 후 디버그
 app.get('/api/debug-after-services', (req, res) => {
@@ -158,7 +158,7 @@ app.get('/health', async (req, res) => {
             useGemini: process.env.USE_GEMINI === 'true',
             useMongoDB: process.env.USE_MONGODB === 'true',
             database: {
-                [FieldMapper.get('STATUS')]: 'error',
+                status: 'error',
                 message: error.message,
             },
             version: '1.0.0',
@@ -182,12 +182,12 @@ app.get('/api/database/health', async (req, res) => {
             message: '데이터베이스 상태 확인 완료',
         });
     } catch (error) {
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            [FieldMapper.get('ERROR')]: error.message,
+            error: error.message,
             database: {
                 type: 'MongoDB Atlas',
-                [FieldMapper.get('STATUS')]: 'error',
+                status: 'error',
             },
             message: '데이터베이스 연결 확인 실패',
         });

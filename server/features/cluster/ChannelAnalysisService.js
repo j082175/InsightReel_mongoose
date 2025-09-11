@@ -4,7 +4,7 @@ const { ServerLogger } = require('../../utils/logger');
 const { FieldMapper } = require('../../types/field-mapper');
 const YouTubeChannelService = require('../../services/YouTubeChannelService');
 const YouTubeChannelAnalyzer = require('../../services/YouTubeChannelAnalyzer');
-const Channel = require('../../models/Channel');
+const Channel = require('../../models/ChannelModel');
 
 /**
  * 📊 채널 분석 서비스

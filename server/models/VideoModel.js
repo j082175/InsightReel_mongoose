@@ -25,11 +25,11 @@ const videoSchema = new mongoose.Schema(createVideoSchema(), {
   }
 });
 
-// 복합 인덱스 생성
+// 복합 인덱스 생성 (개별 인덱스는 video-types.js에서 정의됨)
 videoSchema.index({ platform: 1, uploadDate: -1 });    // 플랫폼별 최신순
 videoSchema.index({ platform: 1, likes: -1 });         // 플랫폼별 인기순  
-videoSchema.index({ mainCategory: 1, views: -1 });     // 카테고리별 조회수순
 videoSchema.index({ channelName: 1, uploadDate: -1 }); // 채널별 최신순
+// mainCategory는 video-types.js에서 이미 인덱스 설정됨
 
 // 정적 메서드
 videoSchema.statics.findByPlatform = function(platform, sortBy = 'uploadDate', order = 'desc', limit = 15) {

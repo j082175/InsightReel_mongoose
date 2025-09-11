@@ -1,21 +1,118 @@
 # CLAUDE.md - InsightReel 프로젝트 가이드
 
-## 🚨 **데이터 구조 및 타입 시스템**
+## 🚨 **CRITICAL: 코드 표준화 및 상수 시스템 사용 규칙**
 
-### **🎯 새로운 인터페이스 기반 시스템**
-FieldMapper를 완전히 제거하고 TypeScript 인터페이스 기반으로 전환했습니다.
+### **🎯 현재 문제 상황**
+프로젝트에 3가지 다른 패턴이 혼재되어 있음:
 
-**✅ 새 구조:**
-- **video-types.js**: Video 데이터 인터페이스 조합 시스템
-- **channel-types.js**: Channel 데이터 인터페이스 조합 시스템
-- **VideoModel.js**: 새 인터페이스 기반 Video 모델
-- **ChannelAnalysisService.js**: 새 인터페이스 기반 Channel 모델
+1. **✅ 올바른 상수 사용**: `ERROR_CODES.FILE_NOT_FOUND`, `HTTP_STATUS_CODES.NOT_FOUND`
+2. **❌ 하드코딩**: `res.status(500)`, `409`, `403` 등
+3. **❌ 과도한 FieldMapper**: `[FieldMapper.get('STATUS')]`, `[FieldMapper.get('ERROR')]`
 
-### **📁 인터페이스 구성**
+### **📋 기존 상수 시스템 (이미 구축됨)**
+- `server/config/api-messages.js`: `HTTP_STATUS_CODES`, `ERROR_CODES`, `API_MESSAGES`
+- `server/config/constants.js`: `PLATFORMS`, `TIMEOUTS`, `LIMITS` 등
+
+### **🚨 절대 규칙 (위반 시 시스템 오류 발생)**
+
+#### **1. 상수 시스템 사용 범위**
+**✅ 상수 시스템 사용 대상:**
+- **HTTP 상태 코드**: `HTTP_STATUS_CODES.FORBIDDEN` (403 대신)
+- **에러 코드**: `ERROR_CODES.FILE_NOT_FOUND` (하드코딩 대신)
+- **플랫폼**: `PLATFORMS.YOUTUBE` ('youtube' 대신)
+- **시스템 상수**: `TIMEOUTS.API_REQUEST` (30000 대신)
+
+**❌ 직접 사용 대상 (상수 없이):**
+- **비즈니스 데이터**: title, views, likes, channelName 등
+- **API 응답 기본 필드**: status, data, error, message 등
+
+#### **2. 금지된 패턴들**
+
+**❌ 절대 금지:**
+```javascript
+// 하드코딩된 상태 코드
+res.status(500).json(...)
+res.status(403).json(...)
+
+// 과도한 FieldMapper (시스템 필드용)
+[FieldMapper.get('STATUS')]: 'error'
+[FieldMapper.get('ERROR')]: error.message
+[FieldMapper.get('TIMESTAMP')]: new Date()
+[FieldMapper.get('ID')]: Date.now()
+
+// 하드코딩된 에러 코드
+{ error: 'FILE_NOT_FOUND' }
+{ error: 'INTERNAL_SERVER_ERROR' }
+```
+
+#### **3. 올바른 표준 패턴**
+
+**✅ HTTP 응답:**
+```javascript
+const { HTTP_STATUS_CODES, ERROR_CODES } = require('./config/api-messages');
+
+// HTTP 상태 코드
+res.status(HTTP_STATUS_CODES.FORBIDDEN).json({
+  success: false,
+  error: ERROR_CODES.UNAUTHORIZED,
+  message: API_MESSAGES.AUTH.FORBIDDEN
+});
+
+// 성공 응답
+res.status(HTTP_STATUS_CODES.OK).json({
+  success: true,
+  data: videoData,
+  timestamp: new Date()
+});
+```
+
+**✅ 비즈니스 데이터 (직접 필드명):**
+```javascript
+// 비디오 데이터
+const videoData = {
+  title: title,
+  channelName: channelName, 
+  views: views,
+  likes: likes,
+  platform: platform
+};
+
+// 직접 필드 접근
+console.log(video.title);
+console.log(video.channelName);
+```
+
+**✅ 플랫폼 상수:**
+```javascript
+const { PLATFORMS } = require('./config/constants');
+
+// 플랫폼 비교
+if (video.platform === PLATFORMS.YOUTUBE) {
+  // YouTube 처리
+}
+```
+
+### **🔧 마이그레이션 체크리스트**
+
+#### **1. 즉시 수정 필요한 패턴들:**
+- [ ] `res.status(숫자)` → `res.status(HTTP_STATUS_CODES.상수)`
+- [ ] `[FieldMapper.get('STATUS')]` → `status` (직접 사용)
+- [ ] `[FieldMapper.get('ERROR')]` → `error` (직접 사용) 
+- [ ] `[FieldMapper.get('TIMESTAMP')]` → `timestamp` (직접 사용)
+- [ ] `[FieldMapper.get('ID')]` → `id` (직접 사용)
+- [ ] 하드코딩 에러 → `ERROR_CODES.상수`
+
+#### **2. 파일별 우선순위:**
+1. **긴급**: `server/index.js` (가장 많은 혼재)
+2. **높음**: `frontend/` 파일들 (과도한 FieldMapper)
+3. **높음**: `extension/` 파일들 (과도한 FieldMapper)
+4. **보통**: 나머지 서비스 파일들
+
+### **📊 데이터 구조 시스템 (기존 유지)**
 
 **Video 인터페이스 (42개 필드):**
 - `VideoCore`: 기본 비디오 정보 (rowNumber, uploadDate, platform, keywords 등)
-- `ChannelInfo`: 채널 정보 최소한 (channelName, channelUrl, subscribers 등)
+- `ChannelInfo`: 채널 정보 (channelName, channelUrl, subscribers 등)  
 - `AIAnalysis`: AI 분석 결과 (mainCategory, middleCategory, confidence 등)
 - `YouTubeSpecific`: YouTube 전용 필드 (youtubeHandle, duration, views 등)
 - `SystemMetadata`: 시스템 메타데이터 (collectionTime, timestamp, processedAt 등)
@@ -26,26 +123,6 @@ FieldMapper를 완전히 제거하고 TypeScript 인터페이스 기반으로 �
 - `ChannelClusterInfo`: 클러스터링 정보 (clusterIds, suggestedClusters)
 - `ChannelStats`: 성과 통계 (totalViews, uploadFrequency, mostViewedVideo 등)
 - `ChannelMetadata`: 시스템 정보 (lastAnalyzedAt, analysisVersion 등)
-
-### **✅ 올바른 사용 패턴:**
-
-**백엔드 (JavaScript):**
-```javascript
-// ✅ 직접 필드명 사용
-const videoData = {
-  title: title,
-  channelName: channelName,
-  views: views,
-  likes: likes,
-  platform: platform
-};
-
-// ✅ API 응답
-const apiResponse = {
-  status: 'success',
-  data: videoData,
-  timestamp: new Date(),
-  error: null
 };
 ```
 
@@ -70,9 +147,126 @@ const views = video.views || 0;
 {video.views}
 ```
 
+---
+
+## 📋 **필드명 통일 가이드라인 (2025-09-11)**
+
+### **🎯 목표: 모든 필드를 새 인터페이스 표준으로 통일**
+
+**완전 변환 대상**: 31개 파일에서 FieldMapper 및 기존 비표준 필드명 제거
+
+### **📊 비디오 필드 표준 매핑**
+
+#### **🎬 비디오 핵심 정보**
+```javascript
+title            // 제목
+url              // 비디오 URL  
+platform         // 플랫폼 ('youtube', 'instagram', 'tiktok')
+uploadDate       // 업로드 날짜
+duration         // 영상 길이
+description      // 설명
+category         // 카테고리
+```
+
+#### **📊 통계 정보** 
+```javascript
+views            // 조회수
+likes            // 좋아요  
+comments         // 댓글수
+shares          // 공유수 (Instagram)
+saves           // 저장수 (Instagram)
+```
+
+#### **👤 채널 정보**
+```javascript
+channelName     // 채널명
+channelUrl      // 채널 URL
+youtubeHandle   // YouTube 핸들 (@username)
+subscribers     // 구독자수
+```
+
+#### **🏷️ 메타데이터**
+```javascript
+keywords        // 키워드 배열
+hashtags        // 해시태그 배열  
+thumbnailUrl    // 썸네일 URL
+language        // 언어
+```
+
+#### **🔄 시스템 필드**
+```javascript
+createdAt       // 생성일시
+updatedAt       // 수정일시  
+rowNumber       // 시트 행번호
+```
+
+### **🗂️ 채널 필드 표준 매핑**
+
+#### **📺 채널 핵심**
+```javascript  
+id              // 채널 ID
+name            // 채널명
+url             // 채널 URL
+platform        // 플랫폼
+description     // 채널 설명
+```
+
+#### **📈 채널 통계**
+```javascript
+subscribers     // 구독자수  
+totalViews      // 총 조회수
+totalVideos     // 총 영상수
+```
+
+### **🔄 변환 규칙**
+
+#### **❌ → ✅ 변환 예시:**
+```javascript
+// FieldMapper 패턴
+video[FieldMapper.get('TITLE')] → video.title
+video[FieldMapper.get('CHANNEL_NAME')] → video.channelName
+video[FieldMapper.get('VIEWS')] → video.views
+
+// 기존 다른 필드명들  
+video.videoTitle → video.title
+video.videoUrl → video.url
+video.uploadedDate → video.uploadDate
+video.channelHandle → video.youtubeHandle
+channel.subscriberCount → channel.subscribers
+```
+
+### **🚀 작업 우선순위**
+
+#### **🔥 1순위: 핵심 런타임 파일**
+- `index.js` - 메인 서버
+- `AIAnalyzer.js` - AI 분석
+- `VideoProcessor.js` - 비디오 처리
+- `SheetsManager.js` - 구글 시트
+
+#### **⚡ 2순위: 서비스 파일들**
+- `ChannelAnalysisService.js`
+- `YouTubeChannelService.js`
+- `VideoDataConverter.js`
+
+#### **📝 3순위: 도구 파일들**
+- `scripts/` 폴더 전체 (check-mongodb.js ✅ 완료)
+- `utils/` 폴더
+
+### **⚙️ 작업 방법**
+
+1. **150줄씩 나누어 처리**
+2. **변환 전후 Grep으로 `FieldMapper` 검색하여 0개 확인**  
+3. **서버 재시작하여 동작 확인**
+4. **한 파일 완료 후 다음 파일 진행**
+
+### **✅ 완료 현황 (2025-09-11)**
+- ✅ **scripts/check-mongodb.js**: FieldMapper 완전 제거 완료
+
+---
+
 ### **🎉 현재 상태:**
 - ✅ **백엔드**: 새 인터페이스 기반 모델 완료 (VideoModel.js, ChannelAnalysisService.js)
-- ⏳ **서비스 레이어**: 새 모델 import 업데이트 필요
+- ⏳ **서비스 레이어**: 31개 파일 필드명 통일 작업 진행 중 (1/31 완료)
 - ⏳ **프론트엔드**: FieldMapper 제거 및 직접 필드 접근으로 전환 필요
 - ⏳ **Chrome 확장**: 새 구조 적용 필요
 
