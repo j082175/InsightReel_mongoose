@@ -1332,7 +1332,7 @@ app.get('/api/videos', async (req, res) => {
         // 🚀 쿼리 조건 구성
         const query = {};
         if (platform) {
-            query.platform = platform.toLowerCase();
+            query.platform = platform;
         }
 
         // 🚀 정렬 조건 구성
@@ -1401,10 +1401,10 @@ app.get('/api/videos', async (req, res) => {
                     } else {
                         // 파일이 없으면 플랫폼별 placeholder
                         const platform = video.platform;
-                        if (platform === 'instagram') {
+                        if (platform === 'INSTAGRAM') {
                             thumbnailUrl =
                                 'https://placehold.co/400x600/E4405F/FFFFFF?text=IG';
-                        } else if (platform === 'tiktok') {
+                        } else if (platform === 'TIKTOK') {
                             thumbnailUrl =
                                 'https://placehold.co/400x600/000000/FFFFFF?text=TT';
                         } else {
@@ -1415,10 +1415,10 @@ app.get('/api/videos', async (req, res) => {
                 } catch (err) {
                     // 에러 발생시 placeholder 사용
                     const platform = video.platform;
-                    if (platform === 'instagram') {
+                    if (platform === 'INSTAGRAM') {
                         thumbnailUrl =
                             'https://placehold.co/400x600/E4405F/FFFFFF?text=IG';
-                    } else if (platform === 'tiktok') {
+                    } else if (platform === 'TIKTOK') {
                         thumbnailUrl =
                             'https://placehold.co/400x600/000000/FFFFFF?text=TT';
                     } else {
@@ -1429,10 +1429,10 @@ app.get('/api/videos', async (req, res) => {
             } else if (!thumbnailUrl) {
                 // 썸네일이 없으면 플랫폼별 placeholder 제공
                 const platform = video.platform;
-                if (platform === 'instagram') {
+                if (platform === 'INSTAGRAM') {
                     thumbnailUrl =
                         'https://placehold.co/400x600/E4405F/FFFFFF?text=IG';
-                } else if (platform === 'tiktok') {
+                } else if (platform === 'TIKTOK') {
                     thumbnailUrl =
                         'https://placehold.co/400x600/000000/FFFFFF?text=TT';
                 } else {
@@ -1542,7 +1542,7 @@ app.get('/api/channels', async (req, res) => {
         };
 
         if (platform) {
-            filters.platform = platform.toLowerCase();
+            filters.platform = platform;
         }
 
         if (clustered !== undefined) {
