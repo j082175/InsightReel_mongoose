@@ -199,7 +199,8 @@
       "Bash(del:*)",
       "Bash(rm:*)",
       "Bash(git stash:*)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(start http://localhost:8001)"
     ],
     "deny": [
       "Bash(curl:*)"

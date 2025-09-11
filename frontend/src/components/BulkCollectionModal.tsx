@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CollectionBatch } from '../types';
+import { useChannelGroups } from '../hooks/useChannelGroups';
 
 interface CollectionFilters {
   days: number;
@@ -61,6 +62,10 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
   const [progress, setProgress] = useState(0);
   const [keywordInput, setKeywordInput] = useState('');
   const [excludeKeywordInput, setExcludeKeywordInput] = useState('');
+  
+  // 🎯 그룹 관련 상태
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [collectionMode, setCollectionMode] = useState<'channels' | 'group'>('channels');
 
   // 모달이 열릴 때마다 상태 초기화
   useEffect(() => {
@@ -252,6 +257,52 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
         <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 180px)' }}>
           {!isCollecting && collectionResults.length === 0 && (
             <div className="space-y-6">
+              {/* 수집 모드 선택 */}
+              <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-semibold text-indigo-900 mb-4">🎯 수집 모드</h3>
+                <div className="flex gap-4">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="collectionMode"
+                      value="channels"
+                      checked={collectionMode === 'channels'}
+                      onChange={(e) => setCollectionMode(e.target.value as 'channels' | 'group')}
+                      className="mr-2"
+                    />
+                    📺 선택한 채널들에서 수집
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="collectionMode"
+                      value="group"
+                      checked={collectionMode === 'group'}
+                      onChange={(e) => setCollectionMode(e.target.value as 'channels' | 'group')}
+                      className="mr-2"
+                    />
+                    🎯 채널 그룹에서 수집
+                  </label>
+                </div>
+                
+                {collectionMode === 'group' && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      채널 그룹 선택
+                    </label>
+                    <select
+                      value={selectedGroup || ''}
+                      onChange={(e) => setSelectedGroup(e.target.value || null)}
+                      className="w-full border-gray-300 rounded-md shadow-sm"
+                    >
+                      <option value="">그룹을 선택하세요</option>
+                      <option value="group1">영화 채널 그룹 1 (예시)</option>
+                      <option value="group2">요리 채널 그룹 2 (예시)</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
               {/* 배치 정보 설정 */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
                 <h3 className="text-lg font-semibold text-blue-900 mb-4">📦 수집 배치 정보</h3>
@@ -465,26 +516,38 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
                 </div>
               </div>
 
-              {/* 수집할 채널 목록 */}
+              {/* 수집 대상 표시 */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  📺 수집 대상 채널 ({isSelectedChannels ? '선택한 채널' : '모든 표시된 채널'})
+                  {collectionMode === 'group' ? '🎯 수집 대상 그룹' : '📺 수집 대상 채널'}
                 </h3>
                 <div className="bg-gray-50 p-4 rounded-lg max-h-32 overflow-y-auto">
-                  <div className="flex flex-wrap gap-2">
-                    {channelsToProcess.map((channel, index) => (
-                      <span
-                        key={index}
-                        className={`inline-flex items-center px-3 py-1 text-sm rounded-full ${
-                          isSelectedChannels 
-                            ? 'bg-blue-100 text-blue-700' 
-                            : 'bg-indigo-100 text-indigo-700'
-                        }`}
-                      >
-                        {channel}
-                      </span>
-                    ))}
-                  </div>
+                  {collectionMode === 'group' ? (
+                    <div className="text-center py-4">
+                      {selectedGroup ? (
+                        <span className="inline-flex items-center px-4 py-2 text-sm bg-indigo-100 text-indigo-700 rounded-full">
+                          🎯 {selectedGroup === 'group1' ? '영화 채널 그룹 1' : '요리 채널 그룹 2'}
+                        </span>
+                      ) : (
+                        <span className="text-gray-500">그룹을 선택해주세요</span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {channelsToProcess.map((channel, index) => (
+                        <span
+                          key={index}
+                          className={`inline-flex items-center px-3 py-1 text-sm rounded-full ${
+                            isSelectedChannels 
+                              ? 'bg-blue-100 text-blue-700' 
+                              : 'bg-indigo-100 text-indigo-700'
+                          }`}
+                        >
+                          {channel}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 

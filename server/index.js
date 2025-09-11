@@ -3445,6 +3445,15 @@ try {
     ServerLogger.error('❌ 채널 분석 큐 라우트 등록 실패:', error);
 }
 
+// 🎯 채널 그룹 API 등록
+try {
+    const channelGroupRoutes = require('./routes/channel-groups');
+    app.use('/api/channel-groups', channelGroupRoutes);
+    ServerLogger.info('🎯 채널 그룹 API 등록 완료');
+} catch (error) {
+    ServerLogger.error('❌ 채널 그룹 라우트 등록 실패:', error);
+}
+
 // 404 핸들러 (모든 라우트 등록 후 마지막에)
 app.use((req, res) => {
     ResponseHandler.notFound(res, `경로 '${req.path}'를 찾을 수 없습니다.`);
