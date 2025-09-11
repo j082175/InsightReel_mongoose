@@ -824,7 +824,7 @@ app.post('/api/process-video', async (req, res) => {
                 let youtubeInfo = null;
 
                 // YouTube인 경우 API로 정보 수집
-                if (platform === 'youtube') {
+                if (platform === 'YOUTUBE') {
                     ServerLogger.info('0️⃣ YouTube 정보 수집 중...');
                     youtubeInfo = await videoProcessor.getYouTubeVideoInfo(
                         videoUrl,
@@ -852,7 +852,7 @@ app.post('/api/process-video', async (req, res) => {
                 let analysis;
                 let enrichedMetadata = { platform }; // 🆕 기본값으로 초기화
 
-                if (platform === 'youtube') {
+                if (platform === 'YOUTUBE') {
                     // YouTube 정보를 원본 metadata에 병합 (시트 저장용)
                     // 🆕 metadata가 null/undefined인 경우 빈 객체로 초기화
                     if (!metadata || typeof metadata !== 'object') {

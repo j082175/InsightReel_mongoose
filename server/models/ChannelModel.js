@@ -36,7 +36,7 @@ channelSchema.statics.findByPlatform = function(platform, sortBy = 'subscribers'
   const sortObj = {};
   sortObj[sortBy] = -1;
   
-  return this.find({ platform: platform.toLowerCase() })
+  return this.find({ platform: platform })
     .sort(sortObj)
     .limit(limit);
 };
@@ -48,7 +48,7 @@ channelSchema.statics.findByCategory = function(category, limit = 20) {
 };
 
 channelSchema.statics.getTopPerforming = function(platform, limit = 20) {
-  return this.find({ platform: platform.toLowerCase() })
+  return this.find({ platform: platform })
     .sort({ totalViews: -1, subscribers: -1 })
     .limit(limit);
 };

@@ -18,10 +18,10 @@ export const CONSTANTS = {
 
   // 📱 플랫폼 정의  
   PLATFORMS: {
-    INSTAGRAM: 'instagram',
-    TIKTOK: 'tiktok',
-    YOUTUBE: 'youtube', // 향후 확장용
-    FACEBOOK: 'facebook' // 향후 확장용
+    INSTAGRAM: 'INSTAGRAM',
+    TIKTOK: 'TIKTOK',
+    YOUTUBE: 'YOUTUBE', // 향후 확장용
+    FACEBOOK: 'FACEBOOK' // 향후 확장용
   },
 
   // 🔗 플랫폼 URL 패턴
