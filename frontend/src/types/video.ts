@@ -17,9 +17,9 @@ export interface VideoCore {
   platform: Platform;
   
   // 콘텐츠 분석 필드
-  keywords?: string;
-  hashtags?: string;
-  mentions?: string;
+  keywords?: string[];
+  hashtags?: string[];
+  mentions?: string[];
   description?: string;
   analysisContent?: string;
   

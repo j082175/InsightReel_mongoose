@@ -18,7 +18,7 @@ const VideoCore = {
   platform: { 
     type: String,
     required: true,
-    enum: ['INSTAGRAM', 'YOUTUBE', 'TIKTOK'],
+    enum: ['YOUTUBE', 'INSTAGRAM', 'TIKTOK'],
     index: true
   },
   

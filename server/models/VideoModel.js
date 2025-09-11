@@ -134,9 +134,9 @@ videoSchema.statics.createOrUpdateFromVideoUrl = async function(videoUrlData, me
     middleCategory: metadata.middleCategory || '',
     fullCategoryPath: metadata.fullCategoryPath || '',
     categoryDepth: metadata.categoryDepth || 0,
-    keywords: Array.isArray(metadata.keywords) ? metadata.keywords.join(', ') : (metadata.keywords || ''),
-    hashtags: Array.isArray(metadata.hashtags) ? metadata.hashtags.join(', ') : (metadata.hashtags || ''),
-    mentions: Array.isArray(metadata.mentions) ? metadata.mentions.join(', ') : (metadata.mentions || ''),
+    keywords: Array.isArray(metadata.keywords) ? metadata.keywords : (metadata.keywords ? [metadata.keywords] : []),
+    hashtags: Array.isArray(metadata.hashtags) ? metadata.hashtags : (metadata.hashtags ? [metadata.hashtags] : []),
+    mentions: Array.isArray(metadata.mentions) ? metadata.mentions : (metadata.mentions ? [metadata.mentions] : []),
     description: metadata.description || '',
     analysisContent: metadata.analysisContent || metadata.ai_description || '',
     
