@@ -410,28 +410,33 @@ class UsageTracker {
         this.dailyUsage[today].lastUpdated = new Date().toISOString();
         this.saveTodayUsage();
 
-        // 로깅
+        // 로깅 (10번마다만 출력하여 노이즈 감소)
         const todayData = this.dailyUsage[today];
         const totalYouTube =
             (todayData.youtubeVideos || 0) +
             (todayData.youtubeSearch || 0) +
             (todayData.youtubeChannels || 0) +
             (todayData.youtubeComments || 0);
-        ServerLogger.info(
-            `📊 사용량 업데이트: Pro ${todayData.pro}/${
-                this.quotas['gemini-2.5-pro'].rpd
-            } (에러:${todayData.proErrors}), Flash ${todayData.flash}/${
-                this.quotas['gemini-2.5-flash'].rpd
-            } (에러:${todayData.flashErrors}), Flash-Lite ${
-                todayData.flashLite || 0
-            }/${this.quotas['gemini-2.5-flash-lite'].rpd} (에러:${
-                todayData.flashLiteErrors || 0
-            }), YouTube ${totalYouTube}/${
-                this.quotas['youtube-data-api'].rpd
-            } (에러:${todayData.youtubeErrors || 0})`,
-            null,
-            'USAGE',
-        );
+        
+        // 10번마다 또는 에러 발생시만 로그 출력
+        const totalCalls = todayData.pro + todayData.flash + (todayData.flashLite || 0) + totalYouTube;
+        if (totalCalls % 10 === 0 || !success || process.env.NODE_ENV === 'development') {
+            ServerLogger.info(
+                `📊 사용량 업데이트: Pro ${todayData.pro}/${
+                    this.quotas['gemini-2.5-pro'].rpd
+                } (에러:${todayData.proErrors}), Flash ${todayData.flash}/${
+                    this.quotas['gemini-2.5-flash'].rpd
+                } (에러:${todayData.flashErrors}), Flash-Lite ${
+                    todayData.flashLite || 0
+                }/${this.quotas['gemini-2.5-flash-lite'].rpd} (에러:${
+                    todayData.flashLiteErrors || 0
+                }), YouTube ${totalYouTube}/${
+                    this.quotas['youtube-data-api'].rpd
+                } (에러:${todayData.youtubeErrors || 0})`,
+                null,
+                'USAGE',
+            );
+        }
     }
 
     /**

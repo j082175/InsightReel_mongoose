@@ -220,9 +220,12 @@ class ChannelAnalysisService {
             let analysisData = null;
 
             // 2. 상세 분석 수행 (선택적)
-            ServerLogger.info(
-                `🔍 ChannelAnalysisService DEBUG: includeAnalysis = ${includeAnalysis}, skipAIAnalysis = ${skipAIAnalysis}, channelId = ${youtubeData.id}`,
-            );
+            // DEBUG 로그는 개발 환경에서만
+            if (process.env.NODE_ENV === 'development') {
+                ServerLogger.debug(
+                    `🔍 ChannelAnalysisService DEBUG: includeAnalysis = ${includeAnalysis}, skipAIAnalysis = ${skipAIAnalysis}, channelId = ${youtubeData.id}`,
+                );
+            }
             if (includeAnalysis) {
                 try {
                     // skipAIAnalysis가 true면 AI 콘텐츠 분석만 건너뛰고 기본 통계는 수집
@@ -323,28 +326,7 @@ class ChannelAnalysisService {
                 // AI 태그 (향상된 분석에서 추출 또는 빈 배열)
                 aiTags: skipAIAnalysis
                     ? []
-                    : (() => {
-                          const extractedTags =
-                              analysisData?.enhancedAnalysis?.channelIdentity
-                                  ?.channelTags || [];
-                          ServerLogger.info(
-                              '🔍 ChannelAnalysisService DEBUG: aiTags 추출',
-                              {
-                                  hasAnalysisData: !!analysisData,
-                                  hasEnhancedAnalysis:
-                                      !!analysisData?.enhancedAnalysis,
-                                  hasChannelIdentity:
-                                      !!analysisData?.enhancedAnalysis
-                                          ?.channelIdentity,
-                                  hasChannelTags:
-                                      !!analysisData?.enhancedAnalysis
-                                          ?.channelIdentity?.channelTags,
-                                  extractedTags: extractedTags,
-                                  tagCount: extractedTags.length,
-                              },
-                          );
-                          return extractedTags;
-                      })(),
+                    : analysisData?.enhancedAnalysis?.channelIdentity?.channelTags || [],
                 deepInsightTags: [], // 일단 빈 배열로 초기화, 나중에 재해석으로 채움
                 allTags: skipAIAnalysis
                     ? [...(userKeywords || [])]
@@ -366,13 +348,16 @@ class ChannelAnalysisService {
             };
 
             // 🔄 AI 재해석 수행 (사용자 카테고리가 있고 AI 분석을 건너뛰지 않은 경우에만)
-            ServerLogger.info(`🔍 DEBUG: 재해석 조건 체크`, {
+            // DEBUG 로그는 개발 환경에서만
+            if (process.env.NODE_ENV === 'development') {
+                ServerLogger.debug(`🔍 DEBUG: 재해석 조건 체크`, {
                 hasUserKeywords: !!(userKeywords && userKeywords.length > 0),
                 userKeywords: userKeywords,
                 hasAnalysisData: !!analysisData,
                 skipAIAnalysis: skipAIAnalysis,
                 videoAnalysesCount: analysisData?.videoAnalyses?.length || 0,
-            });
+                });
+            }
 
             if (
                 userKeywords &&

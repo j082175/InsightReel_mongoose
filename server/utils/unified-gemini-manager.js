@@ -203,9 +203,9 @@ class UnifiedGeminiManager {
    * 메인 콘텐츠 생성 메소드 - 폴백 모드에 따라 분기
    */
   async generateContent(prompt, imageBase64 = null, options = {}) {
-    // 🎯 조건부 모델 선택: flash-lite 지정 시 직접 사용
-    if (options.modelType === 'flash-lite') {
-      return await this.generateContentWithSpecificModel('flash-lite', prompt, imageBase64, options);
+    // 🎯 조건부 모델 선택: 특정 모델 지정 시 직접 사용
+    if (options.modelType && ['pro', 'flash', 'flash-lite'].includes(options.modelType)) {
+      return await this.generateContentWithSpecificModel(options.modelType, prompt, imageBase64, options);
     }
     
     if (this.fallbackMode === 'multi-key') {
@@ -230,66 +230,102 @@ class UnifiedGeminiManager {
   async generateContentWithSpecificModel(modelType, prompt, imageBase64 = null, options = {}) {
     const startTime = Date.now();
     
-    try {
-      ServerLogger.info(`🎯 특정 모델 직접 사용: ${modelType}`, null, 'UNIFIED');
-      
-      // API 키 선택 (첫 번째 키 사용)
-      const apiKey = this.apiKeys?.[0] || process.env.GOOGLE_API_KEY;
-      const genAI = new GoogleGenerativeAI(apiKey);
-      
-      // 모델명 매핑
-      const modelMap = {
-        'pro': 'gemini-2.5-pro',
-        'flash': 'gemini-2.5-flash', 
-        'flash-lite': 'gemini-2.5-flash-lite'
-      };
-      
-      const modelName = modelMap[modelType] || modelType;
-      const model = genAI.getGenerativeModel({ model: modelName });
-      
-      // 요청 데이터 구성
-      const requestData = imageBase64 ? [
-        prompt,
-        {
-          inlineData: {
-            mimeType: 'image/jpeg',
-            data: imageBase64
-          }
+    // 할당량 폴백 순서 정의
+    const fallbackOrder = {
+      'pro': ['pro', 'flash', 'flash-lite'],
+      'flash': ['flash', 'flash-lite'], 
+      'flash-lite': ['flash-lite']
+    };
+    
+    const modelsToTry = fallbackOrder[modelType] || [modelType];
+    let lastError = null;
+    
+    for (const currentModel of modelsToTry) {
+      try {
+        // 개발 환경에서만 개별 분석 로그 출력
+        if (process.env.NODE_ENV === 'development') {
+          ServerLogger.debug(`🎯 모델 시도: ${currentModel} (원본: ${modelType})`, null, 'UNIFIED');
         }
-      ] : prompt;
-      
-      // Generation Config 설정
-      const generationConfig = {
-        maxOutputTokens: 8192,
-        temperature: 0.1,
-        topP: 0.95,
-        topK: 40
-      };
-      
-      // Deep Thinking 설정 (Flash 계열 모델만)
-      const thinkingBudget = options.thinkingBudget ?? 
-                            (process.env.GEMINI_THINKING_BUDGET ? parseInt(process.env.GEMINI_THINKING_BUDGET) : undefined);
-      
-      if (thinkingBudget !== undefined && modelName.includes('flash')) {
-        generationConfig.thinkingBudget = thinkingBudget;
+        
+        // API 키 선택 (첫 번째 키 사용)
+        const apiKey = this.apiKeys?.[0] || process.env.GOOGLE_API_KEY;
+        const genAI = new GoogleGenerativeAI(apiKey);
+        
+        // 모델명 매핑
+        const modelMap = {
+          'pro': 'gemini-2.5-pro',
+          'flash': 'gemini-2.5-flash', 
+          'flash-lite': 'gemini-2.5-flash-lite'
+        };
+        
+        const modelName = modelMap[currentModel] || currentModel;
+        const model = genAI.getGenerativeModel({ model: modelName });
+        
+        // 요청 데이터 구성
+        const requestData = imageBase64 ? [
+          prompt,
+          {
+            inlineData: {
+              mimeType: 'image/jpeg',
+              data: imageBase64
+            }
+          }
+        ] : prompt;
+        
+        // Generation Config 설정
+        const generationConfig = {
+          maxOutputTokens: 8192,
+          temperature: 0.1,
+          topP: 0.95,
+          topK: 40
+        };
+        
+        // Deep Thinking 설정 (Flash 계열 모델만)
+        const thinkingBudget = options.thinkingBudget ?? 
+                              (process.env.GEMINI_THINKING_BUDGET ? parseInt(process.env.GEMINI_THINKING_BUDGET) : undefined);
+        
+        if (thinkingBudget !== undefined && modelName.includes('flash')) {
+          generationConfig.thinkingBudget = thinkingBudget;
+        }
+        
+        const result = await model.generateContent(requestData, generationConfig);
+        const response = result.response;
+        const text = response.text();
+        
+        const duration = Date.now() - startTime;
+        this.usageTracker.increment(currentModel, true);
+        // 개발 환경에서만 개별 성공 로그 출력
+        if (process.env.NODE_ENV === 'development') {
+          ServerLogger.debug(`✅ 폴백 모델 분석 성공 (${currentModel}, ${duration}ms)`, null, 'UNIFIED');
+        }
+        
+        return text;
+        
+      } catch (error) {
+        lastError = error;
+        
+        // 할당량 에러나 503 에러면 다음 모델 시도
+        const isQuotaError = error.message?.includes('quota') || 
+                            error.message?.includes('429') ||
+                            error.message?.includes('503');
+        
+        if (isQuotaError) {
+          ServerLogger.warn(`⚠️ 모델 ${currentModel} 할당량 초과, 다음 모델 시도`, null, 'UNIFIED');
+          continue; // 다음 모델로 계속
+        } else {
+          // 할당량 문제가 아니면 즉시 실패
+          const duration = Date.now() - startTime;
+          this.usageTracker.increment(currentModel, false);
+          ServerLogger.error(`❌ 모델 ${currentModel} 분석 실패 (${duration}ms)`, error, 'UNIFIED');
+          throw error;
+        }
       }
-      
-      const result = await model.generateContent(requestData, generationConfig);
-      const response = result.response;
-      const text = response.text();
-      
-      const duration = Date.now() - startTime;
-      this.usageTracker.increment(modelType, true);
-      ServerLogger.success(`✅ 특정 모델 분석 성공 (${modelType}, ${duration}ms)`, null, 'UNIFIED');
-      
-      return text;
-      
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      this.usageTracker.increment(modelType, false);
-      ServerLogger.error(`❌ 특정 모델 분석 실패 (${modelType}, ${duration}ms)`, error, 'UNIFIED');
-      throw error;
     }
+    
+    // 모든 모델 시도 실패
+    const duration = Date.now() - startTime;
+    ServerLogger.error(`❌ 모든 폴백 모델 실패 (원본: ${modelType}, ${duration}ms)`, lastError, 'UNIFIED');
+    throw lastError;
   }
 
   /**
