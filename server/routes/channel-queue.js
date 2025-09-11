@@ -241,7 +241,13 @@ router.post('/check-duplicate', async (req, res) => {
             });
         }
 
+        // URL 디코딩 처리 (한글 채널명 지원)
+        const decodedChannelIdentifier = decodeURIComponent(channelIdentifier);
+        
         ServerLogger.info(`🔍 채널 중복 검사 요청: ${channelIdentifier}`);
+        if (channelIdentifier !== decodedChannelIdentifier) {
+            ServerLogger.info(`📝 URL 디코딩 적용: ${decodedChannelIdentifier}`);
+        }
 
         // Channel 모델을 동적으로 로드
         const Channel = require('../models/ChannelModel');
@@ -254,19 +260,26 @@ router.post('/check-duplicate', async (req, res) => {
             const mongoose = require('mongoose');
             let existingChannel = null;
 
-            if (mongoose.Types.ObjectId.isValid(channelIdentifier)) {
+            if (mongoose.Types.ObjectId.isValid(decodedChannelIdentifier)) {
                 // MongoDB ObjectId인 경우
-                existingChannel = await Channel.findOne({ id: channelIdentifier }).lean();
+                existingChannel = await Channel.findOne({ id: decodedChannelIdentifier }).lean();
             } else {
-                // YouTube 핸들이나 채널명인 경우 다른 필드로 검색
+                // YouTube 핸들이나 채널명인 경우 다른 필드로 검색 (원본과 디코딩된 것 모두 확인)
                 existingChannel = await Channel.findOne({
                     $or: [
                         { customUrl: channelIdentifier },
+                        { customUrl: decodedChannelIdentifier },
                         { name: channelIdentifier },
+                        { name: decodedChannelIdentifier },
                         {
                             customUrl: channelIdentifier.startsWith('@')
                                 ? channelIdentifier
                                 : `@${channelIdentifier}`,
+                        },
+                        {
+                            customUrl: decodedChannelIdentifier.startsWith('@')
+                                ? decodedChannelIdentifier
+                                : `@${decodedChannelIdentifier}`,
                         },
                     ],
                 }).lean();
@@ -302,7 +315,7 @@ router.post('/check-duplicate', async (req, res) => {
                 };
 
                 ServerLogger.info(
-                    `✅ 새로운 채널 (API 호출 없음): ${channelIdentifier}`,
+                    `✅ 새로운 채널 (API 호출 없음): ${decodedChannelIdentifier}`,
                 );
             }
         } catch (searchError) {
@@ -319,7 +332,8 @@ router.post('/check-duplicate', async (req, res) => {
 
         res.json({
             success: true,
-            channelIdentifier,
+            channelIdentifier: decodedChannelIdentifier, // 디코딩된 버전 반환
+            originalChannelIdentifier: channelIdentifier, // 원본도 함께 반환
             duplicate: duplicateInfo,
         });
     } catch (error) {
