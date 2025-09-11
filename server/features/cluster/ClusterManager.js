@@ -2,7 +2,7 @@ const { ServerLogger } = require('../../utils/logger');
 const { FieldMapper } = require('../../types/field-mapper');
 const TagExtractor = require('./TagExtractor');
 const SimilarityCalculator = require('./SimilarityCalculator');
-const ChannelModel = require('./ChannelModel');
+const ChannelAnalysisService = require('./ChannelAnalysisService');
 const ClusterModel = require('./ClusterModel');
 
 /**
@@ -64,7 +64,7 @@ class ClusterManager {
       ServerLogger.info('✅ STEP 4 완료: 클러스터 검색', { suggestionCount: clusterSuggestions.length });
       
       // 5. 채널 저장
-      const savedChannel = await ChannelModel.createOrUpdate({
+      const savedChannel = await ChannelAnalysisService.createOrUpdate({
         ...channel,
         [FieldMapper.get('KEYWORDS')]: userKeywords,
         [FieldMapper.get('AI_TAGS')]: aiTags,
@@ -157,7 +157,7 @@ class ClusterManager {
    */
   async getRecentKeywords(limit = 10) {
     try {
-      const recentChannels = await ChannelModel.getRecent(50);
+      const recentChannels = await ChannelAnalysisService.getRecent(50);
       const keywordFreq = new Map();
 
       // 빈도 계산
@@ -185,7 +185,7 @@ class ClusterManager {
    */
   async suggestNewClusters() {
     try {
-      const unclusteredChannels = await ChannelModel.getUnclustered();
+      const unclusteredChannels = await ChannelAnalysisService.getUnclustered();
       
       if (unclusteredChannels.length < 3) {
         return []; // 최소 3개는 있어야 클러스터 생성
@@ -230,9 +230,9 @@ class ClusterManager {
   async getStatistics() {
     try {
       const [totalChannels, totalClusters, unclusteredCount] = await Promise.all([
-        ChannelModel.getTotalCount(),
+        ChannelAnalysisService.getTotalCount(),
         ClusterModel.getTotalCount(),
-        ChannelModel.getUnclusteredCount()
+        ChannelAnalysisService.getUnclusteredCount()
       ]);
 
       return {
@@ -253,7 +253,7 @@ class ClusterManager {
    * 💾 기존 데이터 로드 (캐시 구축)
    */
   async loadExistingData() {
-    const channels = await ChannelModel.getAll();
+    const channels = await ChannelAnalysisService.getAll();
     const clusters = await ClusterModel.getAll();
 
     channels.forEach(channel => {

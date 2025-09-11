@@ -1,82 +1,95 @@
 # CLAUDE.md - InsightReel 프로젝트 가이드
 
-## 🚨 **CRITICAL: FieldMapper 사용 범위 및 표준화 규칙**
+## 🚨 **데이터 구조 및 타입 시스템**
 
-### **🎯 FieldMapper 사용 범위 (ONLY)**
-**✅ FieldMapper 사용 대상:**
-- **비디오 데이터**: title, views, likes, uploadDate, duration 등
-- **채널 데이터**: channelName, subscribers, channelUrl 등  
-- **플랫폼별 메타데이터**: platform, videoId, thumbnailUrl 등
+### **🎯 새로운 인터페이스 기반 시스템**
+FieldMapper를 완전히 제거하고 TypeScript 인터페이스 기반으로 전환했습니다.
 
-**❌ FieldMapper 사용 금지 대상:**
-- **시스템/API 응답**: status, error, message, success 등
-- **표준 HTTP 필드**: timestamp, uptime, memory 등
-- **데이터베이스 시스템 필드**: _id, __v, createdAt, updatedAt 등
-- **일반 상수값**: 403, 404, 200, 5000 등
+**✅ 새 구조:**
+- **video-types.js**: Video 데이터 인터페이스 조합 시스템
+- **channel-types.js**: Channel 데이터 인터페이스 조합 시스템
+- **VideoModel.js**: 새 인터페이스 기반 Video 모델
+- **ChannelAnalysisService.js**: 새 인터페이스 기반 Channel 모델
 
-### **❗ 절대 규칙 (위반 시 시스템 오류 발생)**
-1. **비즈니스 데이터만 FieldMapper 사용**: 비디오/채널 데이터 필드만 `FieldMapper.get('FIELD_NAME')` 사용
-2. **시스템 필드는 직접 사용**: API 응답, 에러 처리는 표준 필드명 직접 사용
-3. **레거시 호환성 하지 말 것**: `|| metadata.channelName` 같은 fallback 패턴 절대 사용 금지
-4. **중간 인터페이스 금지**: LocalChannel, TransformedVideo 등 중간 변환 인터페이스 생성 금지
+### **📁 인터페이스 구성**
 
-### **✅ 올바른 패턴:**
+**Video 인터페이스 (42개 필드):**
+- `VideoCore`: 기본 비디오 정보 (rowNumber, uploadDate, platform, keywords 등)
+- `ChannelInfo`: 채널 정보 최소한 (channelName, channelUrl, subscribers 등)
+- `AIAnalysis`: AI 분석 결과 (mainCategory, middleCategory, confidence 등)
+- `YouTubeSpecific`: YouTube 전용 필드 (youtubeHandle, duration, views 등)
+- `SystemMetadata`: 시스템 메타데이터 (collectionTime, timestamp, processedAt 등)
 
-**✅ 올바른 사용 - 비즈니스 데이터:**
+**Channel 인터페이스 (32개 필드):**
+- `ChannelCore`: 기본 채널 정보 (id, name, platform, subscribers 등)
+- `ChannelAIAnalysis`: AI 분석 결과 (keywords, aiTags, categoryInfo 등)
+- `ChannelClusterInfo`: 클러스터링 정보 (clusterIds, suggestedClusters)
+- `ChannelStats`: 성과 통계 (totalViews, uploadFrequency, mostViewedVideo 등)
+- `ChannelMetadata`: 시스템 정보 (lastAnalyzedAt, analysisVersion 등)
+
+### **✅ 올바른 사용 패턴:**
+
+**백엔드 (JavaScript):**
 ```javascript
-// ✅ 비디오/채널 데이터: FieldMapper 사용
+// ✅ 직접 필드명 사용
 const videoData = {
-  [FieldMapper.get('TITLE')]: title,
-  [FieldMapper.get('CHANNEL_NAME')]: channelName,
-  [FieldMapper.get('VIEWS')]: views,
-  [FieldMapper.get('LIKES')]: likes
+  title: title,
+  channelName: channelName,
+  views: views,
+  likes: likes,
+  platform: platform
 };
 
-// ✅ API 응답: 시스템 필드는 직접 사용
+// ✅ API 응답
 const apiResponse = {
-  status: 'success',           // ❌ FieldMapper.get('STATUS') 금지
-  data: videoData,             // ✅ 비즈니스 데이터는 FieldMapper
-  timestamp: new Date(),       // ❌ FieldMapper.get('TIMESTAMP') 금지
-  error: null                  // ❌ FieldMapper.get('ERROR') 금지
+  status: 'success',
+  data: videoData,
+  timestamp: new Date(),
+  error: null
 };
 ```
 
-**❌ 잘못된 사용 패턴:**
-```javascript
-// ❌ 시스템 필드에 FieldMapper 사용 금지
-const response = {
-  [FieldMapper.get('STATUS')]: 'error',     // 시스템 필드
-  [FieldMapper.get('ERROR')]: error.message, // 시스템 필드
-  [FieldMapper.get('TIMESTAMP')]: new Date() // 시스템 필드
-};
-
-// ❌ 레거시 호환성 패턴 금지
-metadata[FieldMapper.get('LIKES')] || metadata.likes || 0
-
-// ❌ 직접 필드명 사용 금지 (비즈니스 데이터)
-const data = { channelName: name, views: count };
-```
-
-**프론트엔드 TypeScript:**
+**프론트엔드 (TypeScript):**
 ```typescript
-// ✅ 비즈니스 데이터 (TypeScript 타입 안전)
-const channelName = FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME');
-const views = FieldMapper.getTypedField<number>(video, 'VIEWS') || 0;
+// ✅ 타입 안전한 직접 접근
+interface VideoData {
+  title: string;
+  channelName: string;
+  views: number;
+  likes: number;
+  platform: string;
+}
+
+const video: VideoData = await fetchVideo();
+const channelName = video.channelName;
+const views = video.views || 0;
 
 // ✅ UI에서 직접 사용
-{FieldMapper.getTypedField<string>(channel, 'CHANNEL_NAME')}
-{FieldMapper.getTypedField<string>(video, 'PLATFORM')}
-
-// ✅ API 상태는 직접 접근
-if (response.status === 'success') {  // 시스템 필드
-  const data = response.data;         // 비즈니스 데이터
-}
+{video.channelName}
+{video.platform}
+{video.views}
 ```
 
-### **🎉 표준화 완료 현황:**
-- ✅ **백엔드 (server/)**: 100% FieldMapper 표준화 완료
-- ✅ **프론트엔드 (frontend/)**: 100% FieldMapper 표준화 완료 (2025-01-14)
-- ✅ **Chrome 확장 (extension/)**: FieldMapper 적용 완료
+### **🎉 현재 상태:**
+- ✅ **백엔드**: 새 인터페이스 기반 모델 완료 (VideoModel.js, ChannelAnalysisService.js)
+- ⏳ **서비스 레이어**: 새 모델 import 업데이트 필요
+- ⏳ **프론트엔드**: FieldMapper 제거 및 직접 필드 접근으로 전환 필요
+- ⏳ **Chrome 확장**: 새 구조 적용 필요
+
+### **💡 아키텍처 원칙**
+```typescript
+// ✅ 새로운 단순한 아키텍처
+API Data → TypeScript Interface → UI 직접 사용
+
+// ❌ 기존 복잡한 아키텍처 (제거됨)
+API Data → FieldMapper → UI
+```
+
+**장점**: 
+- 단순성: 복잡한 FieldMapper 제거
+- 타입 안전성: TypeScript 네이티브 지원
+- 유지보수성: 인터페이스 기반 모듈화
+- 성능: 중간 변환 레이어 제거
 
 ---
 
@@ -210,24 +223,25 @@ PORT=3000
 4. **제네릭 활용**: 재사용 가능한 타입 안전 코드
 
 #### **🎯 프로젝트 특수 사항**
-- **우리 프로젝트는 예외 없음**: 새 프로젝트 + 명확한 도메인
-- **FieldMapper와 연계**: 타입 안전한 필드 접근 필수
+- **새 인터페이스 시스템**: video-types.js, channel-types.js 기반
+- **타입 안전성**: TypeScript 네이티브 인터페이스 활용
 - **API 응답 타입 정의**: 백엔드 응답 구조 명시적 타입화
-- **직접 FieldMapper 사용**: 중간 변환층 없이 UI에서 바로 FieldMapper 호출
+- **직접 필드 접근**: 중간 변환층 없이 UI에서 바로 필드 접근
 
 #### **💡 아키텍처 원칙**
 ```typescript
-// ✅ 권장: 단일 레이어 아키텍처
-API Data → FieldMapper → UI 직접 사용
+// ✅ 새로운 단순한 아키텍처
+API Data → TypeScript Interface → UI 직접 사용
 
-// ❌ 금지: 다중 레이어 아키텍처  
-API Data → FieldMapper → LocalInterface → 직접 접근 → UI
+// ❌ 기존 복잡한 아키텍처 (제거됨)
+API Data → FieldMapper → UI
 ```
 
 **이유**: 
-- 일관성 유지 (모든 필드 접근이 FieldMapper를 통함)
-- 유지보수성 향상 (필드명 변경 시 FieldMapper만 수정)
+- 단순성: 복잡한 중간 레이어 제거
+- 유지보수성 향상 (인터페이스 기반 모듈화)
 - 타입 안전성 보장 (컴파일 타임 체크)
+- 성능: 런타임 변환 오버헤드 제거
 
 ### 2. TypeScript 컴파일러 설정
 ```json
@@ -354,5 +368,5 @@ curl http://localhost:3000/api/config/health
 - **메모리 부족**: 대용량 파일 스트림 처리 확인
 
 ---
-**Last Updated**: 2025-09-10 (FieldMapper 표준화 + 운영 가이드 완료)
+**Last Updated**: 2025-09-11 (FieldMapper 제거 + 새 인터페이스 시스템 도입)
 **Maintainer**: JUNSOOCHO

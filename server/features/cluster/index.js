@@ -9,7 +9,7 @@ const TagExtractor = require('./TagExtractor');
 const SimilarityCalculator = require('./SimilarityCalculator');
 
 // 모델들
-const ChannelModel = require('./ChannelModel');
+const ChannelAnalysisService = require('./ChannelAnalysisService');
 const ClusterModel = require('./ClusterModel');
 
 // 라우터
@@ -54,7 +54,7 @@ module.exports = {
   ClusterManager,
   TagExtractor,
   SimilarityCalculator,
-  ChannelModel,
+  ChannelAnalysisService,
   ClusterModel,
   clusterRoutes,
   initializeClusterSystem,

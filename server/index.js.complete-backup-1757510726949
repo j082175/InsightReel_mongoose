@@ -15,7 +15,7 @@ const config = getConfig(); // 여기서 검증 실행
 // DatabaseManager는 다른 API에서 사용되므로 일단 유지
 const DatabaseManager = require('./config/database');
 // 간단한 채널 분석에서는 직접 사용하지 않지만 다른 API에서 필요
-const Video = require('./models/Video');
+const Video = require('./models/VideoModel');
 const VideoUrl = require('./models/VideoUrl');
 
 const VideoProcessor = require('./services/VideoProcessor');
@@ -1214,7 +1214,7 @@ app.get('/api/videos', async (req, res) => {
 // 📊 채널 목록 조회 API (MongoDB + JSON 하이브리드)
 app.get('/api/channels', async (req, res) => {
   try {
-    const ChannelModel = require('./features/cluster/ChannelModel');
+    const ChannelAnalysisService = require('./features/cluster/ChannelAnalysisService');
     
     const limit = parseInt(req.query.limit) || 20;
     const sortBy = req.query.sortBy || 'subscribers'; // subscribers, totalViews, lastAnalyzedAt
@@ -1242,8 +1242,8 @@ app.get('/api/channels', async (req, res) => {
       filters.tags = [search]; // 태그 검색
     }
     
-    // ChannelModel을 통해 검색
-    const channels = await ChannelModel.search(filters);
+    // ChannelAnalysisService을 통해 검색
+    const channels = await ChannelAnalysisService.search(filters);
     
     // 응답 데이터 구성
     const responseData = {
@@ -1274,12 +1274,12 @@ app.get('/api/channels', async (req, res) => {
 // 📊 특정 채널 조회 API
 app.get('/api/channels/:channelId', async (req, res) => {
   try {
-    const ChannelModel = require('./features/cluster/ChannelModel');
+    const ChannelAnalysisService = require('./features/cluster/ChannelAnalysisService');
     const channelId = req.params.channelId;
     
     ServerLogger.info(`📡 특정 채널 조회 요청: ${channelId}`, 'DEBUG');
     
-    const channel = await ChannelModel.findById(channelId);
+    const channel = await ChannelAnalysisService.findById(channelId);
     
     if (!channel) {
       return ResponseHandler.notFound(res, '채널을 찾을 수 없습니다');
@@ -1299,7 +1299,7 @@ app.get('/api/channels/:channelId', async (req, res) => {
 // 📊 채널 통계 조회 API
 app.get('/api/channels/stats/overview', async (req, res) => {
   try {
-    const ChannelModel = require('./features/cluster/ChannelModel');
+    const ChannelAnalysisService = require('./features/cluster/ChannelAnalysisService');
     
     ServerLogger.info(`📡 채널 통계 조회 요청`, 'DEBUG');
     
@@ -1309,10 +1309,10 @@ app.get('/api/channels/stats/overview', async (req, res) => {
       platformStats,
       keywordStats
     ] = await Promise.all([
-      ChannelModel.getTotalCount(),
-      ChannelModel.getUnclusteredCount(),
-      ChannelModel.getPlatformStatistics(),
-      ChannelModel.getKeywordStatistics()
+      ChannelAnalysisService.getTotalCount(),
+      ChannelAnalysisService.getUnclusteredCount(),
+      ChannelAnalysisService.getPlatformStatistics(),
+      ChannelAnalysisService.getKeywordStatistics()
     ]);
     
     const statsData = {
