@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Video } from '../types';
-import { FieldMapper } from '../types/field-mapper';
 
 interface VideoModalProps {
   video: Video | null;
@@ -9,20 +8,6 @@ interface VideoModalProps {
 
 const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
   const [isAnimating, setIsAnimating] = useState(false);
-  
-  // 🐛 VideoModal 데이터 디버깅
-  if (video) {
-    console.log('🎬 VideoModal 받은 데이터:', {
-      title: FieldMapper.getTypedField<string>(video, 'TITLE'),
-      uploadDate: FieldMapper.getTypedField<string>(video, 'UPLOAD_DATE'),
-      timestamp: FieldMapper.getTypedField<string>(video, 'TIMESTAMP'),
-      createdAt: FieldMapper.getTypedField<string>(video, 'CREATED_AT'),
-      archivedAt: FieldMapper.getTypedField<string>(video, 'ARCHIVED_AT'),
-      keywords: FieldMapper.getTypedField<string[]>(video, 'KEYWORDS'),
-      keywordsType: typeof FieldMapper.getTypedField<string[]>(video, 'KEYWORDS'),
-      rawVideo: video
-    });
-  }
 
   const handleClose = useCallback(() => {
     setIsAnimating(false);
@@ -58,69 +43,71 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
 
   const formatViews = (num: number) => {
     if (num >= 10000) return (num / 10000).toFixed(0) + '만';
+    if (num >= 1000) return (num / 1000).toFixed(1) + '천';
     return num.toLocaleString();
   };
 
-  const getYouTubeEmbedUrl = (url: string) => {
-    // YouTube URL에서 video ID 추출
-    const videoId = extractYouTubeVideoId(url);
-    return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('ko-KR', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch {
+      return dateString;
+    }
   };
 
-  const extractYouTubeVideoId = (url: string) => {
-    const patterns = [
-      /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([^&\n?#]+)/,
-      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([^&\n?#]+)/
-    ];
-    
-    for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match) return match[1];
-    }
-    
-    return '';
+  const getYouTubeEmbedUrl = (url: string) => {
+    if (!url) return '';
+    const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/);
+    return videoId ? `https://www.youtube.com/embed/${videoId[1]}` : '';
   };
 
   return (
     <div 
-      className={`fixed inset-0 z-[100] flex items-center justify-center p-4 transition-opacity duration-200 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ${
         isAnimating ? 'bg-black bg-opacity-75' : 'bg-black bg-opacity-0'
       }`}
       onClick={handleClose}
     >
       <div 
-        className={`bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto transition-all duration-200 ease-in-out ${
+        className={`bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden transition-all duration-200 ease-in-out ${
           isAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 모달 헤더 */}
-        <div className="flex justify-between items-start p-6 border-b">
-          <div className="flex-1 pr-4">
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
-              {FieldMapper.getTypedField<string>(video, 'TITLE') || ''}
-            </h2>
-            <div className="flex items-center gap-3">
-              <img 
-                src={FieldMapper.getTypedField<string>(video, 'CHANNEL_AVATAR_URL') || ''} 
-                alt={FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || ''}
-                className="w-8 h-8 rounded-full"
-              />
-              <span className="text-sm text-gray-600">{FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || ''}</span>
-              <span className={`px-2 py-1 rounded-full text-xs ${
-                FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'YouTube' ? 'bg-red-100 text-red-700' :
-                FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'TikTok' ? 'bg-pink-100 text-pink-700' :
+        {/* 헤더 */}
+        <div className="flex items-center justify-between p-6 border-b">
+          <div className="flex items-center space-x-3">
+            <img 
+              src={video.channelAvatarUrl || video.channelAvatar || ''} 
+              alt={video.channelName || ''}
+              className="w-10 h-10 rounded-full"
+            />
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900 line-clamp-1">
+                {video.title || ''}
+              </h2>
+              <span className="text-sm text-gray-600">{video.channelName || ''}</span>
+              <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
+                video.platform === 'YOUTUBE' ? 'bg-red-100 text-red-700' :
+                video.platform === 'TIKTOK' ? 'bg-pink-100 text-pink-700' :
                 'bg-purple-100 text-purple-700'
               }`}>
-                {FieldMapper.getTypedField<string>(video, 'PLATFORM')}
+                {video.platform}
               </span>
-              {FieldMapper.getTypedField<boolean>(video, 'IS_TRENDING') && (
-                <span className="px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-700">
-                  🔥 인기
+              {video.isTrending && (
+                <span className="ml-2 px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
+                  🔥 인기급상승
                 </span>
               )}
             </div>
           </div>
+          
           <button 
             onClick={handleClose}
             className="text-gray-400 hover:text-gray-600 text-2xl font-light"
@@ -129,222 +116,163 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
           </button>
         </div>
 
-        {/* 모달 본문 */}
-        <div className="p-6">
+        {/* 콘텐츠 */}
+        <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* 영상/썸네일 영역 */}
+            {/* 영상/이미지 영역 */}
             <div className="space-y-4">
-              {FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'YouTube' ? (
-                /* 유튜브 영상 iframe */
-                <div className={`relative overflow-hidden rounded-lg shadow-sm ${
-                  FieldMapper.getTypedField<string>(video, 'ASPECT_RATIO') === '16:9' 
+              {video.platform === 'YOUTUBE' ? (
+                <div className={`relative bg-black rounded-lg overflow-hidden ${
+                  video.aspectRatio === '16:9' 
                     ? 'aspect-video' /* 16:9 롱폼 */
-                    : 'aspect-[9/16] max-w-xs mx-auto' /* 9:16 숏폼 */
+                    : 'aspect-[9/16] max-w-sm mx-auto' /* 9:16 숏폼 */
                 }`}>
                   <iframe
-                    src={getYouTubeEmbedUrl(FieldMapper.getTypedField<string>(video, 'URL') || '')}
-                    title={FieldMapper.getTypedField<string>(video, 'TITLE') || ''}
-                    className="absolute inset-0 w-full h-full"
+                    src={getYouTubeEmbedUrl(video.url || '')}
+                    title={video.title || ''}
+                    className="w-full h-full"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   />
                 </div>
               ) : (
-                /* 다른 플랫폼은 썸네일 + 링크 */
-                <div className="relative">
+                <div className="space-y-4">
                   <img 
-                    src={FieldMapper.getTypedField<string>(video, 'THUMBNAIL_URL') || ''} 
-                    alt={FieldMapper.getTypedField<string>(video, 'TITLE') || ''}
-                    className="w-full rounded-lg shadow-sm"
+                    src={video.thumbnailUrl || video.thumbnail || ''} 
+                    alt={video.title || ''}
+                    className="w-full rounded-lg"
                   />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <a
-                      href={FieldMapper.getTypedField<string>(video, 'URL') || ''}
-                      target="_blank"
+                  <div className="text-center">
+                    <a 
+                      href={video.url || ''}
+                      target="_blank" 
                       rel="noopener noreferrer"
-                      className="bg-black bg-opacity-75 text-white p-3 rounded-full hover:bg-opacity-90 transition-opacity"
+                      className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700 transition-colors"
                     >
-                      <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                       </svg>
+                      원본 링크 보기
                     </a>
                   </div>
                 </div>
               )}
-              
-              {/* 액션 버튼들 */}
-              <div className="flex flex-wrap gap-2">
-                <a
-                  href={FieldMapper.getTypedField<string>(video, 'URL') || ''}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                  원본 보기
-                </a>
-                <button className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                  </svg>
-                  아카이브에 저장
-                </button>
-                <button className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700 transition-colors">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-                  </svg>
-                  공유
-                </button>
-              </div>
+
+              <a 
+                href={video.url || ''}
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="block w-full text-center px-4 py-2 bg-gray-100 text-gray-700 text-sm rounded-md hover:bg-gray-200 transition-colors"
+              >
+                원본 링크에서 보기 →
+              </a>
             </div>
 
             {/* 정보 영역 */}
             <div className="space-y-6">
-              {/* 기본 정보 */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">영상 정보</h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">조회수</span>
-                    <span className="text-sm font-medium">{formatViews(FieldMapper.getTypedField<number>(video, 'VIEWS') || 0)}</span>
+              {/* 기본 통계 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="text-xs text-gray-500 mb-1">조회수</div>
+                  <div className="flex items-center">
+                    <svg className="w-4 h-4 text-gray-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                      <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd"/>
+                    </svg>
+                    <span className="text-sm font-medium">{formatViews(video.views || video.viewCount || 0)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">업로드</span>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="text-xs text-gray-500 mb-1">업로드</div>
+                  <div className="flex items-center">
+                    <svg className="w-4 h-4 text-gray-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"/>
+                    </svg>
                     <span className="text-sm font-medium">
-                      {(() => {
-                        const uploadDate = FieldMapper.getTypedField<string>(video, 'UPLOAD_DATE');
-                        if (uploadDate) {
-                          // 한국어 날짜 형식 처리
-                          if (uploadDate.includes('오전') || uploadDate.includes('오후')) {
-                            // '2025. 9. 9. 오전 5:37:21' 형식을 '2025-09-09' 형식으로 변환
-                            const match = uploadDate.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
-                            if (match) {
-                              const [, year, month, day] = match;
-                              return `${year}. ${month.padStart(2, '0')}. ${day.padStart(2, '0')}.`;
-                            }
-                          }
-                          try {
-                            const date = new Date(uploadDate);
-                            if (!isNaN(date.getTime())) {
-                              return date.toLocaleDateString('ko-KR');
-                            }
-                          } catch {}
-                          return uploadDate; // 원본 문자열 반환
-                        }
-                        const daysAgo = FieldMapper.getTypedField<number>(video, 'DAYS_AGO');
-                        return daysAgo === 0 ? '오늘' : `${daysAgo}일 전`;
-                      })()}
+                      {video.uploadDate ? formatDate(video.uploadDate) : 
+                       video.daysAgo !== undefined ? `${video.daysAgo}일 전` : '날짜 없음'}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">비율</span>
-                    <span className="text-sm font-medium">{FieldMapper.getTypedField<string>(video, 'ASPECT_RATIO')}</span>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="text-xs text-gray-500 mb-1">화면비</div>
+                  <div className="flex items-center">
+                    <svg className="w-4 h-4 text-gray-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v8a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 4a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clipRule="evenodd"/>
+                    </svg>
+                    <span className="text-sm font-medium">{video.aspectRatio || '16:9'}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">수집일</span>
+                </div>
+                
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="text-xs text-gray-500 mb-1">수집일</div>
+                  <div className="flex items-center">
+                    <svg className="w-4 h-4 text-gray-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd"/>
+                    </svg>
                     <span className="text-sm font-medium">
-                      {(() => {
-                        const archivedAt = FieldMapper.getTypedField<string>(video, 'ARCHIVED_AT');
-                        if (archivedAt) {
-                          // 한국어 날짜 형식 처리
-                          if (archivedAt.includes('오전') || archivedAt.includes('오후')) {
-                            // '2025. 9. 9. 오전 5:37:21' 형식을 '2025. 09. 09.' 형식으로 변환
-                            const match = archivedAt.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
-                            if (match) {
-                              const [, year, month, day] = match;
-                              return `${year}. ${month.padStart(2, '0')}. ${day.padStart(2, '0')}.`;
-                            }
-                          }
-                          try {
-                            const date = new Date(archivedAt);
-                            if (!isNaN(date.getTime())) {
-                              return date.toLocaleDateString('ko-KR');
-                            }
-                          } catch {}
-                          return archivedAt; // 원본 문자열 반환
-                        }
-                        return '정보 없음';
-                      })()}
+                      {video.archivedAt ? formatDate(video.archivedAt) :
+                       video.collectionTime ? formatDate(video.collectionTime) :
+                       video.createdAt ? formatDate(video.createdAt) : '날짜 없음'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* 키워드 */}
+              {/* 키워드/태그 */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">키워드</h3>
+                <h4 className="text-sm font-medium text-gray-900 mb-3">키워드</h4>
                 <div className="flex flex-wrap gap-2">
-                  {Array.isArray(FieldMapper.getTypedField<string[]>(video, 'KEYWORDS')) 
-                    ? FieldMapper.getTypedField<string[]>(video, 'KEYWORDS')!.map((keyword, index) => (
-                      <span 
-                        key={index}
-                        className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full"
-                      >
-                        #{keyword}
-                      </span>
-                    ))
-                    : (
-                      <span className="text-gray-500 text-sm">키워드가 없습니다</span>
-                    )}
+                  {Array.isArray(video.keywords) 
+                    ? video.keywords.map((keyword, index) => (
+                        <span key={index} className="px-3 py-1 bg-indigo-100 text-indigo-700 text-sm rounded-full">
+                          #{keyword}
+                        </span>
+                      ))
+                    : video.keywords && (
+                        <span className="px-3 py-1 bg-indigo-100 text-indigo-700 text-sm rounded-full">
+                          #{video.keywords}
+                        </span>
+                      )
+                  }
                 </div>
               </div>
 
               {/* AI 분석 결과 */}
-              {FieldMapper.getTypedField<any>(video, 'ANALYSIS_RESULT') && (
+              {video.analysisResult && (
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">AI 분석</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">AI 분석</h4>
+                  <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">카테고리</span>
-                      <span className="text-sm font-medium">{FieldMapper.getTypedField<any>(video, 'ANALYSIS_RESULT')?.category}</span>
+                      <span className="text-xs text-gray-500">카테고리</span>
+                      <span className="text-sm font-medium">{video.analysisResult.category}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">신뢰도</span>
-                      <span className="text-sm font-medium">{Math.round((FieldMapper.getTypedField<any>(video, 'ANALYSIS_RESULT')?.confidence || 0) * 100)}%</span>
+                      <span className="text-xs text-gray-500">신뢰도</span>
+                      <span className="text-sm font-medium">{Math.round(video.analysisResult.confidence * 100)}%</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">감정</span>
-                      <span className={`text-sm font-medium capitalize ${
-                        FieldMapper.getTypedField<any>(video, 'ANALYSIS_RESULT')?.sentiment === 'positive' ? 'text-green-600' :
-                        FieldMapper.getTypedField<any>(video, 'ANALYSIS_RESULT')?.sentiment === 'negative' ? 'text-red-600' :
+                      <span className="text-xs text-gray-500">감정</span>
+                      <span className={`text-sm font-medium ${
+                        video.analysisResult.sentiment === 'positive' ? 'text-green-600' :
+                        video.analysisResult.sentiment === 'negative' ? 'text-red-600' :
                         'text-gray-600'
                       }`}>
-                        {FieldMapper.getTypedField<any>(video, 'ANALYSIS_RESULT')?.sentiment || '중립'}
+                        {video.analysisResult.sentiment || '중립'}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">처리 시간</span>
-                      <span className="text-sm font-medium">{FieldMapper.getTypedField<any>(video, 'ANALYSIS_RESULT')?.processingTime}ms</span>
+                      <span className="text-xs text-gray-500">처리시간</span>
+                      <span className="text-sm font-medium">{video.analysisResult.processingTime}ms</span>
                     </div>
                   </div>
                 </div>
               )}
-
-              {/* 관련 영상 섹션 */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">유사한 영상</h3>
-                <div className="text-sm text-gray-500">
-                  동일한 채널의 다른 영상들을 여기에 표시할 예정입니다.
-                </div>
-              </div>
             </div>
           </div>
-        </div>
-
-        {/* 모달 푸터 */}
-        <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
-          <button 
-            onClick={handleClose}
-            className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
-          >
-            닫기
-          </button>
-          <button className="px-4 py-2 text-sm text-white bg-red-600 rounded hover:bg-red-700 transition-colors">
-            삭제
-          </button>
         </div>
       </div>
     </div>

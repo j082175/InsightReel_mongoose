@@ -98,30 +98,39 @@ const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ isModal = false }) => {
         console.error('❌ API 키 추가 실패:', response.message);
         alert(`API 키 추가 실패: ${response.message}`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('API 키 추가 실패:', error);
       
       // 서버에서 온 에러 메시지 추출
       let errorMessage = 'API 키 추가 중 오류가 발생했습니다.';
       
-      if (error.response?.status === 400) {
-        // 400 에러 - 클라이언트 입력 오류
-        if (error.response.data?.message) {
-          if (error.response.data.message.includes('유효하지 않은')) {
-            errorMessage = '⚠️ 유효하지 않은 YouTube API 키 형식입니다.\n\n올바른 형식:\n• AIza로 시작하는 39자리 문자열\n• 예: AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
-          } else {
-            errorMessage = `⚠️ ${error.response.data.message}`;
+      // JSON 직렬화를 통한 안전한 에러 정보 추출
+      try {
+        const errorString = JSON.stringify(error);
+        const errorData = JSON.parse(errorString);
+        
+        // HTTP 에러 응답 처리
+        if (errorData.response && typeof errorData.response === 'object') {
+          const status = errorData.response.status;
+          const data = errorData.response.data;
+          
+          if (status === 400 && data && typeof data.message === 'string') {
+            if (data.message.includes('유효하지 않은')) {
+              errorMessage = '⚠️ 유효하지 않은 YouTube API 키 형식입니다.\n\n올바른 형식:\n• AIza로 시작하는 39자리 문자열\n• 예: AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+            } else {
+              errorMessage = `⚠️ ${data.message}`;
+            }
+          } else if (status === 400) {
+            errorMessage = '⚠️ 입력값이 올바르지 않습니다. 키 이름과 API 키를 모두 입력해주세요.';
+          } else if (status === 500 && data && typeof data.message === 'string') {
+            errorMessage = data.message;
           }
-        } else {
-          errorMessage = '⚠️ 입력값이 올바르지 않습니다. 키 이름과 API 키를 모두 입력해주세요.';
-        }
-      } else if (error.response?.status === 500) {
-        // 서버 에러에서 구체적인 메시지 추출
-        if (error.response.data?.message) {
-          errorMessage = error.response.data.message;
-        } else if (error.message.includes('유효하지 않은')) {
+        } else if (typeof errorData.message === 'string' && errorData.message.includes('유효하지 않은')) {
           errorMessage = '⚠️ 유효하지 않은 YouTube API 키 형식입니다.\n\n올바른 형식:\n• AIza로 시작하는 39자리 문자열\n• 예: AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
         }
+      } catch {
+        // JSON 직렬화 실패 시 기본 메시지 사용
+        console.log('에러 정보 파싱 실패, 기본 메시지 사용');
       }
       
       alert(errorMessage);
@@ -129,11 +138,14 @@ const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ isModal = false }) => {
   };
 
   const toggleKeyStatus = async (keyId: string) => {
-    setApiKeys(prev => prev.map(key => 
-      key.id === keyId 
-        ? { ...key, status: key.status === 'disabled' ? 'active' : 'disabled' as any }
-        : key
-    ));
+    setApiKeys(prev => prev.map(key => {
+      if (key.id === keyId) {
+        const newStatus: 'active' | 'warning' | 'error' | 'disabled' = 
+          key.status === 'disabled' ? 'active' : 'disabled';
+        return { ...key, status: newStatus };
+      }
+      return key;
+    }));
   };
 
   const deleteKey = async (keyId: string) => {

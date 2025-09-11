@@ -13,8 +13,53 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-  const updateSetting = (category: string, key: string, value: any) => {
-    updateSettings(category as any, key, value);
+  const updateSetting = (category: keyof typeof settings, key: string, value: unknown) => {
+    // 타입별로 안전하게 값을 검증하고 업데이트
+    switch (category) {
+      case 'general':
+        if (key === 'darkMode' && typeof value === 'boolean') {
+          updateSettings('general', 'darkMode', value);
+        } else if (key === 'notifications' && typeof value === 'boolean') {
+          updateSettings('general', 'notifications', value);
+        } else if (key === 'dashboardLayout' && (value === 'cards' || value === 'list' || value === 'grid')) {
+          updateSettings('general', 'dashboardLayout', value);
+        }
+        break;
+      
+      case 'analysis':
+        if (key === 'aiModel' && (value === 'flash-lite' || value === 'flash' || value === 'pro')) {
+          updateSettings('analysis', 'aiModel', value);
+        } else if (key === 'autoAnalysis' && typeof value === 'boolean') {
+          updateSettings('analysis', 'autoAnalysis', value);
+        } else if (key === 'analysisInterval' && (value === 'realtime' || value === 'hourly' || value === 'daily' || value === 'weekly')) {
+          updateSettings('analysis', 'analysisInterval', value);
+        } else if (key === 'defaultCategory' && typeof value === 'string') {
+          updateSettings('analysis', 'defaultCategory', value);
+        }
+        break;
+      
+      case 'data':
+        if (key === 'savePath' && typeof value === 'string') {
+          updateSettings('data', 'savePath', value);
+        } else if (key === 'autoBackup' && typeof value === 'boolean') {
+          updateSettings('data', 'autoBackup', value);
+        } else if (key === 'backupInterval' && (value === 'daily' || value === 'weekly' || value === 'monthly')) {
+          updateSettings('data', 'backupInterval', value);
+        } else if (key === 'dataRetention' && typeof value === 'string') {
+          updateSettings('data', 'dataRetention', value);
+        }
+        break;
+      
+      case 'account':
+        if (key === 'username' && typeof value === 'string') {
+          updateSettings('account', 'username', value);
+        } else if (key === 'email' && typeof value === 'string') {
+          updateSettings('account', 'email', value);
+        } else if (key === 'apiKeyVisible' && typeof value === 'boolean') {
+          updateSettings('account', 'apiKeyVisible', value);
+        }
+        break;
+    }
   };
 
   const tabs = [

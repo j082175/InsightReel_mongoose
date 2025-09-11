@@ -6,12 +6,18 @@ interface HeaderProps {
   onNavigate: (page: string) => void;
 }
 
+interface NavigationItem {
+  id: string;
+  name: string;
+  children?: NavigationItem[];
+}
+
 const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
   const [isProfileOpen, setProfileOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
 
-  const navStructure = [
+  const navStructure: NavigationItem[] = [
     { id: 'dashboard', name: '대시보드' },
     {
       id: 'management', name: '관리', children: [
@@ -27,8 +33,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
     }
   ];
 
-  const NavItem: React.FC<{ item: any }> = ({ item }) => {
-    const isActive = item.id === currentPage || (item.children && item.children.some((child: any) => child.id === currentPage));
+  const NavItem: React.FC<{ item: NavigationItem }> = ({ item }) => {
+    const isActive = item.id === currentPage || (item.children && item.children.some((child: NavigationItem) => child.id === currentPage));
 
     if (item.children) {
       return (
@@ -43,7 +49,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
           </button>
           {openDropdown === item.id && (
             <div className="origin-top-right absolute right-0 top-full pt-1 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-30">
-              {item.children.map((child: any) => (
+              {item.children.map((child: NavigationItem) => (
                 <button 
                   key={child.id} 
                   onClick={() => onNavigate(child.id)} 

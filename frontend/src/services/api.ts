@@ -10,16 +10,15 @@ import {
   ApiKeyCreateResult,
   ApiKeyDeleteResult
 } from '../types';
-import { FieldMapper } from '../types/field-mapper';
 
 class APIClient {
   private client: AxiosInstance;
-  private readonly baseURL = FieldMapper.getString('BASE_URL');
+  private readonly baseURL = 'http://localhost:3000';
 
   constructor() {
     this.client = axios.create({
       baseURL: this.baseURL,
-      timeout: FieldMapper.getNumber('API_TIMEOUT'),
+      timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -53,7 +52,7 @@ class APIClient {
   // 재시도 로직이 포함된 요청 함수
   private async requestWithRetry<T>(
     config: AxiosRequestConfig,
-    retries: number = FieldMapper.getNumber('API_RETRY_COUNT')
+    retries: number = 3
   ): Promise<T> {
     try {
       const response = await this.client.request<T>(config);
@@ -61,7 +60,7 @@ class APIClient {
     } catch (error) {
       if (retries > 0) {
         console.warn(`⏳ API 요청 재시도 중... (남은 시도: ${retries})`);
-        await new Promise(resolve => setTimeout(resolve, FieldMapper.getNumber('API_RETRY_DELAY')));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         return this.requestWithRetry<T>(config, retries - 1);
       }
       throw error;
@@ -84,10 +83,10 @@ class APIClient {
     search?: string;
   }): Promise<APIResponse<Video[]>> {
     const mappedParams = params ? {
-      [FieldMapper.get('PAGE')]: params.page,
-      [FieldMapper.get('LIMIT')]: params.limit,
-      [FieldMapper.get('PLATFORM')]: params.platform,
-      [FieldMapper.get('SEARCH')]: params.search,
+      page: params.page,
+      limit: params.limit,
+      platform: params.platform,
+      search: params.search,
     } : undefined;
     
     return this.requestWithRetry({
@@ -143,8 +142,8 @@ class APIClient {
       url: '/api/api-keys',
       method: 'POST',
       data: { 
-        [FieldMapper.get('NAME')]: name, 
-        [FieldMapper.get('API_KEY')]: apiKey 
+        name: name, 
+        apiKey: apiKey 
       },
     });
   }

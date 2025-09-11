@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Video } from '../types';
-import { FieldMapper } from '../types/field-mapper';
 
 interface VideoOnlyModalProps {
   video: Video | null;
@@ -72,7 +71,7 @@ const VideoOnlyModal: React.FC<VideoOnlyModalProps> = ({ video, onClose }) => {
         className={`relative transition-all duration-200 ease-in-out ${
           isAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
         } ${
-          FieldMapper.getTypedField<string>(video, 'ASPECT_RATIO') === '16:9' 
+          video.aspectRatio === '16:9' 
             ? 'w-full max-w-4xl aspect-video' /* 16:9 롱폼 */
             : 'w-full max-w-sm aspect-[9/16]' /* 9:16 숏폼 */
         }`}
@@ -89,8 +88,8 @@ const VideoOnlyModal: React.FC<VideoOnlyModalProps> = ({ video, onClose }) => {
         {/* YouTube 영상 iframe */}
         <div className="w-full h-full rounded-lg overflow-hidden shadow-2xl">
           <iframe
-            src={getYouTubeEmbedUrl(FieldMapper.getTypedField<string>(video, 'URL') || '')}
-            title={FieldMapper.getTypedField<string>(video, 'TITLE') || ''}
+            src={getYouTubeEmbedUrl(video.url || '')}
+            title={video.title || ''}
             className="w-full h-full"
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -101,10 +100,10 @@ const VideoOnlyModal: React.FC<VideoOnlyModalProps> = ({ video, onClose }) => {
         {/* 영상 제목 (하단) */}
         <div className="absolute -bottom-16 left-0 right-0 text-center">
           <h3 className="text-white text-lg font-medium truncate px-4">
-            {FieldMapper.getTypedField<string>(video, 'TITLE') || ''}
+            {video.title || ''}
           </h3>
           <p className="text-gray-300 text-sm mt-1">
-            {FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || ''} • {FieldMapper.getTypedField<string>(video, 'PLATFORM')}
+            {video.channelName || ''} • {video.platform}
           </p>
         </div>
       </div>

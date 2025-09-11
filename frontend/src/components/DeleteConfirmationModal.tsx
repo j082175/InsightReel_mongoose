@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Video } from '../types';
-import { FieldMapper } from '../types/field-mapper';
 
 interface DeleteConfirmationModalProps {
   itemToDelete: {
@@ -53,7 +52,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
   
   const message = isBulkDelete
     ? `선택한 ${itemToDelete.count}개의 영상을 삭제하시겠습니까?`
-    : `"${FieldMapper.getTypedField<string>(itemToDelete.data, 'TITLE') || ''}"을(를) 삭제하시겠습니까?`;
+    : `"${itemToDelete.data?.title || ''}"을(를) 삭제하시겠습니까?`;
 
   return (
     <div 

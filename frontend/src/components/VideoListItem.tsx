@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Video } from '../types';
-import { FieldMapper } from '../types/field-mapper';
 
 interface VideoListItemProps {
   video: Video;
@@ -8,7 +7,7 @@ interface VideoListItemProps {
   onDeleteClick: (item: { type: 'single'; data: Video }) => void;
   isSelectMode: boolean;
   isSelected: boolean;
-  onSelectToggle: (videoId: number) => void;
+  onSelectToggle: (videoId: string | number) => void;
 }
 
 const VideoListItem: React.FC<VideoListItemProps> = ({
@@ -23,12 +22,13 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
 
   const formatViews = (num: number) => {
     if (num >= 10000) return (num / 10000).toFixed(0) + '만';
+    if (num >= 1000) return (num / 1000).toFixed(1) + '천';
     return num.toLocaleString();
   };
 
   const handleClick = (_e: React.MouseEvent) => {
     if (isSelectMode) {
-      onSelectToggle(FieldMapper.getTypedField<number>(video, 'ID') || 0);
+      onSelectToggle(video.id || 0);
     } else {
       onCardClick(video);
     }
@@ -59,7 +59,7 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
             <input
               type="checkbox"
               checked={isSelected}
-              onChange={() => onSelectToggle(FieldMapper.getTypedField<number>(video, 'ID') || 0)}
+              onChange={() => onSelectToggle(video.id || 0)}
               className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
               onClick={(e) => e.stopPropagation()}
             />
@@ -69,8 +69,8 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
         {/* 썸네일 */}
         <div className="flex-shrink-0">
           <img 
-            src={FieldMapper.getTypedField<string>(video, 'THUMBNAIL_URL') || ''} 
-            alt={FieldMapper.getTypedField<string>(video, 'TITLE') || ''}
+            src={video.thumbnailUrl || video.thumbnail || ''} 
+            alt={video.title || ''}
             className="w-32 h-20 object-cover rounded"
           />
         </div>
@@ -80,119 +80,59 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
           <div className="flex justify-between items-start">
             <div className="flex-1 min-w-0">
               <h3 className="text-sm font-medium text-gray-900 truncate mb-1">
-                {FieldMapper.getTypedField<string>(video, 'TITLE') || ''}
+                {video.title || ''}
               </h3>
               
               <div className="flex items-center gap-2 mb-2">
                 <img 
-                  src={FieldMapper.getTypedField<string>(video, 'CHANNEL_AVATAR_URL') || ''} 
-                  alt={FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || ''}
+                  src={video.channelAvatarUrl || video.channelAvatar || ''} 
+                  alt={video.channelName || ''}
                   className="w-4 h-4 rounded-full"
                 />
-                <span className="text-xs text-gray-600 truncate">{FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME') || ''}</span>
+                <span className="text-xs text-gray-600 truncate">{video.channelName || ''}</span>
               </div>
 
               <div className="flex items-center gap-4 text-xs text-gray-500">
-                <span>{formatViews(FieldMapper.getTypedField<number>(video, 'VIEWS') || 0)} 조회수</span>
-                <span>{FieldMapper.getTypedField<number>(video, 'DAYS_AGO') === 0 ? '오늘' : `${FieldMapper.getTypedField<number>(video, 'DAYS_AGO')}일 전`}</span>
+                <span>{formatViews(video.views || video.viewCount || 0)} 조회수</span>
+                <span>{video.daysAgo === 0 ? '오늘' : `${video.daysAgo}일 전`}</span>
                 <span className={`px-2 py-1 rounded-full ${
-                  FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'YouTube' ? 'bg-red-100 text-red-700' :
-                  FieldMapper.getTypedField<string>(video, 'PLATFORM') === 'TikTok' ? 'bg-pink-100 text-pink-700' :
+                  video.platform === 'YOUTUBE' ? 'bg-red-100 text-red-700' :
+                  video.platform === 'TIKTOK' ? 'bg-pink-100 text-pink-700' :
                   'bg-purple-100 text-purple-700'
                 }`}>
-                  {FieldMapper.getTypedField<string>(video, 'PLATFORM')}
+                  {video.platform}
                 </span>
-                {FieldMapper.getTypedField<boolean>(video, 'IS_TRENDING') && (
-                  <span className="px-2 py-1 rounded-full bg-orange-100 text-orange-700">
-                    🔥 인기
-                  </span>
-                )}
-              </div>
-
-              {/* 키워드 */}
-              <div className="mt-2 flex flex-wrap gap-1">
-                {(FieldMapper.getTypedField<string[]>(video, 'KEYWORDS') || []).slice(0, 3).map((keyword, index) => (
-                  <span 
-                    key={index}
-                    className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded"
-                  >
-                    #{keyword}
-                  </span>
-                ))}
-                {(FieldMapper.getTypedField<string[]>(video, 'KEYWORDS') || []).length > 3 && (
-                  <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
-                    +{(FieldMapper.getTypedField<string[]>(video, 'KEYWORDS') || []).length - 3}
-                  </span>
-                )}
               </div>
             </div>
 
-            {/* 액션 메뉴 */}
-            {!isSelectMode && (
-              <div className="relative flex-shrink-0">
-                <button
-                  onClick={handleMenuToggle}
-                  className="p-1 text-gray-400 hover:text-gray-600 rounded"
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                  </svg>
-                </button>
-
-                {menuOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-md shadow-lg border z-10">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onCardClick(video);
-                        setMenuOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      상세 보기
-                    </button>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.open(FieldMapper.getTypedField<string>(video, 'URL') || '', '_blank');
-                        setMenuOpen(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      원본 보기
-                    </button>
-                    <button 
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setMenuOpen(false);
-                      }}
-                    >
-                      아카이브에 저장
-                    </button>
-                    <div className="border-t">
-                      <button 
-                        onClick={handleDelete}
-                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                      >
-                        삭제
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+            {/* 메뉴 버튼 */}
+            <div className="relative">
+              <button 
+                onClick={handleMenuToggle}
+                className="p-1 rounded hover:bg-gray-100"
+              >
+                <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"></path>
+                </svg>
+              </button>
+              
+              {menuOpen && (
+                <div className="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg z-10 border">
+                  <button 
+                    onClick={handleDelete}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clipRule="evenodd"></path>
+                    </svg>
+                    삭제
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-
-      {/* 클릭시 외부 영역 닫기 */}
-      {menuOpen && (
-        <div 
-          className="fixed inset-0 z-5"
-          onClick={() => setMenuOpen(false)}
-        />
-      )}
     </div>
   );
 };

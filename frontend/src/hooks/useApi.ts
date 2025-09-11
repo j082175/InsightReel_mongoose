@@ -26,6 +26,81 @@ interface ChannelsResponse {
   meta?: ResponseMeta;
 }
 
+// 안전한 속성 접근 헬퍼
+const hasProperty = <T extends string>(obj: unknown, prop: T): obj is Record<T, unknown> => {
+  return typeof obj === 'object' && obj !== null && prop in obj;
+};
+
+// 타입 가드 함수들
+const isVideosResponse = (data: unknown): data is VideosResponse => {
+  if (!hasProperty(data, 'videos')) {
+    return false;
+  }
+  return Array.isArray(data.videos);
+};
+
+const isVideoArray = (data: unknown): data is Video[] => {
+  return Array.isArray(data) && (
+    data.length === 0 || 
+    (typeof data[0] === 'object' && data[0] !== null && 'id' in data[0])
+  );
+};
+
+const isChannelsResponse = (data: unknown): data is ChannelsResponse => {
+  if (!hasProperty(data, 'channels')) {
+    return false;
+  }
+  return Array.isArray(data.channels);
+};
+
+const isChannelArray = (data: unknown): data is Channel[] => {
+  return Array.isArray(data) && (
+    data.length === 0 || 
+    (typeof data[0] === 'object' && data[0] !== null && 'id' in data[0])
+  );
+};
+
+// API 응답 데이터 검증 및 파싱 헬퍼
+const parseVideosResponse = (response: { data?: unknown }): Video[] => {
+  if (!response || !response.data) {
+    return [];
+  }
+
+  const data = response.data;
+  
+  // VideosResponse 형태인지 확인
+  if (isVideosResponse(data)) {
+    return data.videos;
+  }
+
+  // 직접 Video 배열인지 확인
+  if (isVideoArray(data)) {
+    return data;
+  }
+
+  return [];
+};
+
+const parseChannelsResponse = (response: { data?: unknown }): Channel[] => {
+  if (!response || !response.data) {
+    return [];
+  }
+
+  const data = response.data;
+  
+  // ChannelsResponse 형태인지 확인
+  if (isChannelsResponse(data)) {
+    return data.channels;
+  }
+
+  // 직접 Channel 배열인지 확인
+  if (isChannelArray(data)) {
+    return data;
+  }
+
+  return [];
+};
+
 // 영상 목록 조회
 export const useVideos = () => {
   return useQuery({
@@ -35,21 +110,19 @@ export const useVideos = () => {
         const response = await apiClient.getVideos();
         console.log('🎬 Videos API 응답:', response);
         
-        // 백엔드 응답 구조: { data: { videos: [...], total: ..., platform_stats: {...} } }
-        const data = response?.data as unknown as VideosResponse;
-        const videos = data?.videos || (response?.data as unknown as Video[]) || [];
+        const videos = parseVideosResponse(response);
         console.log('📊 파싱된 영상 수:', videos.length);
-        console.log('🔍 첫 번째 영상 샘플:', videos[0]);
         
-        // 🐛 플랫폼 정보 디버깅
-        videos.forEach((video: any, index: number) => {
-          if (index < 3) { // 처음 3개만 로그
-            console.log(`🔍 영상 ${index + 1} 플랫폼 정보:`, {
-              title: video.title?.substring(0, 30) + '...',
-              platform: video.platform,
-              rawData: video
-            });
-          }
+        if (videos.length > 0) {
+          console.log('🔍 첫 번째 영상 샘플:', videos[0]);
+        }
+        
+        // 플랫폼 정보 디버깅 (처음 3개만)
+        videos.slice(0, 3).forEach((video, index) => {
+          console.log(`🔍 영상 ${index + 1} 플랫폼 정보:`, {
+            title: video.title?.substring(0, 30) + '...',
+            platform: video.platform,
+          });
         });
         
         return videos;
@@ -109,9 +182,8 @@ export const useChannels = () => {
       try {
         const response = await apiClient.getChannels();
         console.log('🔍 Channels API 응답:', response);
-        // 백엔드 응답 구조: { data: { channels: [...], meta: {...} } }
-        const data = response?.data as unknown as ChannelsResponse;
-        const channels = data?.channels || (response?.data as unknown as Channel[]) || [];
+        
+        const channels = parseChannelsResponse(response);
         console.log('📊 파싱된 채널 수:', channels.length);
         return channels;
       } catch (error) {

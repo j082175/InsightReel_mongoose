@@ -25,9 +25,16 @@ export interface Settings {
   };
 }
 
+// 카테고리별 설정 값 타입
+type SettingValue<T extends keyof Settings, K extends keyof Settings[T]> = Settings[T][K];
+
 interface SettingsContextType {
   settings: Settings;
-  updateSettings: (category: keyof Settings, key: string, value: any) => void;
+  updateSettings: <T extends keyof Settings, K extends keyof Settings[T]>(
+    category: T, 
+    key: K, 
+    value: SettingValue<T, K>
+  ) => void;
   saveSettings: () => Promise<void>;
   resetSettings: () => void;
 }
@@ -96,7 +103,11 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
     }
   }, [settings.general.darkMode]);
 
-  const updateSettings = (category: keyof Settings, key: string, value: any) => {
+  const updateSettings = <T extends keyof Settings, K extends keyof Settings[T]>(
+    category: T, 
+    key: K, 
+    value: SettingValue<T, K>
+  ) => {
     setSettings(prev => ({
       ...prev,
       [category]: {
