@@ -1,48 +1,76 @@
 # CLAUDE.md - InsightReel 프로젝트 가이드
 
-## 🚨 **CRITICAL: FieldMapper 표준화 필수 규칙**
+## 🚨 **CRITICAL: FieldMapper 사용 범위 및 표준화 규칙**
+
+### **🎯 FieldMapper 사용 범위 (ONLY)**
+**✅ FieldMapper 사용 대상:**
+- **비디오 데이터**: title, views, likes, uploadDate, duration 등
+- **채널 데이터**: channelName, subscribers, channelUrl 등  
+- **플랫폼별 메타데이터**: platform, videoId, thumbnailUrl 등
+
+**❌ FieldMapper 사용 금지 대상:**
+- **시스템/API 응답**: status, error, message, success 등
+- **표준 HTTP 필드**: timestamp, uptime, memory 등
+- **데이터베이스 시스템 필드**: _id, __v, createdAt, updatedAt 등
+- **일반 상수값**: 403, 404, 200, 5000 등
 
 ### **❗ 절대 규칙 (위반 시 시스템 오류 발생)**
-1. **항상 FieldMapper 사용할 것**: 모든 데이터베이스 필드 접근은 `FieldMapper.get('FIELD_NAME')` 사용 필수
-2. **레거시 호환성 하지 말 것**: `|| metadata.channelName` 같은 fallback 패턴 절대 사용 금지
-3. **절대 하드코딩 하지 말 것**: `channelName:`, `subscribers:`, `views:` 등 직접 필드명 사용 금지 (매직넘버도 포함됨)
+1. **비즈니스 데이터만 FieldMapper 사용**: 비디오/채널 데이터 필드만 `FieldMapper.get('FIELD_NAME')` 사용
+2. **시스템 필드는 직접 사용**: API 응답, 에러 처리는 표준 필드명 직접 사용
+3. **레거시 호환성 하지 말 것**: `|| metadata.channelName` 같은 fallback 패턴 절대 사용 금지
 4. **중간 인터페이스 금지**: LocalChannel, TransformedVideo 등 중간 변환 인터페이스 생성 금지
 
 ### **✅ 올바른 패턴:**
 
-**백엔드 (server/):**
+**✅ 올바른 사용 - 비즈니스 데이터:**
 ```javascript
-// ✅ 항상 이렇게
-[FieldMapper.get('CHANNEL_NAME')]: value
-metadata[FieldMapper.get('LIKES')] || 0
+// ✅ 비디오/채널 데이터: FieldMapper 사용
+const videoData = {
+  [FieldMapper.get('TITLE')]: title,
+  [FieldMapper.get('CHANNEL_NAME')]: channelName,
+  [FieldMapper.get('VIEWS')]: views,
+  [FieldMapper.get('LIKES')]: likes
+};
 
-// ❌ 절대 이렇게 하지 말 것
-channelName: value
-metadata[FieldMapper.get('LIKES')] || metadata.likes || 0
+// ✅ API 응답: 시스템 필드는 직접 사용
+const apiResponse = {
+  status: 'success',           // ❌ FieldMapper.get('STATUS') 금지
+  data: videoData,             // ✅ 비즈니스 데이터는 FieldMapper
+  timestamp: new Date(),       // ❌ FieldMapper.get('TIMESTAMP') 금지
+  error: null                  // ❌ FieldMapper.get('ERROR') 금지
+};
 ```
 
-**프론트엔드 (frontend/):**
+**❌ 잘못된 사용 패턴:**
+```javascript
+// ❌ 시스템 필드에 FieldMapper 사용 금지
+const response = {
+  [FieldMapper.get('STATUS')]: 'error',     // 시스템 필드
+  [FieldMapper.get('ERROR')]: error.message, // 시스템 필드
+  [FieldMapper.get('TIMESTAMP')]: new Date() // 시스템 필드
+};
+
+// ❌ 레거시 호환성 패턴 금지
+metadata[FieldMapper.get('LIKES')] || metadata.likes || 0
+
+// ❌ 직접 필드명 사용 금지 (비즈니스 데이터)
+const data = { channelName: name, views: count };
+```
+
+**프론트엔드 TypeScript:**
 ```typescript
-// ✅ 항상 이렇게 (TypeScript 타입 안전)
+// ✅ 비즈니스 데이터 (TypeScript 타입 안전)
 const channelName = FieldMapper.getTypedField<string>(video, 'CHANNEL_NAME');
 const views = FieldMapper.getTypedField<number>(video, 'VIEWS') || 0;
 
-// ✅ 객체 설정 시
-FieldMapper.setTypedField(videoData, 'TITLE', titleValue);
-
-// ✅ UI에서 직접 사용 (중간 변환 없이)
+// ✅ UI에서 직접 사용
 {FieldMapper.getTypedField<string>(channel, 'CHANNEL_NAME')}
 {FieldMapper.getTypedField<string>(video, 'PLATFORM')}
 
-// ❌ 절대 이렇게 하지 말 것
-video.channelName
-video.views || 0
-videoData.title = titleValue
-
-// ❌ 중간 인터페이스 생성 금지
-interface LocalChannel { name: string; platform: string; }
-const transformedChannel: LocalChannel = { name: ch.name, platform: ch.platform };
-transformedChannel.name // 이후 직접 접근
+// ✅ API 상태는 직접 접근
+if (response.status === 'success') {  // 시스템 필드
+  const data = response.data;         // 비즈니스 데이터
+}
 ```
 
 ### **🎉 표준화 완료 현황:**
