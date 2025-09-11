@@ -1,6 +1,7 @@
 const EventEmitter = require('events');
 const { ServerLogger } = require('../utils/logger');
 const ChannelAnalysisService = require('../features/cluster/ChannelAnalysisService');
+const DuplicateCheckManager = require('../models/DuplicateCheckManager');
 
 /**
  * 채널 분석 큐 시스템
@@ -134,6 +135,25 @@ class ChannelAnalysisQueue extends EventEmitter {
         ).toString('utf8');
         ServerLogger.info(`⚙️ 채널 분석 시작: ${safeChannelName} (${job.id})`);
         this.emit('jobStarted', job);
+
+        // 중복검사 DB에 processing 상태로 등록
+        try {
+            const decodedChannelIdentifier = decodeURIComponent(job.channelIdentifier);
+            const normalizedChannelId = decodedChannelIdentifier.startsWith('@') 
+                ? decodedChannelIdentifier 
+                : `@${decodedChannelIdentifier}`;
+                
+            await DuplicateCheckManager.registerChannel(
+                normalizedChannelId,
+                decodedChannelIdentifier,
+                'YOUTUBE',
+                { name: decodedChannelIdentifier, temp: true }
+            );
+            
+            ServerLogger.info(`📝 중복검사 DB 등록 (processing): ${normalizedChannelId}`);
+        } catch (duplicateError) {
+            ServerLogger.warn(`⚠️ 중복검사 DB 등록 실패 (무시): ${duplicateError.message}`);
+        }
 
         try {
             // 1단계: 채널 정보 수집

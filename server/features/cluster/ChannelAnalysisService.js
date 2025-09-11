@@ -5,6 +5,7 @@ const { ServerLogger } = require('../../utils/logger');
 const YouTubeChannelService = require('../../services/YouTubeChannelService');
 const YouTubeChannelAnalyzer = require('../../services/YouTubeChannelAnalyzer');
 const Channel = require('../../models/ChannelModel');
+const DuplicateCheckManager = require('../../models/DuplicateCheckManager');
 
 /**
  * 📊 채널 분석 서비스
@@ -571,6 +572,28 @@ class ChannelAnalysisService {
 
             // 🚀 MongoDB 저장 (메인) + 백업 파일 업데이트
             const savedChannel = await this.saveToMongoDB(channel);
+
+            // ✅ 채널 저장 성공 후 중복검사 DB에 등록
+            try {
+                const normalizedChannelId = channel.customUrl?.startsWith('@') 
+                    ? channel.customUrl 
+                    : `@${channel.customUrl || channel.name}`;
+                
+                await DuplicateCheckManager.updateChannelStatus(
+                    normalizedChannelId,
+                    'completed',
+                    {
+                        name: channel.name,
+                        url: channel.url,
+                        subscribers: channel.subscribers,
+                        id: channel.id
+                    }
+                );
+                
+                ServerLogger.success(`📝 중복검사 DB 등록 완료: ${normalizedChannelId}`);
+            } catch (duplicateError) {
+                ServerLogger.warn(`⚠️ 중복검사 DB 등록 실패 (무시): ${duplicateError.message}`);
+            }
 
             // 백업 파일은 비동기로 업데이트 (성능 최적화)
             this.saveChannels().catch((error) => {

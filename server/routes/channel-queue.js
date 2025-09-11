@@ -249,74 +249,89 @@ router.post('/check-duplicate', async (req, res) => {
             ServerLogger.info(`📝 URL 디코딩 적용: ${decodedChannelIdentifier}`);
         }
 
-        // Channel 모델을 동적으로 로드
-        const Channel = require('../models/ChannelModel');
-        const YouTubeChannelService = require('../services/YouTubeChannelService');
+        // 전용 중복 검사 모델 사용 (성능 최적화)
+        const ChannelUrl = require('../models/ChannelUrl');
+        const DuplicateCheckManager = require('../models/DuplicateCheckManager');
 
         let duplicateInfo = null;
+        let normalizedChannelId = null; // 스코프 밖에서도 사용할 수 있도록
 
         try {
-            // 1. 먼저 MongoDB에서 채널 식별자로 직접 검색 시도 (API 호출 없이)
-            const mongoose = require('mongoose');
-            let existingChannel = null;
+            // 1. 채널 식별자 정규화 (@ 추가 처리)
+            normalizedChannelId = decodedChannelIdentifier.startsWith('@') 
+                ? decodedChannelIdentifier 
+                : `@${decodedChannelIdentifier}`;
 
-            if (mongoose.Types.ObjectId.isValid(decodedChannelIdentifier)) {
-                // MongoDB ObjectId인 경우
-                existingChannel = await Channel.findOne({ id: decodedChannelIdentifier }).lean();
+            ServerLogger.info(`🔧 정규화된 채널 ID: ${normalizedChannelId}`);
+
+            // 2. 전용 중복 검사 컬렉션에서 초고속 검색
+            const duplicateResult = await DuplicateCheckManager.checkChannelDuplicate(normalizedChannelId);
+            
+            if (duplicateResult.isDuplicate) {
+                // 중복 채널 발견 (전용 DB에서)
+                duplicateInfo = {
+                    isDuplicate: true,
+                    existingChannel: duplicateResult.existingData,
+                    message: `채널은 이미 분석 대기열에 있습니다.`,
+                };
+                ServerLogger.warn(`⚠️ 중복 채널 발견 (전용 DB): ${normalizedChannelId}`);
             } else {
-                // YouTube 핸들이나 채널명인 경우 다른 필드로 검색 (원본과 디코딩된 것 모두 확인)
-                existingChannel = await Channel.findOne({
+                // 3. 전용 DB에 없으면 메인 channels 컬렉션도 확인 (기존 데이터 호환)
+                const Channel = require('../models/ChannelModel');
+                const existingChannel = await Channel.findOne({
                     $or: [
                         { customUrl: channelIdentifier },
                         { customUrl: decodedChannelIdentifier },
+                        { customUrl: normalizedChannelId },
                         { name: channelIdentifier },
                         { name: decodedChannelIdentifier },
-                        {
-                            customUrl: channelIdentifier.startsWith('@')
-                                ? channelIdentifier
-                                : `@${channelIdentifier}`,
-                        },
-                        {
-                            customUrl: decodedChannelIdentifier.startsWith('@')
-                                ? decodedChannelIdentifier
-                                : `@${decodedChannelIdentifier}`,
-                        },
                     ],
                 }).lean();
-            }
 
-            // 2. MongoDB에서 찾았으면 중복으로 처리 (API 호출 없이)
+                if (existingChannel) {
+                    // 메인 DB에서 발견된 경우, 전용 DB에도 등록 (동기화)
+                    try {
+                        await DuplicateCheckManager.registerChannel(
+                            normalizedChannelId,
+                            decodedChannelIdentifier,
+                            'YOUTUBE',
+                            { 
+                                name: existingChannel.name,
+                                url: existingChannel.url,
+                                subscribers: existingChannel.subscribers 
+                            }
+                        );
+                        ServerLogger.info(`🔄 전용 DB 동기화 완료: ${normalizedChannelId}`);
+                    } catch (syncError) {
+                        ServerLogger.warn(`⚠️ 동기화 실패 (무시): ${syncError.message}`);
+                    }
 
-            if (existingChannel) {
-                duplicateInfo = {
-                    isDuplicate: true,
-                    existingChannel: {
-                        id: existingChannel.id,
-                        name: existingChannel.name,
-                        url: existingChannel.url,
-                        subscribers: existingChannel.subscribers,
-                        platform: existingChannel.platform,
-                        collectedAt: existingChannel.collectedAt,
-                        lastAnalyzedAt: existingChannel.lastAnalyzedAt,
-                    },
-                    message: `채널 "${existingChannel.name}"은 이미 분석되었습니다.`,
-                };
+                    duplicateInfo = {
+                        isDuplicate: true,
+                        existingChannel: {
+                            id: existingChannel.id,
+                            name: existingChannel.name,
+                            url: existingChannel.url,
+                            subscribers: existingChannel.subscribers,
+                            platform: existingChannel.platform,
+                            collectedAt: existingChannel.collectedAt,
+                            lastAnalyzedAt: existingChannel.lastAnalyzedAt,
+                        },
+                        message: `채널 "${existingChannel.name}"은 이미 분석되었습니다.`,
+                    };
 
-                ServerLogger.warn(
-                    `⚠️ 중복 채널 발견: ${existingChannel.name} (${existingChannel.id})`,
-                );
-            } else {
-                // 3. MongoDB에 없는 경우 - 새로운 채널로 간주 (API 호출은 실제 수집 시에만)
-                duplicateInfo = {
-                    isDuplicate: false,
-                    message:
-                        '새로운 채널입니다. "수집하기" 버튼을 눌러 채널 정보를 수집하세요.',
-                    note: '중복 검사에서는 API를 호출하지 않아 할당량을 절약합니다.',
-                };
+                    ServerLogger.warn(
+                        `⚠️ 중복 채널 발견 (메인 DB): ${existingChannel.name}`,
+                    );
+                } else {
+                    // 완전히 새로운 채널 - 수집 완료 후에만 DB 등록
+                    duplicateInfo = {
+                        isDuplicate: false,
+                        message: '새로운 채널입니다. "수집하기" 버튼을 눌러 채널 정보를 수집하세요.',
+                    };
 
-                ServerLogger.info(
-                    `✅ 새로운 채널 (API 호출 없음): ${decodedChannelIdentifier}`,
-                );
+                    ServerLogger.info(`✅ 새로운 채널: ${normalizedChannelId}`);
+                }
             }
         } catch (searchError) {
             ServerLogger.warn(`⚠️ 채널 정보 조회 실패: ${searchError.message}`);
@@ -333,6 +348,7 @@ router.post('/check-duplicate', async (req, res) => {
         res.json({
             success: true,
             channelIdentifier: decodedChannelIdentifier, // 디코딩된 버전 반환
+            normalizedChannelId: normalizedChannelId || decodedChannelIdentifier, // 정규화된 ID
             originalChannelIdentifier: channelIdentifier, // 원본도 함께 반환
             duplicate: duplicateInfo,
         });
