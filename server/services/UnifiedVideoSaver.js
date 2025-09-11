@@ -1,7 +1,7 @@
 /**
- * 🚀 Google Sheets + MongoDB 통합 저장 서비스 (FieldMapper 자동화)
- * FieldMapper로 완전 자동화된 필드명 관리
- * 필드명 변경 시 이 파일은 자동으로 동기화됩니다!
+ * 🚀 Google Sheets + MongoDB 통합 저장 서비스
+ * 새 인터페이스 기반 직접 필드 접근 방식
+ * video-types.js 인터페이스 표준 준수
  */
 
 const SheetsManager = require('./SheetsManager');
@@ -28,18 +28,11 @@ class UnifiedVideoSaver {
         let mongoResult = null;
 
         try {
-            // 🚀 FieldMapper 자동화된 로깅
-            const urlField = FieldMapper.get('URL');
-            const channelNameField = FieldMapper.get('CHANNEL_NAME');
-
             ServerLogger.info(
                 `🚀 통합 저장 시작: ${platform.toUpperCase()}`,
                 {
-                    [urlField]:
-                        videoData[urlField] ||
-                        videoData.url ||
-                        videoData.postUrl,
-                    [channelNameField]: videoData[channelNameField],
+                    url: videoData.url || videoData.postUrl,
+                    channelName: videoData.channelName,
                 },
                 'UNIFIED_SAVER',
             );
@@ -399,8 +392,7 @@ class UnifiedVideoSaver {
                 {
                     platform: platform,
                     url: convertedData.url,
-                    [FieldMapper.get('CHANNEL_NAME')]:
-                        convertedData[FieldMapper.get('CHANNEL_NAME')],
+                    channelName: convertedData.channelName,
                 },
                 'UNIFIED_SAVER',
             );

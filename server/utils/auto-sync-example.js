@@ -1,43 +1,23 @@
 /**
- * 🚀 필드명 변경 시 전체 시스템 자동 동기화 예시
- * FieldMapper 적용 전후 비교
+ * 🚀 새 인터페이스 시스템 vs 기존 FieldMapper 방식 비교
+ * 직접 필드 접근 vs FieldMapper 사용 비교 예시
  */
 
-const { FieldMapper } = require('../types/field-mapper');
-
-// ===== 기존 방식 (수동 변경 필요) =====
+// ===== 기존 FieldMapper 방식 (복잡한 동적 필드 접근) =====
 class VideoService_Old {
   async getVideos() {
-    // ❌ 하드코딩된 필드명들 - 변경 시 일일이 찾아서 수정해야 함
-    return await Video.find()
-      .select('platform channelName title likes views commentsCount url timestamp uploadDate')
-      .sort({ uploadDate: -1, timestamp: -1 })
-      .lean();
-  }
-  
-  createVideo(data) {
-    // ❌ 하드코딩 - 필드명 변경 시 놓치기 쉬움
-    return {
-      channelName: data.channelName,
-      commentsCount: data.commentsCount,
-      url: data.url,
-      uploadDate: data.uploadDate
-    };
-  }
-}
-
-// ===== 새로운 방식 (완전 자동화) =====
-class VideoService_New {
-  async getVideos() {
-    // ✅ FieldMapper 사용 - MASTER_FIELD_NAMES만 변경하면 자동 동기화!
-    const selectFields = FieldMapper.buildSelectString([
-      'PLATFORM', 'CHANNEL_NAME', 'TITLE', 'LIKES', 'VIEWS', 'COMMENTS_COUNT', 'URL', 'TIMESTAMP', 'UPLOAD_DATE'
-    ]);
+    // ❌ FieldMapper를 통한 복잡한 동적 필드 접근
+    const selectFields = [
+      'PLATFORM',
+      'CHANNEL_NAME', 
+      'TITLE',
+      'LIKES',
+      'VIEWS'
+    ].map(field => field.toLowerCase()).join(' ');
     
-    const sortObj = {
-      ...FieldMapper.buildSortObject('UPLOAD_DATE', 'desc'),
-      ...FieldMapper.buildSortObject('TIMESTAMP', 'desc')
-    };
+    const sortObj = {};
+    sortObj['uploadDate'] = -1;
+    sortObj['timestamp'] = -1;
     
     return await Video.find()
       .select(selectFields)
@@ -46,93 +26,134 @@ class VideoService_New {
   }
   
   createVideo(data) {
-    // ✅ FieldMapper 사용 - 필드명 변경 시 자동 동기화!
-    return {
-      [FieldMapper.get('CHANNEL_NAME')]: data[FieldMapper.get('CHANNEL_NAME')],
-      [FieldMapper.get('COMMENTS_COUNT')]: data[FieldMapper.get('COMMENTS_COUNT')],
-      [FieldMapper.get('URL')]: data[FieldMapper.get('URL')],
-      [FieldMapper.get('UPLOAD_DATE')]: data[FieldMapper.get('UPLOAD_DATE')]
-    };
-  }
-  
-  // 레거시 데이터 자동 변환
-  standardizeLegacyData(legacyData) {
-    return FieldMapper.standardizeDataObject(legacyData);
+    // ❌ 동적 필드 접근 - 다루기 어려움
+    const result = {};
+    result['channelName'] = data['channelName'];
+    result['commentsCount'] = data['commentsCount'];
+    result['url'] = data['url'];
+    result['uploadDate'] = data['uploadDate'];
+    return result;
   }
 }
 
-// ===== MongoDB 스키마도 자동화 =====
+// ===== 새로운 인터페이스 방식 (단순한 직접 접근) =====
+class VideoService_New {
+  async getVideos() {
+    // ✅ 직접 필드 명시 - 명확하고 이해하기 쉬움
+    return await Video.find()
+      .select('platform channelName title likes views commentsCount url timestamp uploadDate')
+      .sort({ uploadDate: -1, timestamp: -1 })
+      .lean();
+  }
+  
+  createVideo(data) {
+    // ✅ 직접 필드 접근 - TypeScript 타입 체크 가능
+    return {
+      channelName: data.channelName,
+      commentsCount: data.commentsCount,
+      url: data.url,
+      uploadDate: data.uploadDate,
+      platform: data.platform,
+      title: data.title,
+      likes: data.likes,
+      views: data.views
+    };
+  }
+  
+  // 레거시 데이터 변환 (필요 시)
+  convertLegacyData(legacyData) {
+    return {
+      channelName: legacyData.channel_name || legacyData.channelName,
+      commentsCount: legacyData.comments_count || legacyData.commentsCount,
+      url: legacyData.video_url || legacyData.url,
+      uploadDate: legacyData.upload_date || legacyData.uploadDate
+    };
+  }
+}
+
+// ===== MongoDB 스키마 정의 =====
 class VideoSchema_New {
   static getSchema() {
     const { mongoose } = require('mongoose');
     
-    // ✅ 스키마 필드도 FieldMapper로 정의
-    const schemaDefinition = {};
-    schemaDefinition[FieldMapper.get('CHANNEL_NAME')] = { type: String, index: true };
-    schemaDefinition[FieldMapper.get('COMMENTS_COUNT')] = { type: Number, default: 0 };
-    schemaDefinition[FieldMapper.get('URL')] = { type: String, unique: true };
-    schemaDefinition[FieldMapper.get('UPLOAD_DATE')] = { type: Date, index: true };
+    // ✅ 직접 스키마 정의 - 명확하고 TypeScript와 일치
+    const schema = new mongoose.Schema({
+      channelName: { type: String, index: true },
+      commentsCount: { type: Number, default: 0 },
+      url: { type: String, unique: true },
+      uploadDate: { type: Date, index: true },
+      platform: { type: String, required: true },
+      title: { type: String, required: true },
+      likes: { type: Number, default: 0 },
+      views: { type: Number, default: 0 },
+      timestamp: { type: Date, default: Date.now }
+    });
     
-    const schema = new mongoose.Schema(schemaDefinition);
-    
-    // 인덱스도 자동화
+    // 직접 인덱스 정의
     schema.index({
-      [FieldMapper.get('PLATFORM')]: 1,
-      [FieldMapper.get('UPLOAD_DATE')]: -1
+      platform: 1,
+      uploadDate: -1
     });
     
     return schema;
   }
 }
 
-// ===== API 응답도 자동화 =====
+// ===== API 응답 정의 =====
 class VideoAPI_New {
   async getVideos(req, res) {
     const videos = await VideoService_New.getVideos();
     
-    // ✅ API 응답 필드도 자동 동기화
+    // ✅ 직접 필드 접근 - TypeScript 타입 체크 가능
     const responseData = videos.map(video => ({
       id: video._id,
-      [FieldMapper.get('CHANNEL_NAME')]: video[FieldMapper.get('CHANNEL_NAME')],
-      [FieldMapper.get('URL')]: video[FieldMapper.get('URL')],
-      [FieldMapper.get('LIKES')]: video[FieldMapper.get('LIKES')],
-      [FieldMapper.get('VIEWS')]: video[FieldMapper.get('VIEWS')],
-      [FieldMapper.get('UPLOAD_DATE')]: video[FieldMapper.get('UPLOAD_DATE')]
+      channelName: video.channelName,
+      url: video.url,
+      likes: video.likes,
+      views: video.views,
+      uploadDate: video.uploadDate,
+      platform: video.platform,
+      title: video.title,
+      commentsCount: video.commentsCount
     }));
     
     res.json({ success: true, data: responseData });
   }
 }
 
-// ===== Google Sheets 연동도 자동화 =====
+// ===== Google Sheets 연동 =====
 class SheetsManager_New {
   buildRowData(platform, videoData) {
-    const mapping = FieldMapper.getGoogleSheetsMapping(platform);
-    const rowData = [];
+    // ✅ 플랫폼별 컬럼 순서 정의 - 명확하고 유지보수 용이
+    const columnOrder = {
+      youtube: ['channelName', 'title', 'url', 'views', 'likes', 'commentsCount', 'uploadDate'],
+      instagram: ['channelName', 'title', 'url', 'likes', 'saves', 'uploadDate'],
+      tiktok: ['channelName', 'title', 'url', 'views', 'likes', 'shares', 'uploadDate']
+    };
     
-    // ✅ Google Sheets 매핑도 자동 동기화
-    for (let i = 1; i <= Object.keys(mapping).length; i++) {
-      const fieldName = mapping[i];
-      rowData.push(videoData[fieldName] || '');
-    }
+    const fields = columnOrder[platform] || columnOrder.youtube;
     
-    return rowData;
+    return fields.map(field => videoData[field] || '');
   }
 }
 
-// ===== 사용 예시: 필드명 변경 시나리오 =====
-console.log('\n🎯 필드명 변경 시나리오:');
-console.log('MASTER_FIELD_NAMES.CHANNEL_NAME을 "channelName"에서 "creatorName"으로 변경하면...\n');
+// ===== 비교 결과 =====
+console.log('\n🎯 새 인터페이스 vs FieldMapper 비교:');
 
-console.log('✅ 자동으로 변경되는 부분들:');
-console.log('- MongoDB 스키마 필드명');
-console.log('- API 쿼리의 select, sort 필드');
-console.log('- API 응답 JSON의 필드명');
-console.log('- Google Sheets 매핑');
-console.log('- Frontend TypeScript 타입');
-console.log('- 모든 데이터 변환 로직');
+console.log('\n✅ 새 인터페이스의 장점:');
+console.log('- 단순성: 중간 변환 레이어 제거');
+console.log('- 타입 안전성: TypeScript 네이티브 지원');
+console.log('- 유지보수성: 인터페이스 기반 모듈화');
+console.log('- 성능: 런타임 변환 오버헤드 제거');
+console.log('- 가독성: 직관적인 필드 접근');
 
-console.log('\n🎉 결과: 한 곳만 변경으로 전체 시스템 동기화 완료!');
+console.log('\n❌ 기존 FieldMapper의 문제:');
+console.log('- 복잡성: 동적 필드 접근으로 인한 가독성 저하');
+console.log('- 디버깅 어려움: 런타임에서야 필드명 확인 가능');
+console.log('- TypeScript 타입 체크 제한');
+console.log('- 성능 오버헤드: 매번 동적 필드 매핑');
+
+console.log('\n🎉 결론: 인터페이스 기반 아키텍처로 전환 완료!');
 
 module.exports = {
   VideoService_New,

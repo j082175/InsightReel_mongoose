@@ -1,6 +1,5 @@
 const { google } = require('googleapis');
 const { ServerLogger } = require('../utils/logger');
-const { FieldMapper } = require('../types/field-mapper');
 
 /**
  * YouTube 채널 데이터 수집기 - 2단계 분석용
@@ -133,30 +132,30 @@ class YouTubeChannelDataCollector {
 
             const channel = response.data.items[0];
             
-            // 🚀 FieldMapper 완전 자동화된 채널 정보 구조
+            // channel-types.js 인터페이스 표준 채널 정보 구조
             return {
-                [FieldMapper.get('CHANNEL_ID')]: channel.id,
-                [FieldMapper.get('TITLE')]: channel.snippet.title,
-                [FieldMapper.get('DESCRIPTION')]: channel.snippet.description,
-                [FieldMapper.get('CUSTOM_URL')]: channel.snippet.customUrl,
-                [FieldMapper.get('UPLOAD_DATE')]: channel.snippet.publishedAt,
-                [FieldMapper.get('THUMBNAIL_URL')]: channel.snippet.thumbnails,
-                [FieldMapper.get('CHANNEL_COUNTRY')]: channel.snippet.country,
-                [FieldMapper.get('LANGUAGE')]: channel.snippet.defaultLanguage,
+                channelId: channel.id,
+                title: channel.snippet.title,
+                description: channel.snippet.description,
+                customUrl: channel.snippet.customUrl,
+                uploadDate: channel.snippet.publishedAt,
+                thumbnailUrl: channel.snippet.thumbnails,
+                channelCountry: channel.snippet.country,
+                language: channel.snippet.defaultLanguage,
                 
-                // 통계 (FieldMapper 표준)
+                // 통계
                 statistics: {
-                    [FieldMapper.get('CHANNEL_VIEWS')]: parseInt(channel.statistics.viewCount || 0),
-                    [FieldMapper.get('SUBSCRIBERS')]: parseInt(channel.statistics.subscriberCount || 0),
-                    [FieldMapper.get('CHANNEL_VIDEOS')]: parseInt(channel.statistics.videoCount || 0)
+                    channelViews: parseInt(channel.statistics.viewCount || 0),
+                    subscribers: parseInt(channel.statistics.subscriberCount || 0),
+                    channelVideos: parseInt(channel.statistics.videoCount || 0)
                 },
 
-                // 브랜딩 정보 (FieldMapper 표준)
-                [FieldMapper.get('KEYWORDS')]: channel.brandingSettings?.channel?.keywords || [],
-                [FieldMapper.get('BANNER_URL')]: channel.brandingSettings?.image?.bannerExternalUrl,
+                // 브랜딩 정보
+                keywords: channel.brandingSettings?.channel?.keywords || [],
+                bannerUrl: channel.brandingSettings?.image?.bannerExternalUrl,
                 
                 // 추가 정보
-                [FieldMapper.get('UPLOADS_PLAYLIST')]: channel.contentDetails?.relatedPlaylists?.uploads
+                uploadsPlaylist: channel.contentDetails?.relatedPlaylists?.uploads
             };
 
         } catch (error) {
@@ -179,13 +178,13 @@ class YouTubeChannelDataCollector {
                 publishedAfter: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString() // 최근 3개월
             });
 
-            // 🚀 FieldMapper 완전 자동화된 영상 목록 구조
+            // video-types.js 인터페이스 표준 영상 목록 구조
             return response.data.items.map(item => ({
-                [FieldMapper.get('VIDEO_ID')]: item.id.videoId,
-                [FieldMapper.get('TITLE')]: item.snippet.title,
-                [FieldMapper.get('DESCRIPTION')]: item.snippet.description,
-                [FieldMapper.get('UPLOAD_DATE')]: item.snippet.publishedAt,
-                [FieldMapper.get('THUMBNAIL_URL')]: item.snippet.thumbnails
+                videoId: item.id.videoId,
+                title: item.snippet.title,
+                description: item.snippet.description,
+                uploadDate: item.snippet.publishedAt,
+                thumbnailUrl: item.snippet.thumbnails
             }));
 
         } catch (error) {
@@ -203,7 +202,7 @@ class YouTubeChannelDataCollector {
                 return [];
             }
 
-            const videoIds = videos.map(video => video.id).slice(0, this.maxVideos);
+            const videoIds = videos.map(video => video.videoId).slice(0, this.maxVideos);
             
             // 50개씩 배치로 처리 (API 제한)
             const batches = [];
@@ -221,27 +220,27 @@ class YouTubeChannelDataCollector {
 
                 if (response.data.items) {
                     for (const item of response.data.items) {
-                        // 🚀 FieldMapper 완전 자동화된 영상 상세 정보 구조
+                        // video-types.js 인터페이스 표준 영상 상세 정보 구조
                         detailedVideos.push({
-                            [FieldMapper.get('VIDEO_ID')]: item.id,
-                            [FieldMapper.get('TITLE')]: item.snippet.title,
-                            [FieldMapper.get('DESCRIPTION')]: item.snippet.description,
-                            [FieldMapper.get('TAGS')]: item.snippet.tags || [],
-                            [FieldMapper.get('UPLOAD_DATE')]: item.snippet.publishedAt,
-                            [FieldMapper.get('THUMBNAIL_URL')]: item.snippet.thumbnails,
-                            [FieldMapper.get('CATEGORY_ID')]: item.snippet.categoryId,
-                            [FieldMapper.get('LANGUAGE')]: item.snippet.defaultLanguage,
+                            videoId: item.id,
+                            title: item.snippet.title,
+                            description: item.snippet.description,
+                            tags: item.snippet.tags || [],
+                            uploadDate: item.snippet.publishedAt,
+                            thumbnailUrl: item.snippet.thumbnails,
+                            categoryId: item.snippet.categoryId,
+                            language: item.snippet.defaultLanguage,
                             
-                            // 통계 (FieldMapper 표준)
+                            // 통계
                             statistics: {
-                                [FieldMapper.get('VIEWS')]: parseInt(item.statistics.viewCount || 0),
-                                [FieldMapper.get('LIKES')]: parseInt(item.statistics.likeCount || 0),
-                                [FieldMapper.get('COMMENTS_COUNT')]: parseInt(item.statistics.commentCount || 0)
+                                views: parseInt(item.statistics.viewCount || 0),
+                                likes: parseInt(item.statistics.likeCount || 0),
+                                commentsCount: parseInt(item.statistics.commentCount || 0)
                             },
 
-                            // 콘텐츠 정보 (FieldMapper 표준)
-                            [FieldMapper.get('DURATION')]: item.contentDetails.duration,
-                            [FieldMapper.get('QUALITY')]: item.contentDetails.definition
+                            // 콘텐츠 정보
+                            duration: item.contentDetails.duration,
+                            quality: item.contentDetails.definition
                         });
                     }
                 }
@@ -267,18 +266,18 @@ class YouTubeChannelDataCollector {
     generateBasicAnalysis(channelDetails, videos) {
         try {
             const analysis = {
-                // 채널 기본 분석 (FieldMapper 표준)
+                // 채널 기본 분석
                 channel: {
-                    averageViewsPerVideo: Math.round(channelDetails.statistics[FieldMapper.get('CHANNEL_VIEWS')] / channelDetails.statistics[FieldMapper.get('CHANNEL_VIDEOS')]),
-                    subscribersPerVideo: Math.round(channelDetails.statistics[FieldMapper.get('SUBSCRIBERS')] / channelDetails.statistics[FieldMapper.get('CHANNEL_VIDEOS')]),
+                    averageViewsPerVideo: Math.round(channelDetails.statistics.channelViews / channelDetails.statistics.channelVideos),
+                    subscribersPerVideo: Math.round(channelDetails.statistics.subscribers / channelDetails.statistics.channelVideos),
                 },
 
-                // 영상 분석 (FieldMapper 표준)
+                // 영상 분석
                 videos: {
                     total: videos.length,
-                    averageViews: Math.round(videos.reduce((sum, v) => sum + v.statistics[FieldMapper.get('VIEWS')], 0) / videos.length),
-                    averageLikes: Math.round(videos.reduce((sum, v) => sum + v.statistics[FieldMapper.get('LIKES')], 0) / videos.length),
-                    averageComments: Math.round(videos.reduce((sum, v) => sum + v.statistics[FieldMapper.get('COMMENTS_COUNT')], 0) / videos.length),
+                    averageViews: Math.round(videos.reduce((sum, v) => sum + v.statistics.views, 0) / videos.length),
+                    averageLikes: Math.round(videos.reduce((sum, v) => sum + v.statistics.likes, 0) / videos.length),
+                    averageComments: Math.round(videos.reduce((sum, v) => sum + v.statistics.commentsCount, 0) / videos.length),
                 },
 
                 // 태그 분석
@@ -306,8 +305,8 @@ class YouTubeChannelDataCollector {
         const tagCount = {};
         
         videos.forEach(video => {
-            if (video[FieldMapper.get('TAGS')]) {
-                video[FieldMapper.get('TAGS')].forEach(tag => {
+            if (video.tags) {
+                video.tags.forEach(tag => {
                     tagCount[tag] = (tagCount[tag] || 0) + 1;
                 });
             }
@@ -324,8 +323,8 @@ class YouTubeChannelDataCollector {
      */
     analyzeUploadPattern(videos) {
         const now = new Date();
-        const last7Days = videos.filter(v => new Date(v[FieldMapper.get('UPLOAD_DATE')]) > new Date(now - 7 * 24 * 60 * 60 * 1000)).length;
-        const last30Days = videos.filter(v => new Date(v[FieldMapper.get('UPLOAD_DATE')]) > new Date(now - 30 * 24 * 60 * 60 * 1000)).length;
+        const last7Days = videos.filter(v => new Date(v.uploadDate) > new Date(now - 7 * 24 * 60 * 60 * 1000)).length;
+        const last30Days = videos.filter(v => new Date(v.uploadDate) > new Date(now - 30 * 24 * 60 * 60 * 1000)).length;
 
         return {
             last7Days,
@@ -338,7 +337,7 @@ class YouTubeChannelDataCollector {
      * 영상 길이 분석
      */
     analyzeDuration(videos) {
-        const durations = videos.map(video => this.parseDuration(video[FieldMapper.get('DURATION')])).filter(d => d > 0);
+        const durations = videos.map(video => this.parseDuration(video.duration)).filter(d => d > 0);
         
         if (durations.length === 0) return { averageSeconds: 0, shortFormRatio: 0 };
 

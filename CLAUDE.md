@@ -161,18 +161,19 @@ const views = video.views || 0;
 ```javascript
 title            // 제목
 url              // 비디오 URL  
-platform         // 플랫폼 ('youtube', 'instagram', 'tiktok')
+platform         // 플랫폼 ('YOUTUBE', 'INSTAGRAM', 'TIKTOK') - enum 값
 uploadDate       // 업로드 날짜
 duration         // 영상 길이
 description      // 설명
-category         // 카테고리
+mainCategory     // AI 분석 메인 카테고리
+middleCategory   // AI 분석 중간 카테고리
 ```
 
 #### **📊 통계 정보** 
 ```javascript
 views            // 조회수
 likes            // 좋아요  
-comments         // 댓글수
+commentsCount    // 댓글수 (실제 필드명)
 shares          // 공유수 (Instagram)
 saves           // 저장수 (Instagram)
 ```
@@ -195,9 +196,12 @@ language        // 언어
 
 #### **🔄 시스템 필드**
 ```javascript
-createdAt       // 생성일시
-updatedAt       // 수정일시  
-rowNumber       // 시트 행번호
+createdAt       // Mongoose 자동 생성 (timestamps: true)
+updatedAt       // Mongoose 자동 생성 (timestamps: true)
+timestamp       // SystemMetadata - 별도 타임스탬프 필드
+collectionTime  // SystemMetadata - 수집 일시
+processedAt     // SystemMetadata - 처리 일시
+rowNumber       // VideoCore - 시트 행번호
 ```
 
 ### **🗂️ 채널 필드 표준 매핑**
@@ -205,9 +209,9 @@ rowNumber       // 시트 행번호
 #### **📺 채널 핵심**
 ```javascript  
 id              // 채널 ID
-name            // 채널명
-url             // 채널 URL
-platform        // 플랫폼
+channelName     // 채널명 (실제 필드명)
+channelUrl      // 채널 URL (실제 필드명)
+platform        // 플랫폼 ('YOUTUBE', 'INSTAGRAM', 'TIKTOK')
 description     // 채널 설명
 ```
 

@@ -4,7 +4,7 @@ const AIAnalyzer = require('../services/AIAnalyzer');
 const SheetsManager = require('../services/SheetsManager');
 const ErrorHandler = require('../middleware/error-handler');
 const { ServerLogger } = require('../utils/logger');
-const { FieldMapper } = require('../types/field-mapper');
+// const { FieldMapper } = require('../types/field-mapper'); // 제거됨 - 직접 필드 접근 사용
 
 /**
  * 비디오 처리 컨트롤러
@@ -223,13 +223,13 @@ class VideoController {
       // 1단계: 비디오 준비 및 메타데이터 수집
       let enrichedMetadata = { ...metadata };
       
-      // Instagram 메타데이터 보존 (FieldMapper 표준)
+      // Instagram 메타데이터 보존
       ServerLogger.info('📱 Instagram 메타데이터 수신:', {
-        channelName: metadata[FieldMapper.get('CHANNEL_NAME')],
-        channelUrl: metadata[FieldMapper.get('CHANNEL_URL')],
-        description: metadata[FieldMapper.get('DESCRIPTION')]?.substring(0, 50),
-        likes: metadata[FieldMapper.get('LIKES')],
-        commentsCount: metadata[FieldMapper.get('COMMENTS_COUNT')]
+        channelName: metadata.channelName,
+        channelUrl: metadata.channelUrl,
+        description: metadata.description?.substring(0, 50),
+        likes: metadata.likes,
+        commentsCount: metadata.commentsCount
       });
       
       if (isBlob && videoPath) {
@@ -246,20 +246,19 @@ class VideoController {
             const youtubeInfo = await this.videoProcessor.getYouTubeVideoInfo(postUrl);
             enrichedMetadata = {
               ...enrichedMetadata,
-              [FieldMapper.get('CHANNEL_NAME')]: youtubeInfo[FieldMapper.get('CHANNEL_NAME')],
-              [FieldMapper.get('LIKES')]: youtubeInfo[FieldMapper.get('LIKES')],
-              [FieldMapper.get('COMMENTS_COUNT')]: youtubeInfo[FieldMapper.get('COMMENTS_COUNT')],
-              [FieldMapper.get('VIEWS')]: youtubeInfo[FieldMapper.get('VIEWS')],
-              [FieldMapper.get('UPLOAD_DATE')]: youtubeInfo[FieldMapper.get('UPLOAD_DATE')],
-              [FieldMapper.get('DURATION')]: youtubeInfo[FieldMapper.get('DURATION')],
-              [FieldMapper.get('DURATION_FORMATTED')]: youtubeInfo[FieldMapper.get('DURATION_FORMATTED')],
-              [FieldMapper.get('CONTENT_TYPE')]: youtubeInfo[FieldMapper.get('CONTENT_TYPE')]
+              channelName: youtubeInfo.channelName,
+              likes: youtubeInfo.likes,
+              commentsCount: youtubeInfo.commentsCount,
+              views: youtubeInfo.views,
+              uploadDate: youtubeInfo.uploadDate,
+              duration: youtubeInfo.duration,
+              contentType: youtubeInfo.contentType
             };
             ServerLogger.info(`✅ YouTube 메타데이터 수집 완료:`);
-            ServerLogger.info(`👤 채널: ${enrichedMetadata[FieldMapper.get('CHANNEL_NAME')]}`);
-            ServerLogger.info(`👍 좋아요: ${enrichedMetadata[FieldMapper.get('LIKES')]}, 💬 댓글: ${enrichedMetadata[FieldMapper.get('COMMENTS_COUNT')]}, 👀 조회수: ${enrichedMetadata[FieldMapper.get('VIEWS')]}`);
-            ServerLogger.info(`⏱️ 영상길이: ${enrichedMetadata[FieldMapper.get('DURATION_FORMATTED')]} (${enrichedMetadata[FieldMapper.get('DURATION')]}초)`);
-            ServerLogger.info(`📅 업로드: ${enrichedMetadata[FieldMapper.get('UPLOAD_DATE')]}`);
+            ServerLogger.info(`👤 채널: ${enrichedMetadata.channelName}`);
+            ServerLogger.info(`👍 좋아요: ${enrichedMetadata.likes}, 💬 댓글: ${enrichedMetadata.commentsCount}, 👀 조회수: ${enrichedMetadata.views}`);
+            ServerLogger.info(`⏱️ 영상길이: ${enrichedMetadata.duration}초 (${enrichedMetadata.contentType})`);
+            ServerLogger.info(`📅 업로드: ${enrichedMetadata.uploadDate}`);
           } catch (error) {
             ServerLogger.warn('⚠️ YouTube 메타데이터 수집 실패 (무시하고 계속):', error.message);
           }
@@ -308,13 +307,13 @@ class VideoController {
         // Instagram과 YouTube 메타데이터 처리
         const processedMetadata = { ...enrichedMetadata };
         
-        // Instagram 필드는 이미 FieldMapper로 전달되므로 그대로 사용
+        // Instagram 필드는 직접 접근으로 전달됨
         // processedMetadata에는 enrichedMetadata가 그대로 전달됨
         
         // Instagram 채널명이 임시 필드에 있는 경우 표준 필드로 이동
         const tempChannelName = enrichedMetadata._instagramAuthor || enrichedMetadata.instagramAuthor;
-        if (tempChannelName && !processedMetadata[FieldMapper.get('CHANNEL_NAME')]) {
-          processedMetadata[FieldMapper.get('CHANNEL_NAME')] = tempChannelName;
+        if (tempChannelName && !processedMetadata.channelName) {
+          processedMetadata.channelName = tempChannelName;
           ServerLogger.info('👤 Instagram 채널 정보 처리:', tempChannelName);
         }
         

@@ -15,6 +15,9 @@ const ClusterModel = require('./ClusterModel');
 // 라우터
 const clusterRoutes = require('./clusterRoutes');
 
+// 로깅
+const { ServerLogger } = require('../../utils/logger');
+
 /**
  * 🚀 클러스터 시스템 초기화 함수
  */
@@ -23,10 +26,10 @@ function initializeClusterSystem(app) {
     // API 라우트 등록
     app.use('/api/cluster', clusterRoutes);
     
-    console.log('✅ 채널 클러스터 시스템 초기화 완료');
+    ServerLogger.success('✅ 채널 클러스터 시스템 초기화 완료');
     return true;
   } catch (error) {
-    console.error('❌ 클러스터 시스템 초기화 실패:', error.message);
+    ServerLogger.error('❌ 클러스터 시스템 초기화 실패', error);
     return false;
   }
 }

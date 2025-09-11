@@ -5,8 +5,6 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-// 🚀 FieldMapper 임포트 (완전 자동화 시스템)
-const { FieldMapper } = require('./types/field-mapper');
 
 // 설정 검증 먼저 실행
 const { getConfig } = require('./config/config-validator');
@@ -21,7 +19,7 @@ const VideoUrl = require('./models/VideoUrl');
 const VideoProcessor = require('./services/VideoProcessor');
 const AIAnalyzer = require('./services/AIAnalyzer');
 const SheetsManager = require('./services/SheetsManager');
-// const UnifiedVideoSaver = require('./services/UnifiedVideoSaver'); // TODO: FieldMapper 제거 후 새 인터페이스로 업데이트 필요
+// const UnifiedVideoSaver = require('./services/UnifiedVideoSaver'); // FieldMapper 제거 완료 - 새 인터페이스 적용됨
 // const youtubeBatchProcessor = require('./services/YouTubeBatchProcessor');
 const HighViewCollector = require('./services/HighViewCollector');
 const YouTubeChannelDataCollector = require('./services/YouTubeChannelDataCollector');
@@ -36,7 +34,7 @@ const PORT = config.get('PORT');
 
 // 매우 초기 디버그 API 추가
 app.get('/api/debug-very-early', (req, res) => {
-    res.json({
+    res.status(HTTP_STATUS_CODES.OK).json({
         success: true,
         message: '🔍 VERY EARLY DEBUG: 라인 25 실행됨!',
     });
@@ -102,7 +100,7 @@ const upload = multer({ storage });
 
 // 서비스 초기화 전 디버그
 app.get('/api/debug-before-services', (req, res) => {
-    res.json({
+    res.status(HTTP_STATUS_CODES.OK).json({
         success: true,
         message: '🔧 BEFORE SERVICES: 서비스 초기화 전 실행됨!',
     });
@@ -114,11 +112,11 @@ const sheetsManager = new SheetsManager();
 // Blob 처리 API를 위해 필요한 서비스들 추가
 const videoProcessor = new VideoProcessor();
 const aiAnalyzer = new AIAnalyzer();
-// const unifiedVideoSaver = new UnifiedVideoSaver(sheetsManager, aiAnalyzer); // TODO: FieldMapper 제거 후 활성화
+// const unifiedVideoSaver = new UnifiedVideoSaver(sheetsManager, aiAnalyzer); // FieldMapper 제거 완료 - 활성화 가능
 
 // 서비스 초기화 후 디버그
 app.get('/api/debug-after-services', (req, res) => {
-    res.json({
+    res.status(HTTP_STATUS_CODES.OK).json({
         success: true,
         message: '✅ AFTER SERVICES: 기본 서비스 초기화 완료!',
     });
@@ -172,7 +170,7 @@ app.get('/api/database/health', async (req, res) => {
         const healthCheck = await DatabaseManager.healthCheck();
         const connectionStatus = DatabaseManager.isConnectedStatus();
 
-        res.json({
+        res.status(HTTP_STATUS_CODES.OK).json({
             success: true,
             database: {
                 type: 'MongoDB Atlas',
@@ -199,17 +197,19 @@ app.get('/api/database/test', async (req, res) => {
     try {
         // 1. 테스트 비디오 데이터 생성
         const testVideo = new Video({
-            [FieldMapper.get('PLATFORM')]: 'youtube',
-            [FieldMapper.get('TIMESTAMP')]: new Date(),
-            [FieldMapper.get('CHANNEL_NAME')]: 'TestChannel',
-            [FieldMapper.get('TITLE')]: 'MongoDB 연결 테스트 비디오',
-            [FieldMapper.get('URL')]: 'https://www.youtube.com/watch?v=test123', // 🚀 FieldMapper 자동화
-            [FieldMapper.get('COMMENTS_COUNT')]: 0, // 🚀 FieldMapper 자동화
-            [FieldMapper.get('LIKES')]: 100,
-            [FieldMapper.get('VIEWS')]: 1000,
-            [FieldMapper.get('CATEGORY')]: 'Technology',
-            [FieldMapper.get('AI_DESCRIPTION')]:
+            platform: 'YOUTUBE',
+            uploadDate: new Date().toISOString(),
+            channelName: 'TestChannel',
+            title: 'MongoDB 연결 테스트 비디오',
+            url: 'https://www.youtube.com/watch?v=test123',
+            commentsCount: 0,
+            likes: 100,
+            views: 1000,
+            mainCategory: 'Technology',
+            description:
                 'MongoDB Atlas 연결 테스트용 비디오입니다',
+            timestamp: new Date(),
+            collectionTime: new Date(),
         });
 
         // 2. 데이터베이스에 저장
@@ -221,7 +221,7 @@ app.get('/api/database/test', async (req, res) => {
         // 4. 테스트 데이터 삭제 (정리)
         await Video.findByIdAndDelete(saved._id);
 
-        res.json({
+        res.status(HTTP_STATUS_CODES.OK).json({
             success: true,
             message: 'MongoDB CRUD 테스트 성공!',
             test_results: {
@@ -232,9 +232,9 @@ app.get('/api/database/test', async (req, res) => {
             },
         });
     } catch (error) {
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            [FieldMapper.get('ERROR')]: error.message,
+            error: error.message,
             message: 'MongoDB 테스트 실패',
         });
     }
@@ -254,16 +254,16 @@ app.get('/api/database/collections', async (req, res) => {
             stats[collection.name] = collectionStats;
         }
 
-        res.json({
+        res.status(HTTP_STATUS_CODES.OK).json({
             success: true,
             database: 'videos',
             collections: stats,
             message: '컬렉션 상태 조회 완료',
         });
     } catch (error) {
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            [FieldMapper.get('ERROR')]: error.message,
+            error: error.message,
             message: '컬렉션 상태 조회 실패',
         });
     }
@@ -295,7 +295,7 @@ app.get('/api/database/collections', async (req, res) => {
 //     ServerLogger.error('❌ 마이그레이션 API 실패', error.message, 'API');
 //     res.status(500).json({
 //       success: false,
-//       [FieldMapper.get('ERROR')]: error.message,
+//       error: error.message,
 //       message: '마이그레이션 실패'
 //     });
 //   }
@@ -311,7 +311,7 @@ app.delete('/api/database/reset', async (req, res) => {
             'API',
         );
 
-        res.json({
+        res.status(HTTP_STATUS_CODES.OK).json({
             success: true,
             message: `MongoDB 데이터 초기화 완료! ${deleteResult.deletedCount}개 문서 삭제`,
             deleted_count: deleteResult.deletedCount,
@@ -319,9 +319,9 @@ app.delete('/api/database/reset', async (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 데이터 초기화 실패', error.message, 'API');
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            [FieldMapper.get('ERROR')]: error.message,
+            error: error.message,
             message: 'MongoDB 데이터 초기화 실패',
         });
     }
@@ -349,13 +349,13 @@ app.delete('/api/database/reset', async (req, res) => {
 //       success: success,
 //       message: success ? 'MongoDB 데이터 검증 완료!' : '데이터 검증 실패',
 //       verification_output: output,
-// //       [FieldMapper.get('TIMESTAMP')]: new Date()
+// //       timestamp: new Date()
 //     });
 //
 //   } catch (error) {
 //     res.status(500).json({
 //       success: false,
-//       [FieldMapper.get('ERROR')]: error.message,
+//       error: error.message,
 //       message: '데이터 검증 API 실패'
 //     });
 //   }
@@ -370,7 +370,7 @@ app.get('/api/database/migration-status', async (req, res) => {
             { $sort: { count: -1 } },
         ]);
 
-        res.json({
+        res.status(HTTP_STATUS_CODES.OK).json({
             success: true,
             migration_status: {
                 total_migrated: totalVideos,
@@ -383,9 +383,9 @@ app.get('/api/database/migration-status', async (req, res) => {
             message: '마이그레이션 상태 조회 완료',
         });
     } catch (error) {
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            [FieldMapper.get('ERROR')]: error.message,
+            error: error.message,
             message: '마이그레이션 상태 조회 실패',
         });
     }
@@ -478,15 +478,15 @@ app.get('/api/test-youtube-sheet', async (req, res) => {
 
         const data = response.data.values || [];
         const sampleData = data.slice(0, 3).map((row) => ({
-            [FieldMapper.get('ID')]: row[0],
-            [FieldMapper.get('TIMESTAMP')]: row[1],
-            [FieldMapper.get('PLATFORM')]: row[2],
-            [FieldMapper.get('CHANNEL_NAME')]: row[3],
-            [FieldMapper.get('TITLE')]:
+            rowNumber: row[0],
+            uploadDate: row[1],
+            platform: row[2],
+            channelName: row[3],
+            title:
                 row[9]?.substring(0, 50) + '...' || 'N/A',
         }));
 
-        res.json({
+        res.status(HTTP_STATUS_CODES.OK).json({
             success: true,
             range,
             count: data.length,
@@ -494,9 +494,9 @@ app.get('/api/test-youtube-sheet', async (req, res) => {
             message: `YouTube 시트에서 ${data.length}개 행 직접 조회 성공`,
         });
     } catch (error) {
-        res.json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            [FieldMapper.get('ERROR')]: error.message,
+            error: error.message,
             range: 'YouTube!A2:S10',
         });
     }
@@ -509,22 +509,20 @@ app.get('/api/test-sheet-structure', async (req, res) => {
             spreadsheetId: sheetsManager.spreadsheetId,
         });
         const sheetInfo = response.data.sheets.map((sheet) => ({
-            [FieldMapper.get('TITLE')]:
-                sheet.properties[FieldMapper.get('TITLE')],
+            title: sheet.properties.title,
             sheetId: sheet.properties.sheetId,
             rowCount: sheet.properties.gridProperties.rowCount,
             columnCount: sheet.properties.gridProperties.columnCount,
         }));
 
-        res.json({
+        res.status(HTTP_STATUS_CODES.OK).json({
             success: true,
-            spreadsheetTitle:
-                response.data.properties[FieldMapper.get('TITLE')],
+            spreadsheetTitle: response.data.properties.title,
             sheetInfo,
             totalSheets: sheetInfo.length,
         });
     } catch (error) {
-        res.json({ success: false, [FieldMapper.get('ERROR')]: error.message });
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ success: false, error: error.message });
     }
 });
 
@@ -547,15 +545,15 @@ app.get('/api/test-all-sheets-count', async (req, res) => {
             } catch (error) {
                 results[sheetName] = {
                     success: false,
-                    [FieldMapper.get('ERROR')]: error.message,
+                    error: error.message,
                     count: 0,
                 };
             }
         }
 
-        res.json({ success: true, results });
+        res.status(HTTP_STATUS_CODES.OK).json({ success: true, results });
     } catch (error) {
-        res.json({ success: false, [FieldMapper.get('ERROR')]: error.message });
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ success: false, error: error.message });
     }
 });
 
@@ -589,13 +587,13 @@ app.get('/api/test-instagram-latest', async (req, res) => {
             range,
             totalRows: data.length,
             latestDates: sortedData.map((row) => ({
-                [FieldMapper.get('ID')]: row[0],
+                rowNumber: row[0],
                 date: row[1],
             })),
             message: `Instagram 시트에서 ${data.length}개 행 조회, 최신 10개 날짜 정렬 완료`,
         });
     } catch (error) {
-        res.json({ success: false, [FieldMapper.get('ERROR')]: error.message });
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ success: false, error: error.message });
     }
 });
 
@@ -603,7 +601,7 @@ app.get('/api/test-instagram-latest', async (req, res) => {
 app.get('/api/config/health', (req, res) => {
     try {
         const healthStatus = config.healthCheck();
-        const isHealthy = healthStatus[FieldMapper.get('STATUS')] === 'healthy';
+        const isHealthy = healthStatus.status === 'healthy';
 
         if (isHealthy) {
             ResponseHandler.success(
@@ -635,13 +633,13 @@ app.get('/api/config/health', (req, res) => {
 app.post('/api/process-video', async (req, res) => {
     try {
         const {
-            [FieldMapper.get('PLATFORM')]: platform,
-            [FieldMapper.get('VIDEO_URL')]: videoUrl,
-            [FieldMapper.get('POST_URL')]: postUrl,
-            [FieldMapper.get('URL')]: url,
-            [FieldMapper.get('METADATA')]: metadata,
-            [FieldMapper.get('ANALYSIS_TYPE')]: analysisType = 'quick',
-            [FieldMapper.get('USE_AI')]: useAI = true,
+            platform,
+            videoUrl,
+            postUrl,
+            url,
+            metadata,
+            analysisType = 'quick',
+            useAI = true,
             mode = 'immediate',
         } = req.body;
 
@@ -688,7 +686,7 @@ app.post('/api/process-video', async (req, res) => {
                 if (duplicateCheck.isDuplicate) {
                     let errorMessage;
 
-                    if (duplicateCheck[FieldMapper.get('IS_PROCESSING')]) {
+                    if (duplicateCheck.isProcessing) {
                         errorMessage = `🔄 처리 중인 URL: 같은 URL이 현재 처리되고 있습니다 (${duplicateCheck.existingPlatform})`;
                     } else {
                         errorMessage = `⚠️ 중복 URL: 이미 ${duplicateCheck.existingPlatform} 시트의 ${duplicateCheck.existingColumn}${duplicateCheck.existingRow}행에 존재합니다`;
@@ -696,25 +694,17 @@ app.post('/api/process-video', async (req, res) => {
 
                     ServerLogger.warn(errorMessage, 'API_DUPLICATE');
 
-                    return res.status(409).json({
+                    return res.status(HTTP_STATUS_CODES.CONFLICT).json({
                         success: false,
-                        [FieldMapper.get('ERROR')]: 'DUPLICATE_URL',
+                        error: 'DUPLICATE_URL',
                         message: errorMessage,
                         duplicate_info: {
-                            [FieldMapper.get('PLATFORM')]:
-                                duplicateCheck.existingPlatform,
-                            [FieldMapper.get('ROW')]:
-                                duplicateCheck.existingRow,
-                            [FieldMapper.get('COLUMN')]:
-                                duplicateCheck.existingColumn,
-                            [FieldMapper.get('NORMALIZED_URL')]:
-                                sheetsManager.normalizeVideoUrl(checkUrl),
-                            [FieldMapper.get('IS_PROCESSING')]:
-                                duplicateCheck[
-                                    FieldMapper.get('IS_PROCESSING')
-                                ] || false,
-                            [FieldMapper.get('STATUS')]:
-                                duplicateCheck[FieldMapper.get('STATUS')],
+                            platform: duplicateCheck.existingPlatform,
+                            row: duplicateCheck.existingRow,
+                            column: duplicateCheck.existingColumn,
+                            normalizedUrl: sheetsManager.normalizeVideoUrl(checkUrl),
+                            isProcessing: duplicateCheck.isProcessing || false,
+                            status: duplicateCheck.status,
                         },
                     });
                 }
@@ -737,9 +727,7 @@ app.post('/api/process-video', async (req, res) => {
                     );
                 } else {
                     ServerLogger.warn(
-                        `⚠️ URL processing 상태 등록 실패: ${
-                            registerResult[FieldMapper.get('ERROR')]
-                        }`,
+                        `⚠️ URL processing 상태 등록 실패: ${registerResult.error}`,
                     );
                 }
 
@@ -760,19 +748,15 @@ app.post('/api/process-video', async (req, res) => {
         if (finalPlatform === 'youtube' && mode === 'batch') {
             try {
                 const options = {
-                    [FieldMapper.get('PRIORITY')]:
-                        req.body.priority || 'normal',
-                    [FieldMapper.get('CLIENT_INFO')]: {
-                        [FieldMapper.get('USER_AGENT')]: req.get('User-Agent'),
-                        [FieldMapper.get(
-                            'REQUEST_ID',
-                        )]: `req_${Date.now()}_${Math.random()
+                    priority: req.body.priority || 'normal',
+                    clientInfo: {
+                        userAgent: req.get('User-Agent'),
+                        requestId: `req_${Date.now()}_${Math.random()
                             .toString(36)
                             .substr(2, 9)}`,
-                        [FieldMapper.get('TIMESTAMP')]:
-                            new Date().toISOString(),
+                        timestamp: new Date().toISOString(),
                     },
-                    [FieldMapper.get('METADATA')]: metadata || {},
+                    metadata: metadata || {},
                 };
 
                 const batchResult = await youtubeBatchProcessor.addToBatch(
@@ -781,24 +765,19 @@ app.post('/api/process-video', async (req, res) => {
                 );
 
                 ServerLogger.info(`📦 YouTube 배치 모드: 큐에 추가됨`, {
-                    [FieldMapper.get('BATCH_ID')]:
-                        batchResult[FieldMapper.get('BATCH_ID')],
-                    [FieldMapper.get('QUEUE_POSITION')]:
-                        batchResult.queuePosition,
-                    [FieldMapper.get('ESTIMATED_WAIT_TIME')]:
-                        batchResult.estimatedWaitTime,
+                    batchId: batchResult.batchId,
+                    queuePosition: batchResult.queuePosition,
+                    estimatedWaitTime: batchResult.estimatedWaitTime,
                 });
 
-                return res.json({
+                return res.status(HTTP_STATUS_CODES.OK).json({
                     success: true,
                     message: '배치 큐에 추가되었습니다',
-                    [FieldMapper.get('DATA')]: {
-                        [FieldMapper.get('MODE')]: 'batch',
+                    data: {
+                        mode: 'batch',
                         ...batchResult,
-                        [FieldMapper.get('API_SAVING')]:
-                            '개별 호출 대비 97% 쿼터 절약',
-                        [FieldMapper.get('ESTIMATED_PROCESS_TIME')]:
-                            '최대 60초 또는 50개 모일 때까지 대기',
+                        apiSaving: '개별 호출 대비 97% 쿼터 절약',
+                        estimatedProcessTime: '최대 60초 또는 50개 모일 때까지 대기',
                     },
                 });
             } catch (error) {
@@ -814,25 +793,25 @@ app.post('/api/process-video', async (req, res) => {
 
         // 큐에 작업 추가
         const result = await videoQueue.addToQueue({
-            [FieldMapper.get('ID')]: `url_${finalPlatform}_${Date.now()}`,
-            [FieldMapper.get('TYPE')]: 'url',
-            [FieldMapper.get('DATA')]: {
-                [FieldMapper.get('PLATFORM')]: finalPlatform,
-                [FieldMapper.get('VIDEO_URL')]: finalVideoUrl,
-                [FieldMapper.get('POST_URL')]: finalPostUrl,
+            id: `url_${finalPlatform}_${Date.now()}`,
+            type: 'url',
+            data: {
+                platform: finalPlatform,
+                videoUrl: finalVideoUrl,
+                postUrl: finalPostUrl,
                 metadata,
-                [FieldMapper.get('ANALYSIS_TYPE')]: analysisType,
-                [FieldMapper.get('USE_AI')]: useAI,
+                analysisType: analysisType,
+                useAI: useAI,
             },
-            [FieldMapper.get('PROCESSOR')]: async (taskData) => {
+            processor: async (taskData) => {
                 const {
-                    [FieldMapper.get('PLATFORM')]: platform,
-                    [FieldMapper.get('VIDEO_URL')]: videoUrl,
-                    [FieldMapper.get('POST_URL')]: postUrl,
-                    [FieldMapper.get('ANALYSIS_TYPE')]: analysisType,
-                    [FieldMapper.get('USE_AI')]: useAI,
+                    platform,
+                    videoUrl,
+                    postUrl,
+                    analysisType,
+                    useAI,
                 } = taskData;
-                let metadata = taskData[FieldMapper.get('METADATA')]; // 🆕 재할당 가능하도록 let으로 선언
+                let metadata = taskData.metadata; // 🆕 재할당 가능하도록 let으로 선언
 
                 ServerLogger.info(`🎬 Processing ${platform} video:`, postUrl);
                 ServerLogger.info(
@@ -851,14 +830,10 @@ app.post('/api/process-video', async (req, res) => {
                         videoUrl,
                     );
                     ServerLogger.info(
-                        `📺 ${
-                            youtubeInfo[FieldMapper.get('CONTENT_TYPE')]
-                        } 감지: ${youtubeInfo[FieldMapper.get('TITLE')]}`,
+                        `📺 ${youtubeInfo.contentType} 감지: ${youtubeInfo.title}`,
                     );
                     ServerLogger.info(
-                        `⏱️ 길이: ${
-                            youtubeInfo[FieldMapper.get('DURATION_FORMATTED')]
-                        }`,
+                        `⏱️ 길이: ${youtubeInfo.durationFormatted}`,
                     );
 
                     // YouTube는 일단 정보 수집만 (다운로드는 후단계에서)
@@ -884,105 +859,72 @@ app.post('/api/process-video', async (req, res) => {
                         metadata = {};
                     }
                     Object.assign(metadata, {
-                        [FieldMapper.get('TITLE')]:
-                            youtubeInfo[FieldMapper.get('TITLE')],
-                        [FieldMapper.get('DESCRIPTION')]:
-                            youtubeInfo[FieldMapper.get('DESCRIPTION')],
-                        [FieldMapper.get('CHANNEL_NAME')]:
-                            youtubeInfo[FieldMapper.get('CHANNEL_NAME')],
-                        [FieldMapper.get('LIKES')]:
-                            youtubeInfo[FieldMapper.get('LIKES')],
-                        [FieldMapper.get('COMMENTS')]:
-                            youtubeInfo[FieldMapper.get('COMMENTS_COUNT')],
-                        [FieldMapper.get('VIEWS')]:
-                            youtubeInfo[FieldMapper.get('VIEWS')],
-                        [FieldMapper.get('DURATION')]:
-                            youtubeInfo[FieldMapper.get('DURATION')],
-                        [FieldMapper.get('DURATION_FORMATTED')]:
-                            youtubeInfo[FieldMapper.get('DURATION_FORMATTED')],
-                        [FieldMapper.get('UPLOAD_DATE')]:
-                            youtubeInfo[FieldMapper.get('UPLOAD_DATE')],
-                        [FieldMapper.get('CONTENT_TYPE')]:
-                            youtubeInfo[FieldMapper.get('CONTENT_TYPE')],
-                        [FieldMapper.get('YOUTUBE_CATEGORY')]:
-                            youtubeInfo[FieldMapper.get('YOUTUBE_CATEGORY')],
+                        title: youtubeInfo.title,
+                        description: youtubeInfo.description,
+                        channelName: youtubeInfo.channelName,
+                        likes: youtubeInfo.likes,
+                        commentsCount: youtubeInfo.commentsCount,
+                        views: youtubeInfo.views,
+                        duration: youtubeInfo.duration,
+                        durationFormatted: youtubeInfo.durationFormatted,
+                        uploadDate: youtubeInfo.uploadDate,
+                        contentType: youtubeInfo.contentType,
+                        youtubeCategory: youtubeInfo.youtubeCategory,
                         // YouTube 추가 정보
-                        [FieldMapper.get('SUBSCRIBERS')]:
-                            youtubeInfo[FieldMapper.get('SUBSCRIBERS')],
-                        [FieldMapper.get('CHANNEL_VIDEOS')]:
-                            youtubeInfo[FieldMapper.get('CHANNEL_VIDEOS')],
-                        [FieldMapper.get('MONETIZED')]:
-                            youtubeInfo[FieldMapper.get('MONETIZED')],
-                        [FieldMapper.get('CATEGORY_ID')]:
-                            youtubeInfo[FieldMapper.get('CATEGORY_ID')],
-                        [FieldMapper.get('LICENSE')]:
-                            youtubeInfo[FieldMapper.get('LICENSE')],
-                        [FieldMapper.get('DEFINITION')]:
-                            youtubeInfo[FieldMapper.get('DEFINITION')],
-                        [FieldMapper.get('LANGUAGE')]:
-                            youtubeInfo[FieldMapper.get('LANGUAGE')],
-                        [FieldMapper.get('AGE_RESTRICTED')]:
-                            youtubeInfo[FieldMapper.get('AGE_RESTRICTED')],
-                        [FieldMapper.get('LIVE_BROADCAST')]:
-                            youtubeInfo[FieldMapper.get('LIVE_BROADCAST')],
+                        subscribers: youtubeInfo.subscribers,
+                        channelVideos: youtubeInfo.channelVideos,
+                        monetized: youtubeInfo.monetized,
+                        categoryId: youtubeInfo.categoryId,
+                        license: youtubeInfo.license,
+                        definition: youtubeInfo.definition,
+                        language: youtubeInfo.language,
+                        ageRestricted: youtubeInfo.ageRestricted,
+                        liveBroadcast: youtubeInfo.liveBroadcast,
                         // YouTube 핸들명과 채널 URL 추가 🎯
-                        [FieldMapper.get('YOUTUBE_HANDLE')]:
-                            youtubeInfo[FieldMapper.get('YOUTUBE_HANDLE')],
-                        [FieldMapper.get('CHANNEL_URL')]:
-                            youtubeInfo[FieldMapper.get('CHANNEL_URL')],
+                        youtubeHandle: youtubeInfo.youtubeHandle,
+                        channelUrl: youtubeInfo.channelUrl,
                         // 새로운 필드들 추가 🆕
-                        [FieldMapper.get('DESCRIPTION')]:
-                            youtubeInfo[FieldMapper.get('DESCRIPTION')],
-                        [FieldMapper.get('HASHTAGS')]:
-                            youtubeInfo[FieldMapper.get('HASHTAGS')],
-                        [FieldMapper.get('MENTIONS')]:
-                            youtubeInfo[FieldMapper.get('MENTIONS')],
-                        [FieldMapper.get('TOP_COMMENTS')]:
-                            youtubeInfo[FieldMapper.get('TOP_COMMENTS')],
-                        [FieldMapper.get('COMMENTS_COUNT')]:
-                            youtubeInfo[FieldMapper.get('COMMENTS_COUNT')],
-                        [FieldMapper.get('THUMBNAIL_URL')]:
-                            youtubeInfo[FieldMapper.get('THUMBNAIL_URL')],
+                        description: youtubeInfo.description,
+                        hashtags: youtubeInfo.hashtags,
+                        mentions: youtubeInfo.mentions,
+                        topComments: youtubeInfo.topComments,
+                        commentsCount: youtubeInfo.commentsCount,
+                        thumbnailUrl: youtubeInfo.thumbnailUrl,
                     });
 
                     enrichedMetadata = {
                         ...metadata,
                         platform,
-                        [FieldMapper.get('URL')]: videoUrl || postUrl, // 🆕 원본 URL 추가
+                        url: videoUrl || postUrl, // 🆕 원본 URL 추가
                         // 🆕 YouTube 전용 ID 추가
-                        [FieldMapper.get('VIDEO_ID')]:
-                            youtubeInfo?.[FieldMapper.get('VIDEO_ID')] ||
-                            videoUrl?.match(/[?&]v=([^&]+)/)?.[1],
-                        [FieldMapper.get('CHANNEL_ID')]:
-                            youtubeInfo?.[FieldMapper.get('CHANNEL_ID')],
+                        videoId: youtubeInfo?.videoId || videoUrl?.match(/[?&]v=([^&]+)/)?.[1],
+                        channelId: youtubeInfo?.channelId,
                     };
 
-                    thumbnailPaths = [
-                        youtubeInfo[FieldMapper.get('THUMBNAIL_URL')],
-                    ]; // 썸네일 URL 저장
+                    thumbnailPaths = [youtubeInfo.thumbnailUrl]; // 썸네일 URL 저장
 
                     // AI 분석 조건부 실행
                     if (useAI && analysisType !== 'none') {
                         ServerLogger.info('1️⃣ YouTube 썸네일로 AI 분석 중...');
                         analysis = await aiAnalyzer.analyzeVideo(
-                            youtubeInfo[FieldMapper.get('THUMBNAIL_URL')],
+                            youtubeInfo.thumbnailUrl,
                             enrichedMetadata,
                         );
 
                         // 🔍 AI 분석 결과 디버깅
-                        console.log(
+                        ServerLogger.info(
                             '🔍 AI 분석 결과 전체:',
                             JSON.stringify(analysis, null, 2),
                         );
 
                         // YouTube 카테고리와 AI 카테고리 일치율 비교
                         if (
-                            youtubeInfo[FieldMapper.get('CATEGORY')] &&
+                            youtubeInfo.category &&
                             analysis.mainCategory
                         ) {
                             const matchResult =
                                 videoProcessor.compareCategories(
-                                    youtubeInfo[FieldMapper.get('CATEGORY')],
+                                    youtubeInfo.category,
                                     analysis.mainCategory,
                                     analysis.middleCategory,
                                     analysis.fullCategoryPath,
@@ -1002,30 +944,25 @@ app.post('/api/process-video', async (req, res) => {
                         ServerLogger.info('1️⃣ AI 분석 건너뜀 (사용자 설정)');
                         // YouTube 카테고리를 기본 분류로 사용
                         const youtubeMainCategory =
-                            youtubeInfo[FieldMapper.get('CATEGORY')] ||
-                            '미분류';
+                            youtubeInfo.category || '미분류';
                         ServerLogger.info(
                             `📂 YouTube 카테고리 사용: ${youtubeMainCategory}`,
                         );
 
                         analysis = {
-                            [FieldMapper.get('CATEGORY')]: '분석 안함',
-                            [FieldMapper.get('MAIN_CATEGORY')]:
-                                youtubeMainCategory, // YouTube 카테고리 사용 🎯
-                            [FieldMapper.get('MIDDLE_CATEGORY')]: '기본',
-                            [FieldMapper.get('KEYWORDS')]: [],
-                            [FieldMapper.get('HASHTAGS')]: [],
-                            [FieldMapper.get('CONFIDENCE')]: 100, // YouTube 공식 카테고리이므로 100% 신뢰도
-                            [FieldMapper.get('FRAME_COUNT')]: 1,
+                            category: '분석 안함',
+                            mainCategory: youtubeMainCategory, // YouTube 카테고리 사용 🎯
+                            middleCategory: '기본',
+                            keywords: [],
+                            hashtags: [],
+                            confidence: 100, // YouTube 공식 카테고리이므로 100% 신뢰도
+                            frameCount: 1,
                             categoryMatch: {
                                 matchScore: 100,
-                                [FieldMapper.get('MATCH_TYPE')]:
-                                    'youtube_official',
-                                [FieldMapper.get(
-                                    'MATCH_REASON',
-                                )]: `YouTube 공식 카테고리: ${youtubeMainCategory}`,
+                                matchType: 'youtube_official',
+                                matchReason: `YouTube 공식 카테고리: ${youtubeMainCategory}`,
                             },
-                            [FieldMapper.get('AI_MODEL')]: '수동', // AI 비사용 시 '수동'으로 표시
+                            aiModel: '수동', // AI 비사용 시 '수동'으로 표시
                         };
                     }
                 } else {
@@ -1058,8 +995,8 @@ app.post('/api/process-video', async (req, res) => {
                     // 3단계: AI 분석 (조건부 실행)
                     enrichedMetadata = {
                         ...metadata,
-                        [FieldMapper.get('PLATFORM')]: platform,
-                        [FieldMapper.get('URL')]: videoUrl || postUrl,
+                        platform: platform,
+                        url: videoUrl || postUrl,
                     };
 
                     if (useAI && analysisType !== 'none') {
@@ -1077,15 +1014,14 @@ app.post('/api/process-video', async (req, res) => {
                     } else {
                         ServerLogger.info('3️⃣ AI 분석 건너뜀 (사용자 설정)');
                         analysis = {
-                            [FieldMapper.get('CATEGORY')]: '분석 안함',
-                            [FieldMapper.get('MAIN_CATEGORY')]: '미분류',
-                            [FieldMapper.get('MIDDLE_CATEGORY')]: '기본',
-                            [FieldMapper.get('KEYWORDS')]: [],
-                            [FieldMapper.get('HASHTAGS')]: [],
-                            [FieldMapper.get('CONFIDENCE')]: 0,
-                            [FieldMapper.get('FRAME_COUNT')]:
-                                thumbnailPaths.length,
-                            [FieldMapper.get('AI_MODEL')]: '수동', // AI 비사용 시 '수동'으로 표시
+                            category: '분석 안함',
+                            mainCategory: '미분류',
+                            middleCategory: '기본',
+                            keywords: [],
+                            hashtags: [],
+                            confidence: 0,
+                            frameCount: thumbnailPaths.length,
+                            aiModel: '수동', // AI 비사용 시 '수동'으로 표시
                         };
                     }
                 }
@@ -1103,36 +1039,28 @@ app.post('/api/process-video', async (req, res) => {
                     );
 
                     return {
-                        [FieldMapper.get('PROCESSING')]: {
+                        processing: {
                             platform,
                             analysisType,
-                            [FieldMapper.get('FRAME_COUNT')]:
-                                analysis.frameCount || 1,
+                            frameCount: analysis.frameCount || 1,
                             skippedSaving: true,
                         },
-                        [FieldMapper.get('ANALYSIS')]: {
-                            [FieldMapper.get('CATEGORY')]:
-                                analysis[FieldMapper.get('CATEGORY')],
-                            [FieldMapper.get('MAIN_CATEGORY')]:
-                                analysis.mainCategory,
-                            [FieldMapper.get('MIDDLE_CATEGORY')]:
-                                analysis.middleCategory,
-                            [FieldMapper.get('KEYWORDS')]: analysis.keywords,
-                            [FieldMapper.get('HASHTAGS')]: analysis.hashtags,
-                            [FieldMapper.get('CONFIDENCE')]:
-                                analysis.confidence,
+                        analysis: {
+                            category: analysis.category,
+                            mainCategory: analysis.mainCategory,
+                            middleCategory: analysis.middleCategory,
+                            keywords: analysis.keywords,
+                            hashtags: analysis.hashtags,
+                            confidence: analysis.confidence,
                         },
-                        [FieldMapper.get('FILES')]: {
-                            [FieldMapper.get('VIDEO_PATH')]: videoPath,
-                            [FieldMapper.get('THUMBNAIL_PATH')]: Array.isArray(
-                                thumbnailPaths,
-                            )
+                        files: {
+                            videoPath: videoPath,
+                            thumbnailPath: Array.isArray(thumbnailPaths)
                                 ? thumbnailPaths[0]
                                 : thumbnailPaths,
-                            [FieldMapper.get('THUMBNAIL_PATHS')]:
-                                thumbnailPaths,
+                            thumbnailPaths: thumbnailPaths,
                         },
-                        [FieldMapper.get('AI_ERROR')]: analysis.aiError,
+                        aiError: analysis.aiError,
                     };
                 }
 
@@ -1144,30 +1072,24 @@ app.post('/api/process-video', async (req, res) => {
                     platform,
                     postUrl,
                     videoPath,
-                    [FieldMapper.get('THUMBNAIL_PATH')]: Array.isArray(
-                        thumbnailPaths,
-                    )
+                    thumbnailPath: Array.isArray(thumbnailPaths)
                         ? thumbnailPaths[0]
                         : thumbnailPaths,
-                    [FieldMapper.get('THUMBNAIL_PATHS')]: thumbnailPaths,
+                    thumbnailPaths: thumbnailPaths,
                     metadata,
                     analysis,
-                    [FieldMapper.get('TIMESTAMP')]: new Date().toISOString(),
+                    timestamp: new Date().toISOString(),
                 });
 
                 // 통합 저장 결과 확인
                 if (!result.success) {
                     // Google Sheets 인증 문제는 경고로 처리하고 계속 진행
                     if (
-                        result[FieldMapper.get('ERROR')] &&
-                        result[FieldMapper.get('ERROR')].includes(
-                            'invalid_grant',
-                        )
+                        result.error &&
+                        result.error.includes('invalid_grant')
                     ) {
                         ServerLogger.warn(
-                            `⚠️ Google Sheets 인증 실패로 시트 저장 건너뜀: ${
-                                result[FieldMapper.get('ERROR')]
-                            }`,
+                            `⚠️ Google Sheets 인증 실패로 시트 저장 건너뜀: ${result.error}`,
                         );
                         // MongoDB 저장이 성공했다면 계속 진행
                         if (result.mongodb && result.mongodb.success) {
@@ -1175,31 +1097,17 @@ app.post('/api/process-video', async (req, res) => {
                                 '✅ MongoDB 저장은 성공, Google Sheets 실패는 무시하고 계속 진행',
                             );
                         } else {
-                            throw new Error(
-                                `통합 저장 실패: ${
-                                    result[FieldMapper.get('ERROR')]
-                                }`,
-                            );
+                            throw new Error(`통합 저장 실패: ${result.error}`);
                         }
                     } else {
-                        throw new Error(
-                            `통합 저장 실패: ${
-                                result[FieldMapper.get('ERROR')]
-                            }`,
-                        );
+                        throw new Error(`통합 저장 실패: ${result.error}`);
                     }
                 }
 
                 ServerLogger.info('✅ 통합 저장 완료!', {
-                    [FieldMapper.get(
-                        'SHEETS_TIME',
-                    )]: `${result.performance.sheetsTime}ms`,
-                    [FieldMapper.get(
-                        'MONGO_TIME',
-                    )]: `${result.performance.mongoTime}ms`,
-                    [FieldMapper.get(
-                        'TOTAL_TIME',
-                    )]: `${result.performance.totalTime}ms`,
+                    sheetsTime: `${result.performance.sheetsTime}ms`,
+                    mongoTime: `${result.performance.mongoTime}ms`,
+                    totalTime: `${result.performance.totalTime}ms`,
                 });
 
                 // 통계 업데이트
@@ -1218,22 +1126,15 @@ app.post('/api/process-video', async (req, res) => {
                         // sheetInfo가 있으면 사용, 없으면 null로 업데이트
                         const sheetLocation = result.sheets
                             ? {
-                                  [FieldMapper.get('SHEET_NAME')]:
-                                      result.sheets.sheetName,
-                                  [FieldMapper.get('COLUMN')]: 'N', // URL 저장 컬럼
-                                  [FieldMapper.get('ROW')]:
-                                      result.sheets.nextRow,
+                                  sheetName: result.sheets.sheetName,
+                                  column: 'N', // URL 저장 컬럼
+                                  row: result.sheets.nextRow,
                               }
                             : null;
 
                         // YouTube 게시일 추출 (enrichedMetadata에서)
-                        const originalPublishDate = enrichedMetadata[
-                            FieldMapper.get('UPLOAD_DATE')
-                        ]
-                            ? new Date(
-                                  enrichedMetadata[
-                                      FieldMapper.get('UPLOAD_DATE')
-                                  ],
+                        const originalPublishDate = enrichedMetadata.uploadDate
+                            ? new Date(enrichedMetadata.uploadDate,
                               )
                             : null;
 
@@ -1259,257 +1160,103 @@ app.post('/api/process-video', async (req, res) => {
                 const totalProcessingTime = 2000; // 임시값
 
                 const responseData = {
-                    [FieldMapper.get('PROCESSING')]: {
+                    processing: {
                         platform,
                         analysisType,
-                        [FieldMapper.get('FRAME_COUNT')]:
-                            analysis.frameCount || 1,
+                        frameCount: analysis.frameCount || 1,
                         // 🆕 시간 정보 추가
-                        [FieldMapper.get('START_TIME')]:
-                            new Date().toISOString(),
-                        [FieldMapper.get('END_TIME')]: new Date().toISOString(),
-                        [FieldMapper.get(
-                            'TOTAL_TIME',
-                        )]: `${totalProcessingTime}ms`,
-                        [FieldMapper.get('AI_PROCESSING_TIME')]:
-                            analysis[FieldMapper.get('PROCESSING_TIME')] ||
-                            'N/A',
+                        startTime: new Date().toISOString(),
+                        endTime: new Date().toISOString(),
+                        totalTime: `${totalProcessingTime}ms`,
+                        aiProcessingTime: analysis.processingTime || 'N/A',
                     },
-                    [FieldMapper.get('METADATA')]: {
+                    metadata: {
                         ...enrichedMetadata,
                         // 🆕 상세 메타데이터 추가
-                        [FieldMapper.get('TITLE')]:
-                            enrichedMetadata[FieldMapper.get('TITLE')] ||
-                            youtubeInfo?.[FieldMapper.get('TITLE')],
-                        [FieldMapper.get('UPLOAD_DATE')]:
-                            enrichedMetadata[FieldMapper.get('UPLOAD_DATE')] ||
-                            '',
-                        [FieldMapper.get('CHANNEL_ID')]:
-                            youtubeInfo?.[FieldMapper.get('CHANNEL_ID')] || '',
-                        [FieldMapper.get('VIDEO_ID')]:
-                            youtubeInfo?.[FieldMapper.get('VIDEO_ID')] ||
-                            videoUrl?.match(/[?&]v=([^&]+)/)?.[1] ||
-                            '',
-                        [FieldMapper.get('CHANNEL_NAME')]: (() => {
+                        title: enrichedMetadata.title || youtubeInfo?.title,
+                        uploadDate: enrichedMetadata.uploadDate || '',
+                        channelId: youtubeInfo?.channelId || '',
+                        videoId: youtubeInfo?.videoId || videoUrl?.match(/[?&]v=([^&]+)/)?.[1] || '',
+                        channelName: (() => {
                             const channelName =
-                                enrichedMetadata[
-                                    FieldMapper.get('CHANNEL_NAME')
-                                ] ||
-                                youtubeInfo?.[
-                                    FieldMapper.get('CHANNEL_NAME')
-                                ] ||
+                                enrichedMetadata.channelName ||
+                                youtubeInfo?.channelName ||
                                 '';
                             ServerLogger.info(
                                 `🔍 채널명 디버그: ${channelName}`,
                                 {
-                                    enrichedChannelName:
-                                        enrichedMetadata[
-                                            FieldMapper.get('CHANNEL_NAME')
-                                        ],
-                                    enrichedChannelNameLegacy:
-                                        enrichedMetadata[
-                                            FieldMapper.get('CHANNEL_NAME')
-                                        ],
-                                    youtubeInfoChannel:
-                                        youtubeInfo?.[
-                                            FieldMapper.get('CHANNEL_NAME')
-                                        ],
+                                    enrichedChannelName: enrichedMetadata.channelName,
+                                    enrichedChannelNameLegacy: enrichedMetadata.channelName,
+                                    youtubeInfoChannel: youtubeInfo?.channelName,
                                     finalChannelName: channelName,
                                 },
                             );
                             return channelName;
                         })(),
-                        [FieldMapper.get('CHANNEL_URL')]:
-                            enrichedMetadata[FieldMapper.get('CHANNEL_URL')] ||
-                            youtubeInfo?.[FieldMapper.get('CHANNEL_URL')] ||
-                            '',
-                        [FieldMapper.get('TAGS')]:
-                            enrichedMetadata[FieldMapper.get('TAGS')] ||
-                            youtubeInfo?.[FieldMapper.get('TAGS')] ||
-                            [],
-                        [FieldMapper.get('LANGUAGE')]:
-                            enrichedMetadata[FieldMapper.get('LANGUAGE')] &&
-                            enrichedMetadata[
-                                FieldMapper.get('LANGUAGE')
-                            ].trim() !== ''
-                                ? enrichedMetadata[FieldMapper.get('LANGUAGE')]
-                                : enrichedMetadata[
-                                      FieldMapper.get('DEFAULT_LANGUAGE')
-                                  ] &&
-                                  enrichedMetadata[
-                                      FieldMapper.get('DEFAULT_LANGUAGE')
-                                  ].trim() !== ''
-                                ? enrichedMetadata[
-                                      FieldMapper.get('DEFAULT_LANGUAGE')
-                                  ]
-                                : youtubeInfo?.[FieldMapper.get('LANGUAGE')] &&
-                                  youtubeInfo?.[
-                                      FieldMapper.get('LANGUAGE')
-                                  ].trim() !== ''
-                                ? youtubeInfo?.[FieldMapper.get('LANGUAGE')]
-                                : youtubeInfo?.[
-                                      FieldMapper.get('DEFAULT_LANGUAGE')
-                                  ] &&
-                                  youtubeInfo?.[
-                                      FieldMapper.get('DEFAULT_LANGUAGE')
-                                  ].trim() !== ''
-                                ? youtubeInfo?.[
-                                      FieldMapper.get('DEFAULT_LANGUAGE')
-                                  ]
-                                : youtubeInfo?.[
-                                      FieldMapper.get('DEFAULT_AUDIO_LANGUAGE')
-                                  ] &&
-                                  youtubeInfo?.[
-                                      FieldMapper.get('DEFAULT_AUDIO_LANGUAGE')
-                                  ].trim() !== ''
-                                ? youtubeInfo?.[
-                                      FieldMapper.get('DEFAULT_AUDIO_LANGUAGE')
-                                  ]
-                                : null,
-                        [FieldMapper.get('LICENSED_CONTENT')]:
-                            enrichedMetadata[
-                                FieldMapper.get('LICENSED_CONTENT')
-                            ] || '',
-                        [FieldMapper.get('CATEGORY_ID')]:
-                            youtubeInfo?.[FieldMapper.get('CATEGORY_ID')] || 0,
-                        [FieldMapper.get('SHARES')]:
-                            enrichedMetadata[FieldMapper.get('SHARES')] || 0,
-                        [FieldMapper.get('VIDEO_URL')]:
-                            finalVideoUrl || postUrl || '',
-                        [FieldMapper.get('TOP_COMMENTS')]:
-                            enrichedMetadata[FieldMapper.get('TOP_COMMENTS')] ||
-                            youtubeInfo?.[FieldMapper.get('TOP_COMMENTS')] ||
-                            '',
-                        // 📈 통계 정보 추가
-                        [FieldMapper.get('LIKE_RATIO')]:
-                            enrichedMetadata[FieldMapper.get('LIKES')] &&
-                            enrichedMetadata[FieldMapper.get('VIEWS')]
-                                ? (
-                                      (parseInt(
-                                          enrichedMetadata[
-                                              FieldMapper.get('LIKES')
-                                          ],
-                                      ) /
-                                          parseInt(
-                                              enrichedMetadata[
-                                                  FieldMapper.get('VIEWS')
-                                              ],
-                                          )) *
-                                      100
-                                  ).toFixed(2) + '%'
-                                : '',
-                        [FieldMapper.get('ENGAGEMENT_RATE')]:
-                            enrichedMetadata[FieldMapper.get('LIKES')] &&
-                            enrichedMetadata[FieldMapper.get('COMMENTS')] &&
-                            enrichedMetadata[FieldMapper.get('VIEWS')]
-                                ? (
-                                      ((parseInt(
-                                          enrichedMetadata[
-                                              FieldMapper.get('LIKES')
-                                          ],
-                                      ) +
-                                          parseInt(
-                                              enrichedMetadata[
-                                                  FieldMapper.get(
-                                                      'COMMENTS_COUNT',
-                                                  )
-                                              ] || 0,
-                                          )) /
-                                          parseInt(
-                                              enrichedMetadata[
-                                                  FieldMapper.get('VIEWS')
-                                              ],
-                                          )) *
-                                      100
-                                  ).toFixed(2) + '%'
-                                : '',
-                    },
-                    [FieldMapper.get('ANALYSIS')]: {
-                        [FieldMapper.get('CATEGORY')]:
-                            analysis[FieldMapper.get('CATEGORY')] ||
-                            analysis.mainCategory ||
-                            '미분류',
-                        [FieldMapper.get('MAIN_CATEGORY')]:
-                            analysis.mainCategory,
-                        [FieldMapper.get('MIDDLE_CATEGORY')]:
-                            analysis.middleCategory,
-                        [FieldMapper.get('KEYWORDS')]: analysis.keywords,
-                        [FieldMapper.get('HASHTAGS')]: analysis.hashtags,
-                        [FieldMapper.get('CONFIDENCE')]: analysis.confidence,
-                        // 🆕 AI 분석 상세 내용 추가 (폴백 시스템 신뢰)
-                        [FieldMapper.get('SUMMARY')]:
-                            analysis[FieldMapper.get('SUMMARY')],
-                        [FieldMapper.get('DESCRIPTION')]:
-                            analysis[FieldMapper.get('DESCRIPTION')],
-                        [FieldMapper.get('CONTENT')]:
-                            analysis[FieldMapper.get('CONTENT')],
-                        [FieldMapper.get('ANALYSIS_CONTENT')]:
-                            analysis[FieldMapper.get('ANALYSIS_CONTENT')] ||
-                            analysis[FieldMapper.get('SUMMARY')] ||
-                            analysis[FieldMapper.get('DESCRIPTION')] ||
-                            analysis[FieldMapper.get('CONTENT')] ||
+                        channelUrl: enrichedMetadata.channelUrl || youtubeInfo?.channelUrl || '',
+                        tags: enrichedMetadata.tags || youtubeInfo?.tags || [],
+                        language: 
+                            enrichedMetadata.language || 
+                            enrichedMetadata.defaultLanguage ||
+                            youtubeInfo?.language ||
+                            youtubeInfo?.defaultLanguage ||
+                            youtubeInfo?.defaultAudioLanguage ||
                             null,
-                        [FieldMapper.get('SOURCE')]:
-                            analysis[FieldMapper.get('SOURCE')] || 'gemini',
-                        [FieldMapper.get('AI_MODEL')]:
-                            analysis.aiModel || 'gemini-2.5-flash-lite',
-                        [FieldMapper.get('PROCESSING_TIME')]:
-                            analysis[FieldMapper.get('PROCESSING_TIME')] ||
-                            'N/A',
+                        licensedContent: enrichedMetadata.licensedContent || '',
+                        categoryId: youtubeInfo?.categoryId || 0,
+                        shares: enrichedMetadata.shares || 0,
+                        videoUrl: finalVideoUrl || postUrl || '',
+                        topComments: enrichedMetadata.topComments || youtubeInfo?.topComments || '',
+                        // 📈 통계 정보 추가
+                        likeRatio: enrichedMetadata.likes && enrichedMetadata.views
+                            ? ((parseInt(enrichedMetadata.likes) / parseInt(enrichedMetadata.views)) * 100).toFixed(2) + '%'
+                            : '',
+                        engagementRate: enrichedMetadata.likes && enrichedMetadata.commentsCount && enrichedMetadata.views
+                            ? (((parseInt(enrichedMetadata.likes) + parseInt(enrichedMetadata.commentsCount || 0)) / parseInt(enrichedMetadata.views)) * 100).toFixed(2) + '%'
+                            : '',
+                    },
+                    analysis: {
+                        category: analysis.category || analysis.mainCategory || '미분류',
+                        mainCategory: analysis.mainCategory,
+                        middleCategory: analysis.middleCategory,
+                        keywords: analysis.keywords,
+                        hashtags: analysis.hashtags,
+                        confidence: analysis.confidence,
+                        // 🆕 AI 분석 상세 내용 추가 (폴백 시스템 신뢰)
+                        summary: analysis.summary,
+                        description: analysis.description,
+                        content: analysis.content,
+                        analysisContent: analysis.analysisContent || analysis.summary || analysis.description || analysis.content || null,
+                        source: analysis.source || 'gemini',
+                        aiModel: analysis.aiModel || 'gemini-2.5-flash-lite',
+                        processingTime: analysis.processingTime || 'N/A',
                         // 🏷️ 카테고리 매칭 상세
-                        [FieldMapper.get('FULL_CATEGORY_PATH')]:
+                        fullCategoryPath:
                             analysis.fullCategoryPath ||
                             `${analysis.mainCategory}/${analysis.middleCategory}`,
-                        [FieldMapper.get('CATEGORY_MATCH_RATE')]:
+                        categoryMatchRate:
                             analysis.categoryMatch
                                 ? `${analysis.categoryMatch.matchScore}%`
                                 : analysis.categoryMatchRate || null,
-                        [FieldMapper.get('MATCH_TYPE')]: analysis.categoryMatch
+                        matchType: analysis.categoryMatch
                             ? analysis.categoryMatch.matchType
-                            : analysis.matchType ||
-                              (analysis[FieldMapper.get('SOURCE')]
-                                  ? `${
-                                        analysis[FieldMapper.get('SOURCE')]
-                                    }-analysis`
-                                  : null),
-                        [FieldMapper.get('MATCH_REASON')]:
-                            analysis.categoryMatch
-                                ? analysis.categoryMatch.matchReason
-                                : analysis.matchReason ||
-                                  (analysis[FieldMapper.get('SOURCE')]
-                                      ? `${
-                                            analysis[FieldMapper.get('SOURCE')]
-                                        } 분석 결과`
-                                      : null),
+                            : analysis.matchType || (analysis.source ? `${analysis.source}-analysis` : null),
+                        matchReason: analysis.categoryMatch
+                            ? analysis.categoryMatch.matchReason
+                            : analysis.matchReason || (analysis.source ? `${analysis.source} 분석 결과` : null),
                     },
                     // 🆕 누락된 필드들 추가
-                    [FieldMapper.get('COMMENTS_COUNT')]:
-                        enrichedMetadata[FieldMapper.get('COMMENTS_COUNT')] ||
-                        0,
-                    [FieldMapper.get('COMMENTS')]:
-                        enrichedMetadata[FieldMapper.get('TOP_COMMENTS')] || '',
-                    [FieldMapper.get('URL')]:
-                        enrichedMetadata[FieldMapper.get('URL')] ||
-                        videoUrl ||
-                        postUrl ||
-                        '',
-                    [FieldMapper.get('FILES')]: {
-                        [FieldMapper.get('VIDEO_PATH')]: videoPath,
-                        [FieldMapper.get('THUMBNAIL_PATH')]: Array.isArray(
-                            thumbnailPaths,
-                        )
-                            ? thumbnailPaths[0]
-                            : thumbnailPaths,
-                        [FieldMapper.get('THUMBNAIL_PATHS')]: thumbnailPaths,
+                    commentsCount: enrichedMetadata.commentsCount || 0,
+                    comments: enrichedMetadata.topComments || '',
+                    url: enrichedMetadata.url || videoUrl || postUrl || '',
+                    files: {
+                        videoPath: videoPath,
+                        thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
+                        thumbnailPaths: thumbnailPaths,
                         // 🆕 비디오 상세 정보 추가
-                        [FieldMapper.get('VIDEO_SIZE')]: videoPath
-                            ? 'N/A'
-                            : null,
-                        [FieldMapper.get('VIDEO_FORMAT')]: 'youtube-stream',
-                        [FieldMapper.get('VIDEO_QUALITY')]:
-                            enrichedMetadata[
-                                FieldMapper.get('VIDEO_QUALITY')
-                            ] || 'hd',
+                        videoSize: videoPath ? 'N/A' : null,
+                        videoFormat: 'youtube-stream',
+                        videoQuality: enrichedMetadata.videoQuality || 'hd',
                     },
                 };
 
@@ -1532,8 +1279,8 @@ app.post('/api/process-video', async (req, res) => {
 
         // ❌ 처리 실패 시 MongoDB에서 URL 상태를 failed로 업데이트
         const {
-            [FieldMapper.get('VIDEO_URL')]: errorVideoUrl,
-            [FieldMapper.get('POST_URL')]: errorPostUrl,
+            videoUrl: errorVideoUrl,
+            postUrl: errorPostUrl,
         } = req.body;
         const checkUrl = errorVideoUrl || errorPostUrl;
         if (checkUrl) {
@@ -1570,7 +1317,7 @@ app.get('/api/videos', async (req, res) => {
         const limit = parseInt(req.query.limit) || 10;
         const sortBy = req.query.sortBy || 'timestamp'; // timestamp는 이제 원본 게시일
         const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
-        const platform = req.query[FieldMapper.get('PLATFORM')]; // 플랫폼 필터 (선택적)
+        const platform = req.query.platform; // 플랫폼 필터 (선택적)
 
         ServerLogger.info(
             `📡 MongoDB API 요청: /api/videos (limit=${limit}, sortBy=${sortBy}, platform=${platform})`,
@@ -1582,50 +1329,49 @@ app.get('/api/videos', async (req, res) => {
             await DatabaseManager.connect();
         }
 
-        // 🚀 쿼리 조건 구성 (FieldMapper 자동화)
+        // 🚀 쿼리 조건 구성
         const query = {};
         if (platform) {
-            query[FieldMapper.get('PLATFORM')] = platform.toLowerCase();
+            query.platform = platform.toLowerCase();
         }
 
-        // 🚀 정렬 조건 구성 (FieldMapper 자동화)
+        // 🚀 정렬 조건 구성
         const sortOptions = {};
         if (sortBy === 'timestamp') {
             // uploadDate가 있으면 우선, 없으면 timestamp 사용
-            sortOptions[FieldMapper.get('UPLOAD_DATE')] = sortOrder;
-            sortOptions[FieldMapper.get('TIMESTAMP')] = sortOrder;
+            sortOptions.uploadDate = sortOrder;
+            sortOptions.timestamp = sortOrder;
         } else {
-            // sortBy를 FieldMapper로 변환 시도, 실패하면 원본 사용
+            // sortBy를 직접 사용
             try {
-                const mappedField = FieldMapper.get(sortBy.toUpperCase());
-                sortOptions[mappedField] = sortOrder;
+                sortOptions[sortBy] = sortOrder;
             } catch {
                 sortOptions[sortBy] = sortOrder; // 레거시 호환
             }
         }
 
-        // 🚀 MongoDB에서 비디오 조회 (FieldMapper 자동화)
-        const selectFields = FieldMapper.buildSelectString([
-            'PLATFORM',
-            'CHANNEL_NAME',
-            'TITLE',
-            'LIKES',
-            'VIEWS',
-            'COMMENTS_COUNT',
-            'URL',
-            'TIMESTAMP',
-            'UPLOAD_DATE',
-            'PROCESSED_AT',
-            'CATEGORY',
-            'MAIN_CATEGORY',
-            'MIDDLE_CATEGORY',
-            'FULL_CATEGORY_PATH',
-            'CATEGORY_DEPTH',
-            'KEYWORDS',
-            'HASHTAGS',
-            'THUMBNAIL_URL',
-            'YOUTUBE_HANDLE',
-        ]);
+        // 🚀 MongoDB에서 비디오 조회
+        const selectFields = {
+            platform: 1,
+            channelName: 1,
+            title: 1,
+            likes: 1,
+            views: 1,
+            commentsCount: 1,
+            url: 1,
+            timestamp: 1,
+            uploadDate: 1,
+            processedAt: 1,
+            category: 1,
+            mainCategory: 1,
+            middleCategory: 1,
+            fullCategoryPath: 1,
+            categoryDepth: 1,
+            keywords: 1,
+            hashtags: 1,
+            thumbnailUrl: 1,
+            youtubeHandle: 1,
+        };
 
         const videos = await Video.find(query)
             .sort(sortOptions)
@@ -1633,10 +1379,10 @@ app.get('/api/videos', async (req, res) => {
             .select(selectFields)
             .lean(); // 성능 최적화
 
-        // 🚀 필드 접근 자동화 (FieldMapper)
+        // 🚀 필드 접근 직접 사용
         const enhancedVideos = videos.map((video) => {
             // 썸네일 URL을 HTTP URL로 변환
-            let thumbnailUrl = video[FieldMapper.get('THUMBNAIL_URL')];
+            let thumbnailUrl = video.thumbnailUrl;
             if (thumbnailUrl && !thumbnailUrl.startsWith('http')) {
                 // 로컬 파일 경로를 HTTP URL로 변환
                 const relativePath = thumbnailUrl.includes('/downloads/')
@@ -1654,7 +1400,7 @@ app.get('/api/videos', async (req, res) => {
                         thumbnailUrl = `http://localhost:3000/downloads/${relativePath}`;
                     } else {
                         // 파일이 없으면 플랫폼별 placeholder
-                        const platform = video[FieldMapper.get('PLATFORM')];
+                        const platform = video.platform;
                         if (platform === 'instagram') {
                             thumbnailUrl =
                                 'https://placehold.co/400x600/E4405F/FFFFFF?text=IG';
@@ -1668,7 +1414,7 @@ app.get('/api/videos', async (req, res) => {
                     }
                 } catch (err) {
                     // 에러 발생시 placeholder 사용
-                    const platform = video[FieldMapper.get('PLATFORM')];
+                    const platform = video.platform;
                     if (platform === 'instagram') {
                         thumbnailUrl =
                             'https://placehold.co/400x600/E4405F/FFFFFF?text=IG';
@@ -1682,7 +1428,7 @@ app.get('/api/videos', async (req, res) => {
                 }
             } else if (!thumbnailUrl) {
                 // 썸네일이 없으면 플랫폼별 placeholder 제공
-                const platform = video[FieldMapper.get('PLATFORM')];
+                const platform = video.platform;
                 if (platform === 'instagram') {
                     thumbnailUrl =
                         'https://placehold.co/400x600/E4405F/FFFFFF?text=IG';
@@ -1697,48 +1443,38 @@ app.get('/api/videos', async (req, res) => {
 
             return {
                 ...video,
-                // 🚀 FieldMapper 자동화된 필드 접근
-                [FieldMapper.get('TIMESTAMP')]:
-                    video[FieldMapper.get('UPLOAD_DATE')] ||
-                    video[FieldMapper.get('TIMESTAMP')],
-                [FieldMapper.get('UPLOAD_DATE')]:
-                    video[FieldMapper.get('UPLOAD_DATE')],
-                [FieldMapper.get('THUMBNAIL_URL')]: thumbnailUrl,
+                // 🚀 직접 필드 접근
+                timestamp: video.uploadDate || video.timestamp,
+                uploadDate: video.uploadDate,
+                thumbnailUrl: thumbnailUrl,
                 // url이 없고 channelName이 URL인 경우 복구
-                [FieldMapper.get('URL')]:
-                    video[FieldMapper.get('URL')] ||
-                    (video[FieldMapper.get('CHANNEL_NAME')] &&
-                    video[FieldMapper.get('CHANNEL_NAME')].startsWith('http')
-                        ? video[FieldMapper.get('CHANNEL_NAME')]
+                url: video.url ||
+                    (video.channelName &&
+                    video.channelName.startsWith('http')
+                        ? video.channelName
                         : ''),
-                // 🚀 채널명과 핸들명을 올바르게 구분 (FieldMapper 자동화)
-                [FieldMapper.get('CHANNEL_NAME')]:
-                    video[FieldMapper.get('CHANNEL_NAME')] &&
-                    !video[FieldMapper.get('CHANNEL_NAME')].startsWith(
-                        'http',
-                    ) &&
-                    !video[FieldMapper.get('CHANNEL_NAME')].startsWith('@')
-                        ? video[FieldMapper.get('CHANNEL_NAME')]
+                // 🚀 채널명과 핸들명을 올바르게 구분
+                channelName:
+                    video.channelName &&
+                    !video.channelName.startsWith('http') &&
+                    !video.channelName.startsWith('@')
+                        ? video.channelName
                         : '알 수 없는 채널',
-                [FieldMapper.get('THUMBNAIL')]: thumbnailUrl, // 레거시 호환
-                [FieldMapper.get('CHANNEL_AVATAR_URL')]: '',
-                [FieldMapper.get('CHANNEL_AVATAR')]: '',
-                [FieldMapper.get('VIEW_COUNT')]:
-                    video[FieldMapper.get('VIEWS')],
-                [FieldMapper.get('DAYS_AGO')]: 0,
-                [FieldMapper.get('IS_TRENDING')]: false,
+                thumbnail: thumbnailUrl, // 레거시 호환
+                channelAvatarUrl: '',
+                channelAvatar: '',
+                viewCount: video.views,
+                daysAgo: 0,
+                isTrending: false,
                 // 🐛 디버깅: LIKES 필드 명시적 처리
-                [FieldMapper.get('LIKES')]:
-                    video[FieldMapper.get('LIKES')] !== undefined
-                        ? video[FieldMapper.get('LIKES')]
-                        : null,
+                likes: video.likes !== undefined ? video.likes : null,
             };
         });
 
         // 플랫폼별 비디오 수 분석
         const platformCounts = {};
         enhancedVideos.forEach((v) => {
-            const platform = v[FieldMapper.get('PLATFORM')] || 'unknown';
+            const platform = v.platform || 'unknown';
             platformCounts[platform] = (platformCounts[platform] || 0) + 1;
         });
 
@@ -1790,7 +1526,7 @@ app.get('/api/channels', async (req, res) => {
 
         const limit = parseInt(req.query.limit) || 20;
         const sortBy = req.query.sortBy || 'subscribers'; // subscribers, totalViews, lastAnalyzedAt
-        const platform = req.query[FieldMapper.get('PLATFORM')]; // 플랫폼 필터
+        const platform = req.query.platform; // 플랫폼 필터
         const clustered = req.query.clustered; // true/false/undefined
         const search = req.query.search; // 검색어
 
@@ -1806,7 +1542,7 @@ app.get('/api/channels', async (req, res) => {
         };
 
         if (platform) {
-            filters[FieldMapper.get('PLATFORM')] = platform.toLowerCase();
+            filters.platform = platform.toLowerCase();
         }
 
         if (clustered !== undefined) {
@@ -1814,7 +1550,7 @@ app.get('/api/channels', async (req, res) => {
         }
 
         if (search) {
-            filters[FieldMapper.get('TAGS')] = [search]; // 태그 검색
+            filters.tags = [search]; // 태그 검색
         }
 
         // ChannelAnalysisService를 통해 검색
@@ -1828,7 +1564,7 @@ app.get('/api/channels', async (req, res) => {
                 limit: limit,
                 sortBy: sortBy,
                 filters: {
-                    [FieldMapper.get('PLATFORM')]: platform || 'all',
+                    platform: platform || 'all',
                     clustered: clustered || 'all',
                     search: search || null,
                 },
@@ -1868,10 +1604,10 @@ app.get('/api/channels/:channelId', async (req, res) => {
             ServerLogger.info(`📡 핸들/채널명으로 검색: ${channelId}`, 'DEBUG');
             channel = await ChannelAnalysisService.findOne({
                 $or: [
-                    { [FieldMapper.get('YOUTUBE_HANDLE')]: channelId },
-                    { [FieldMapper.get('CHANNEL_NAME')]: channelId },
+                    { youtubeHandle: channelId },
+                    { name: channelId },
                     {
-                        [FieldMapper.get('YOUTUBE_HANDLE')]:
+                        youtubeHandle:
                             channelId.startsWith('@')
                                 ? channelId
                                 : `@${channelId}`,
@@ -1954,7 +1690,7 @@ app.post('/api/cache/clear', async (req, res) => {
                 '캐시가 무효화되었습니다. 다음 조회부터 새로운 데이터를 가져옵니다.',
         });
     } catch (error) {
-        res.json({ success: false, [FieldMapper.get('ERROR')]: error.message });
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ success: false, error: error.message });
     }
 });
 
@@ -1962,7 +1698,7 @@ app.post('/api/cache/clear', async (req, res) => {
 app.get('/api/cache/status', async (req, res) => {
     try {
         const cacheInfo = {
-            cacheSize: sheetsManager.cache[FieldMapper.get('SIZE')],
+            cacheSize: sheetsManager.cache.size,
             keys: Array.from(sheetsManager.cache.keys()),
             ttl: sheetsManager.cacheTTL,
             entries: {},
@@ -1970,7 +1706,7 @@ app.get('/api/cache/status', async (req, res) => {
 
         // 각 캐시 엔트리의 나이 계산
         for (const [key, value] of sheetsManager.cache.entries()) {
-            const age = Date.now() - value[FieldMapper.get('TIMESTAMP')];
+            const age = Date.now() - value.timestamp;
             cacheInfo.entries[key] = {
                 age: `${age}ms`,
                 isValid: age < sheetsManager.cacheTTL,
@@ -2024,7 +1760,7 @@ app.get('/api/self-learning/stats', async (req, res) => {
             {
                 selfLearning: stats,
                 system: systemStats,
-                [FieldMapper.get('TIMESTAMP')]: new Date().toISOString(),
+                timestamp: new Date().toISOString(),
             },
             '자가 학습 통계 조회 성공',
         );
@@ -2047,9 +1783,9 @@ app.post('/api/check-duplicate', async (req, res) => {
         const { url } = req.body;
 
         if (!url) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
                 success: false,
-                [FieldMapper.get('ERROR')]: 'URL_REQUIRED',
+                error: ERROR_CODES.INVALID_INPUT,
                 message: 'URL이 필요합니다.',
             });
         }
@@ -2067,13 +1803,11 @@ app.post('/api/check-duplicate', async (req, res) => {
                 isDuplicate: true,
                 message: `중복 URL 발견: ${duplicateCheck.existingPlatform} 시트의 ${duplicateCheck.existingColumn}${duplicateCheck.existingRow}행에 존재합니다`,
                 data: {
-                    [FieldMapper.get('PLATFORM')]:
-                        duplicateCheck.existingPlatform,
-                    [FieldMapper.get('ROW')]: duplicateCheck.existingRow,
-                    [FieldMapper.get('COLUMN')]: duplicateCheck.existingColumn,
-                    [FieldMapper.get('ORIGINAL_URL')]: url,
-                    [FieldMapper.get('NORMALIZED_URL')]:
-                        sheetsManager.normalizeVideoUrl(url),
+                    platform: duplicateCheck.existingPlatform,
+                    row: duplicateCheck.existingRow,
+                    column: duplicateCheck.existingColumn,
+                    originalUrl: url,
+                    normalizedUrl: sheetsManager.normalizeVideoUrl(url),
                 },
             });
         } else {
@@ -2082,11 +1816,9 @@ app.post('/api/check-duplicate', async (req, res) => {
                 isDuplicate: false,
                 message: '중복 없음 - 새로운 URL입니다',
                 data: {
-                    [FieldMapper.get('ORIGINAL_URL')]: url,
-                    [FieldMapper.get('NORMALIZED_URL')]:
-                        sheetsManager.normalizeVideoUrl(url),
-                    [FieldMapper.get('ERROR')]:
-                        duplicateCheck[FieldMapper.get('ERROR')] || null,
+                    originalUrl: url,
+                    normalizedUrl: sheetsManager.normalizeVideoUrl(url),
+                    error: duplicateCheck.error || null,
                 },
             });
         }
@@ -2096,9 +1828,9 @@ app.post('/api/check-duplicate', async (req, res) => {
             error.message,
             'API_DUPLICATE_CHECK',
         );
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            [FieldMapper.get('ERROR')]: 'DUPLICATE_CHECK_FAILED',
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
             message: '중복 검사 중 오류가 발생했습니다.',
         });
     }
@@ -2119,14 +1851,14 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
     const analysis = await aiAnalyzer.analyzeVideo(thumbnailPath, {});
     
     const responseData = {
-      [FieldMapper.get('FILE')]: {
-        [FieldMapper.get('NAME')]: req.file.filename,
-        [FieldMapper.get('ORIGINAL_NAME')]: req.file.originalname,
-        [FieldMapper.get('SIZE')]: req.file[FieldMapper.get('SIZE')],
-        [FieldMapper.get('MIMETYPE')]: req.file.mimetype
+      file: {
+        name: req.file.filename,
+        originalName: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype
       },
-      [FieldMapper.get('THUMBNAIL')]: thumbnailPath,
-      [FieldMapper.get('ANALYSIS')]: analysis
+      thumbnail: thumbnailPath,
+      analysis: analysis
     };
 
     ResponseHandler.success(res, responseData, API_MESSAGES.FILE.UPLOAD_SUCCESS);
@@ -2148,17 +1880,17 @@ app.post(
 
         try {
             const { platform, analysisType = 'quick', useAI = true } = req.body;
-            postUrl = req.body[FieldMapper.get('POST_URL')]; // 명시적으로 할당
+            postUrl = req.body.postUrl; // 명시적으로 할당
             // 🚨 중요: FormData로 전송된 metadata는 JSON 문자열이므로 파싱 필요!
             let metadata = {};
             try {
-                metadata = req.body[FieldMapper.get('METADATA')]
-                    ? JSON.parse(req.body[FieldMapper.get('METADATA')])
+                metadata = req.body.metadata
+                    ? JSON.parse(req.body.metadata)
                     : {};
             } catch (error) {
                 ServerLogger.warn(
                     '❌ metadata JSON 파싱 실패:',
-                    req.body[FieldMapper.get('METADATA')],
+                    req.body.metadata,
                 );
                 metadata = {};
             }
@@ -2168,7 +1900,7 @@ app.post(
                 '📡 /api/process-video-blob 엔드포인트에서 metadata 수신:',
                 {
                     platform,
-                    rawMetadata: req.body[FieldMapper.get('METADATA')],
+                    rawMetadata: req.body.metadata,
                     hasMetadata: !!metadata && Object.keys(metadata).length > 0,
                     metadataKeys: Object.keys(metadata),
                     metadataPreview:
@@ -2178,14 +1910,12 @@ app.post(
 
             // 🔧 Instagram 메타데이터 보정 (author 필드 처리)
             try {
-                const { FieldMapper } = require('./types/field-mapper');
-
                 // author 필드가 있고 channelName이 비어있으면 매핑
                 if (
-                    metadata[FieldMapper.get('AUTHOR')] &&
-                    !metadata[FieldMapper.get('CHANNEL_NAME')]
+                    metadata.author &&
+                    !metadata.channelName
                 ) {
-                    const authorUrl = metadata[FieldMapper.get('AUTHOR')];
+                    const authorUrl = metadata.author;
 
                     // URL에서 사용자명 추출
                     const usernameMatch = authorUrl.match(
@@ -2193,38 +1923,30 @@ app.post(
                     );
                     if (usernameMatch) {
                         const username = usernameMatch[1];
-                        metadata[FieldMapper.get('CHANNEL_NAME')] = username;
-                        metadata[
-                            FieldMapper.get('CHANNEL_URL')
-                        ] = `https://www.instagram.com/${username}/`;
+                        metadata.channelName = username;
+                        metadata.channelUrl = `https://www.instagram.com/${username}/`;
 
                         ServerLogger.info(
                             '🔧 author 필드에서 채널 정보 매핑:',
                             {
                                 원본Author: authorUrl,
                                 추출된Username: username,
-                                생성된ChannelUrl:
-                                    metadata[FieldMapper.get('CHANNEL_URL')],
+                                생성된ChannelUrl: metadata.channelUrl,
                             },
                         );
                     }
                 }
 
-                ServerLogger.info('🔑 FieldMapper로 접근한 메타데이터 값들:', {
-                    [FieldMapper.get('CHANNEL_NAME')]:
-                        metadata[FieldMapper.get('CHANNEL_NAME')] || 'null',
-                    [FieldMapper.get('CHANNEL_URL')]:
-                        metadata[FieldMapper.get('CHANNEL_URL')] || 'null',
-                    [FieldMapper.get('DESCRIPTION')]:
-                        metadata[FieldMapper.get('DESCRIPTION')] || 'null',
-                    [FieldMapper.get('LIKES')]:
-                        metadata[FieldMapper.get('LIKES')] || 'null',
-                    [FieldMapper.get('COMMENTS_COUNT')]:
-                        metadata[FieldMapper.get('COMMENTS_COUNT')] || 'null',
+                ServerLogger.info('🔑 메타데이터 값들:', {
+                    channelName: metadata.channelName || 'null',
+                    channelUrl: metadata.channelUrl || 'null',
+                    description: metadata.description || 'null',
+                    likes: metadata.likes || 'null',
+                    commentsCount: metadata.commentsCount || 'null',
                 });
             } catch (error) {
                 ServerLogger.error(
-                    '❌ FieldMapper 디버깅 실패:',
+                    '❌ 메타데이터 처리 실패:',
                     error.message,
                 );
             }
@@ -2237,7 +1959,7 @@ app.post(
                 `📁 Uploaded file: ${
                     req.file
                         ? `${req.file.filename} (${
-                              req.file[FieldMapper.get('SIZE')]
+                              req.file.size
                           } bytes)`
                         : 'None'
                 }`,
@@ -2258,10 +1980,10 @@ app.post(
                     if (duplicateCheck.isDuplicate) {
                         let errorMessage;
 
-                        if (duplicateCheck[FieldMapper.get('IS_PROCESSING')]) {
+                        if (duplicateCheck.isProcessing) {
                             // ⚠️ 임시 해결책: processing 상태가 10분 이상 된 경우 재처리 허용
                             const createdAt = new Date(
-                                duplicateCheck[FieldMapper.get('CREATED_AT')],
+                                duplicateCheck.createdAt,
                             );
                             const now = new Date();
                             const tenMinutesAgo = new Date(
@@ -2283,8 +2005,7 @@ app.post(
                                         );
                                     await VideoUrl.deleteOne({
                                         normalizedUrl,
-                                        [FieldMapper.get('STATUS')]:
-                                            'processing',
+                                        status: 'processing',
                                     });
                                     ServerLogger.info(
                                         `🗑️ 오래된 processing 레코드 삭제: ${normalizedUrl}`,
@@ -2301,29 +2022,16 @@ app.post(
                                     'API_DUPLICATE_BLOB',
                                 );
 
-                                return res.status(409).json({
+                                return res.status(HTTP_STATUS_CODES.CONFLICT).json({
                                     success: false,
-                                    [FieldMapper.get('ERROR')]:
-                                        'DUPLICATE_URL_PROCESSING',
+                                    error: ERROR_CODES.DUPLICATE_RESOURCE,
                                     message: errorMessage,
                                     duplicate_info: {
-                                        [FieldMapper.get('PLATFORM')]:
-                                            duplicateCheck.existingPlatform,
-                                        [FieldMapper.get('NORMALIZED_URL')]:
-                                            sheetsManager.normalizeVideoUrl(
-                                                postUrl,
-                                            ),
-                                        [FieldMapper.get(
-                                            'IS_PROCESSING',
-                                        )]: true,
-                                        [FieldMapper.get('STATUS')]:
-                                            duplicateCheck[
-                                                FieldMapper.get('STATUS')
-                                            ],
-                                        [FieldMapper.get('CREATED_AT')]:
-                                            duplicateCheck[
-                                                FieldMapper.get('CREATED_AT')
-                                            ],
+                                        platform: duplicateCheck.existingPlatform,
+                                        normalizedUrl: sheetsManager.normalizeVideoUrl(postUrl),
+                                        isProcessing: true,
+                                        status: duplicateCheck.status,
+                                        createdAt: duplicateCheck.createdAt,
                                     },
                                 });
                             }
@@ -2339,27 +2047,17 @@ app.post(
                                 'API_DUPLICATE_BLOB',
                             );
 
-                            return res.status(409).json({
+                            return res.status(HTTP_STATUS_CODES.CONFLICT).json({
                                 success: false,
-                                [FieldMapper.get('ERROR')]:
-                                    'DUPLICATE_URL_COMPLETED',
+                                error: ERROR_CODES.DUPLICATE_RESOURCE,
                                 message: errorMessage,
                                 duplicate_info: {
-                                    [FieldMapper.get('PLATFORM')]:
-                                        duplicateCheck.existingPlatform,
-                                    [FieldMapper.get('ROW')]:
-                                        duplicateCheck.existingRow,
-                                    [FieldMapper.get('COLUMN')]:
-                                        duplicateCheck.existingColumn,
-                                    [FieldMapper.get('NORMALIZED_URL')]:
-                                        sheetsManager.normalizeVideoUrl(
-                                            postUrl,
-                                        ),
-                                    [FieldMapper.get('IS_PROCESSING')]: false,
-                                    [FieldMapper.get('STATUS')]:
-                                        duplicateCheck[
-                                            FieldMapper.get('STATUS')
-                                        ],
+                                    platform: duplicateCheck.existingPlatform,
+                                    row: duplicateCheck.existingRow,
+                                    column: duplicateCheck.existingColumn,
+                                    normalizedUrl: sheetsManager.normalizeVideoUrl(postUrl),
+                                    isProcessing: false,
+                                    status: duplicateCheck.status,
                                 },
                             });
                         }
@@ -2399,7 +2097,7 @@ app.post(
                     } else {
                         ServerLogger.warn(
                             `⚠️ URL processing 상태 등록 실패 (Blob): ${
-                                registerResult[FieldMapper.get('ERROR')]
+                                registerResult.error
                             }`,
                         );
                     }
@@ -2438,7 +2136,7 @@ app.post(
                         code: ERROR_CODES.FILE_NOT_FOUND,
                         message: API_MESSAGES.VIDEO.FILE_NOT_UPLOADED,
                     },
-                    400,
+                    HTTP_STATUS_CODES.BAD_REQUEST,
                 );
             }
 
@@ -2450,24 +2148,24 @@ app.post(
 
             // 큐에 작업 추가
             const result = await videoQueue.addToQueue({
-                [FieldMapper.get('ID')]: `blob_${finalPlatform}_${Date.now()}`,
-                [FieldMapper.get('TYPE')]: 'blob',
-                [FieldMapper.get('DATA')]: {
-                    [FieldMapper.get('PLATFORM')]: finalPlatform,
-                    [FieldMapper.get('POST_URL')]: postUrl,
-                    [FieldMapper.get('ANALYSIS_TYPE')]: analysisType,
+                id: `blob_${finalPlatform}_${Date.now()}`,
+                type: 'blob',
+                data: {
+                    platform: finalPlatform,
+                    postUrl: postUrl,
+                    analysisType: analysisType,
                     metadata,
-                    [FieldMapper.get('VIDEO_PATH')]: videoPath,
-                    [FieldMapper.get('USE_AI')]: useAI,
+                    videoPath: videoPath,
+                    useAI: useAI,
                 },
-                [FieldMapper.get('PROCESSOR')]: async (taskData) => {
+                processor: async (taskData) => {
                     const {
-                        [FieldMapper.get('PLATFORM')]: platform,
-                        [FieldMapper.get('POST_URL')]: postUrl,
-                        [FieldMapper.get('ANALYSIS_TYPE')]: analysisType,
-                        [FieldMapper.get('METADATA')]: metadata,
-                        [FieldMapper.get('VIDEO_PATH')]: videoPath,
-                        [FieldMapper.get('USE_AI')]: useAI,
+                        platform,
+                        postUrl,
+                        analysisType,
+                        metadata,
+                        videoPath,
+                        useAI,
                     } = taskData;
 
                     // 2단계: 썸네일/프레임 생성
@@ -2515,14 +2213,13 @@ app.post(
                     } else {
                         ServerLogger.info('3️⃣ AI 분석 건너뜀 (사용자 설정)');
                         analysis = {
-                            [FieldMapper.get('CATEGORY')]: '분석 안함',
-                            [FieldMapper.get('MAIN_CATEGORY')]: '미분류',
-                            [FieldMapper.get('MIDDLE_CATEGORY')]: '기본',
-                            [FieldMapper.get('KEYWORDS')]: [],
-                            [FieldMapper.get('HASHTAGS')]: [],
-                            [FieldMapper.get('CONFIDENCE')]: 0,
-                            [FieldMapper.get('FRAME_COUNT')]:
-                                thumbnailPaths.length,
+                            category: '분석 안함',
+                            mainCategory: '미분류',
+                            middleCategory: '기본',
+                            keywords: [],
+                            hashtags: [],
+                            confidence: 0,
+                            frameCount: thumbnailPaths.length,
                         };
                     }
 
@@ -2539,38 +2236,29 @@ app.post(
                         );
 
                         return {
-                            [FieldMapper.get('PROCESSING')]: {
+                            processing: {
                                 platform,
                                 analysisType,
-                                [FieldMapper.get('FRAME_COUNT')]:
-                                    analysis.frameCount || 1,
+                                frameCount: analysis.frameCount || 1,
                                 skippedSaving: true,
-                                [FieldMapper.get('SOURCE')]: 'blob-upload',
+                                source: 'blob-upload',
                             },
-                            [FieldMapper.get('ANALYSIS')]: {
-                                [FieldMapper.get('CATEGORY')]:
-                                    analysis[FieldMapper.get('CATEGORY')],
-                                [FieldMapper.get('MAIN_CATEGORY')]:
-                                    analysis.mainCategory,
-                                [FieldMapper.get('MIDDLE_CATEGORY')]:
-                                    analysis.middleCategory,
-                                [FieldMapper.get('KEYWORDS')]:
-                                    analysis.keywords,
-                                [FieldMapper.get('HASHTAGS')]:
-                                    analysis.hashtags,
-                                [FieldMapper.get('CONFIDENCE')]:
-                                    analysis.confidence,
+                            analysis: {
+                                category: analysis.category,
+                                mainCategory: analysis.mainCategory,
+                                middleCategory: analysis.middleCategory,
+                                keywords: analysis.keywords,
+                                hashtags: analysis.hashtags,
+                                confidence: analysis.confidence,
                             },
-                            [FieldMapper.get('FILES')]: {
-                                [FieldMapper.get('VIDEO_PATH')]: videoPath,
-                                [FieldMapper.get('THUMBNAIL_PATH')]:
-                                    Array.isArray(thumbnailPaths)
-                                        ? thumbnailPaths[0]
-                                        : thumbnailPaths,
-                                [FieldMapper.get('THUMBNAIL_PATHS')]:
-                                    thumbnailPaths,
+                            files: {
+                                videoPath: videoPath,
+                                thumbnailPath: Array.isArray(thumbnailPaths)
+                                    ? thumbnailPaths[0]
+                                    : thumbnailPaths,
+                                thumbnailPaths: thumbnailPaths,
                             },
-                            [FieldMapper.get('AI_ERROR')]: analysis.aiError,
+                            aiError: analysis.aiError,
                         };
                     }
 
@@ -2584,17 +2272,13 @@ app.post(
                             platform,
                             postUrl,
                             videoPath,
-                            [FieldMapper.get('THUMBNAIL_PATH')]: Array.isArray(
-                                thumbnailPaths,
-                            )
+                            thumbnailPath: Array.isArray(thumbnailPaths)
                                 ? thumbnailPaths[0]
                                 : thumbnailPaths,
-                            [FieldMapper.get('THUMBNAIL_PATHS')]:
-                                thumbnailPaths,
+                            thumbnailPaths: thumbnailPaths,
                             metadata,
                             analysis,
-                            [FieldMapper.get('TIMESTAMP')]:
-                                new Date().toISOString(),
+                            timestamp: new Date().toISOString(),
                         },
                     );
 
@@ -2602,15 +2286,11 @@ app.post(
                     if (!result.success) {
                         // Google Sheets 인증 문제는 경고로 처리하고 계속 진행
                         if (
-                            result[FieldMapper.get('ERROR')] &&
-                            result[FieldMapper.get('ERROR')].includes(
-                                'invalid_grant',
-                            )
+                            result.error &&
+                            result.error.includes('invalid_grant')
                         ) {
                             ServerLogger.warn(
-                                `⚠️ Google Sheets 인증 실패로 시트 저장 건너뜀: ${
-                                    result[FieldMapper.get('ERROR')]
-                                }`,
+                                `⚠️ Google Sheets 인증 실패로 시트 저장 건너뜀: ${result.error}`,
                             );
                             // MongoDB 저장이 성공했다면 계속 진행
                             if (result.mongodb && result.mongodb.success) {
@@ -2619,30 +2299,20 @@ app.post(
                                 );
                             } else {
                                 throw new Error(
-                                    `통합 저장 실패: ${
-                                        result[FieldMapper.get('ERROR')]
-                                    }`,
+                                    `통합 저장 실패: ${result.error}`,
                                 );
                             }
                         } else {
                             throw new Error(
-                                `통합 저장 실패: ${
-                                    result[FieldMapper.get('ERROR')]
-                                }`,
+                                `통합 저장 실패: ${result.error}`,
                             );
                         }
                     }
 
                     ServerLogger.info('✅ 통합 저장 완료!', {
-                        [FieldMapper.get(
-                            'SHEETS_TIME',
-                        )]: `${result.performance.sheetsTime}ms`,
-                        [FieldMapper.get(
-                            'MONGO_TIME',
-                        )]: `${result.performance.mongoTime}ms`,
-                        [FieldMapper.get(
-                            'TOTAL_TIME',
-                        )]: `${result.performance.totalTime}ms`,
+                        sheetsTime: `${result.performance.sheetsTime}ms`,
+                        mongoTime: `${result.performance.mongoTime}ms`,
+                        totalTime: `${result.performance.totalTime}ms`,
                     });
 
                     // 통계 업데이트
@@ -2661,23 +2331,15 @@ app.post(
                             // sheetInfo가 있으면 사용, 없으면 null로 업데이트
                             const sheetLocation = result.sheets
                                 ? {
-                                      [FieldMapper.get('SHEET_NAME')]:
-                                          result.sheets.sheetName,
-                                      [FieldMapper.get('COLUMN')]: 'N', // URL 저장 컬럼
-                                      [FieldMapper.get('ROW')]:
-                                          result.sheets.nextRow,
+                                      sheetName: result.sheets.sheetName,
+                                      column: 'N', // URL 저장 컬럼
+                                      row: result.sheets.nextRow,
                                   }
                                 : null;
 
                             // YouTube 게시일 추출 (enrichedMetadata에서)
-                            const originalPublishDate = enrichedMetadata[
-                                FieldMapper.get('UPLOAD_DATE')
-                            ]
-                                ? new Date(
-                                      enrichedMetadata[
-                                          FieldMapper.get('UPLOAD_DATE')
-                                      ],
-                                  )
+                            const originalPublishDate = enrichedMetadata.uploadDate
+                                ? new Date(enrichedMetadata.uploadDate)
                                 : null;
 
                             await VideoUrl.updateStatus(
@@ -2698,34 +2360,26 @@ app.post(
                     }
 
                     const responseData = {
-                        [FieldMapper.get('PROCESSING')]: {
+                        processing: {
                             platform,
                             analysisType,
-                            [FieldMapper.get('FRAME_COUNT')]:
-                                analysis.frameCount || 1,
-                            [FieldMapper.get('SOURCE')]: 'blob-upload',
+                            frameCount: analysis.frameCount || 1,
+                            source: 'blob-upload',
                         },
-                        [FieldMapper.get('ANALYSIS')]: {
-                            [FieldMapper.get('CATEGORY')]:
-                                analysis[FieldMapper.get('CATEGORY')],
-                            [FieldMapper.get('MAIN_CATEGORY')]:
-                                analysis.mainCategory,
-                            [FieldMapper.get('MIDDLE_CATEGORY')]:
-                                analysis.middleCategory,
-                            [FieldMapper.get('KEYWORDS')]: analysis.keywords,
-                            [FieldMapper.get('HASHTAGS')]: analysis.hashtags,
-                            [FieldMapper.get('CONFIDENCE')]:
-                                analysis.confidence,
+                        analysis: {
+                            category: analysis.category,
+                            mainCategory: analysis.mainCategory,
+                            middleCategory: analysis.middleCategory,
+                            keywords: analysis.keywords,
+                            hashtags: analysis.hashtags,
+                            confidence: analysis.confidence,
                         },
-                        [FieldMapper.get('FILES')]: {
-                            [FieldMapper.get('VIDEO_PATH')]: videoPath,
-                            [FieldMapper.get('THUMBNAIL_PATH')]: Array.isArray(
-                                thumbnailPaths,
-                            )
+                        files: {
+                            videoPath: videoPath,
+                            thumbnailPath: Array.isArray(thumbnailPaths)
                                 ? thumbnailPaths[0]
                                 : thumbnailPaths,
-                            [FieldMapper.get('THUMBNAIL_PATHS')]:
-                                thumbnailPaths,
+                            thumbnailPaths: thumbnailPaths,
                         },
                     };
 
@@ -2802,18 +2456,15 @@ app.post('/api/youtube-batch', async (req, res) => {
         }
 
         const options = {
-            [FieldMapper.get('PRIORITY')]: priority,
-            [FieldMapper.get('CLIENT_INFO')]: {
-                [FieldMapper.get('USER_AGENT')]: req.get('User-Agent'),
-                [FieldMapper.get(
-                    'REQUEST_ID',
-                )]: `req_${Date.now()}_${Math.random()
+            priority: priority,
+            clientInfo: {
+                userAgent: req.get('User-Agent'),
+                requestId: `req_${Date.now()}_${Math.random()
                     .toString(36)
                     .substr(2, 9)}`,
-                [FieldMapper.get('TIMESTAMP')]: new Date().toISOString(),
+                timestamp: new Date().toISOString(),
             },
-            [FieldMapper.get('METADATA')]:
-                req.body[FieldMapper.get('METADATA')] || {},
+            metadata: req.body.metadata || {},
         };
 
         if (mode === 'immediate') {
@@ -2897,7 +2548,7 @@ app.get('/api/test-debug', (req, res) => {
     res.json({
         success: true,
         message: 'DEBUG: 코드가 여기까지 실행됨!',
-        [FieldMapper.get('TIMESTAMP')]: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
     });
 });
 
@@ -2919,7 +2570,7 @@ app.get('/api/debug-collector', (req, res) => {
         success: true,
         message: 'HighViewCollector 초기화 체크 완료',
         initialized: !!highViewCollector,
-        [FieldMapper.get('TIMESTAMP')]: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
     });
 });
 // ServerLogger.info('🧪 DEBUG: HighViewCollector 초기화 체크 API 등록');
@@ -3011,7 +2662,7 @@ app.get('/api/debug-after-collect', (req, res) => {
     res.json({
         success: true,
         message: 'collect-trending API 등록 이후 실행됨!',
-        [FieldMapper.get('TIMESTAMP')]: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
     });
 });
 // ServerLogger.info('🧪 DEBUG: collect-trending API 등록 후 체크');
@@ -3036,7 +2687,7 @@ app.get('/api/quota-status', (req, res) => {
             {
                 quota: quotaStatus,
                 safetyMargin: safetyMargin,
-                [FieldMapper.get('TIMESTAMP')]: new Date().toISOString(),
+                timestamp: new Date().toISOString(),
                 recommendations: {
                     canProcess: quotaStatus.remaining > 200,
                     estimatedChannels: Math.floor(quotaStatus.remaining / 101),
@@ -3078,7 +2729,7 @@ app.get('/api/test-usage', (req, res) => {
         ResponseHandler.success(res, {
             message: 'Direct usage test',
             results: testResults,
-            [FieldMapper.get('TIMESTAMP')]: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
         });
     } catch (error) {
         ResponseHandler.serverError(res, error, 'Test usage API error');
@@ -3107,12 +2758,12 @@ app.get('/api/api-keys', async (req, res) => {
                       };
 
             geminiKeys.push({
-                [FieldMapper.get('ID')]: 'gemini-main',
+                id: 'gemini-main',
                 name: 'Gemini API (Main)',
                 apiKey: process.env.GOOGLE_API_KEY,
                 type: 'gemini',
                 usage: geminiUsage,
-                [FieldMapper.get('SOURCE')]: 'env',
+                source: 'env',
             });
         }
 
@@ -3124,11 +2775,11 @@ app.get('/api/api-keys', async (req, res) => {
                 res,
                 {
                     apiKeys: [],
-                    [FieldMapper.get('SUMMARY')]: {
+                    summary: {
                         total: 0,
                         active: 0,
                         warning: 0,
-                        [FieldMapper.get('ERROR')]: 0,
+                        error: 0,
                     },
                 },
                 '등록된 API 키가 없습니다.',
@@ -3183,7 +2834,7 @@ app.get('/api/api-keys', async (req, res) => {
                         else if (usagePercent >= 75) status = 'warning';
 
                         return {
-                            [FieldMapper.get('ID')]: key[FieldMapper.get('ID')],
+                            id: key.id,
                             name: key.name,
                             maskedKey: ApiKeyManager.maskApiKey(key.apiKey),
                             type: 'gemini',
@@ -3193,8 +2844,7 @@ app.get('/api/api-keys', async (req, res) => {
                             lastUsed:
                                 realUsage.total.used > 0 ? '방금 전' : '미사용',
                             resetTime: '오후 4시 (한국시간)',
-                            [FieldMapper.get('SOURCE')]:
-                                key[FieldMapper.get('SOURCE')],
+                            source: key.source,
                         };
                     } catch (error) {
                         ServerLogger.warn(
@@ -3202,11 +2852,11 @@ app.get('/api/api-keys', async (req, res) => {
                             error.message,
                         );
                         return {
-                            [FieldMapper.get('ID')]: key[FieldMapper.get('ID')],
+                            id: key.id,
                             name: key.name,
                             maskedKey: ApiKeyManager.maskApiKey(key.apiKey),
                             type: 'gemini',
-                            [FieldMapper.get('STATUS')]: 'active',
+                            status: 'active',
                             usage: {
                                 pro: { used: 0, limit: 50 },
                                 flash: { used: 0, limit: 250 },
@@ -3216,8 +2866,7 @@ app.get('/api/api-keys', async (req, res) => {
                             errors: 0,
                             lastUsed: '미사용',
                             resetTime: '오후 4시 (한국시간)',
-                            [FieldMapper.get('SOURCE')]:
-                                key[FieldMapper.get('SOURCE')],
+                            source: key.source,
                         };
                     }
                 }
@@ -3296,14 +2945,14 @@ app.get('/api/api-keys', async (req, res) => {
                 }
 
                 // 상태 결정 로직
-                let status = key[FieldMapper.get('STATUS')] || 'active';
+                let status = key.status || 'active';
                 const usagePercent =
                     (realUsage.total.used / realUsage.total.limit) * 100;
                 if (usagePercent >= 90) status = 'error';
                 else if (usagePercent >= 75) status = 'warning';
 
                 return {
-                    [FieldMapper.get('ID')]: key[FieldMapper.get('ID')],
+                    id: key.id,
                     name: key.name,
                     maskedKey: ApiKeyManager.maskApiKey(key.apiKey),
                     type: 'youtube',
@@ -3312,7 +2961,7 @@ app.get('/api/api-keys', async (req, res) => {
                     errors: 0,
                     lastUsed: quotaStatus?.used > 0 ? '방금 전' : '미사용',
                     resetTime: '오후 4시 (한국시간)',
-                    [FieldMapper.get('SOURCE')]: key[FieldMapper.get('SOURCE')],
+                    source: key.source,
                 };
             }),
         );
@@ -3321,16 +2970,16 @@ app.get('/api/api-keys', async (req, res) => {
             res,
             {
                 apiKeys,
-                [FieldMapper.get('SUMMARY')]: {
+                summary: {
                     total: apiKeys.length,
                     active: apiKeys.filter(
-                        (k) => k[FieldMapper.get('STATUS')] === 'active',
+                        (k) => k.status === 'active',
                     ).length,
                     warning: apiKeys.filter(
-                        (k) => k[FieldMapper.get('STATUS')] === 'warning',
+                        (k) => k.status === 'warning',
                     ).length,
-                    [FieldMapper.get('ERROR')]: apiKeys.filter(
-                        (k) => k[FieldMapper.get('STATUS')] === 'error',
+                    error: apiKeys.filter(
+                        (k) => k.status === 'error',
                     ).length,
                 },
             },
@@ -3363,10 +3012,10 @@ app.post('/api/api-keys', async (req, res) => {
         ResponseHandler.success(
             res,
             {
-                [FieldMapper.get('ID')]: newKey[FieldMapper.get('ID')],
+                id: newKey.id,
                 name: newKey.name,
                 maskedKey: ApiKeyManager.maskApiKey(newKey.apiKey),
-                [FieldMapper.get('STATUS')]: newKey[FieldMapper.get('STATUS')],
+                status: newKey.status,
             },
             'API 키가 성공적으로 추가되었습니다.',
         );
@@ -3442,7 +3091,7 @@ app.get('/api/proxy-image', async (req, res) => {
 
         if (!imageResponse.ok) {
             throw new Error(
-                `이미지 로드 실패: ${imageResponse[FieldMapper.get('STATUS')]}`,
+                `이미지 로드 실패: ${imageResponse.status}`,
             );
         }
 
@@ -3509,17 +3158,17 @@ app.post('/api/get-instagram-thumbnail', async (req, res) => {
         ResponseHandler.success(
             res,
             {
-                [FieldMapper.get('THUMBNAIL_URL')]: thumbnailUrls[0],
+                thumbnailUrl: thumbnailUrls[0],
                 mediaId,
                 alternativeUrls: thumbnailUrls.slice(1),
-                [FieldMapper.get('URL')]: url, // 🚀 FieldMapper 자동화
+                url: url,
             },
             'Instagram 썸네일 URL을 생성했습니다.',
         );
 
         ServerLogger.info('✅ Instagram 썸네일 URL 생성 완료:', {
             mediaId,
-            [FieldMapper.get('URL')]: thumbnailUrls[0],
+            url: thumbnailUrls[0],
         });
     } catch (error) {
         ServerLogger.error('❌ Instagram 썸네일 추출 실패:', error);
@@ -3538,12 +3187,12 @@ app.get('/api/mongodb/url-stats', async (req, res) => {
 
         const stats = await VideoUrl.getStats();
 
-        if (stats[FieldMapper.get('ERROR')]) {
+        if (stats.error) {
             return ResponseHandler.serverError(
                 res,
                 {
                     code: 'STATS_QUERY_FAILED',
-                    message: stats[FieldMapper.get('ERROR')],
+                    message: stats.error,
                 },
                 'MongoDB URL 통계 조회 실패',
             );
@@ -3555,7 +3204,7 @@ app.get('/api/mongodb/url-stats', async (req, res) => {
                 ...stats,
                 cleanupInfo: {
                     staleThresholdMinutes: 10,
-                    [FieldMapper.get('DESCRIPTION')]:
+                    description:
                         '10분 이상 processing 상태인 레코드는 자동 정리됩니다',
                     nextCleanup: '매 10분마다 자동 실행',
                 },
@@ -3600,7 +3249,7 @@ app.post('/api/mongodb/cleanup', async (req, res) => {
                 res,
                 {
                     code: 'CLEANUP_FAILED',
-                    message: result[FieldMapper.get('ERROR')],
+                    message: result.error,
                 },
                 '정리 작업 실패',
             );
@@ -3647,7 +3296,7 @@ app.get('/api/trending-stats', async (req, res) => {
             {
                 stats,
                 summary,
-                [FieldMapper.get('TIMESTAMP')]: new Date().toISOString(),
+                timestamp: new Date().toISOString(),
             },
             '트렌딩 수집 통계를 조회했습니다.',
         );
@@ -3697,7 +3346,7 @@ app.get('/api/unified-saver/validate/:platform', async (req, res) => {
     } catch (error) {
         ServerLogger.error(
             `데이터 일관성 검증 실패: ${
-                req.params[FieldMapper.get('PLATFORM')]
+                req.params.platform
             }`,
             error.message,
             'UNIFIED_SAVER_API',

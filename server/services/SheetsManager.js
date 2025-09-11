@@ -2,7 +2,6 @@ const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
 const { ServerLogger } = require('../utils/logger');
-const { FieldMapper } = require('../types/field-mapper'); // 🚀 FieldMapper 임포트
 const VideoUrl = require('../models/VideoUrl');
 
 class SheetsManager {
@@ -176,7 +175,7 @@ class SheetsManager {
             const firstSheet = response.data.sheets[0];
             return firstSheet.properties.title;
         } catch (error) {
-            console.warn('시트 이름 조회 실패, 기본값 사용:', error.message);
+            ServerLogger.warn('시트 이름 조회 실패, 기본값 사용:', error.message);
             return 'Sheet1'; // 기본값
         }
     }
@@ -355,7 +354,7 @@ class SheetsManager {
             return [
                 uploadDate, // 업로드날짜 (업로드 날짜 우선)
                 platform.toUpperCase(), // 플랫폼
-                metadata[FieldMapper.get('CHANNEL_NAME')] || '', // FieldMapper 표준
+                metadata.channelName || '', // 채널명
                 metadata.youtubeHandle || '', // YouTube핸들명
                 metadata.channelUrl || '', // 채널URL
                 analysis.mainCategory || '미분류', // 대카테고리
@@ -369,24 +368,22 @@ class SheetsManager {
                 analysis.mentions?.join(' ') ||
                     metadata.mentions?.join(' ') ||
                     '', // 멘션 (@username)
-                metadata[FieldMapper.get('DESCRIPTION')] ||
-                    metadata.description ||
-                    '', // 설명 (FieldMapper 표준)
+                metadata.description || '', // 설명
                 analysis.summary || '', // 분석내용 (영상 분석 결과)
-                metadata[FieldMapper.get('COMMENTS')] || '', // 댓글 (FieldMapper 표준)
-                metadata[FieldMapper.get('LIKES')] || '0', // 좋아요 (FieldMapper 표준)
-                metadata[FieldMapper.get('COMMENTS_COUNT')] || '0', // 댓글수 (FieldMapper 표준)
-                metadata[FieldMapper.get('VIEWS')] || '0', // 조회수 (FieldMapper 표준)
-                metadata[FieldMapper.get('DURATION')] || '', // 영상길이 (FieldMapper 표준)
-                metadata[FieldMapper.get('SUBSCRIBERS')] || '0', // 구독자수 (FieldMapper 표준)
-                metadata[FieldMapper.get('CHANNEL_VIDEOS')] || '0', // 채널동영상수 (FieldMapper 표준)
+                metadata.comments || '', // 댓글
+                metadata.likes || '0', // 좋아요
+                metadata.commentsCount || '0', // 댓글수
+                metadata.views || '0', // 조회수
+                metadata.duration || '', // 영상길이
+                metadata.subscribers || '0', // 구독자수
+                metadata.channelVideos || '0', // 채널동영상수
                 metadata.monetized || 'N', // 수익화여부
                 metadata.youtubeCategory || metadata.category || '', // YouTube 카테고리
                 metadata.license || 'youtube', // 라이센스
                 metadata.definition || 'sd', // 화질
                 metadata.language || '', // 언어
                 postUrl, // URL
-                metadata[FieldMapper.get('THUMBNAIL_URL')] || '', // 썸네일URL (FieldMapper 표준)
+                metadata.thumbnailUrl || '', // 썸네일URL
                 (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
                 analysis.aiModel || '수동', // 분석상태 (AI 모델 정보)
                 analysis.categoryMatch
@@ -403,29 +400,29 @@ class SheetsManager {
             return [
                 uploadDate, // 업로드날짜 (업로드 날짜 우선)
                 platform.toUpperCase(), // 플랫폼
-                metadata[FieldMapper.get('CHANNEL_NAME')] || '', // 채널이름 (FieldMapper 표준)
-                metadata[FieldMapper.get('CHANNEL_URL')] || '', // 채널URL (FieldMapper 표준)
+                metadata.channelName || '', // 채널이름
+                metadata.channelUrl || '', // 채널URL
                 analysis.mainCategory || '미분류', // 대카테고리
                 analysis.middleCategory || '미분류', // 중카테고리
                 fullCategoryPath, // 전체카테고리경로 (동적)
                 categoryDepth, // 카테고리깊이
                 analysis.keywords?.join(', ') || '', // 키워드
                 analysis.hashtags?.join(' ') ||
-                    metadata[FieldMapper.get('HASHTAGS')]?.join(' ') ||
-                    '', // 해시태그 (FieldMapper 표준)
+                    metadata.hashtags?.join(' ') ||
+                    '', // 해시태그
                 analysis.mentions?.join(' ') ||
-                    metadata[FieldMapper.get('MENTIONS')]?.join(' ') ||
-                    '', // 멘션 (FieldMapper 표준)
-                metadata[FieldMapper.get('DESCRIPTION')] ||
+                    metadata.mentions?.join(' ') ||
+                    '', // 멘션
+                metadata.description ||
                     analysis.extractedText ||
-                    '', // 설명 (FieldMapper 표준)
+                    '', // 설명
                 analysis.summary || '', // 분석내용 (영상 분석 결과)
-                metadata[FieldMapper.get('LIKES')] || '0', // 좋아요 (FieldMapper 표준)
-                metadata[FieldMapper.get('COMMENTS_COUNT')] || '0', // 댓글수 (FieldMapper 표준)
+                metadata.likes || '0', // 좋아요
+                metadata.commentsCount || '0', // 댓글수
                 postUrl, // URL
                 thumbnailPath ||
-                    metadata[FieldMapper.get('THUMBNAIL_URL')] ||
-                    '', // 썸네일URL (FieldMapper 표준)
+                    metadata.thumbnailUrl ||
+                    '', // 썸네일URL
                 (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
                 analysis.aiModel || '수동', // 분석상태 (AI 모델 정보)
                 new Date().toISOString(), // 수집시간
@@ -807,7 +804,7 @@ class SheetsManager {
                 timestamp,
             } = videoData;
 
-            console.log(
+            ServerLogger.info(
                 `🔍 saveVideoData - Analysis 객체:`,
                 JSON.stringify(analysis, null, 2),
             );
@@ -860,11 +857,7 @@ class SheetsManager {
             let fullCategoryPath = '';
             let categoryDepth = 0;
 
-            console.log(`🔍 FieldMapper Keys:`, {
-                FULL_CATEGORY_PATH: FieldMapper.get('FULL_CATEGORY_PATH'),
-                CATEGORY_DEPTH: FieldMapper.get('CATEGORY_DEPTH'),
-            });
-            console.log(`🔍 Analysis 필드값:`, {
+            ServerLogger.info(`🔍 Analysis 필드값:`, {
                 'analysis.categoryDepth': analysis.categoryDepth,
                 'analysis.fullCategoryPath': analysis.fullCategoryPath,
                 'analysis.depth': analysis.depth,
@@ -873,31 +866,26 @@ class SheetsManager {
 
             if (
                 isDynamicMode &&
-                (analysis[FieldMapper.get('FULL_CATEGORY_PATH')] ||
+                (analysis.fullCategoryPath ||
                     analysis.fullPath)
             ) {
                 // 동적 카테고리 모드: AI가 생성한 전체 경로 사용
                 fullCategoryPath =
-                    analysis[FieldMapper.get('FULL_CATEGORY_PATH')] ||
+                    analysis.fullCategoryPath ||
                     analysis.fullPath;
                 categoryDepth =
-                    analysis[FieldMapper.get('CATEGORY_DEPTH')] ||
+                    analysis.categoryDepth ||
                     analysis.depth ||
                     0;
-                console.log(
-                    `🎯 동적 모드 - 선택된 값: categoryDepth=${categoryDepth}`,
-                );
                 ServerLogger.info(
                     `🎯 동적 카테고리 데이터: ${fullCategoryPath} (깊이: ${categoryDepth})`,
                 );
             } else {
                 // 기존 모드: 대카테고리 > 중카테고리 형식으로 구성
                 const mainCat =
-                    analysis[FieldMapper.get('MAIN_CATEGORY')] ||
                     analysis.mainCategory ||
                     '미분류';
                 const middleCat =
-                    analysis[FieldMapper.get('MIDDLE_CATEGORY')] ||
                     analysis.middleCategory ||
                     '미분류';
                 if (middleCat && middleCat !== '미분류') {
@@ -1014,10 +1002,8 @@ class SheetsManager {
                                 analysis.content || analysis.description || '',
                             thumbnailPath: thumbnailPath,
                             thumbnailUrl: thumbnailPath,
-                            [FieldMapper.get('LIKES')]:
-                                metadata[FieldMapper.get('LIKES')] || 0,
-                            [FieldMapper.get('VIEWS')]:
-                                metadata[FieldMapper.get('VIEWS')] || 0,
+                            likes: metadata.likes || 0,
+                            views: metadata.views || 0,
                         },
                     );
                     ServerLogger.info(
@@ -1132,19 +1118,15 @@ class SheetsManager {
                         author: videoInfo.channel,
                         description: videoInfo.description,
                         uploadDate: videoInfo.publishedAt,
-                        [FieldMapper.get('LIKES')]:
-                            videoInfo[FieldMapper.get('LIKES')],
+                        likes: videoInfo.likes,
                         comments: videoInfo.comments,
-                        [FieldMapper.get('VIEWS')]:
-                            videoInfo[FieldMapper.get('VIEWS')],
+                        views: videoInfo.views,
                         duration: videoInfo.duration,
                         durationFormatted: this.formatDuration(
                             videoInfo.duration,
                         ),
-                        [FieldMapper.get('SUBSCRIBERS')]:
-                            videoInfo[FieldMapper.get('SUBSCRIBERS')],
-                        [FieldMapper.get('CHANNEL_VIDEOS')]:
-                            videoInfo[FieldMapper.get('CHANNEL_VIDEOS')],
+                        subscribers: videoInfo.subscribers,
+                        channelVideos: videoInfo.channelVideos,
                         channelViews: videoInfo.channelViews,
                         channelCountry: videoInfo.channelCountry,
                         channelDescription: videoInfo.channelDescription,
@@ -1332,16 +1314,16 @@ class SheetsManager {
 
         // AIAnalyzer가 반환하는 실제 필드를 확인
         const analysisCategoryPath =
-            analysis[FieldMapper.get('FULL_CATEGORY_PATH')] ||
+            analysis.fullCategoryPath ||
             analysis.fullCategoryPath;
         const analysisCategoryDepth =
-            analysis[FieldMapper.get('CATEGORY_DEPTH')] ||
+            analysis.categoryDepth ||
             analysis.categoryDepth;
 
-        console.log(
+        ServerLogger.info(
             `🔍 Category Debug: isDynamicMode=${isDynamicMode}, categoryPath="${analysisCategoryPath}", depth=${analysisCategoryDepth}`,
         );
-        console.log(
+        ServerLogger.info(
             `🔍 Analysis 객체 전체:`,
             JSON.stringify(analysis, null, 2),
         );
@@ -1349,36 +1331,36 @@ class SheetsManager {
         if (isDynamicMode && analysisCategoryPath) {
             fullCategoryPath = analysisCategoryPath;
             categoryDepth = analysisCategoryDepth || 0;
-            console.log(
+            ServerLogger.info(
                 `✅ 동적 모드 사용: ${fullCategoryPath} → depth: ${categoryDepth}`,
             );
         } else {
-            // 동적 카테고리에서 FieldMapper 표준 필드나 레거시 필드가 있으면 사용
+            // 동적 카테고리에서 표준 필드나 레거시 필드가 있으면 사용
             if (analysisCategoryPath) {
                 fullCategoryPath = analysisCategoryPath;
                 categoryDepth = fullCategoryPath.split(' > ').length;
-                console.log(
+                ServerLogger.info(
                     `🔍 CategoryDepth 계산: ${fullCategoryPath} → depth: ${categoryDepth}`,
                 );
             } else {
                 // 기존 방식: mainCategory, middleCategory 조합
                 const mainCat =
-                    analysis[FieldMapper.get('MAIN_CATEGORY')] || '미분류';
+                    analysis.mainCategory || '미분류';
                 const middleCat =
-                    analysis[FieldMapper.get('MIDDLE_CATEGORY')] || '';
-                console.log(
+                    analysis.middleCategory || '';
+                ServerLogger.info(
                     `🔍 기존 방식: mainCat="${mainCat}", middleCat="${middleCat}"`,
                 );
                 if (middleCat && middleCat !== '미분류') {
                     fullCategoryPath = `${mainCat} > ${middleCat}`;
                     categoryDepth = 2;
-                    console.log(
+                    ServerLogger.info(
                         `✅ 2단계 카테고리: ${fullCategoryPath} → depth: ${categoryDepth}`,
                     );
                 } else {
                     fullCategoryPath = mainCat;
                     categoryDepth = 1;
-                    console.log(
+                    ServerLogger.info(
                         `✅ 1단계 카테고리: ${fullCategoryPath} → depth: ${categoryDepth}`,
                     );
                 }
@@ -1391,8 +1373,7 @@ class SheetsManager {
                 rowNumber, // 번호
                 uploadDate, // 일시
                 platform.toUpperCase(), // 플랫폼
-                metadata[FieldMapper.get('CHANNEL_NAME')] || '', // FieldMapper 표준
-                metadata.youtubeHandle || '', // YouTube핸들명
+                metadata.channelName || '',                metadata.youtubeHandle || '', // YouTube핸들명
                 metadata.channelUrl || '', // 채널URL
                 analysis.mainCategory || '미분류', // 대카테고리
                 analysis.middleCategory || '', // 중카테고리
@@ -1400,13 +1381,7 @@ class SheetsManager {
                 categoryDepth, // 카테고리깊이
                 analysis.keywords?.join(', ') || '', // 키워드
                 analysis.content || '', // 분석내용
-                metadata[FieldMapper.get('LIKES')] || '0', // 좋아요 (FieldMapper 표준)
-                metadata[FieldMapper.get('COMMENTS_COUNT')] || '0', // 댓글수 (FieldMapper 표준)
-                metadata[FieldMapper.get('VIEWS')] || '0', // 조회수 (FieldMapper 표준)
-                metadata[FieldMapper.get('DURATION')] || '', // 영상길이 (FieldMapper 표준)
-                metadata[FieldMapper.get('SUBSCRIBERS')] || '0', // 구독자수 (FieldMapper 표준)
-                metadata[FieldMapper.get('CHANNEL_VIDEOS')] || '0', // 채널동영상수 (FieldMapper 표준)
-                metadata.monetized || 'N', // 수익화여부
+                metadata.likes || '0', // 좋아요                metadata.commentsCount || '0', // 댓글수                metadata.views || '0', // 조회수                metadata.duration || '', // 영상길이                metadata.subscribers || '0', // 구독자수                metadata.channelVideos || '0', // 채널동영상수                metadata.monetized || 'N', // 수익화여부
                 metadata.youtubeCategory || '', // YouTube카테고리
                 metadata.license || 'youtube', // 라이센스
                 metadata.definition || 'sd', // 화질
@@ -1428,16 +1403,13 @@ class SheetsManager {
                 rowNumber, // 번호
                 uploadDate, // 일시
                 platform.toUpperCase(), // 플랫폼
-                metadata[FieldMapper.get('CHANNEL_NAME')] || '', // FieldMapper 표준
-                analysis.mainCategory || '미분류', // 대카테고리
+                metadata.channelName || '',                analysis.mainCategory || '미분류', // 대카테고리
                 analysis.middleCategory || '', // 중카테고리
                 fullCategoryPath, // 전체카테고리경로
                 categoryDepth, // 카테고리깊이
                 analysis.keywords?.join(', ') || '', // 키워드
                 analysis.content || '', // 분석내용
-                metadata[FieldMapper.get('LIKES')] || '0', // 좋아요 (FieldMapper 표준)
-                metadata[FieldMapper.get('COMMENTS_COUNT')] || '0', // 댓글수 (FieldMapper 표준)
-                analysis.hashtags?.join(' ') ||
+                metadata.likes || '0', // 좋아요                metadata.commentsCount || '0', // 댓글수                analysis.hashtags?.join(' ') ||
                     metadata.hashtags?.join(' ') ||
                     '', // 해시태그
                 postUrl, // URL
@@ -1859,7 +1831,7 @@ class SheetsManager {
                 id: row[0],
                 timestamp: row[1],
                 platform: row[2],
-                [FieldMapper.get('CHANNEL_NAME')]: row[3], // 🚀 자동화
+                ['channelName']: row[3], // 🚀 자동화
                 mainCategory: row[4], // 대카테고리
                 middleCategory: row[5], // 중카테고리
                 fullCategoryPath: row[6], // 전체카테고리경로

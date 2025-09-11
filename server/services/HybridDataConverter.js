@@ -1,6 +1,5 @@
 const { ServerLogger } = require('../utils/logger');
 const YouTubeDataProcessor = require('../utils/youtube-data-processor');
-const { FieldMapper } = require('../types/field-mapper');
 
 /**
  * 🔄 하이브리드 YouTube 데이터를 기존 VideoProcessor 포맷으로 변환
@@ -19,7 +18,7 @@ class HybridDataConverter {
         videoId: videoId,
         title: hybridData.title || '제목 없음',
         description: hybridData.description || '',
-        channel: hybridData[FieldMapper.get('CHANNEL_NAME')] || hybridData[FieldMapper.get('CHANNEL_TITLE')] || '채널 없음',
+        channel: hybridData.channelName || hybridData.channelTitle || '채널 없음',
         channelId: hybridData.channelId || '',
         
         // 날짜 처리
@@ -42,25 +41,25 @@ class HybridDataConverter {
         tags: hybridData.tags || hybridData.keywords || [],
         
         // 통계 (하이브리드의 핵심 장점)
-        [FieldMapper.get('VIEWS')]: String(hybridData.viewCount || hybridData[FieldMapper.get('VIEWS')] || hybridData.views || '0'),
-        [FieldMapper.get('LIKES')]: String(hybridData.likeCount || hybridData[FieldMapper.get('LIKES')] || hybridData.likes || '0'),
-        [FieldMapper.get('COMMENTS_COUNT')]: String(hybridData.commentCount || hybridData[FieldMapper.get('COMMENTS_COUNT')] || '0'),
+        views: String(hybridData.viewCount || hybridData.views || '0'),
+        likes: String(hybridData.likeCount || hybridData.likes || '0'),
+        commentsCount: String(hybridData.commentCount || hybridData.commentsCount || '0'),
         
-        // 채널 정보 (하이브리드 데이터에서 매핑) - FieldMapper 키 우선 사용
-        [FieldMapper.get('SUBSCRIBERS')]: String(hybridData[FieldMapper.get('SUBSCRIBERS')] || hybridData.subscriberCount || '0'),
-        [FieldMapper.get('CHANNEL_VIDEOS')]: String(hybridData[FieldMapper.get('CHANNEL_VIDEOS')] || hybridData.channelVideoCount || '0'),
-        [FieldMapper.get('CHANNEL_VIEWS')]: String(hybridData[FieldMapper.get('CHANNEL_VIEWS')] || hybridData.channelViewCount || '0'),
-        [FieldMapper.get('CHANNEL_COUNTRY')]: hybridData.channelCountry || '',
-        [FieldMapper.get('CHANNEL_DESCRIPTION')]: hybridData.channelDescription || '',
+        // 채널 정보 (하이브리드 데이터에서 매핑)
+        subscribers: String(hybridData.subscribers || hybridData.subscriberCount || '0'),
+        channelVideos: String(hybridData.channelVideos || hybridData.channelVideoCount || '0'),
+        channelViews: String(hybridData.channelViews || hybridData.channelViewCount || '0'),
+        channelCountry: hybridData.channelCountry || '',
+        channelDescription: hybridData.channelDescription || '',
         
         // 해시태그 및 멘션 (설명에서 추출)
-        hashtags: YouTubeDataProcessor.extractHashtags(hybridData[FieldMapper.get('DESCRIPTION')] || hybridData.description || ''),
-        mentions: YouTubeDataProcessor.extractMentions(hybridData[FieldMapper.get('DESCRIPTION')] || hybridData.description || ''),
+        hashtags: YouTubeDataProcessor.extractHashtags(hybridData.description || ''),
+        mentions: YouTubeDataProcessor.extractMentions(hybridData.description || ''),
         
         // 댓글 및 추가 채널 정보 - 객체 배열 처리 개선
-        [FieldMapper.get('TOP_COMMENTS')]: this.formatComments(hybridData.topComments),
-        [FieldMapper.get('YOUTUBE_HANDLE')]: hybridData.youtubeHandle || hybridData.channelCustomUrl || '',
-        [FieldMapper.get('CHANNEL_URL')]: hybridData.channelUrl || `https://www.youtube.com/channel/${hybridData.channelId || ''}`,
+        topComments: this.formatComments(hybridData.topComments),
+        youtubeHandle: hybridData.youtubeHandle || hybridData.channelCustomUrl || '',
+        channelUrl: hybridData.channelUrl || `https://www.youtube.com/channel/${hybridData.channelId || ''}`,
         
         // 하이브리드 메타데이터
         extractionMethod: 'hybrid',
@@ -80,7 +79,7 @@ class HybridDataConverter {
       ServerLogger.info('🔄 하이브리드 → 레거시 포맷 변환 완료', {
         title: converted.title.substring(0, 50),
         sources: hybridData.dataSources,
-        stats: `${converted[FieldMapper.get('VIEWS')]} views, ${converted[FieldMapper.get('LIKES')]} likes`
+        stats: `${converted.views} views, ${converted.likes} likes`
       });
 
       return converted;
@@ -92,8 +91,8 @@ class HybridDataConverter {
       return {
         videoId: videoId,
         title: hybridData?.title || '변환 실패',
-        [FieldMapper.get('DESCRIPTION')]: hybridData?.[FieldMapper.get('DESCRIPTION')] || hybridData?.description || '',
-        channel: hybridData?.[FieldMapper.get('CHANNEL_NAME')] || '알 수 없음',
+        description: hybridData?.description || '',
+        channel: hybridData?.channelName || '알 수 없음',
         channelId: hybridData?.channelId || '',
         publishedAt: new Date().toISOString(),
         thumbnailUrl: '',
@@ -104,10 +103,10 @@ class HybridDataConverter {
         contentType: 'Video',
         isShortForm: false,
         tags: [],
-        [FieldMapper.get('VIEWS')]: '0',
-        [FieldMapper.get('LIKES')]: '0', 
-        [FieldMapper.get('COMMENTS_COUNT')]: '0',
-        [FieldMapper.get('SUBSCRIBERS')]: '0',
+        views: '0',
+        likes: '0', 
+        commentsCount: '0',
+        subscribers: '0',
         extractionMethod: 'hybrid-fallback',
         error: error.message
       };

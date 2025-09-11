@@ -1,7 +1,6 @@
 const axios = require('axios');
 const { ServerLogger } = require('../utils/logger');
 const UsageTracker = require('../utils/usage-tracker');
-const { FieldMapper } = require('../types/field-mapper');
 
 /**
  * YouTube 채널 정보 수집 서비스
@@ -47,7 +46,7 @@ class YouTubeChannelService {
             if (channelData) {
                 ServerLogger.success(
                     `✅ 채널 정보 수집 성공: ${
-                        channelData[FieldMapper.get('CHANNEL_NAME')]
+                        channelData.channelName
                     }`,
                 );
                 return channelData;
@@ -148,30 +147,27 @@ class YouTubeChannelService {
         const snippet = channelData.snippet || {};
         const statistics = channelData.statistics || {};
 
-        // 🚀 FieldMapper 완전 자동화된 채널 데이터 구조
+        // 🚀 새 인터페이스 표준을 따르는 채널 데이터 구조
         return {
-            [FieldMapper.get('ID')]: channelData.id, // ChannelAnalysisService이 기대하는 필드명
-            [FieldMapper.get('NAME')]: snippet.title || '', // ChannelAnalysisService이 기대하는 필드명
-            [FieldMapper.get('CHANNEL_ID')]: channelData.id, // 호환성을 위한 추가
-            [FieldMapper.get('CHANNEL_NAME')]: snippet.title || '', // 호환성을 위한 추가
-            [FieldMapper.get('DESCRIPTION')]: snippet.description || '',
-            [FieldMapper.get('CUSTOM_URL')]: snippet.customUrl || '',
-            [FieldMapper.get('THUMBNAIL_URL')]:
+            id: channelData.id,
+            channelName: snippet.title || '',
+            channelId: channelData.id, // 호환성을 위한 추가
+            description: snippet.description || '',
+            customUrl: snippet.customUrl || '',
+            thumbnailUrl:
                 snippet.thumbnails?.high?.url ||
                 snippet.thumbnails?.default?.url ||
                 '',
-            [FieldMapper.get('SUBSCRIBERS')]:
+            subscribers:
                 parseInt(statistics.subscriberCount) || 0,
-            [FieldMapper.get('CHANNEL_VIDEOS')]:
+            channelVideos:
                 parseInt(statistics.videoCount) || 0,
-            [FieldMapper.get('CHANNEL_VIEWS')]:
+            channelViews:
                 parseInt(statistics.viewCount) || 0,
-            [FieldMapper.get('UPLOAD_DATE')]: snippet.publishedAt || null,
-            [FieldMapper.get('PLATFORM')]: 'youtube',
-            [FieldMapper.get(
-                'CHANNEL_URL',
-            )]: `https://youtube.com/channel/${channelData.id}`,
-            [FieldMapper.get('YOUTUBE_HANDLE_URL')]: snippet.customUrl
+            uploadDate: snippet.publishedAt || null,
+            platform: 'YOUTUBE',
+            channelUrl: `https://youtube.com/channel/${channelData.id}`,
+            youtubeHandleUrl: snippet.customUrl
                 ? `https://youtube.com/@${snippet.customUrl.replace('@', '')}`
                 : null,
         };

@@ -72,6 +72,12 @@ const YouTubeSpecific = {
   comments: commonFieldOptions,
   views: { ...numberFieldOptions, index: true },
   duration: commonFieldOptions,
+  contentType: {
+    type: String,
+    enum: ['shortform', 'longform', 'mixed'],
+    default: 'longform',
+    index: true
+  },
   monetized: commonFieldOptions,
   youtubeCategory: commonFieldOptions,
   license: commonFieldOptions,

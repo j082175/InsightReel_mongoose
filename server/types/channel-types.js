@@ -60,13 +60,11 @@ const ChannelAIAnalysis = {
   categoryInfo: {
     majorCategory: { 
       type: String, 
-      required: false,
-      index: true
+      required: false
     },
     middleCategory: { 
       type: String, 
-      required: false,
-      index: true
+      required: false
     },
     subCategory: { 
       type: String, 
@@ -177,6 +175,7 @@ const ChannelMetadata = {
   
   analysisVersion: commonFieldOptions,
   collectedAt: { type: Date, required: false },
+  createdAt: { type: Date, required: false },
   updatedAt: { type: Date, required: false },
   version: numberFieldOptions
 };

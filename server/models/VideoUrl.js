@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const { FieldMapper } = require('../types/field-mapper');
 
 // 🔍 URL 중복 검사 전용 초경량 스키마 (성능 최적화)
 const videoUrlSchema = new mongoose.Schema({
@@ -21,7 +20,7 @@ const videoUrlSchema = new mongoose.Schema({
   platform: {
     type: String,
     required: true,
-    enum: ['instagram', 'youtube', 'tiktok'],
+    enum: ['INSTAGRAM', 'YOUTUBE', 'TIKTOK'],
     index: true  // 플랫폼별 조회 최적화
   },
   

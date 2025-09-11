@@ -3,6 +3,7 @@ const ClusterManager = require('./ClusterManager');
 const ChannelAnalysisService = require('./ChannelAnalysisService');
 const ClusterModel = require('./ClusterModel');
 const { ServerLogger } = require('../../utils/logger');
+const { HTTP_STATUS_CODES, ERROR_CODES } = require('../../config/api-messages');
 
 const router = express.Router();
 
@@ -33,9 +34,10 @@ router.post('/collect-channel', async (req, res) => {
         } = req.body;
 
         if (!channelData || !channelData.name) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
                 success: false,
-                error: '채널 데이터가 필요합니다',
+                error: ERROR_CODES.MISSING_REQUIRED_FIELD,
+                message: '채널 데이터가 필요합니다',
             });
         }
 
@@ -49,9 +51,10 @@ router.post('/collect-channel', async (req, res) => {
         res.json(result);
     } catch (error) {
         ServerLogger.error('❌ 채널 수집 API 오류', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -71,9 +74,10 @@ router.get('/recent-keywords', async (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 키워드 조회 API 오류', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -100,9 +104,10 @@ router.get('/channels', async (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 채널 목록 조회 API 오류', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -114,7 +119,6 @@ router.get('/channels/:channelId', async (req, res) => {
     try {
         const { channelId } = req.params;
         const mongoose = require('mongoose');
-        const { FieldMapper } = require('../../types/field-mapper');
 
         // ObjectId 여부 확인 후 적절한 검색 방법 선택
         let channel;
@@ -125,10 +129,10 @@ router.get('/channels/:channelId', async (req, res) => {
             // YouTube 핸들(@handle) 또는 채널명인 경우
             channel = await ChannelAnalysisService.findOne({
                 $or: [
-                    { [FieldMapper.get('YOUTUBE_HANDLE')]: channelId },
-                    { [FieldMapper.get('CHANNEL_NAME')]: channelId },
+                    { customUrl: channelId },
+                    { name: channelId },
                     {
-                        [FieldMapper.get('YOUTUBE_HANDLE')]:
+                        customUrl:
                             channelId.startsWith('@')
                                 ? channelId
                                 : `@${channelId}`,
@@ -138,9 +142,10 @@ router.get('/channels/:channelId', async (req, res) => {
         }
 
         if (!channel) {
-            return res.status(404).json({
+            return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
                 success: false,
-                error: '채널을 찾을 수 없습니다',
+                error: ERROR_CODES.RESOURCE_NOT_FOUND,
+                message: '채널을 찾을 수 없습니다',
             });
         }
 
@@ -150,9 +155,10 @@ router.get('/channels/:channelId', async (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 채널 상세 조회 API 오류', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -178,9 +184,10 @@ router.get('/clusters', async (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 클러스터 목록 조회 API 오류', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -198,9 +205,10 @@ router.post('/clusters', async (req, res) => {
         } = req.body;
 
         if (!name) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
                 success: false,
-                error: '클러스터 이름이 필요합니다',
+                error: ERROR_CODES.MISSING_REQUIRED_FIELD,
+                message: '클러스터 이름이 필요합니다',
             });
         }
 
@@ -226,9 +234,10 @@ router.post('/clusters', async (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 클러스터 생성 API 오류', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -252,9 +261,10 @@ router.put('/clusters/:clusterId', async (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 클러스터 수정 API 오류', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -268,9 +278,10 @@ router.post('/clusters/:clusterId/channels', async (req, res) => {
         const { channelId } = req.body;
 
         if (!channelId) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
                 success: false,
-                error: '채널 ID가 필요합니다',
+                error: ERROR_CODES.MISSING_REQUIRED_FIELD,
+                message: '채널 ID가 필요합니다',
             });
         }
 
@@ -286,9 +297,10 @@ router.post('/clusters/:clusterId/channels', async (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 채널 추가 API 오류', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -312,9 +324,10 @@ router.delete('/clusters/:clusterId/channels/:channelId', async (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 채널 제거 API 오류', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -334,9 +347,10 @@ router.get('/suggestions/clusters', async (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 클러스터 제안 API 오류', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -371,9 +385,10 @@ router.get('/search/channels', async (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 채널 검색 API 오류', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -403,9 +418,10 @@ router.get('/statistics', async (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 통계 조회 API 오류', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -439,16 +455,18 @@ router.delete('/channels/:channelId', async (req, res) => {
                 message: '채널이 삭제되었습니다',
             });
         } else {
-            res.status(404).json({
+            res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
                 success: false,
-                error: '채널을 찾을 수 없습니다',
+                error: ERROR_CODES.RESOURCE_NOT_FOUND,
+                message: '채널을 찾을 수 없습니다',
             });
         }
     } catch (error) {
         ServerLogger.error('❌ 채널 삭제 API 오류', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -480,16 +498,18 @@ router.delete('/clusters/:clusterId', async (req, res) => {
                 message: '클러스터가 삭제되었습니다',
             });
         } else {
-            res.status(404).json({
+            res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
                 success: false,
-                error: '클러스터를 찾을 수 없습니다',
+                error: ERROR_CODES.RESOURCE_NOT_FOUND,
+                message: '클러스터를 찾을 수 없습니다',
             });
         }
     } catch (error) {
         ServerLogger.error('❌ 클러스터 삭제 API 오류', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -515,9 +535,10 @@ router.post('/clusters/:targetId/merge/:sourceId', async (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 클러스터 병합 API 오류', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -543,10 +564,11 @@ router.get('/health', async (req, res) => {
             },
         });
     } catch (error) {
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
             status: 'unhealthy',
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });

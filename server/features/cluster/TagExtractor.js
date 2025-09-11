@@ -1,5 +1,4 @@
 const { ServerLogger } = require('../../utils/logger');
-const { FieldMapper } = require('../../types/field-mapper');
 const axios = require('axios');
 
 /**
@@ -20,18 +19,16 @@ class TagExtractor {
     async extractFromChannel(channel, contentType = 'longform') {
         try {
             // 캐시 체크
-            const cacheKey = `${channel[FieldMapper.get('ID')]}_${
-                channel[FieldMapper.get('NAME')]
-            }`;
+            const cacheKey = `${channel.id}_${channel.name}`;
             if (this.tagCache.has(cacheKey)) {
                 ServerLogger.info('📋 캐시된 태그 사용', {
-                    channel: channel[FieldMapper.get('NAME')],
+                    channel: channel.name,
                 });
                 return this.tagCache.get(cacheKey);
             }
 
             ServerLogger.info('🤖 AI 태그 추출 시작', {
-                channel: channel[FieldMapper.get('NAME')],
+                channel: channel.name,
             });
 
             // Gemini API로 태그 추출
@@ -42,10 +39,10 @@ class TagExtractor {
 
             // 추가 태그 추출 방법들
             const descriptiveTag = this.extractFromDescription(
-                channel[FieldMapper.get('DESCRIPTION')],
+                channel.description,
             );
             const nameTag = this.extractFromChannelName(
-                channel[FieldMapper.get('NAME')],
+                channel.name,
             );
 
             // 태그 결합 및 정제
@@ -60,7 +57,7 @@ class TagExtractor {
             setTimeout(() => this.tagCache.delete(cacheKey), 60 * 60 * 1000);
 
             ServerLogger.success('✅ 태그 추출 완료', {
-                channel: channel[FieldMapper.get('NAME')],
+                channel: channel.name,
                 tagCount: cleanTags.length,
                 tags: cleanTags.slice(0, 5).join(', '),
             });
@@ -116,10 +113,10 @@ class TagExtractor {
             const prompt = `
 다음 YouTube 채널의 특성을 분석해서 핵심 태그 5-8개를 추출해주세요.
 
-채널명: ${channel[FieldMapper.get('NAME')]}
-설명: ${channel[FieldMapper.get('DESCRIPTION')] || '없음'}
-구독자 수: ${channel[FieldMapper.get('SUBSCRIBERS')] || 0}
-사용자 정의 URL: ${channel[FieldMapper.get('CUSTOM_URL')] || '없음'}
+채널명: ${channel.name}
+설명: ${channel.description || '없음'}
+구독자 수: ${channel.subscribers || 0}
+사용자 정의 URL: ${channel.customUrl || '없음'}
 콘텐츠 유형: ${context.description}
 
 요구사항:
@@ -261,12 +258,12 @@ class TagExtractor {
         const fallbackTags = [];
 
         // 플랫폼 기본 태그
-        fallbackTags.push(channel[FieldMapper.get('PLATFORM')] || 'youtube');
+        fallbackTags.push(channel.platform || 'youtube');
 
         // 구독자 수 기반 태그
-        if ((channel[FieldMapper.get('SUBSCRIBERS')] || 0) > 1000000) {
+        if ((channel.subscribers || 0) > 1000000) {
             fallbackTags.push('대형채널');
-        } else if ((channel[FieldMapper.get('SUBSCRIBERS')] || 0) > 100000) {
+        } else if ((channel.subscribers || 0) > 100000) {
             fallbackTags.push('중견채널');
         } else {
             fallbackTags.push('소형채널');

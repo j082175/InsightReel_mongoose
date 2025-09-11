@@ -25,11 +25,11 @@ const channelSchema = new mongoose.Schema(createChannelSchema(), {
   }
 });
 
-// 복합 인덱스 생성
+// 복합 인덱스 생성 (개별 인덱스는 channel-types.js에서 정의됨)
 channelSchema.index({ platform: 1, subscribers: -1 });           // 플랫폼별 구독자순
-channelSchema.index({ 'categoryInfo.majorCategory': 1 });        // 대카테고리별
 channelSchema.index({ totalViews: -1 });                         // 총 조회수순
 channelSchema.index({ lastAnalyzedAt: -1 });                     // 최근 분석순
+// categoryInfo.majorCategory는 channel-types.js에서 이미 개별 인덱스 설정됨
 
 // 정적 메서드
 channelSchema.statics.findByPlatform = function(platform, sortBy = 'subscribers', limit = 20) {

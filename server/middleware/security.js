@@ -1,4 +1,5 @@
 const { ServerLogger } = require('../utils/logger');
+const { HTTP_STATUS_CODES, ERROR_CODES } = require('../config/api-messages');
 
 /**
  * 보안 미들웨어
@@ -65,7 +66,7 @@ class SecurityMiddleware {
     
     // Preflight 요청 처리
     if (req.method === 'OPTIONS') {
-      return res.status(200).end();
+      return res.status(HTTP_STATUS_CODES.OK).end();
     }
     
     next();
@@ -83,10 +84,10 @@ class SecurityMiddleware {
         const maxSizeInBytes = SecurityMiddleware.parseSize(maxSize);
         
         if (sizeInBytes > maxSizeInBytes) {
-          return res.status(413).json({
+          return res.status(HTTP_STATUS_CODES.PAYLOAD_TOO_LARGE).json({
             success: false,
             error: {
-              type: 'REQUEST_TOO_LARGE',
+              type: ERROR_CODES.REQUEST_TOO_LARGE,
               message: `요청 크기가 너무 큽니다. 최대 ${maxSize}까지 허용됩니다`
             }
           });
@@ -120,10 +121,10 @@ class SecurityMiddleware {
     
     // MIME 타입 검증
     if (!allowedMimeTypes.includes(file.mimetype)) {
-      return res.status(400).json({
+      return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
         success: false,
         error: {
-          type: 'INVALID_FILE_TYPE',
+          type: ERROR_CODES.INVALID_FILE_TYPE,
           message: '지원되지 않는 파일 형식입니다'
         }
       });
@@ -132,10 +133,10 @@ class SecurityMiddleware {
     // 확장자 검증
     const fileExtension = file.originalname.toLowerCase().substring(file.originalname.lastIndexOf('.'));
     if (!allowedExtensions.includes(fileExtension)) {
-      return res.status(400).json({
+      return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
         success: false,
         error: {
-          type: 'INVALID_FILE_EXTENSION',
+          type: ERROR_CODES.INVALID_FILE_EXTENSION,
           message: '허용되지 않는 파일 확장자입니다'
         }
       });
@@ -144,10 +145,10 @@ class SecurityMiddleware {
     // 파일 크기 재검증
     const maxFileSize = 100 * 1024 * 1024; // 100MB
     if (file.size > maxFileSize) {
-      return res.status(400).json({
+      return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
         success: false,
         error: {
-          type: 'FILE_TOO_LARGE',
+          type: ERROR_CODES.FILE_TOO_LARGE,
           message: '파일 크기가 너무 큽니다'
         }
       });
@@ -156,10 +157,10 @@ class SecurityMiddleware {
     // 파일 내용 검증 (간단한 매직 넘버 검사)
     SecurityMiddleware.validateFileContent(file, (isValid) => {
       if (!isValid) {
-        return res.status(400).json({
+        return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
           success: false,
           error: {
-            type: 'INVALID_FILE_CONTENT',
+            type: ERROR_CODES.INVALID_FILE_CONTENT,
             message: '파일 내용이 올바르지 않습니다'
           }
         });
@@ -243,10 +244,10 @@ class SecurityMiddleware {
       const currentRequests = requests.get(clientIp) || [];
       
       if (currentRequests.length >= maxRequests) {
-        return res.status(429).json({
+        return res.status(HTTP_STATUS_CODES.TOO_MANY_REQUESTS).json({
           success: false,
           error: {
-            type: 'RATE_LIMIT_EXCEEDED',
+            type: ERROR_CODES.RATE_LIMIT_EXCEEDED,
             message: '요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요',
             retryAfter: Math.ceil(windowMs / 1000)
           }
@@ -270,10 +271,10 @@ class SecurityMiddleware {
       const validApiKeys = (process.env.API_KEYS || '').split(',');
       
       if (!apiKey || !validApiKeys.includes(apiKey)) {
-        return res.status(401).json({
+        return res.status(HTTP_STATUS_CODES.UNAUTHORIZED).json({
           success: false,
           error: {
-            type: 'INVALID_API_KEY',
+            type: ERROR_CODES.INVALID_API_KEY,
             message: '유효하지 않은 API 키입니다'
           }
         });

@@ -2,7 +2,6 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { ServerLogger } = require('../utils/logger');
-const { FieldMapper } = require('../types/field-mapper'); // 🚀 FieldMapper 임포트
 const UnifiedCategoryManager = require('./UnifiedCategoryManager');
 const UnifiedGeminiManager = require('../utils/unified-gemini-manager');
 // GoogleGenerativeAI는 UnifiedGeminiManager에서 처리하므로 제거
@@ -438,22 +437,22 @@ class AIAnalyzer {
     ServerLogger.info(`⏱️ 기본 동적 분석 총 소요시간: ${dynamicTotalDuration}ms (${(dynamicTotalDuration / 1000).toFixed(2)}초)`);
     
     const returnData = {
-      [FieldMapper.get('SUMMARY')]: result.summary || '영상 분석 내용',
-      [FieldMapper.get('MAIN_CATEGORY')]: result.mainCategory,
-      [FieldMapper.get('MIDDLE_CATEGORY')]: result.middleCategory,
-      [FieldMapper.get('FULL_CATEGORY_PATH')]: result.fullPath,
-      [FieldMapper.get('CATEGORY_DEPTH')]: result.depth,
-      [FieldMapper.get('KEYWORDS')]: result.keywords,
-      [FieldMapper.get('HASHTAGS')]: result.hashtags,
-      [FieldMapper.get('CONFIDENCE')]: result.confidence,
-      [FieldMapper.get('SOURCE')]: result.source,
+      summary: result.summary || '영상 분석 내용',
+      mainCategory: result.mainCategory,
+      middleCategory: result.middleCategory,
+      fullCategoryPath: result.fullPath,
+      categoryDepth: result.depth,
+      keywords: result.keywords,
+      hashtags: result.hashtags,
+      confidence: result.confidence,
+      source: result.source,
       isDynamicCategory: true,
-      [FieldMapper.get('AI_MODEL')]: this.lastUsedModel || 'unknown'
+      aiModel: this.lastUsedModel || 'unknown'
     };
     
-    console.log(`🔍 AIAnalyzer 반환 데이터:`, {
-      categoryDepth: returnData[FieldMapper.get('CATEGORY_DEPTH')],
-      fullCategoryPath: returnData[FieldMapper.get('FULL_CATEGORY_PATH')],
+    ServerLogger.info(`🔍 AIAnalyzer 반환 데이터:`, {
+      categoryDepth: returnData.categoryDepth,
+      fullCategoryPath: returnData.fullCategoryPath,
       원본depth: result.depth
     });
     
@@ -1216,7 +1215,7 @@ JSON 형식으로 답변:
 
 추가 정보:
 - 캡션: "${metadata.caption || ''}"
-- 작성자: "${metadata[FieldMapper.get('CHANNEL_NAME')] || ''}" // 🚀 자동화
+- 작성자: "${metadata.channelName || ''}" // 🚀 자동화
 - 플랫폼: ${metadata.platform || 'unknown'}`;
   }
 
@@ -1466,7 +1465,7 @@ JSON 형식으로 답변:
       
       // 🎯 YouTube categoryId가 있는 경우 우선 사용
       if (metadata.categoryId) {
-        const youtubeMappedCategory = this.mapYouTubeCategoryToKorean(metadata.categoryId, metadata.title, metadata[FieldMapper.get('CHANNEL_NAME')]);
+        const youtubeMappedCategory = this.mapYouTubeCategoryToKorean(metadata.categoryId, metadata.title, metadata.channelName);
         if (youtubeMappedCategory.main !== '엔터테인먼트' || metadata.categoryId === '24') {
           ServerLogger.info(`🎬 YouTube 카테고리 우선 적용: ${youtubeMappedCategory.main}/${youtubeMappedCategory.middle}`);
           finalMainCategory = youtubeMappedCategory.main;
@@ -1992,10 +1991,10 @@ JSON 형식으로 답변:
     ServerLogger.info('🔄 지능형 폴백 콘텐츠 생성 시작...');
     
     const title = metadata.title || metadata.caption || '제목 없음';
-    const channelName = metadata[FieldMapper.get('CHANNEL_NAME')] || '채널 정보 없음';
+    const channelName = metadata.channelName || '채널 정보 없음';
     const description = metadata.description || metadata.caption || '';
-    const viewCount = metadata[FieldMapper.get('VIEWS')] || 0;
-    const likeCount = metadata[FieldMapper.get('LIKES')] || 0;
+    const viewCount = metadata.views || 0;
+    const likeCount = metadata.likes || 0;
     
     // 카테고리 기반 분석 생성
     const categoryContext = this.getCategoryAnalysisContext(urlBasedCategory.mainCategory, urlBasedCategory.middleCategory);
@@ -2112,8 +2111,8 @@ JSON 형식으로 답변:
     }
     
     // 채널명 추가
-    if (metadata[FieldMapper.get('CHANNEL_NAME')]) {
-      keywords.add(metadata[FieldMapper.get('CHANNEL_NAME')]);
+    if (metadata.channelName) {
+      keywords.add(metadata.channelName);
     }
     
     // 기본 키워드 추가
@@ -2149,13 +2148,13 @@ JSON 형식으로 답변:
    */
   generateFallbackSummary(metadata) {
     const title = metadata.title || metadata.caption || '영상';
-    const channelName = metadata[FieldMapper.get('CHANNEL_NAME')] || '채널';
+    const channelName = metadata.channelName || '채널';
     return `${channelName}의 "${title}"`;
   }
 
   generateFallbackContent(metadata) {
     const title = metadata.title || '제목 없음';
-    const channelName = metadata[FieldMapper.get('CHANNEL_NAME')] || '작성자';
+    const channelName = metadata.channelName || '작성자';
     const description = metadata.description || metadata.caption || '';
     
     if (description && description.length > 20) {
@@ -2166,8 +2165,8 @@ JSON 형식으로 답변:
 
   generateFallbackAnalysisContent(metadata, mainCategory, middleCategory) {
     const title = metadata.title || '영상';
-    const channelName = metadata[FieldMapper.get('CHANNEL_NAME')] || '채널';
-    const viewCount = metadata[FieldMapper.get('VIEWS')] || 0;
+    const channelName = metadata.channelName || '채널';
+    const viewCount = metadata.views || 0;
     
     const popularityLevel = viewCount > 1000000 ? '인기' : viewCount > 100000 ? '관심을 받는' : '새로운';
     
@@ -2181,7 +2180,7 @@ JSON 형식으로 답변:
     }
     
     const title = metadata.title || '영상';
-    const channelName = metadata[FieldMapper.get('CHANNEL_NAME')] || '채널';
+    const channelName = metadata.channelName || '채널';
     
     return `${channelName}에서 제작한 "${title}" 콘텐츠입니다. 시청자들에게 유익한 정보와 재미를 제공합니다.`;
   }

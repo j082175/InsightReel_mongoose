@@ -1,6 +1,6 @@
 const express = require('express');
 const { ServerLogger } = require('../utils/logger');
-const { FieldMapper } = require('../types/field-mapper');
+const { HTTP_STATUS_CODES, ERROR_CODES } = require('../config/api-messages');
 
 const router = express.Router();
 
@@ -33,9 +33,10 @@ router.post('/add', async (req, res) => {
         const { channelIdentifier, keywords = [], options = {} } = req.body;
 
         if (!channelIdentifier) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
                 success: false,
-                error: 'channelIdentifier is required',
+                error: ERROR_CODES.MISSING_REQUIRED_FIELD,
+                message: 'channelIdentifier is required',
             });
         }
 
@@ -51,9 +52,10 @@ router.post('/add', async (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 채널 분석 작업 추가 실패', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -69,9 +71,10 @@ router.get('/job/:jobId', (req, res) => {
         const jobStatus = queue.getJobStatus(jobId);
 
         if (!jobStatus) {
-            return res.status(404).json({
+            return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
                 success: false,
-                error: 'Job not found',
+                error: ERROR_CODES.RESOURCE_NOT_FOUND,
+                message: 'Job not found',
             });
         }
 
@@ -81,9 +84,10 @@ router.get('/job/:jobId', (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 작업 상태 조회 실패', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -109,7 +113,7 @@ router.get('/status', (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 큐 상태 조회 실패', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
             error: error.message,
             stack: error.stack,
@@ -134,9 +138,10 @@ router.get('/jobs', (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 작업 목록 조회 실패', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -157,16 +162,18 @@ router.delete('/job/:jobId', (req, res) => {
                 message: '작업이 취소되었습니다',
             });
         } else {
-            res.status(400).json({
+            res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
                 success: false,
-                error: '작업을 취소할 수 없습니다. (이미 처리 중이거나 완료됨)',
+                error: ERROR_CODES.OPERATION_FAILED,
+                message: '작업을 취소할 수 없습니다. (이미 처리 중이거나 완료됨)',
             });
         }
     } catch (error) {
         ServerLogger.error('❌ 작업 취소 실패', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -186,9 +193,10 @@ router.delete('/clear', (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 큐 초기화 실패', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -209,9 +217,10 @@ router.post('/cleanup', (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 작업 정리 실패', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });
@@ -225,9 +234,10 @@ router.post('/check-duplicate', async (req, res) => {
         const { channelIdentifier } = req.body;
 
         if (!channelIdentifier) {
-            return res.status(400).json({
+            return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
                 success: false,
-                error: 'channelIdentifier is required',
+                error: ERROR_CODES.MISSING_REQUIRED_FIELD,
+                message: 'channelIdentifier is required',
             });
         }
 
@@ -246,26 +256,17 @@ router.post('/check-duplicate', async (req, res) => {
 
             if (mongoose.Types.ObjectId.isValid(channelIdentifier)) {
                 // MongoDB ObjectId인 경우
-                const query = {};
-                query[FieldMapper.get('ID')] = channelIdentifier;
-                existingChannel = await Channel.findOne(query).lean();
+                existingChannel = await Channel.findOne({ id: channelIdentifier }).lean();
             } else {
                 // YouTube 핸들이나 채널명인 경우 다른 필드로 검색
                 existingChannel = await Channel.findOne({
                     $or: [
+                        { customUrl: channelIdentifier },
+                        { name: channelIdentifier },
                         {
-                            [FieldMapper.get('YOUTUBE_HANDLE')]:
-                                channelIdentifier,
-                        },
-                        {
-                            [FieldMapper.get('CHANNEL_NAME')]:
-                                channelIdentifier,
-                        },
-                        {
-                            [FieldMapper.get('YOUTUBE_HANDLE')]:
-                                channelIdentifier.startsWith('@')
-                                    ? channelIdentifier
-                                    : `@${channelIdentifier}`,
+                            customUrl: channelIdentifier.startsWith('@')
+                                ? channelIdentifier
+                                : `@${channelIdentifier}`,
                         },
                     ],
                 }).lean();
@@ -277,32 +278,19 @@ router.post('/check-duplicate', async (req, res) => {
                 duplicateInfo = {
                     isDuplicate: true,
                     existingChannel: {
-                        [FieldMapper.get('ID')]:
-                            existingChannel[FieldMapper.get('ID')],
-                        [FieldMapper.get('NAME')]:
-                            existingChannel[FieldMapper.get('NAME')],
-                        [FieldMapper.get('URL')]:
-                            existingChannel[FieldMapper.get('URL')],
-                        [FieldMapper.get('SUBSCRIBERS')]:
-                            existingChannel[FieldMapper.get('SUBSCRIBERS')],
-                        [FieldMapper.get('PLATFORM')]:
-                            existingChannel[FieldMapper.get('PLATFORM')],
-                        [FieldMapper.get('COLLECTED_AT')]:
-                            existingChannel[FieldMapper.get('COLLECTED_AT')],
-                        [FieldMapper.get('LAST_ANALYZED_AT')]:
-                            existingChannel[
-                                FieldMapper.get('LAST_ANALYZED_AT')
-                            ],
+                        id: existingChannel.id,
+                        name: existingChannel.name,
+                        url: existingChannel.url,
+                        subscribers: existingChannel.subscribers,
+                        platform: existingChannel.platform,
+                        collectedAt: existingChannel.collectedAt,
+                        lastAnalyzedAt: existingChannel.lastAnalyzedAt,
                     },
-                    message: `채널 "${
-                        existingChannel[FieldMapper.get('NAME')]
-                    }"은 이미 분석되었습니다.`,
+                    message: `채널 "${existingChannel.name}"은 이미 분석되었습니다.`,
                 };
 
                 ServerLogger.warn(
-                    `⚠️ 중복 채널 발견: ${
-                        existingChannel[FieldMapper.get('NAME')]
-                    } (${existingChannel[FieldMapper.get('ID')]})`,
+                    `⚠️ 중복 채널 발견: ${existingChannel.name} (${existingChannel.id})`,
                 );
             } else {
                 // 3. MongoDB에 없는 경우 - 새로운 채널로 간주 (API 호출은 실제 수집 시에만)
@@ -336,9 +324,10 @@ router.post('/check-duplicate', async (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 채널 중복 검사 실패', error);
-        res.status(500).json({
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
-            error: error.message,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
         });
     }
 });

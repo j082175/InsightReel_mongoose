@@ -1,3 +1,5 @@
+const { HTTP_STATUS_CODES } = require('../config/api-messages');
+
 /**
  * 입력 검증 미들웨어
  */
@@ -31,7 +33,7 @@ class ValidationMiddleware {
 
     if (errors.length > 0) {
       const error = new Error('입력 데이터 검증 실패');
-      error.statusCode = 400;
+      error.statusCode = HTTP_STATUS_CODES.BAD_REQUEST;
       error.type = 'VALIDATION_ERROR';
       error.details = errors;
       return next(error);
@@ -81,7 +83,7 @@ class ValidationMiddleware {
 
     if (errors.length > 0) {
       const error = new Error('입력 데이터 검증 실패');
-      error.statusCode = 400;
+      error.statusCode = HTTP_STATUS_CODES.BAD_REQUEST;
       error.type = 'VALIDATION_ERROR';
       error.details = errors;
       return next(error);
@@ -98,7 +100,7 @@ class ValidationMiddleware {
 
     if (!file) {
       const error = new Error('파일이 업로드되지 않았습니다');
-      error.statusCode = 400;
+      error.statusCode = HTTP_STATUS_CODES.BAD_REQUEST;
       error.type = 'VALIDATION_ERROR';
       return next(error);
     }
@@ -107,7 +109,7 @@ class ValidationMiddleware {
     const maxSize = 100 * 1024 * 1024; // 100MB
     if (file.size > maxSize) {
       const error = new Error(`파일 크기가 너무 큽니다. 최대 ${maxSize / 1024 / 1024}MB까지 지원됩니다`);
-      error.statusCode = 400;
+      error.statusCode = HTTP_STATUS_CODES.BAD_REQUEST;
       error.type = 'VALIDATION_ERROR';
       return next(error);
     }
@@ -150,7 +152,7 @@ class ValidationMiddleware {
       
       if (currentRequests.length >= maxRequests) {
         const error = new Error('너무 많은 요청입니다. 잠시 후 다시 시도해주세요');
-        error.statusCode = 429;
+        error.statusCode = HTTP_STATUS_CODES.TOO_MANY_REQUESTS;
         error.type = 'RATE_LIMIT_EXCEEDED';
         return next(error);
       }
@@ -193,7 +195,7 @@ class ValidationMiddleware {
 
     if (!allowedOrigins.includes(origin)) {
       const error = new Error('허용되지 않는 도메인입니다');
-      error.statusCode = 403;
+      error.statusCode = HTTP_STATUS_CODES.FORBIDDEN;
       error.type = 'FORBIDDEN_ORIGIN';
       return next(error);
     }
@@ -211,7 +213,7 @@ class ValidationMiddleware {
       if (expectedType === 'application/json' && 
           (!contentType || !contentType.includes('application/json'))) {
         const error = new Error('Content-Type은 application/json이어야 합니다');
-        error.statusCode = 400;
+        error.statusCode = HTTP_STATUS_CODES.BAD_REQUEST;
         error.type = 'INVALID_CONTENT_TYPE';
         return next(error);
       }
@@ -244,7 +246,7 @@ class ValidationMiddleware {
 
     } catch (error) {
       const validationError = new Error(`메타데이터 형식이 올바르지 않습니다: ${error.message}`);
-      validationError.statusCode = 400;
+      validationError.statusCode = HTTP_STATUS_CODES.BAD_REQUEST;
       validationError.type = 'VALIDATION_ERROR';
       next(validationError);
     }
