@@ -129,7 +129,7 @@ window.INSTAGRAM_MEDIA_TRACKER = {
 
     console.log('📱 미디어 정보 저장됨:', { 
       shortcode, 
-      videoUrl: mediaInfo.video_url?.substring(0, 50) + '...',
+      url: mediaInfo.video_url?.substring(0, 50) + '...',
       hasCarousel: !!mediaInfo.carousel_media 
     });
   },
@@ -1365,7 +1365,7 @@ window.INSTAGRAM_UI_SYSTEM = {
       // Instagram downloader 방식으로 미디어 정보 추출 (async)
       const mediaInfo = await this.extractMediaInfoFromContainer(container, video);
       
-      if (mediaInfo && mediaInfo.videoUrl) {
+      if (mediaInfo && mediaInfo.url) {
         console.log('📹 미디어 정보 발견:', mediaInfo);
         await this.processVideoAnalysis(mediaInfo, button);
       } else {
@@ -1474,7 +1474,7 @@ window.INSTAGRAM_UI_SYSTEM = {
         const mediaData = window.INSTAGRAM_MEDIA_TRACKER.mediaData[shortcode];
         console.log('🎯 개별 미디어 발견:', shortcode);
         return {
-          videoUrl: mediaData.video_versions?.[0]?.url || video.src,
+          url: mediaData.video_versions?.[0]?.url || video.src,
           shortcode: shortcode,
           mediaData: mediaData,
           description: description  // 릴스 설명 추가
@@ -1488,7 +1488,7 @@ window.INSTAGRAM_UI_SYSTEM = {
       const mediaData = window.INSTAGRAM_MEDIA_TRACKER.mediaData[urlShortcode];
       console.log('🎯 URL 기반 미디어 발견:', urlShortcode);
       return {
-        videoUrl: mediaData.video_versions?.[0]?.url || video.src,
+        url: mediaData.video_versions?.[0]?.url || video.src,
         shortcode: urlShortcode,
         mediaData: mediaData,
         description: description  // 릴스 설명 추가
@@ -1499,7 +1499,7 @@ window.INSTAGRAM_UI_SYSTEM = {
     if (video.src) {
       console.log('📺 비디오 src 사용 (fallback)');
       return {
-        videoUrl: video.src,
+        url: video.src,
         shortcode: shortcode || urlShortcode || 'unknown_' + Date.now(),
         mediaData: null,
         isBlob: video.src.includes('blob:'),
@@ -2962,7 +2962,7 @@ window.INSTAGRAM_UI_SYSTEM = {
         const mediaData = this.deepSearchForVideoData(props.children);
         if (mediaData) {
           return {
-            videoUrl: mediaData.videoUrl,
+            url: mediaData.url,
             shortcode: mediaData.shortcode,
             mediaData: mediaData
           };
@@ -2980,7 +2980,7 @@ window.INSTAGRAM_UI_SYSTEM = {
     // 비디오 URL 패턴 찾기
     if (obj.video_versions && Array.isArray(obj.video_versions)) {
       return {
-        videoUrl: obj.video_versions[0].url,
+        url: obj.video_versions[0].url,
         shortcode: obj.code || obj.shortcode,
         ...obj
       };
@@ -3042,8 +3042,8 @@ window.INSTAGRAM_UI_SYSTEM = {
       
       // 가상 비디오 요소 생성 (VideoSaver가 필요로 함) - actualVideo가 없을 때만
       const virtualVideo = actualVideo || {
-        src: mediaInfo.videoUrl,
-        currentSrc: mediaInfo.videoUrl,
+        src: mediaInfo.url,
+        currentSrc: mediaInfo.url,
         readyState: 4,
         videoWidth: 640,
         videoHeight: 480
@@ -3185,7 +3185,7 @@ window.INSTAGRAM_UI_SYSTEM = {
       },
       body: JSON.stringify({
         platform: 'instagram',
-        url: mediaInfo.videoUrl,
+        url: mediaInfo.url,
         videoId: mediaInfo.shortcode,
         mediaData: mediaInfo.mediaData
       })
@@ -3457,7 +3457,7 @@ class ApiClient {
       
       Utils.log('info', 'Processing video with URL', { 
         platform: data.platform, 
-        url: data.videoUrl,
+        url: data.url,
         analysisType: data.analysisType || 'quick',
         mode: data.mode || 'immediate'
       });
@@ -4002,13 +4002,13 @@ class VideoSaver {
     button.disabled = true;
 
     try {
-      const videoUrl = isShorts ? 
+      const url = isShorts ? 
         `https://www.youtube.com/shorts/${videoId}` :
         `https://www.youtube.com/watch?v=${videoId}`;
 
       const metadata = this.extractYouTubeMetadata(isShorts);
       
-      Utils.log('info', 'YouTube 영상 분석 시작', { videoId, videoUrl, isShorts });
+      Utils.log('info', 'YouTube 영상 분석 시작', { videoId, url, isShorts });
 
       // AI 설정 확인
       const useAI = await checkAISettings();
@@ -4016,7 +4016,7 @@ class VideoSaver {
       
       const result = await this.apiClient.processVideo({
         platform: 'youtube',
-        videoUrl: videoUrl,
+        url: url,
         postUrl: window.location.href,
         metadata: metadata,
         analysisType: useAI ? 'quick' : 'none',  // AI 비활성화시 분석 없음
@@ -4419,7 +4419,7 @@ class VideoSaver {
           
           await this.apiClient.processVideo({
             platform: CONSTANTS.PLATFORMS.INSTAGRAM,
-            videoUrl: cleanVideoUrl,
+            url: cleanVideoUrl,
             postUrl,
             analysisType: useAI ? 'multi-frame' : 'none', // AI 비활성화시 분석 없음
             useAI: useAI,  // 백엔드에서 참고하도록 전달
@@ -4619,14 +4619,14 @@ class VideoSaver {
             Utils.log('info', `📋 Reel 섹션 추출 성공 (길이: ${reelSection.length}자)`);
             
             // 디버깅: Reel 섹션에서 video/mp4 관련 키워드 확인
-            const videoKeywords = ['video_url', 'videoUrl', 'playback_url', 'video_dash_url', '.mp4', 'fbcdn.net'];
+            const videoKeywords = ['video_url', 'url', 'playback_url', 'video_dash_url', '.mp4', 'fbcdn.net'];
             const foundKeywords = videoKeywords.filter(keyword => reelSection.includes(keyword));
             Utils.log('info', `🔍 Reel 섹션에서 발견된 비디오 키워드: [${foundKeywords.join(', ')}]`);
             
             // 다양한 패턴으로 비디오 URL 찾기 (확장된 패턴)
             const patterns = [
               /"video_url":"([^"]+)"/,
-              /"videoUrl":"([^"]+)"/,
+              /"url":"([^"]+)"/,
               /"src":"([^"]+\.mp4[^"]*)"/,
               /"url":"([^"]+\.mp4[^"]*)"/,
               /"playback_url":"([^"]+)"/,
@@ -4642,9 +4642,9 @@ class VideoSaver {
             for (let i = 0; i < patterns.length; i++) {
               const pattern = patterns[i];
               Utils.log('info', `🔍 패턴 ${i+1}/${patterns.length} 시도: ${pattern.toString().substring(0, 50)}...`);
-              const videoUrlMatch = reelSection.match(pattern);
-              if (videoUrlMatch) {
-                const url = (videoUrlMatch[1] || videoUrlMatch[0]).replace(/\\u0026/g, '&').replace(/\\/g, '');
+              const urlMatch = reelSection.match(pattern);
+              if (urlMatch) {
+                const url = (urlMatch[1] || urlMatch[0]).replace(/\\u0026/g, '&').replace(/\\/g, '');
                 Utils.log('info', `✅ 패턴 ${i+1} 매칭 성공: ${url.substring(0, 80)}...`);
                 if (url.includes('.mp4') && !url.startsWith('blob:') && 
                     (url.includes('fbcdn.net') || url.includes('cdninstagram.com'))) {
@@ -4666,10 +4666,10 @@ class VideoSaver {
         }
         
         // 강화된 전체 검색 (fallback)
-        if (content.includes('video_url') || content.includes('videoUrl') || content.includes('.mp4')) {
+        if (content.includes('video_url') || content.includes('url') || content.includes('.mp4')) {
           const patterns = [
             /"video_url":"([^"]+\.mp4[^"]*)"/,
-            /"videoUrl":"([^"]+\.mp4[^"]*)"/,
+            /"url":"([^"]+\.mp4[^"]*)"/,
             /"playback_url":"([^"]+\.mp4[^"]*)"/,
             /"src":"([^"]*fbcdn\.net[^"]*\.mp4[^"]*)"/,
             /"url":"([^"]*fbcdn\.net[^"]*\.mp4[^"]*)"/,
@@ -5049,12 +5049,12 @@ class VideoSaver {
 
   /**
    * Blob URL 비디오 처리
-   * @param {string} videoUrl Blob URL
+   * @param {string} url Blob URL
    * @param {string} postUrl 게시물 URL  
    * @param {Object} metadata 메타데이터
    * @param {HTMLVideoElement} videoElement 비디오 요소
    */
-  async processBlobVideo(videoUrl, postUrl, metadata, videoElement = null) {
+  async processBlobVideo(url, postUrl, metadata, videoElement = null) {
     Utils.log('info', 'blob URL 감지 - Video Element에서 직접 프레임 캡처 시도');
     
     let videoBlob;
@@ -5086,7 +5086,7 @@ class VideoSaver {
         
         // 프레임 캡처 실패시 blob URL 다운로드 시도
         try {
-          videoBlob = await this.apiClient.downloadBlobVideo(videoUrl);
+          videoBlob = await this.apiClient.downloadBlobVideo(url);
           Utils.log('info', 'Blob URL 다운로드 성공');
         } catch (blobError) {
           throw new Error(`비디오 처리 실패: 프레임 캡처(${frameError.message})와 Blob 다운로드(${blobError.message}) 모두 실패`);
@@ -5095,7 +5095,7 @@ class VideoSaver {
     } else {
       // Video Element가 없으면 blob URL 다운로드만 시도
       try {
-        videoBlob = await this.apiClient.downloadBlobVideo(videoUrl);
+        videoBlob = await this.apiClient.downloadBlobVideo(url);
         Utils.log('info', 'Blob URL 다운로드 성공');
       } catch (blobError) {
         throw new Error(`Video Element를 찾을 수 없고 Blob 다운로드도 실패: ${blobError.message}`);
@@ -5394,9 +5394,9 @@ if (window.location.hostname.includes('instagram.com') ||
                 
                 // 채널 헤더 요소들 확인
                 const channelName = document.querySelector('#channel-name, .ytd-channel-name, #text-container h1');
-                const subscriberCount = document.querySelector('#subscriber-count, .ytd-subscriber-count');
+                const subscribers = document.querySelector('#subscriber-count, .ytd-subscriber-count');
                 
-                if (channelName && subscriberCount) {
+                if (channelName && subscribers) {
                     this.addAnalyzeButton();
                 } else if (attempts < maxAttempts) {
                     setTimeout(checkHeader, 1000);
@@ -5487,7 +5487,7 @@ if (window.location.hostname.includes('instagram.com') ||
                 const channelInfo = this.extractChannelInfo();
                 console.log('📊 채널 정보:', channelInfo);
 
-                if (!channelInfo.channelId && !channelInfo.channelHandle) {
+                if (!channelInfo.channelId && !channelInfo.youtubeHandle) {
                     throw new Error('채널 ID를 찾을 수 없습니다.');
                 }
 
@@ -5530,7 +5530,7 @@ if (window.location.hostname.includes('instagram.com') ||
 
             // 구독자 수
             const subscriberEl = document.querySelector('#subscriber-count #text, .ytd-subscriber-count #text');
-            channelInfo.subscriberCount = subscriberEl?.textContent?.trim() || '';
+            channelInfo.subscribers = subscriberEl?.textContent?.trim() || '';
 
             // 채널 설명 (About 탭에서 가져와야 하지만 현재 페이지에서 가능한 것만)
             const descriptionEl = document.querySelector('meta[name="description"]');
@@ -5542,7 +5542,7 @@ if (window.location.hostname.includes('instagram.com') ||
             // @handle 형태
             const handleMatch = url.match(/\/@([^\/\?]+)/);
             if (handleMatch) {
-                channelInfo.channelHandle = handleMatch[1];
+                channelInfo.youtubeHandle = handleMatch[1];
             }
 
             // /channel/ID 형태

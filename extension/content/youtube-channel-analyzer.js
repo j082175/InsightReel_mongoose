@@ -416,14 +416,14 @@ class YouTubeChannelAnalyzer {
             const channelInfo = this.extractChannelInfo();
             console.log('📊 채널 정보:', channelInfo);
 
-            if (!channelInfo.channelId && !channelInfo.channelHandle) {
+            if (!channelInfo.channelId && !channelInfo.youtubeHandle) {
                 throw new Error('채널 ID를 찾을 수 없습니다.');
             }
 
             // 중복 검사 실행
             const isDuplicate = await this.checkChannelDuplicate(channelInfo);
             if (isDuplicate) {
-                const channelName = channelInfo.channelName || channelInfo.channelHandle || '이 채널';
+                const channelName = channelInfo.channelName || channelInfo.youtubeHandle || '이 채널';
                 const confirmMessage = `${channelName}은 이미 분석된 채널입니다.\n\n다시 분석하시겠습니까?`;
                 
                 if (!confirm(confirmMessage)) {
@@ -455,7 +455,7 @@ class YouTubeChannelAnalyzer {
             console.log('🔍 채널 중복 검사 시작:', channelInfo);
 
             // 채널 식별자 결정 (우선순위: handle > channelId > customUrl > username)
-            const channelIdentifier = channelInfo.channelHandle ? `@${channelInfo.channelHandle}` : 
+            const channelIdentifier = channelInfo.youtubeHandle ? `@${channelInfo.youtubeHandle}` : 
                                      channelInfo.channelId ? channelInfo.channelId :
                                      channelInfo.customUrl ? channelInfo.customUrl :
                                      channelInfo.username ? channelInfo.username : null;
@@ -630,7 +630,7 @@ class YouTubeChannelAnalyzer {
                     
                     <div class="channel-info">
                         <div class="channel-name">${channelInfo.channelName}</div>
-                        <div class="channel-subs">${channelInfo.subscriberCount}</div>
+                        <div class="channel-subs">${channelInfo.subscribers}</div>
                     </div>
                     
                     <div class="modal-body">
@@ -947,7 +947,7 @@ class YouTubeChannelAnalyzer {
 
         // 구독자 수
         const subscriberEl = document.querySelector('#subscriber-count #text, .ytd-subscriber-count #text');
-        channelInfo.subscriberCount = subscriberEl?.textContent?.trim() || '';
+        channelInfo.subscribers = subscriberEl?.textContent?.trim() || '';
 
         // 채널 설명 (About 탭에서 가져와야 하지만 현재 페이지에서 가능한 것만)
         const descriptionEl = document.querySelector('meta[name="description"]');
@@ -959,7 +959,7 @@ class YouTubeChannelAnalyzer {
         // @handle 형태
         const handleMatch = url.match(/\/@([^\/\?]+)/);
         if (handleMatch) {
-            channelInfo.channelHandle = handleMatch[1];
+            channelInfo.youtubeHandle = handleMatch[1];
         }
 
         // /channel/ID 형태
@@ -1319,7 +1319,7 @@ class YouTubeChannelAnalyzer {
             // 서버에 수집 요청
             const channelDataWithName = {
                 ...channelInfo,
-                name: channelInfo.channelName || channelInfo.channelHandle || '알 수 없음'
+                name: channelInfo.channelName || channelInfo.youtubeHandle || '알 수 없음'
             };
             
             const response = await this.sendCollectRequest({
@@ -1371,7 +1371,7 @@ class YouTubeChannelAnalyzer {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                channelIdentifier: data.channelData.channelHandle ? `@${data.channelData.channelHandle}` : 
+                channelIdentifier: data.channelData.youtubeHandle ? `@${data.channelData.youtubeHandle}` : 
                                   data.channelData.channelId ? data.channelData.channelId :
                                   data.channelData.customUrl ? data.channelData.customUrl :
                                   data.channelData.username ? data.channelData.username : 'unknown',

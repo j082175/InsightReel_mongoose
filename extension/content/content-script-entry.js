@@ -80,7 +80,7 @@ class ContentScriptMain {
     try {
       switch (request.action) {
         case 'saveCurrentVideo':
-          await this.handleSaveCurrentVideo(request.videoUrl);
+          await this.handleSaveCurrentVideo(request.url);
           sendResponse({ success: true });
           break;
 

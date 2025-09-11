@@ -181,7 +181,7 @@ var BackgroundService = /*#__PURE__*/function () {
               // 현재 탭의 content script에 메시지 전송
               chrome.tabs.sendMessage(tab.id, {
                 action: 'saveCurrentVideo',
-                videoUrl: info.srcUrl
+                url: info.srcUrl
               });
               return _context2.a(3, 4);
             case 2:

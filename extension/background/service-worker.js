@@ -132,7 +132,7 @@ class BackgroundService {
         // 현재 탭의 content script에 메시지 전송
         chrome.tabs.sendMessage(tab.id, {
           action: 'saveCurrentVideo',
-          videoUrl: info.srcUrl
+          url: info.srcUrl
         });
         break;
         

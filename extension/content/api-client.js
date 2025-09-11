@@ -33,13 +33,13 @@ export class ApiClient {
    */
   async processVideo(data) {
     try {
-      Utils.log('info', 'Processing video with URL', { platform: data.platform, url: data.videoUrl });
+      Utils.log('info', 'Processing video with URL', { platform: data.platform, url: data.url });
       
       // 🔍 URL 방식 전송 전 메타데이터 로깅
       console.log('🚨🚨🚨 API CLIENT URL 전송 시작 🚨🚨🚨');
       console.log('📤 서버로 전송하는 데이터:');
       console.log('  Platform:', data.platform);
-      console.log('  VideoURL:', data.videoUrl);
+      console.log('  VideoURL:', data.url);
       console.log('  PostURL:', data.postUrl);
       console.log('  Metadata 타입:', typeof data.metadata);
       console.log('  Metadata keys:', data.metadata ? Object.keys(data.metadata) : 'NO KEYS');
@@ -57,7 +57,7 @@ export class ApiClient {
       const result = await response.json();
       
       // 중복 URL 특별 처리 (409 에러)
-      if (response.status === 409 && result.error === 'DUPLICATE_URL') {
+      if (response.status === CONSTANTS.HTTP_STATUS_CODES.CONFLICT && result.error === CONSTANTS.ERROR_CODES.DUPLICATE_URL) {
         return {
           success: false,
           isDuplicate: true,
@@ -134,7 +134,7 @@ export class ApiClient {
       const result = await response.json();
       
       // 중복 URL 특별 처리 (409 에러)
-      if (response.status === 409 && result.error === 'DUPLICATE_URL') {
+      if (response.status === CONSTANTS.HTTP_STATUS_CODES.CONFLICT && result.error === CONSTANTS.ERROR_CODES.DUPLICATE_URL) {
         return {
           success: false,
           isDuplicate: true,

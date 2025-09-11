@@ -2,7 +2,6 @@ import { CONSTANTS } from '../constants.js';
 import { Utils, StringUtils, TimeUtils, DOMUtils } from '../utils.js';
 import { BasePlatformHandler } from './base-handler.js';
 import { ErrorHandler } from '../error-handler.js';
-import { FieldMapper } from '../../utils/field-mapper.js';
 
 /**
  * YouTube 플랫폼 핸들러
@@ -46,7 +45,7 @@ export class YouTubeHandler extends BasePlatformHandler {
     
     this.log('info', `페이지 타입 감지: ${this.isShorts ? 'Shorts' : '일반 영상'}`, {
       url,
-[FieldMapper.get('VIDEO_ID')]: this.videoId
+      videoId: this.videoId
     });
   }
 
@@ -260,17 +259,17 @@ export class YouTubeHandler extends BasePlatformHandler {
       const videoUrl = this.getCurrentVideoUrl();
       
       this.log('info', 'YouTube 영상 분석 시작', {
-  [FieldMapper.get('VIDEO_ID')]: this.videoId,
+        videoId: this.videoId,
         videoUrl,
-  isShorts: this.isShorts,
+        isShorts: this.isShorts,
         metadata
       });
 
       // 서버 전송 데이터 생성
       const requestData = {
-[FieldMapper.get('PLATFORM')]: CONSTANTS.PLATFORMS.YOUTUBE,
+        platform: CONSTANTS.PLATFORMS.YOUTUBE,
         videoUrl,
-[FieldMapper.get('URL')]: videoUrl,
+        url: videoUrl,
         metadata
       };
       
@@ -310,9 +309,9 @@ export class YouTubeHandler extends BasePlatformHandler {
    */
   extractMetadata() {
     const metadata = {
-      [FieldMapper.get('PLATFORM')]: CONSTANTS.PLATFORMS.YOUTUBE,
-isShorts: this.isShorts,
-[FieldMapper.get('VIDEO_ID')]: this.videoId
+      platform: CONSTANTS.PLATFORMS.YOUTUBE,
+      isShorts: this.isShorts,
+      videoId: this.videoId
     };
 
     try {
@@ -323,7 +322,7 @@ isShorts: this.isShorts,
                           document.querySelector('#title h1');
       
       if (titleElement) {
-        metadata[FieldMapper.get('TITLE')] = titleElement.textContent?.trim();
+        metadata.title = titleElement.textContent?.trim();
       }
 
       // 채널명 추출  
@@ -333,7 +332,7 @@ isShorts: this.isShorts,
                            document.querySelector('#owner-name a');
       
       if (channelElement) {
-        metadata[FieldMapper.get('CHANNEL_NAME')] = channelElement.textContent?.trim();
+        metadata.channelName = channelElement.textContent?.trim();
       }
 
       // 조회수 추출 (가능한 경우)
@@ -342,7 +341,7 @@ isShorts: this.isShorts,
                          document.querySelector('#info-text .view-count');
       
       if (viewElement) {
-        metadata[FieldMapper.get('VIEWS')] = viewElement.textContent?.trim();
+        metadata.views = viewElement.textContent?.trim();
       }
 
       // 설명 추출 (일부)
@@ -350,7 +349,7 @@ isShorts: this.isShorts,
                          document.querySelector(CONSTANTS.SELECTORS.YOUTUBE.DESCRIPTION_ALT);
       
       if (descElement) {
-        metadata[FieldMapper.get('DESCRIPTION')] = descElement.textContent?.trim().substring(0, 200);
+        metadata.description = descElement.textContent?.trim().substring(0, 200);
       }
 
       this.log('info', 'YouTube 메타데이터 추출됨', metadata);

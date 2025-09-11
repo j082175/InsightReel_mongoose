@@ -232,6 +232,27 @@ export const CONSTANTS = {
     }
   },
 
+  // 🌐 HTTP 상태 코드 (CLAUDE.md 준수)
+  HTTP_STATUS_CODES: {
+    OK: 200,
+    CREATED: 201,
+    BAD_REQUEST: 400,
+    UNAUTHORIZED: 401,
+    FORBIDDEN: 403,
+    NOT_FOUND: 404,
+    CONFLICT: 409,
+    INTERNAL_SERVER_ERROR: 500
+  },
+
+  // ⚠️ 에러 코드 (CLAUDE.md 준수)
+  ERROR_CODES: {
+    DUPLICATE_URL: 'DUPLICATE_URL',
+    FILE_NOT_FOUND: 'FILE_NOT_FOUND',
+    INVALID_REQUEST: 'INVALID_REQUEST',
+    SERVER_ERROR: 'SERVER_ERROR',
+    NETWORK_ERROR: 'NETWORK_ERROR'
+  },
+
   // 📊 카테고리 매핑
   CATEGORIES: {
     MAIN: [
