@@ -175,7 +175,10 @@ class SheetsManager {
             const firstSheet = response.data.sheets[0];
             return firstSheet.properties.title;
         } catch (error) {
-            ServerLogger.warn('시트 이름 조회 실패, 기본값 사용:', error.message);
+            ServerLogger.warn(
+                '시트 이름 조회 실패, 기본값 사용:',
+                error.message,
+            );
             return 'Sheet1'; // 기본값
         }
     }
@@ -271,7 +274,7 @@ class SheetsManager {
 
     // 플랫폼별 헤더 구조 정의
     getPlatformHeaders(platform) {
-        if (platform.toLowerCase() === 'youtube') {
+        if (platform.toUpperCase() === 'YOUTUBE') {
             // YouTube 시트 헤더 - 번호, 태그, 파일경로 제거, 일시->업로드날짜, 해시태그/멘션/설명/댓글/썸네일URL/수집시간 추가
             return [
                 '업로드날짜',
@@ -349,7 +352,7 @@ class SheetsManager {
         videoPath,
         thumbnailPath, // 썸네일 경로 추가
     }) {
-        if (platform.toLowerCase() === 'youtube') {
+        if (platform.toUpperCase() === 'YOUTUBE') {
             // YouTube - 새로운 구조 (번호, 태그, 파일경로 제거, 해시태그/멘션/설명/댓글/썸네일URL/수집시간 추가)
             return [
                 uploadDate, // 업로드날짜 (업로드 날짜 우선)
@@ -379,7 +382,7 @@ class SheetsManager {
                 metadata.channelVideos || '0', // 채널동영상수
                 metadata.monetized || 'N', // 수익화여부
                 metadata.youtubeCategory || metadata.category || '', // YouTube 카테고리
-                metadata.license || 'youtube', // 라이센스
+                metadata.license || 'YOUTUBE', // 라이센스
                 metadata.definition || 'sd', // 화질
                 metadata.language || '', // 언어
                 postUrl, // URL
@@ -413,16 +416,12 @@ class SheetsManager {
                 analysis.mentions?.join(' ') ||
                     metadata.mentions?.join(' ') ||
                     '', // 멘션
-                metadata.description ||
-                    analysis.extractedText ||
-                    '', // 설명
+                metadata.description || analysis.extractedText || '', // 설명
                 analysis.summary || '', // 분석내용 (영상 분석 결과)
                 metadata.likes || '0', // 좋아요
                 metadata.commentsCount || '0', // 댓글수
                 postUrl, // URL
-                thumbnailPath ||
-                    metadata.thumbnailUrl ||
-                    '', // 썸네일URL
+                thumbnailPath || metadata.thumbnailUrl || '', // 썸네일URL
                 (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
                 analysis.aiModel || '수동', // 분석상태 (AI 모델 정보)
                 new Date().toISOString(), // 수집시간
@@ -628,7 +627,7 @@ class SheetsManager {
     }
 
     // 기존 스프레드시트의 헤더가 최신 버전인지 확인하고 업데이트
-    async ensureUpdatedHeaders(platform = 'instagram') {
+    async ensureUpdatedHeaders(platform = 'INSTAGRAM') {
         try {
             const sheetName = await this.getSheetNameByPlatform(platform);
 
@@ -828,7 +827,7 @@ class SheetsManager {
             let uploadDate;
             if (metadata.uploadDate) {
                 // YouTube의 경우 업로드 날짜와 시간 모두 표시
-                if (platform === 'youtube') {
+                if (platform === 'YOUTUBE') {
                     uploadDate = new Date(metadata.uploadDate).toLocaleString(
                         'ko-KR',
                     );
@@ -866,28 +865,19 @@ class SheetsManager {
 
             if (
                 isDynamicMode &&
-                (analysis.fullCategoryPath ||
-                    analysis.fullPath)
+                (analysis.fullCategoryPath || analysis.fullPath)
             ) {
                 // 동적 카테고리 모드: AI가 생성한 전체 경로 사용
                 fullCategoryPath =
-                    analysis.fullCategoryPath ||
-                    analysis.fullPath;
-                categoryDepth =
-                    analysis.categoryDepth ||
-                    analysis.depth ||
-                    0;
+                    analysis.fullCategoryPath || analysis.fullPath;
+                categoryDepth = analysis.categoryDepth || analysis.depth || 0;
                 ServerLogger.info(
                     `🎯 동적 카테고리 데이터: ${fullCategoryPath} (깊이: ${categoryDepth})`,
                 );
             } else {
                 // 기존 모드: 대카테고리 > 중카테고리 형식으로 구성
-                const mainCat =
-                    analysis.mainCategory ||
-                    '미분류';
-                const middleCat =
-                    analysis.middleCategory ||
-                    '미분류';
+                const mainCat = analysis.mainCategory || '미분류';
+                const middleCat = analysis.middleCategory || '미분류';
                 if (middleCat && middleCat !== '미분류') {
                     fullCategoryPath = `${mainCat} > ${middleCat}`;
                     categoryDepth = 2;
@@ -987,7 +977,7 @@ class SheetsManager {
                     await Video.createOrUpdateFromVideoUrl(
                         {
                             originalUrl: normalizedUrl,
-                            platform: platform.toLowerCase(),
+                            platform: platform.toUpperCase(),
                             originalPublishDate: originalPublishDate,
                             processedAt: new Date(),
                         },
@@ -1057,10 +1047,10 @@ class SheetsManager {
     /**
      * 배치 비디오 데이터 저장 (50개 영상을 한 번에 저장)
      * @param {Array} videoDataArray - 비디오 데이터 배열
-     * @param {string} platform - 플랫폼 ('youtube', 'instagram', 'tiktok')
+     * @param {string} platform - 플랫폼 ('YOUTUBE', 'INSTAGRAM', 'TIKTOK')
      * @returns {Promise<Object>} 저장 결과
      */
-    async saveVideoBatch(videoDataArray, platform = 'youtube') {
+    async saveVideoBatch(videoDataArray, platform = 'YOUTUBE') {
         try {
             if (!this.sheets) {
                 throw new Error('구글 시트 인증이 완료되지 않았습니다.');
@@ -1133,7 +1123,7 @@ class SheetsManager {
                         youtubeCategory: videoInfo.youtubeCategory,
                         categoryId: videoInfo.categoryId,
                         monetized: videoInfo.definition === 'hd' ? 'Y' : 'N',
-                        license: 'youtube',
+                        license: 'YOUTUBE',
                         definition: videoInfo.definition,
                         language: videoInfo.language,
                         tags: videoInfo.tags,
@@ -1294,7 +1284,7 @@ class SheetsManager {
         // 업로드 날짜 결정
         let uploadDate;
         if (metadata.uploadDate) {
-            if (platform === 'youtube') {
+            if (platform === 'YOUTUBE') {
                 uploadDate = new Date(metadata.uploadDate).toLocaleString(
                     'ko-KR',
                 );
@@ -1314,11 +1304,9 @@ class SheetsManager {
 
         // AIAnalyzer가 반환하는 실제 필드를 확인
         const analysisCategoryPath =
-            analysis.fullCategoryPath ||
-            analysis.fullCategoryPath;
+            analysis.fullCategoryPath || analysis.fullCategoryPath;
         const analysisCategoryDepth =
-            analysis.categoryDepth ||
-            analysis.categoryDepth;
+            analysis.categoryDepth || analysis.categoryDepth;
 
         ServerLogger.info(
             `🔍 Category Debug: isDynamicMode=${isDynamicMode}, categoryPath="${analysisCategoryPath}", depth=${analysisCategoryDepth}`,
@@ -1344,10 +1332,8 @@ class SheetsManager {
                 );
             } else {
                 // 기존 방식: mainCategory, middleCategory 조합
-                const mainCat =
-                    analysis.mainCategory || '미분류';
-                const middleCat =
-                    analysis.middleCategory || '';
+                const mainCat = analysis.mainCategory || '미분류';
+                const middleCat = analysis.middleCategory || '';
                 ServerLogger.info(
                     `🔍 기존 방식: mainCat="${mainCat}", middleCat="${middleCat}"`,
                 );
@@ -1368,12 +1354,13 @@ class SheetsManager {
         }
 
         // 플랫폼별 행 데이터 구성
-        if (platform === 'youtube') {
+        if (platform === 'YOUTUBE') {
             return [
                 rowNumber, // 번호
                 uploadDate, // 일시
                 platform.toUpperCase(), // 플랫폼
-                metadata.channelName || '',                metadata.youtubeHandle || '', // YouTube핸들명
+                metadata.channelName || '',
+                metadata.youtubeHandle || '', // YouTube핸들명
                 metadata.channelUrl || '', // 채널URL
                 analysis.mainCategory || '미분류', // 대카테고리
                 analysis.middleCategory || '', // 중카테고리
@@ -1383,7 +1370,7 @@ class SheetsManager {
                 analysis.content || '', // 분석내용
                 metadata.likes || '0', // 좋아요                metadata.commentsCount || '0', // 댓글수                metadata.views || '0', // 조회수                metadata.duration || '', // 영상길이                metadata.subscribers || '0', // 구독자수                metadata.channelVideos || '0', // 채널동영상수                metadata.monetized || 'N', // 수익화여부
                 metadata.youtubeCategory || '', // YouTube카테고리
-                metadata.license || 'youtube', // 라이센스
+                metadata.license || 'YOUTUBE', // 라이센스
                 metadata.definition || 'sd', // 화질
                 metadata.language || '', // 언어
                 analysis.hashtags?.join(' ') ||
@@ -1403,15 +1390,15 @@ class SheetsManager {
                 rowNumber, // 번호
                 uploadDate, // 일시
                 platform.toUpperCase(), // 플랫폼
-                metadata.channelName || '',                analysis.mainCategory || '미분류', // 대카테고리
+                metadata.channelName || '',
+                analysis.mainCategory || '미분류', // 대카테고리
                 analysis.middleCategory || '', // 중카테고리
                 fullCategoryPath, // 전체카테고리경로
                 categoryDepth, // 카테고리깊이
                 analysis.keywords?.join(', ') || '', // 키워드
                 analysis.content || '', // 분석내용
                 metadata.likes || '0', // 좋아요                metadata.commentsCount || '0', // 댓글수                analysis.hashtags?.join(' ') ||
-                    metadata.hashtags?.join(' ') ||
-                    '', // 해시태그
+                metadata.hashtags?.join(' ') || '', // 해시태그
                 postUrl, // URL
                 videoPath ? path.basename(videoPath) : '', // 파일경로
                 (analysis.confidence * 100).toFixed(1) + '%', // 신뢰도
@@ -1442,7 +1429,7 @@ class SheetsManager {
     async updateStatistics() {
         try {
             // 모든 플랫폼 시트에서 데이터 조회
-            const platforms = ['instagram', 'tiktok', 'youtube'];
+            const platforms = ['INSTAGRAM', 'TIKTOK', 'YOUTUBE'];
             let allData = [];
 
             for (const platform of platforms) {
@@ -1574,7 +1561,7 @@ class SheetsManager {
             }
 
             // 모든 플랫폼 시트에서 최신 데이터 조회 (성능 최적화)
-            const platforms = ['instagram', 'tiktok', 'youtube'];
+            const platforms = ['INSTAGRAM', 'TIKTOK', 'YOUTUBE'];
 
             // 1단계: 범위 확대 - Instagram 9월 데이터 누락 방지를 위해 더 많이 조회
             const platformLimit = Math.max(50, limit * 5); // 최소 50개, 또는 limit*5 (9월 데이터 포함 위해 확대)
@@ -1990,7 +1977,7 @@ class SheetsManager {
             );
 
             // 모든 플랫폼 시트에서 검사
-            const platforms = ['instagram', 'youtube', 'tiktok'];
+            const platforms = ['INSTAGRAM', 'YOUTUBE', 'TIKTOK'];
 
             for (const platform of platforms) {
                 try {
@@ -2000,9 +1987,9 @@ class SheetsManager {
 
                     // URL이 저장되는 컬럼들 확인 (플랫폼별로 다를 수 있음)
                     let urlColumns = [];
-                    if (platform === 'youtube') {
+                    if (platform === 'YOUTUBE') {
                         urlColumns = ['W']; // YouTube URL은 W컬럼에 저장
-                    } else if (platform === 'instagram') {
+                    } else if (platform === 'INSTAGRAM') {
                         urlColumns = ['N']; // Instagram URL은 N컬럼에 저장
                     } else {
                         urlColumns = ['L']; // TikTok URL은 L컬럼에 저장 (확인 필요)
@@ -2335,7 +2322,7 @@ class SheetsManager {
                 channelData.shortFormRatio || '0',
                 channelData.analyzedAt || new Date().toISOString(),
                 channelData.analysisLevel || '2',
-                channelData.platform || 'youtube',
+                channelData.platform || 'YOUTUBE',
             ];
 
             // 스프레드시트에 데이터 추가

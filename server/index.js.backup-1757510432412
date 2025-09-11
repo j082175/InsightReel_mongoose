@@ -179,7 +179,7 @@ app.get('/api/database/test', async (req, res) => {
   try {
     // 1. 테스트 비디오 데이터 생성
     const testVideo = new Video({
-      [FieldMapper.get('PLATFORM')]: 'youtube',
+      [FieldMapper.get('PLATFORM')]: 'YOUTUBE',
       [FieldMapper.get('TIMESTAMP')]: new Date(),
       [FieldMapper.get('CHANNEL_NAME')]: 'TestChannel',
       [FieldMapper.get('TITLE')]: 'MongoDB 연결 테스트 비디오',
@@ -567,9 +567,9 @@ app.post('/api/process-video', async (req, res) => {
     
     // 🆕 플랫폼 자동 감지 (platform이 없는 경우)
     const finalPlatform = platform || (finalVideoUrl ? 
-      (finalVideoUrl.includes('youtube.com') || finalVideoUrl.includes('youtu.be') ? 'youtube' : 
-       finalVideoUrl.includes('instagram.com') ? 'instagram' : 
-       finalVideoUrl.includes('tiktok.com') ? 'tiktok' : 'unknown') : 'unknown');
+      (finalVideoUrl.includes('youtube.com') || finalVideoUrl.includes('youtu.be') ? 'YOUTUBE' : 
+       finalVideoUrl.includes('instagram.com') ? 'INSTAGRAM' : 
+       finalVideoUrl.includes('tiktok.com') ? 'TIKTOK' : 'unknown') : 'unknown');
     
     // 🔍 URL 중복 검사 (모든 플랫폼 공통)
     const checkUrl = finalVideoUrl || finalPostUrl;
@@ -632,7 +632,7 @@ app.post('/api/process-video', async (req, res) => {
     }
     
     // 🆕 YouTube 배치 모드 처리
-    if (finalPlatform === 'youtube' && mode === 'batch') {
+    if (finalPlatform === 'YOUTUBE' && mode === 'batch') {
       try {
         const options = {
           [FieldMapper.get('PRIORITY')]: req.body.priority || 'normal',
@@ -689,7 +689,7 @@ app.post('/api/process-video', async (req, res) => {
         let youtubeInfo = null;
         
         // YouTube인 경우 API로 정보 수집
-        if (platform === 'youtube') {
+        if (platform === 'YOUTUBE') {
           ServerLogger.info('0️⃣ YouTube 정보 수집 중...');
           youtubeInfo = await videoProcessor.getYouTubeVideoInfo(videoUrl);
           ServerLogger.info(`📺 ${youtubeInfo[FieldMapper.get('CONTENT_TYPE')]} 감지: ${youtubeInfo[FieldMapper.get('TITLE')]}`);
@@ -708,7 +708,7 @@ app.post('/api/process-video', async (req, res) => {
         let analysis;
         let enrichedMetadata = { platform }; // 🆕 기본값으로 초기화
         
-        if (platform === 'youtube') {
+        if (platform === 'YOUTUBE') {
           // YouTube 정보를 원본 metadata에 병합 (시트 저장용)
           // 🆕 metadata가 null/undefined인 경우 빈 객체로 초기화
           if (!metadata || typeof metadata !== 'object') {
@@ -1131,9 +1131,9 @@ app.get('/api/videos', async (req, res) => {
           } else {
             // 파일이 없으면 플랫폼별 placeholder
             const platform = video.platform;
-            if (platform === 'instagram') {
+            if (platform === 'INSTAGRAM') {
               thumbnailUrl = 'https://placehold.co/400x600/E4405F/FFFFFF?text=IG';
-            } else if (platform === 'tiktok') {
+            } else if (platform === 'TIKTOK') {
               thumbnailUrl = 'https://placehold.co/400x600/000000/FFFFFF?text=TT';
             } else {
               thumbnailUrl = 'https://placehold.co/600x400/FF0000/FFFFFF?text=YT';
@@ -1142,9 +1142,9 @@ app.get('/api/videos', async (req, res) => {
         } catch (err) {
           // 에러 발생시 placeholder 사용
           const platform = video.platform;
-          if (platform === 'instagram') {
+          if (platform === 'INSTAGRAM') {
             thumbnailUrl = 'https://placehold.co/400x600/E4405F/FFFFFF?text=IG';
-          } else if (platform === 'tiktok') {
+          } else if (platform === 'TIKTOK') {
             thumbnailUrl = 'https://placehold.co/400x600/000000/FFFFFF?text=TT';
           } else {
             thumbnailUrl = 'https://placehold.co/600x400/FF0000/FFFFFF?text=YT';
@@ -1153,9 +1153,9 @@ app.get('/api/videos', async (req, res) => {
       } else if (!thumbnailUrl) {
         // 썸네일이 없으면 플랫폼별 placeholder 제공
         const platform = video.platform;
-        if (platform === 'instagram') {
+        if (platform === 'INSTAGRAM') {
           thumbnailUrl = 'https://placehold.co/400x600/E4405F/FFFFFF?text=IG';
-        } else if (platform === 'tiktok') {
+        } else if (platform === 'TIKTOK') {
           thumbnailUrl = 'https://placehold.co/400x600/000000/FFFFFF?text=TT';
         } else {
           thumbnailUrl = 'https://placehold.co/600x400/FF0000/FFFFFF?text=YT';
@@ -1639,9 +1639,9 @@ app.post('/api/process-video-blob', upload.single('video'), async (req, res) => 
         
         // 🆕 플랫폼 자동 감지 (platform이 없는 경우)
         const finalPlatform = platform || (postUrl ? 
-          (postUrl.includes('youtube.com') || postUrl.includes('youtu.be') ? 'youtube' : 
-           postUrl.includes('instagram.com') ? 'instagram' : 
-           postUrl.includes('tiktok.com') ? 'tiktok' : 'unknown') : 'unknown');
+          (postUrl.includes('youtube.com') || postUrl.includes('youtu.be') ? 'YOUTUBE' : 
+           postUrl.includes('instagram.com') ? 'INSTAGRAM' : 
+           postUrl.includes('tiktok.com') ? 'TIKTOK' : 'unknown') : 'unknown');
         
         // ✅ 중복이 아닌 경우 - 즉시 processing 상태로 MongoDB에 등록
         const normalizedUrl = sheetsManager.normalizeVideoUrl(postUrl);
@@ -2306,7 +2306,7 @@ app.get('/api/api-keys', async (req, res) => {
         id: key.id,
         name: key.name,
         maskedKey: ApiKeyManager.maskApiKey(key.apiKey),
-        type: 'youtube',
+        type: 'YOUTUBE',
         status,
         usage: realUsage,
         errors: 0,

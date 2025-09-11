@@ -19,7 +19,7 @@ const VideoUrl = require('./models/VideoUrl');
 const VideoProcessor = require('./services/VideoProcessor');
 const AIAnalyzer = require('./services/AIAnalyzer');
 const SheetsManager = require('./services/SheetsManager');
-// const UnifiedVideoSaver = require('./services/UnifiedVideoSaver'); // FieldMapper 제거 완료 - 새 인터페이스 적용됨
+const UnifiedVideoSaver = require('./services/UnifiedVideoSaver');
 // const youtubeBatchProcessor = require('./services/YouTubeBatchProcessor');
 const HighViewCollector = require('./services/HighViewCollector');
 const YouTubeChannelDataCollector = require('./services/YouTubeChannelDataCollector');
@@ -112,7 +112,7 @@ const sheetsManager = new SheetsManager();
 // Blob 처리 API를 위해 필요한 서비스들 추가
 const videoProcessor = new VideoProcessor();
 const aiAnalyzer = new AIAnalyzer();
-// const unifiedVideoSaver = new UnifiedVideoSaver(sheetsManager, aiAnalyzer); // FieldMapper 제거 완료 - 활성화 가능
+const unifiedVideoSaver = new UnifiedVideoSaver(sheetsManager, aiAnalyzer);
 
 // 서비스 초기화 후 디버그
 app.get('/api/debug-after-services', (req, res) => {

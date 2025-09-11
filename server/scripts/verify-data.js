@@ -38,7 +38,7 @@ async function verifyData() {
         // 3. 샘플 데이터 조회 (각 플랫폼에서 2개씩)
         console.log('\n📋 샘플 데이터:');
 
-        for (const platform of ['instagram', 'youtube']) {
+        for (const platform of ['INSTAGRAM', 'YOUTUBE']) {
             const samples = await Video.find({
                 platform: platform,
             })
@@ -48,20 +48,12 @@ async function verifyData() {
 
             console.log(`\n${platform.toUpperCase()} 샘플:`);
             samples.forEach((video, index) => {
+                console.log(`  ${index + 1}. ${video.title}`);
+                console.log(`     채널이름: ${video.channelName}`);
                 console.log(
-                    `  ${index + 1}. ${video.title}`,
+                    `     좋아요: ${video.likes}, 조회수: ${video.views}`,
                 );
-                console.log(
-                    `     채널이름: ${video.channelName}`,
-                );
-                console.log(
-                    `     좋아요: ${video.likes}, 조회수: ${
-                        video.views
-                    }`,
-                );
-                console.log(
-                    `     날짜: ${video.uploadDate}`,
-                );
+                console.log(`     날짜: ${video.uploadDate}`);
             });
         }
 

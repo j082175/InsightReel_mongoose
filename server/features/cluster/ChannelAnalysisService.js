@@ -156,8 +156,7 @@ class ChannelAnalysisService {
                 name: channelData.name,
                 isNew:
                     !result.updatedAt ||
-                    result.createdAt.getTime() ===
-                        result.updatedAt.getTime(),
+                    result.createdAt.getTime() === result.updatedAt.getTime(),
             });
 
             return result;
@@ -199,14 +198,10 @@ class ChannelAnalysisService {
             });
             if (existing) {
                 ServerLogger.warn(
-                    `⚠️ 중복 분석 차단: 채널 ${
-                        youtubeData.name
-                    }은 이미 분석되었습니다.`,
+                    `⚠️ 중복 분석 차단: 채널 ${youtubeData.name}은 이미 분석되었습니다.`,
                 );
                 throw new Error(
-                    `채널 ${
-                        youtubeData.name
-                    }은 이미 분석되었습니다.`,
+                    `채널 ${youtubeData.name}은 이미 분석되었습니다.`,
                 );
             }
 
@@ -219,9 +214,7 @@ class ChannelAnalysisService {
 
             // 2. 상세 분석 수행 (선택적)
             ServerLogger.info(
-                `🔍 ChannelAnalysisService DEBUG: includeAnalysis = ${includeAnalysis}, skipAIAnalysis = ${skipAIAnalysis}, channelId = ${
-                    youtubeData.id
-                }`,
+                `🔍 ChannelAnalysisService DEBUG: includeAnalysis = ${includeAnalysis}, skipAIAnalysis = ${skipAIAnalysis}, channelId = ${youtubeData.id}`,
             );
             if (includeAnalysis) {
                 try {
@@ -277,17 +270,13 @@ class ChannelAnalysisService {
                 id: youtubeData.id,
                 name: youtubeData.name,
                 url: youtubeData.url,
-                platform: 'youtube',
+                platform: 'YOUTUBE',
 
                 // YouTube API 기본 정보
-                subscribers:
-                    youtubeData.subscribers,
-                description:
-                    youtubeData.description,
-                thumbnailUrl:
-                    youtubeData.thumbnailUrl,
-                customUrl:
-                    youtubeData.customUrl,
+                subscribers: youtubeData.subscribers,
+                description: youtubeData.description,
+                thumbnailUrl: youtubeData.thumbnailUrl,
+                customUrl: youtubeData.customUrl,
 
                 // 상세 분석 정보 (요청한 6가지 + α)
                 ...(analysisData && {
@@ -322,9 +311,7 @@ class ChannelAnalysisService {
                 }),
 
                 // 사용자 입력 정보
-                keywords: Array.isArray(userKeywords)
-                    ? userKeywords
-                    : [],
+                keywords: Array.isArray(userKeywords) ? userKeywords : [],
 
                 // AI 태그 (향상된 분석에서 추출 또는 빈 배열)
                 aiTags: skipAIAnalysis
@@ -465,14 +452,10 @@ class ChannelAnalysisService {
             });
             if (existing) {
                 ServerLogger.warn(
-                    `⚠️ 중복 분석 차단: 채널 ${
-                        youtubeData.name
-                    }은 이미 분석되었습니다.`,
+                    `⚠️ 중복 분석 차단: 채널 ${youtubeData.name}은 이미 분석되었습니다.`,
                 );
                 throw new Error(
-                    `채널 ${
-                        youtubeData.name
-                    }은 이미 분석되었습니다.`,
+                    `채널 ${youtubeData.name}은 이미 분석되었습니다.`,
                 );
             }
 
@@ -486,22 +469,16 @@ class ChannelAnalysisService {
                 id: youtubeData.id,
                 name: youtubeData.name,
                 url: youtubeData.url,
-                platform: 'youtube',
+                platform: 'YOUTUBE',
 
                 // YouTube API에서 가져온 정보
-                subscribers:
-                    youtubeData.subscribers,
-                description:
-                    youtubeData.description,
-                thumbnailUrl:
-                    youtubeData.thumbnailUrl,
-                customUrl:
-                    youtubeData.customUrl,
+                subscribers: youtubeData.subscribers,
+                description: youtubeData.description,
+                thumbnailUrl: youtubeData.thumbnailUrl,
+                customUrl: youtubeData.customUrl,
 
                 // 사용자 입력 키워드
-                keywords: Array.isArray(userKeywords)
-                    ? userKeywords
-                    : [],
+                keywords: Array.isArray(userKeywords) ? userKeywords : [],
 
                 // 기본값들
                 aiTags: [],
@@ -531,33 +508,25 @@ class ChannelAnalysisService {
                 id: channelData.id,
                 name: channelData.name,
                 url: channelData.url,
-                platform:
-                    channelData.platform || 'youtube',
+                platform: channelData.platform || 'YOUTUBE',
 
                 // 기본 정보
-                subscribers:
-                    channelData.subscribers || 0,
-                description:
-                    channelData.description || '',
-                thumbnailUrl:
-                    channelData.thumbnailUrl || '',
-                customUrl:
-                    channelData.customUrl || '',
+                subscribers: channelData.subscribers || 0,
+                description: channelData.description || '',
+                thumbnailUrl: channelData.thumbnailUrl || '',
+                customUrl: channelData.customUrl || '',
 
                 // 콘텐츠 타입 정보
                 contentType: channelData.contentType || 'mixed', // longform, shortform, mixed
 
                 // 태그 정보
-                keywords:
-                    channelDatakeywords || [], // 사용자 입력 키워드
+                keywords: channelDatakeywords || [], // 사용자 입력 키워드
                 aiTags: channelData.aiTags || [], // AI 추출 태그
                 deepInsightTags: channelData.deepInsightTags || [], // AI 재해석 태그 (사용자 카테고리 기반)
-                allTags:
-                    channelDataallTags || [], // 통합 태그
+                allTags: channelDataallTags || [], // 통합 태그
 
                 // 클러스터 정보
-                clusterIds:
-                    channelDataclusterIds || [],
+                clusterIds: channelDataclusterIds || [],
                 suggestedClusters: channelData.suggestedClusters || [],
 
                 // 상세 분석 정보 (있는 경우에만 포함)
@@ -596,8 +565,7 @@ class ChannelAnalysisService {
                 }),
 
                 // 메타데이터
-                collectedAt:
-                    channelData.collectedAt || new Date(),
+                collectedAt: channelData.collectedAt || new Date(),
                 updatedAt: new Date(),
                 version: 1,
             };
@@ -931,12 +899,10 @@ class ChannelAnalysisService {
             if (filters.minSubscribers || filters.maxSubscribers) {
                 query.subscribers = {};
                 if (filters.minSubscribers) {
-                    query.subscribers.$gte =
-                        filters.minSubscribers;
+                    query.subscribers.$gte = filters.minSubscribers;
                 }
                 if (filters.maxSubscribers) {
-                    query.subscribers.$lte =
-                        filters.maxSubscribers;
+                    query.subscribers.$lte = filters.maxSubscribers;
                 }
             }
 
@@ -1003,7 +969,7 @@ class ChannelAnalysisService {
             // MongoDB에서 빈 정보가 있는 채널들 찾기
             const channelsToUpdate = await Channel.find(
                 {
-                    platform: 'youtube',
+                    platform: 'YOUTUBE',
                     $or: [
                         {
                             description: {
@@ -1048,9 +1014,7 @@ class ChannelAnalysisService {
             for (const channelInfo of channelsToUpdate) {
                 try {
                     ServerLogger.info(
-                        `🔄 채널 업데이트 중: ${
-                            channelInfo.name
-                        }`,
+                        `🔄 채널 업데이트 중: ${channelInfo.name}`,
                     );
 
                     // YouTube API에서 정보 가져와서 업데이트
@@ -1064,9 +1028,7 @@ class ChannelAnalysisService {
                     await new Promise((resolve) => setTimeout(resolve, 100));
                 } catch (error) {
                     ServerLogger.error(
-                        `❌ 채널 업데이트 실패: ${
-                            channelInfo.name
-                        }`,
+                        `❌ 채널 업데이트 실패: ${channelInfo.name}`,
                         error,
                     );
                     failed++;
@@ -1123,10 +1085,7 @@ class ChannelAnalysisService {
                     ],
                 }),
                 Channel.countDocuments({
-                    $or: [
-                        { customUrl: { $exists: false } },
-                        { customUrl: '' },
-                    ],
+                    $or: [{ customUrl: { $exists: false } }, { customUrl: '' }],
                 }),
             ]);
 

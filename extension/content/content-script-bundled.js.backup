@@ -3184,7 +3184,7 @@ window.INSTAGRAM_UI_SYSTEM = {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        platform: 'instagram',
+        platform: 'INSTAGRAM',
         url: mediaInfo.videoUrl,
         videoId: mediaInfo.shortcode,
         mediaData: mediaInfo.mediaData
@@ -3269,9 +3269,9 @@ const CONSTANTS = {
   SERVER_URL: 'http://localhost:3000',
   
   PLATFORMS: {
-    INSTAGRAM: 'instagram',
-    TIKTOK: 'tiktok',
-    YOUTUBE: 'youtube'
+    INSTAGRAM: 'INSTAGRAM',
+    TIKTOK: 'TIKTOK',
+    YOUTUBE: 'YOUTUBE'
   },
   
   SELECTORS: {
@@ -3328,9 +3328,9 @@ const CONSTANTS = {
 class Utils {
   static detectPlatform() {
     const hostname = window.location.hostname;
-    if (hostname.includes('instagram.com')) return 'instagram';
-    if (hostname.includes('tiktok.com')) return 'tiktok';
-    if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) return 'youtube';
+    if (hostname.includes('instagram.com')) return 'INSTAGRAM';
+    if (hostname.includes('tiktok.com')) return 'TIKTOK';
+    if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) return 'YOUTUBE';
     return null;
   }
 
@@ -3448,7 +3448,7 @@ class ApiClient {
     try {
       // 🆕 설정에서 배치 모드 확인
       const settings = await this.getSettings();
-      const isBatchMode = settings.batchMode && data.platform === 'youtube';
+      const isBatchMode = settings.batchMode && data.platform === 'YOUTUBE';
       
       // 배치 모드일 때 mode 파라미터 추가
       if (isBatchMode) {
@@ -4015,7 +4015,7 @@ class VideoSaver {
       console.log('🤖 YouTube processVideo - useAI:', useAI);
       
       const result = await this.apiClient.processVideo({
-        platform: 'youtube',
+        platform: 'YOUTUBE',
         videoUrl: videoUrl,
         postUrl: window.location.href,
         metadata: metadata,
@@ -4039,7 +4039,7 @@ class VideoSaver {
   }
 
   extractYouTubeMetadata(isShorts) {
-    const metadata = { platform: 'youtube', isShorts };
+    const metadata = { platform: 'YOUTUBE', isShorts };
 
     try {
       // 제목
@@ -5494,7 +5494,7 @@ if (window.location.hostname.includes('instagram.com') ||
                 // 2단계: 서버에 분석 요청
                 const response = await this.sendAnalysisRequest({
                     type: 'channel',
-                    platform: 'youtube',
+                    platform: 'YOUTUBE',
                     channelInfo: channelInfo,
                     analysisLevel: 2 // 2단계 분석
                 });

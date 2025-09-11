@@ -181,7 +181,7 @@ class MongoDBYouTubeMigration {
 
             // 핸들명이 없는 YouTube 비디오들 찾기
             const query = {
-                platform: 'youtube',
+                platform: 'YOUTUBE',
                 $or: [
                     { youtubeHandle: { $exists: false } },
                     { youtubeHandle: null },
@@ -189,7 +189,9 @@ class MongoDBYouTubeMigration {
                 ],
             };
 
-            const youtubeVideos = await Video.find(query).sort({ createdAt: -1 });
+            const youtubeVideos = await Video.find(query).sort({
+                createdAt: -1,
+            });
 
             ServerLogger.info(
                 `🔍 업데이트 대상: ${youtubeVideos.length}개 YouTube 비디오`,
@@ -209,9 +211,7 @@ class MongoDBYouTubeMigration {
                 try {
                     // URL에서 비디오 ID 추출
                     const videoId = this.extractVideoId(
-                        video.url ||
-                            video.originalUrl ||
-                            '',
+                        video.url || video.originalUrl || '',
                     );
 
                     if (!videoId) {
@@ -240,17 +240,13 @@ class MongoDBYouTubeMigration {
                         this.updatedCount++;
                         ServerLogger.info(
                             `✅ [${i + 1}/${youtubeVideos.length}] ${
-                                video.title ||
-                                video.channelName ||
-                                'N/A'
+                                video.title || video.channelName || 'N/A'
                             } → @${channelInfo.handle}`,
                         );
                     } else {
                         ServerLogger.warn(
                             `⚠️ [${i + 1}/${youtubeVideos.length}] ${
-                                video.title ||
-                                video.channelName ||
-                                'N/A'
+                                video.title || video.channelName || 'N/A'
                             } → 핸들명 없음`,
                         );
                     }
@@ -270,9 +266,7 @@ class MongoDBYouTubeMigration {
                     this.errors.push(`비디오 ${video._id}: ${error.message}`);
                     ServerLogger.error(
                         `❌ [${i + 1}/${youtubeVideos.length}] ${
-                            video.title ||
-                            video.channelName ||
-                            'N/A'
+                            video.title || video.channelName || 'N/A'
                         } → 실패: ${error.message}`,
                     );
                 }

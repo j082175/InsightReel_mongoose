@@ -41,9 +41,7 @@ class TagExtractor {
             const descriptiveTag = this.extractFromDescription(
                 channel.description,
             );
-            const nameTag = this.extractFromChannelName(
-                channel.name,
-            );
+            const nameTag = this.extractFromChannelName(channel.name);
 
             // 태그 결합 및 정제
             const allTags = [
@@ -258,7 +256,7 @@ class TagExtractor {
         const fallbackTags = [];
 
         // 플랫폼 기본 태그
-        fallbackTags.push(channel.platform || 'youtube');
+        fallbackTags.push(channel.platform || 'YOUTUBE');
 
         // 구독자 수 기반 태그
         if ((channel.subscribers || 0) > 1000000) {

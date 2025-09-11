@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
+const ytdl = require('@distube/ytdl-core');
 const { ServerLogger } = require('../utils/logger');
 const youtubeBatchProcessor = require('./YouTubeBatchProcessor');
 const HybridYouTubeExtractor = require('./HybridYouTubeExtractor');
@@ -102,46 +103,13 @@ class VideoProcessor {
       
       ServerLogger.info(`📁 저장 경로: ${filePath}`);
       
-      // 비디오 다운로드
-      const response = await axios({
-        method: 'GET',
-        url: videoUrl,
-        responseType: 'stream',
-        timeout: 30000, // 30초 타임아웃
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-      });
-
-      ServerLogger.info(`📦 Response status: ${response.status}`);
-      ServerLogger.info(`📦 Content-Type: ${response.headers['content-type']}`);
-      ServerLogger.info(`📦 Content-Length: ${response.headers['content-length']}`);
-      
-
-      // 파일 스트림 생성
-      const writer = fs.createWriteStream(filePath);
-      response.data.pipe(writer);
-
-      return new Promise((resolve, reject) => {
-        writer.on('finish', () => {
-          try {
-            const endTime = Date.now();
-            const downloadTime = endTime - startTime;
-            const stats = fs.statSync(filePath);
-            ServerLogger.info(`✅ 비디오 다운로드 완료: ${filename}`);
-            ServerLogger.info(`📊 파일 크기: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
-            ServerLogger.info(`⏱️ 다운로드 소요시간: ${downloadTime}ms (${(downloadTime / 1000).toFixed(2)}초)`);
-            resolve(filePath);
-          } catch (error) {
-            ServerLogger.error('파일 정보 확인 실패:', error);
-            resolve(filePath); // 파일은 다운로드됐으므로 resolve
-          }
-        });
-        writer.on('error', (error) => {
-          ServerLogger.error('비디오 다운로드 실패:', error);
-          reject(error);
-        });
-      });
+      // 플랫폼별 다운로드 로직
+      if (platform === 'YOUTUBE' || this.isYouTubeUrl(videoUrl)) {
+        return await this.downloadYouTubeVideo(videoUrl, filePath, startTime);
+      } else {
+        // 다른 플랫폼은 기존 방식 사용
+        return await this.downloadGenericVideo(videoUrl, filePath, startTime);
+      }
 
     } catch (error) {
       ServerLogger.error('비디오 다운로드 에러:', error);
@@ -153,6 +121,109 @@ class VideoProcessor {
       
       throw new Error(`비디오 다운로드 실패: ${error.message}`);
     }
+  }
+
+  // YouTube URL 체크 함수
+  isYouTubeUrl(url) {
+    return url.includes('youtube.com') || url.includes('youtu.be');
+  }
+
+  // YouTube 전용 다운로드 함수
+  async downloadYouTubeVideo(videoUrl, filePath, startTime) {
+    ServerLogger.info(`🎬 YouTube 전용 다운로드 시작`);
+    
+    try {
+      // @distube/ytdl-core로 스트림 생성 (더 안정적)
+      const videoStream = ytdl(videoUrl, {
+        quality: 'highest',
+        filter: 'videoandaudio',
+        requestOptions: {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          }
+        }
+      });
+
+      // 파일 스트림 생성
+      const writer = fs.createWriteStream(filePath);
+      videoStream.pipe(writer);
+
+      return new Promise((resolve, reject) => {
+        writer.on('finish', () => {
+          try {
+            const endTime = Date.now();
+            const downloadTime = endTime - startTime;
+            const stats = fs.statSync(filePath);
+            ServerLogger.info(`✅ YouTube 비디오 다운로드 완료`);
+            ServerLogger.info(`📊 파일 크기: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+            ServerLogger.info(`⏱️ 다운로드 소요시간: ${downloadTime}ms (${(downloadTime / 1000).toFixed(2)}초)`);
+            resolve(filePath);
+          } catch (error) {
+            ServerLogger.error('파일 정보 확인 실패:', error);
+            resolve(filePath); // 파일은 다운로드됐으므로 resolve
+          }
+        });
+
+        writer.on('error', (error) => {
+          ServerLogger.error('YouTube 비디오 다운로드 실패:', error);
+          reject(error);
+        });
+
+        videoStream.on('error', (error) => {
+          ServerLogger.error('YouTube 스트림 에러:', error);
+          reject(error);
+        });
+      });
+
+    } catch (error) {
+      ServerLogger.error('YouTube 다운로드 에러:', error);
+      throw new Error(`YouTube 비디오 다운로드 실패: ${error.message}`);
+    }
+  }
+
+  // 일반 플랫폼용 다운로드 함수 (기존 로직)
+  async downloadGenericVideo(videoUrl, filePath, startTime) {
+    ServerLogger.info(`🌐 일반 비디오 다운로드 시작`);
+    
+    // 비디오 다운로드
+    const response = await axios({
+      method: 'GET',
+      url: videoUrl,
+      responseType: 'stream',
+      timeout: 30000, // 30초 타임아웃
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
+
+    ServerLogger.info(`📦 Response status: ${response.status}`);
+    ServerLogger.info(`📦 Content-Type: ${response.headers['content-type']}`);
+    ServerLogger.info(`📦 Content-Length: ${response.headers['content-length']}`);
+    
+    // 파일 스트림 생성
+    const writer = fs.createWriteStream(filePath);
+    response.data.pipe(writer);
+
+    return new Promise((resolve, reject) => {
+      writer.on('finish', () => {
+        try {
+          const endTime = Date.now();
+          const downloadTime = endTime - startTime;
+          const stats = fs.statSync(filePath);
+          ServerLogger.info(`✅ 일반 비디오 다운로드 완료`);
+          ServerLogger.info(`📊 파일 크기: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+          ServerLogger.info(`⏱️ 다운로드 소요시간: ${downloadTime}ms (${(downloadTime / 1000).toFixed(2)}초)`);
+          resolve(filePath);
+        } catch (error) {
+          ServerLogger.error('파일 정보 확인 실패:', error);
+          resolve(filePath); // 파일은 다운로드됐으므로 resolve
+        }
+      });
+      writer.on('error', (error) => {
+        ServerLogger.error('일반 비디오 다운로드 실패:', error);
+        reject(error);
+      });
+    });
   }
 
   async generateThumbnail(videoPath, analysisType = 'quick') {

@@ -19,7 +19,7 @@
 **✅ 상수 시스템 사용 대상:**
 - **HTTP 상태 코드**: `HTTP_STATUS_CODES.FORBIDDEN` (403 대신)
 - **에러 코드**: `ERROR_CODES.FILE_NOT_FOUND` (하드코딩 대신)
-- **플랫폼**: `PLATFORMS.YOUTUBE` ('youtube' 대신)
+- **플랫폼**: `PLATFORMS.YOUTUBE` ('YOUTUBE' 대신)
 - **시스템 상수**: `TIMEOUTS.API_REQUEST` (30000 대신)
 
 **❌ 직접 사용 대상 (상수 없이):**

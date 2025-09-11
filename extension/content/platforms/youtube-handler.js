@@ -8,7 +8,7 @@ import { ErrorHandler } from '../error-handler.js';
  */
 export class YouTubeHandler extends BasePlatformHandler {
   constructor(apiClient, uiManager) {
-    super(apiClient, uiManager, 'youtube');
+    super(apiClient, uiManager, 'YOUTUBE');
     
     // YouTube 특화 설정
     this.isShorts = false;

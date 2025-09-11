@@ -197,7 +197,9 @@
       "Read(/C:\\Users\\j0821\\Documents\\___JUNSOOCHO___\\영상자동저장분석기\\prototype\\dashboard-react\\src/**)",
       "Bash(chcp:*)",
       "Bash(del:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(git stash:*)",
+      "Bash(git diff:*)"
     ],
     "deny": [
       "Bash(curl:*)"

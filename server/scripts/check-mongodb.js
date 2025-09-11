@@ -27,7 +27,7 @@ async function checkMongoDB() {
 
         // YouTube 비디오만 조회
         const youtubeVideos = await Video.find({
-            platform: 'youtube',
+            platform: 'YOUTUBE',
         })
             .sort({ createdAt: -1 })
             .limit(10);
@@ -41,9 +41,7 @@ async function checkMongoDB() {
 
             youtubeVideos.forEach((video, index) => {
                 ServerLogger.info(
-                    `\n[${index + 1}] ${
-                        video.title || '제목 없음'
-                    }`,
+                    `\n[${index + 1}] ${video.title || '제목 없음'}`,
                 );
                 ServerLogger.info(
                     `  📅 생성일: ${
@@ -51,42 +49,26 @@ async function checkMongoDB() {
                     }`,
                 );
                 ServerLogger.info(
-                    `  👤 채널이름: ${
-                        video.channelName || 'N/A'
-                    }`,
+                    `  👤 채널이름: ${video.channelName || 'N/A'}`,
                 );
                 ServerLogger.info(
-                    `  🏷️ YouTube 핸들명: ${
-                        video.youtubeHandle || '❌ 없음'
-                    }`,
+                    `  🏷️ YouTube 핸들명: ${video.youtubeHandle || '❌ 없음'}`,
                 );
                 ServerLogger.info(
-                    `  🔗 채널 URL: ${
-                        video.channelUrl || '❌ 없음'
-                    }`,
+                    `  🔗 채널 URL: ${video.channelUrl || '❌ 없음'}`,
                 );
                 ServerLogger.info(
-                    `  👁️ 조회수: ${
-                        video.views?.toLocaleString() ||
-                        'N/A'
-                    }`,
+                    `  👁️ 조회수: ${video.views?.toLocaleString() || 'N/A'}`,
                 );
                 ServerLogger.info(
-                    `  👍 좋아요: ${
-                        video.likes?.toLocaleString() ||
-                        'N/A'
-                    }`,
+                    `  👍 좋아요: ${video.likes?.toLocaleString() || 'N/A'}`,
                 );
-                ServerLogger.info(
-                    `  📂 카테고리: ${
-                        video.category || 'N/A'
-                    }`,
-                );
+                ServerLogger.info(`  📂 카테고리: ${video.category || 'N/A'}`);
             });
 
             // YouTube 핸들명이 있는 비디오 통계
             const withHandleCount = await Video.countDocuments({
-                platform: 'youtube',
+                platform: 'YOUTUBE',
                 youtubeHandle: {
                     $exists: true,
                     $ne: null,
@@ -95,7 +77,7 @@ async function checkMongoDB() {
             });
 
             const withChannelUrlCount = await Video.countDocuments({
-                platform: 'youtube',
+                platform: 'YOUTUBE',
                 channelUrl: {
                     $exists: true,
                     $ne: null,
@@ -132,16 +114,10 @@ async function checkMongoDB() {
                                 {
                                     $and: [
                                         {
-                                            $ne: [
-                                                `$youtubeHandle`,
-                                                null,
-                                            ],
+                                            $ne: [`$youtubeHandle`, null],
                                         },
                                         {
-                                            $ne: [
-                                                `$youtubeHandle`,
-                                                '',
-                                            ],
+                                            $ne: [`$youtubeHandle`, ''],
                                         },
                                     ],
                                 },
@@ -156,16 +132,10 @@ async function checkMongoDB() {
                                 {
                                     $and: [
                                         {
-                                            $ne: [
-                                                `$channelUrl`,
-                                                null,
-                                            ],
+                                            $ne: [`$channelUrl`, null],
                                         },
                                         {
-                                            $ne: [
-                                                `$channelUrl`,
-                                                '',
-                                            ],
+                                            $ne: [`$channelUrl`, ''],
                                         },
                                     ],
                                 },

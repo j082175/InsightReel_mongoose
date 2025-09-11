@@ -17,7 +17,7 @@ class UnifiedVideoSaver {
 
     /**
      * 단일 비디오 데이터 통합 저장
-     * @param {string} platform - 플랫폼 ('youtube', 'instagram')
+     * @param {string} platform - 플랫폼 ('YOUTUBE', 'INSTAGRAM')
      * @param {Object} videoData - 비디오 데이터 객체
      * @param {number} rowNumber - Google Sheets 행 번호
      * @returns {Promise<Object>} 저장 결과
@@ -522,7 +522,7 @@ class UnifiedVideoSaver {
                 stats.total[platform] = mongoCount;
             } else {
                 // 전체 플랫폼 통계
-                const platforms = ['youtube', 'instagram'];
+                const platforms = ['YOUTUBE', 'INSTAGRAM'];
 
                 for (const plt of platforms) {
                     try {

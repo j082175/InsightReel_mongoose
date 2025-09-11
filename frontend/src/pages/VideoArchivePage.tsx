@@ -93,13 +93,13 @@ const VideoArchivePage: React.FC = () => {
 
   // 플랫폼별 기본 URL 생성
   const generateFallbackUrl = (platform: string, channelName?: string) => {
-    const normalizedPlatform = platform.toLowerCase();
+    const normalizedPlatform = platform.toUpperCase();
     switch (normalizedPlatform) {
-      case 'youtube':
+      case 'YOUTUBE':
         return channelName ? `https://www.youtube.com/@${channelName}` : 'https://www.youtube.com';
-      case 'instagram':
+      case 'INSTAGRAM':
         return channelName ? `https://www.instagram.com/${channelName}` : 'https://www.instagram.com';
-      case 'tiktok':
+      case 'TIKTOK':
         return channelName ? `https://www.tiktok.com/@${channelName}` : 'https://www.tiktok.com';
       default:
         return '#';

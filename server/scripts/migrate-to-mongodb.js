@@ -76,11 +76,7 @@ class DataMigrator {
             // 기본 비디오 객체 생성
             const videoData = {
                 // 기본 정보
-                platform: (
-                    platform ||
-                    platformCol ||
-                    'unknown'
-                ).toLowerCase(),
+                platform: (platform || platformCol || 'unknown').toLowerCase(),
                 uploadDate: this.parseKoreanDate(timestamp),
                 channelName: channelName || 'Unknown',
                 title:
@@ -96,13 +92,11 @@ class DataMigrator {
                 likes: this.parseNumber(likes),
                 views: this.parseNumber(views),
                 shares: 0, // 기본값
-                commentsCount:
-                    this.parseNumber(commentsCount),
+                commentsCount: this.parseNumber(commentsCount),
 
                 // AI 분석 결과
                 category: mainCategory || '미분류',
-                analysisContent:
-                    aiDescription || categoryDepth || '', // J열(분석내용)이 실제 AI 분석 결과
+                analysisContent: aiDescription || categoryDepth || '', // J열(분석내용)이 실제 AI 분석 결과
                 keywords: this.parseKeywords(keywords), // I열(키워드)
 
                 // 추가 메타데이터
@@ -210,7 +204,7 @@ class DataMigrator {
             }
 
             // 2. 플랫폼별 데이터 가져오기
-            const platforms = ['instagram', 'youtube', 'tiktok'];
+            const platforms = ['INSTAGRAM', 'YOUTUBE', 'TIKTOK'];
 
             for (const platform of platforms) {
                 ServerLogger.info(
@@ -303,9 +297,7 @@ class DataMigrator {
                 if (existing) {
                     this.migrationStats.duplicates++;
                     ServerLogger.info(
-                        `⚠️ 중복 데이터 건너뜀: ${
-                            videoData.title
-                        }`,
+                        `⚠️ 중복 데이터 건너뜀: ${videoData.title}`,
                         'MIGRATION',
                     );
                     continue;
