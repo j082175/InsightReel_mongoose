@@ -60,7 +60,7 @@ const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
     setKeywordInput('');
   }, [editingGroup, isOpen]);
 
-  const handleInputChange = (field: keyof ChannelGroup, value: any) => {
+  const handleInputChange = (field: keyof ChannelGroup, value: string | boolean | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 

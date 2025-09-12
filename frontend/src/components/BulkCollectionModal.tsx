@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { CollectionBatch } from '../types';
 import { useChannelGroups } from '../hooks/useChannelGroups';
 import { PLATFORMS } from '../types/api';
+import BaseModal from './BaseModal';
+import { formatViews } from '../utils/formatters';
 
 interface CollectionFilters {
   days: number;
@@ -210,11 +212,6 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
     setCurrentStep('수집 완료');
   };
 
-  const formatNumber = (num: number) => {
-    if (num >= 10000) return (num / 10000).toFixed(0) + '만';
-    if (num >= 1000) return (num / 1000).toFixed(1) + '천';
-    return num.toLocaleString();
-  };
 
   if (!isOpen) return null;
 
@@ -235,27 +232,58 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
     channelsToProcess: channelsToProcess.length
   });
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        <div className="flex justify-between items-center p-6 border-b">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">
-              🎯 {isSelectedChannels ? '선택한 채널' : '일괄'} 영상 수집
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              {channelsToProcess.length}개 채널에서 조건에 맞는 영상 수집
-            </p>
-          </div>
-          <button 
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl font-light"
-          >
-            ×
-          </button>
-        </div>
+  const title = (
+    <div>
+      <h2 className="text-xl font-bold text-gray-900">
+        🎯 {isSelectedChannels ? '선택한 채널' : '일괄'} 영상 수집
+      </h2>
+      <p className="text-sm text-gray-600 mt-1">
+        {channelsToProcess.length}개 채널에서 조건에 맞는 영상 수집
+      </p>
+    </div>
+  );
 
-        <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 180px)' }}>
+  const footer = (
+    <>
+      <button 
+        onClick={onClose}
+        disabled={isCollecting}
+        className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
+      >
+        {isCollecting ? '수집 중...' : '닫기'}
+      </button>
+      {!isCollecting && collectionResults.length === 0 && (
+        <button 
+          onClick={startCollection}
+          className="px-4 py-2 text-sm text-white bg-indigo-600 rounded hover:bg-indigo-700"
+        >
+          🎯 수집 시작
+        </button>
+      )}
+      {!isCollecting && collectionResults.length > 0 && (
+        <>
+          <button className="px-4 py-2 text-sm text-white bg-green-600 rounded hover:bg-green-700">
+            대시보드에서 확인
+          </button>
+          <button className="px-4 py-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700">
+            결과 내보내기
+          </button>
+        </>
+      )}
+    </>
+  );
+
+  return (
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      size="xl"
+      className="max-h-[90vh]"
+      showFooter={true}
+      footer={footer}
+    >
+      <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 180px)' }}>
           {!isCollecting && collectionResults.length === 0 && (
             <div className="space-y-6">
               {/* 수집 모드 선택 */}
@@ -557,7 +585,7 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
                 <h4 className="font-medium text-yellow-800 mb-2">📊 예상 수집 조건</h4>
                 <ul className="text-sm text-yellow-700 space-y-1">
                   <li>• 최근 {filters.days}일 내 업로드된 영상</li>
-                  <li>• {formatNumber(filters.minViews)} 조회수 이상{filters.maxViews ? ` ~ ${formatNumber(filters.maxViews)} 이하` : ''}</li>
+                  <li>• {formatViews(filters.minViews)} 조회수 이상{filters.maxViews ? ` ~ ${formatViews(filters.maxViews)} 이하` : ''}</li>
                   <li>• 영상 타입: {
                     filters.includeShorts && filters.includeLongForm ? '숏폼 + 롱폼' :
                     filters.includeShorts ? '숏폼만' :
@@ -690,36 +718,7 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
             </div>
           )}
         </div>
-
-        <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
-          <button 
-            onClick={onClose}
-            disabled={isCollecting}
-            className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
-          >
-            {isCollecting ? '수집 중...' : '닫기'}
-          </button>
-          {!isCollecting && collectionResults.length === 0 && (
-            <button 
-              onClick={startCollection}
-              className="px-4 py-2 text-sm text-white bg-indigo-600 rounded hover:bg-indigo-700"
-            >
-              🎯 수집 시작
-            </button>
-          )}
-          {!isCollecting && collectionResults.length > 0 && (
-            <>
-              <button className="px-4 py-2 text-sm text-white bg-green-600 rounded hover:bg-green-700">
-                대시보드에서 확인
-              </button>
-              <button className="px-4 py-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700">
-                결과 내보내기
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
+    </BaseModal>
   );
 };
 

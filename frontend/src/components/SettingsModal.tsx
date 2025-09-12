@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSettings } from '../contexts/SettingsContext';
 import ApiKeyManager from './ApiKeyManager';
+import BaseModal from './BaseModal';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -348,68 +349,62 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  const footer = (
+    <>
+      <button
+        onClick={onClose}
+        className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+      >
+        취소
+      </button>
+      <button
+        onClick={handleSave}
+        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+      >
+        저장
+      </button>
+    </>
+  );
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        {/* 헤더 */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">설정</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="설정"
+      size="xl"
+      showFooter={true}
+      footer={footer}
+      className="max-h-[90vh] overflow-hidden"
+    >
+      <div className="flex">
+        {/* 사이드바 */}
+        <div className="w-48 bg-gray-50 border-r border-gray-200">
+          <nav className="p-4 space-y-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-indigo-100 text-indigo-700 font-medium'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <span className="mr-3">{tab.icon}</span>
+                {tab.name}
+              </button>
+            ))}
+          </nav>
         </div>
 
-        <div className="flex">
-          {/* 사이드바 */}
-          <div className="w-48 bg-gray-50 border-r border-gray-200">
-            <nav className="p-4 space-y-1">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                    activeTab === tab.id
-                      ? 'bg-indigo-100 text-indigo-700 font-medium'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <span className="mr-3">{tab.icon}</span>
-                  {tab.name}
-                </button>
-              ))}
-            </nav>
+        {/* 메인 콘텐츠 */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-6">
+            {renderTabContent()}
           </div>
-
-          {/* 메인 콘텐츠 */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-6">
-              {renderTabContent()}
-            </div>
-          </div>
-        </div>
-
-        {/* 푸터 */}
-        <div className="flex justify-end space-x-3 p-6 bg-gray-50 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-          >
-            취소
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
-          >
-            저장
-          </button>
         </div>
       </div>
-    </div>
+    </BaseModal>
   );
 };
 

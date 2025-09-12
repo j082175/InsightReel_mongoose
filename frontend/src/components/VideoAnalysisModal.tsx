@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { formatViews, formatDate } from '../utils/formatters';
+import BaseModal from './BaseModal';
 
 interface AnalysisResult {
   channelName: string;
@@ -94,23 +95,41 @@ const VideoAnalysisModal: React.FC<VideoAnalysisModalProps> = ({
 
   if (!isOpen) return null;
 
+  const title = (
+    <div>
+      <h2 className="text-xl font-bold text-gray-900">📊 영상 분석 결과</h2>
+      <p className="text-sm text-gray-600 mt-1">
+        {selectedChannels.length}개 채널 분석 결과
+      </p>
+    </div>
+  );
+
+  const footer = (
+    <>
+      <button 
+        onClick={onClose}
+        className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
+      >
+        닫기
+      </button>
+      {!isAnalyzing && analysisResults.length > 0 && (
+        <button className="px-4 py-2 text-sm text-white bg-indigo-600 rounded hover:bg-indigo-700">
+          결과 내보내기
+        </button>
+      )}
+    </>
+  );
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
-        <div className="flex justify-between items-center p-6 border-b">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">📊 영상 분석 결과</h2>
-            <p className="text-sm text-gray-600 mt-1">
-              {selectedChannels.length}개 채널 분석 결과
-            </p>
-          </div>
-          <button 
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl font-light"
-          >
-            ×
-          </button>
-        </div>
+    <BaseModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      size="full"
+      className="max-h-[90vh]"
+      showFooter={true}
+      footer={footer}
+    >
 
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
           {isAnalyzing && (
@@ -244,22 +263,7 @@ const VideoAnalysisModal: React.FC<VideoAnalysisModalProps> = ({
             </div>
           )}
         </div>
-
-        <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
-          <button 
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
-          >
-            닫기
-          </button>
-          {!isAnalyzing && analysisResults.length > 0 && (
-            <button className="px-4 py-2 text-sm text-white bg-indigo-600 rounded hover:bg-indigo-700">
-              결과 내보내기
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
+    </BaseModal>
   );
 };
 

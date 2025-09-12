@@ -7,26 +7,33 @@ import ChannelAnalysisModal from '../components/ChannelAnalysisModal';
 import VideoAnalysisModal from '../components/VideoAnalysisModal';
 import BulkCollectionModal from '../components/BulkCollectionModal';
 import ChannelGroupModal from '../components/ChannelGroupModal';
+import { formatViews } from '../utils/formatters';
 
 import { PLATFORMS } from '../types/api';
 import { useSelection } from '../hooks/useSelection';
+import { useMultiModal } from '../hooks/useModal';
 import SelectionActionBar from '../components/SelectionActionBar';
 
 const ChannelManagementPage: React.FC = () => {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [platformFilter, setPlatformFilter] = useState('All');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
   const channelSelection = useSelection<string>();
   const [isSelectMode, setIsSelectMode] = useState(false);
-  const [showAnalysisModal, setShowAnalysisModal] = useState(false);
-  const [showCollectionModal, setShowCollectionModal] = useState(false);
   
   // 🎯 그룹 탭 관련 상태
   const [activeTab, setActiveTab] = useState<'channels' | 'groups'>('channels');
-  const [showGroupModal, setShowGroupModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState<ChannelGroup | null>(null);
+  
+  // 🔥 Modal 상태 관리 통합
+  const modalTypes = ['add', 'analysis', 'collection', 'group'] as const;
+  const { 
+    modals, 
+    selectedItems, 
+    openModal, 
+    closeModal,
+    closeAllModals 
+  } = useMultiModal(modalTypes);
 
   // API 훅 (실제 데이터 가져오기)
   const { data: apiChannels = [], isLoading, error } = useChannels();
@@ -135,11 +142,6 @@ const ChannelManagementPage: React.FC = () => {
     return matchesSearch && matchesPlatform;
   });
 
-  const formatNumber = (num: number) => {
-    if (num >= 10000) return (num / 10000).toFixed(0) + '만';
-    if (num >= 1000) return (num / 1000).toFixed(1) + '천';
-    return num.toLocaleString();
-  };
 
   const formatLastChecked = (dateString: string) => {
     const date = new Date(dateString);
@@ -165,7 +167,7 @@ const ChannelManagementPage: React.FC = () => {
     addCollectionBatch(batch, videos);
     console.log('수집 완료:', batch, videos);
     alert(`"${batch.name}" 배치로 ${videos.length}개 영상이 수집되었습니다! 대시보드에서 확인하세요.`);
-    setShowCollectionModal(false);
+    closeModal('collection');
   };
 
   // 그룹 관련 핸들러들
@@ -180,7 +182,7 @@ const ChannelManagementPage: React.FC = () => {
         await createGroup(groupData);
         console.log('새 그룹 생성 완룼:', groupData);
       }
-      setShowGroupModal(false);
+      closeModal('group');
       setEditingGroup(null);
     } catch (error) {
       console.error('그룹 저장 실패:', error);
@@ -190,7 +192,7 @@ const ChannelManagementPage: React.FC = () => {
 
   const handleGroupEdit = (group: ChannelGroup) => {
     setEditingGroup(group);
-    setShowGroupModal(true);
+    openModal('group');
   };
 
   const handleGroupDelete = async (groupId: string) => {
@@ -267,7 +269,7 @@ const ChannelManagementPage: React.FC = () => {
       collectInterval: '매일'
     });
 
-    if (!showAddModal) return null;
+    if (!modals.add) return null;
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
@@ -275,7 +277,7 @@ const ChannelManagementPage: React.FC = () => {
           <div className="flex justify-between items-center p-6 border-b">
             <h2 className="text-xl font-bold text-gray-900">새 채널 추가</h2>
             <button 
-              onClick={() => setShowAddModal(false)}
+              onClick={() => closeModal('add')}
               className="text-gray-400 hover:text-gray-600 text-2xl font-light"
             >
               ×
@@ -349,7 +351,7 @@ const ChannelManagementPage: React.FC = () => {
           
           <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
             <button 
-              onClick={() => setShowAddModal(false)}
+              onClick={() => closeModal('add')}
               className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
             >
               취소
@@ -395,7 +397,7 @@ const ChannelManagementPage: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-500">총 구독자</h3>
           <p className="mt-2 text-3xl font-bold text-gray-900">
-            {formatNumber(channels.reduce((sum, ch) => sum + (ch.subscribers || 0), 0))}
+            {formatViews(channels.reduce((sum, ch) => sum + (ch.subscribers || 0), 0))}
           </p>
           <p className="mt-1 text-sm text-gray-600">전체 도달 범위</p>
         </div>
@@ -453,7 +455,7 @@ const ChannelManagementPage: React.FC = () => {
                 </select>
               )}
               <button
-                onClick={() => activeTab === 'channels' ? setShowAddModal(true) : setShowGroupModal(true)}
+                onClick={() => activeTab === 'channels' ? openModal('add') : openModal('group')}
                 className="px-4 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700"
               >
                 {activeTab === 'channels' ? '+ 채널 추가' : '+ 그룹 생성'}
@@ -469,7 +471,7 @@ const ChannelManagementPage: React.FC = () => {
               )}
               {activeTab === 'channels' && (
                 <button
-                  onClick={() => setShowCollectionModal(true)}
+                  onClick={() => openModal('collection')}
                   className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
                 >
                   🎯 일괄 수집
@@ -556,7 +558,7 @@ const ChannelManagementPage: React.FC = () => {
                       />
                       <div>
                         <button
-                          onClick={() => setChannelToAnalyze(channel.name || '')}
+                          onClick={() => openModal('analysis', channel.name || '')}
                           className="text-sm font-medium text-gray-900 hover:text-indigo-600"
                         >
                           {channel.name}
@@ -580,7 +582,7 @@ const ChannelManagementPage: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
-                    {formatNumber(channel.subscribers || 0)}
+                    {formatViews(channel.subscribers || 0)}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
                     {channel.totalVideos || 0}
@@ -712,7 +714,7 @@ const ChannelManagementPage: React.FC = () => {
                       <div>
                         <h4 className="text-xs font-medium text-gray-500 mb-2">포함 채널 ({group.channels.length}개)</h4>
                         <div className="space-y-1">
-                          {group.channels.slice(0, 3).map((channel: any, index: number) => (
+                          {group.channels.slice(0, 3).map((channel: string | { name: string }, index: number) => (
                             <div key={index} className="text-sm text-gray-700 truncate">
                               📺 {typeof channel === 'object' ? channel.name : channel}
                             </div>
@@ -795,13 +797,13 @@ const ChannelManagementPage: React.FC = () => {
         additionalActions={
           <>
             <button 
-              onClick={() => setShowAnalysisModal(true)}
+              onClick={() => openModal('analysis')}
               className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
             >
               📊 영상 분석
             </button>
             <button 
-              onClick={() => setShowCollectionModal(true)}
+              onClick={() => openModal('collection')}
               className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
             >
               선택한 채널 수집
@@ -813,31 +815,31 @@ const ChannelManagementPage: React.FC = () => {
       {/* 모달들 */}
       <AddChannelModal />
       <ChannelAnalysisModal
-        channelName={channelToAnalyze}
-        onClose={() => setChannelToAnalyze(null)}
+        channelName={selectedItems.analysis}
+        onClose={() => closeModal('analysis')}
       />
       <VideoAnalysisModal
-        isOpen={showAnalysisModal}
+        isOpen={modals.analysis}
         selectedChannels={Array.from(channelSelection.selected).map(id => {
           const channel = channels.find(ch => ch.id === id);
           return channel?.name || '';
         }).filter(name => name)}
-        onClose={() => setShowAnalysisModal(false)}
+        onClose={() => closeModal('analysis')}
       />
       <BulkCollectionModal
-        isOpen={showCollectionModal}
+        isOpen={modals.collection}
         selectedChannels={Array.from(channelSelection.selected).map(id => {
           const channel = channels.find(ch => ch.id === id);
           return channel?.name || '';
         }).filter(name => name)}
         allVisibleChannels={filteredChannels.map(ch => ch.name || '')}
-        onClose={() => setShowCollectionModal(false)}
+        onClose={() => closeModal('collection')}
         onCollectionComplete={handleCollectionComplete}
       />
       <ChannelGroupModal
-        isOpen={showGroupModal}
+        isOpen={modals.group}
         onClose={() => {
-          setShowGroupModal(false);
+          closeModal('group');
           setEditingGroup(null);
         }}
         onSave={handleGroupSave}

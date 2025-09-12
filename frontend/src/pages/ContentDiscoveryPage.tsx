@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatViews } from '../utils/formatters';
 
 interface TrendData {
   id: number;
@@ -93,11 +94,6 @@ const ContentDiscoveryPage: React.FC = () => {
 
   const allCategories = Array.from(new Set(trends.map(t => t.category)));
 
-  const formatNumber = (num: number) => {
-    if (num >= 10000) return (num / 10000).toFixed(0) + '만';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return num.toString();
-  };
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -149,7 +145,7 @@ const ContentDiscoveryPage: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-500">총 검색량</h3>
           <p className="mt-2 text-3xl font-bold text-gray-900">
-            {formatNumber(trends.reduce((sum, t) => sum + t.volume, 0))}
+            {formatViews(trends.reduce((sum, t) => sum + t.volume, 0))}
           </p>
           <p className="mt-1 text-sm text-gray-600">월간 검색</p>
         </div>
@@ -246,7 +242,7 @@ const ContentDiscoveryPage: React.FC = () => {
                       <span>성장률</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="font-medium">{formatNumber(trend.volume)}</span>
+                      <span className="font-medium">{formatViews(trend.volume)}</span>
                       <span>월간 검색</span>
                     </div>
                   </div>

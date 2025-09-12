@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useCallback } from 'react';
 import { Video } from '../types';
-import { PLATFORMS } from '../types/api';
 import { formatViews } from '../utils/formatters';
+import { getPlatformStyle } from '../utils/platformStyles';
+import { getVideoId, getThumbnailUrl, getViewCount } from '../utils/videoUtils';
 
 interface VideoListItemProps {
   video: Video;
@@ -12,7 +13,7 @@ interface VideoListItemProps {
   onSelectToggle: (videoId: string | number) => void;
 }
 
-const VideoListItem: React.FC<VideoListItemProps> = ({
+const VideoListItem: React.FC<VideoListItemProps> = memo(({
   video,
   onCardClick,
   onDeleteClick,
@@ -22,25 +23,36 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const videoId = getVideoId(video);
+  const thumbnailSrc = getThumbnailUrl(video);
+  const views = getViewCount(video);
 
-  const handleClick = (_e: React.MouseEvent) => {
+  const handleClick = useCallback((_e: React.MouseEvent) => {
     if (isSelectMode) {
-      onSelectToggle(video.id || 0);
+      onSelectToggle(videoId);
     } else {
       onCardClick(video);
     }
-  };
+  }, [isSelectMode, onSelectToggle, videoId, onCardClick, video]);
 
-  const handleMenuToggle = (e: React.MouseEvent) => {
+  const handleMenuToggle = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     setMenuOpen(!menuOpen);
-  };
+  }, [menuOpen]);
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDelete = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     onDeleteClick({ type: 'single', data: video });
     setMenuOpen(false);
-  };
+  }, [onDeleteClick, video]);
+
+  const handleCheckboxChange = useCallback(() => {
+    onSelectToggle(videoId);
+  }, [onSelectToggle, videoId]);
+
+  const handleCheckboxClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
 
   return (
     <div 
@@ -56,9 +68,9 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
             <input
               type="checkbox"
               checked={isSelected}
-              onChange={() => onSelectToggle(video.id || 0)}
+              onChange={handleCheckboxChange}
               className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-              onClick={(e) => e.stopPropagation()}
+              onClick={handleCheckboxClick}
             />
           </div>
         )}
@@ -66,7 +78,7 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
         {/* 썸네일 */}
         <div className="flex-shrink-0">
           <img 
-            src={video.thumbnailUrl || video.thumbnail || ''} 
+            src={thumbnailSrc} 
             alt={video.title || ''}
             className="w-32 h-20 object-cover rounded"
           />
@@ -90,13 +102,9 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
               </div>
 
               <div className="flex items-center gap-4 text-xs text-gray-500">
-                <span>{formatViews(video.views || video.viewCount || 0)} 조회수</span>
+                <span>{formatViews(views)} 조회수</span>
                 <span>{video.daysAgo === 0 ? '오늘' : `${video.daysAgo}일 전`}</span>
-                <span className={`px-2 py-1 rounded-full ${
-                  video.platform === PLATFORMS.YOUTUBE ? 'bg-red-100 text-red-700' :
-                  video.platform === 'TIKTOK' ? 'bg-pink-100 text-pink-700' :
-                  'bg-purple-100 text-purple-700'
-                }`}>
+                <span className={`px-2 py-1 rounded-full ${getPlatformStyle(video.platform)}`}>
                   {video.platform}
                 </span>
               </div>
@@ -132,6 +140,6 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default VideoListItem;

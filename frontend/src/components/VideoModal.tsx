@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { Video } from '../types';
 import { PLATFORMS } from '../types/api';
 import { formatViews, formatDate } from '../utils/formatters';
+import { getThumbnailUrl } from '../utils/videoUtils';
+import BaseModal from './BaseModal';
 
 interface VideoModalProps {
   video: Video | null;
@@ -9,37 +11,6 @@ interface VideoModalProps {
 }
 
 const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  const handleClose = useCallback(() => {
-    setIsAnimating(false);
-    setTimeout(onClose, 200);
-  }, [onClose]);
-
-  useEffect(() => {
-    if (video) {
-      const timer = setTimeout(() => setIsAnimating(true), 10);
-      return () => clearTimeout(timer);
-    } else {
-      setIsAnimating(false);
-    }
-  }, [video]);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        handleClose();
-      }
-    };
-
-    if (video) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [video, handleClose]);
 
   if (!video) return null;
 
@@ -50,54 +21,42 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
     return videoId ? `https://www.youtube.com/embed/${videoId[1]}` : '';
   };
 
+  const title = (
+    <div className="flex items-center space-x-3">
+      <img 
+        src={video?.channelAvatarUrl || video?.channelAvatar || ''} 
+        alt={video?.channelName || ''}
+        className="w-10 h-10 rounded-full"
+      />
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 line-clamp-1">
+          {video?.title || ''}
+        </h2>
+        <span className="text-sm text-gray-600">{video?.channelName || ''}</span>
+        <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
+          video?.platform === PLATFORMS.YOUTUBE ? 'bg-red-100 text-red-700' :
+          video?.platform === 'TIKTOK' ? 'bg-pink-100 text-pink-700' :
+          'bg-purple-100 text-purple-700'
+        }`}>
+          {video?.platform}
+        </span>
+        {video?.isTrending && (
+          <span className="ml-2 px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
+            🔥 인기급상승
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <div 
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ${
-        isAnimating ? 'bg-black bg-opacity-75' : 'bg-black bg-opacity-0'
-      }`}
-      onClick={handleClose}
+    <BaseModal
+      isOpen={!!video}
+      onClose={onClose}
+      title={title}
+      size="xl"
+      className="max-h-[90vh]"
     >
-      <div 
-        className={`bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden transition-all duration-200 ease-in-out ${
-          isAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-        }`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* 헤더 */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <div className="flex items-center space-x-3">
-            <img 
-              src={video.channelAvatarUrl || video.channelAvatar || ''} 
-              alt={video.channelName || ''}
-              className="w-10 h-10 rounded-full"
-            />
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 line-clamp-1">
-                {video.title || ''}
-              </h2>
-              <span className="text-sm text-gray-600">{video.channelName || ''}</span>
-              <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
-                video.platform === PLATFORMS.YOUTUBE ? 'bg-red-100 text-red-700' :
-                video.platform === 'TIKTOK' ? 'bg-pink-100 text-pink-700' :
-                'bg-purple-100 text-purple-700'
-              }`}>
-                {video.platform}
-              </span>
-              {video.isTrending && (
-                <span className="ml-2 px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
-                  🔥 인기급상승
-                </span>
-              )}
-            </div>
-          </div>
-          
-          <button 
-            onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl font-light"
-          >
-            ×
-          </button>
-        </div>
 
         {/* 콘텐츠 */}
         <div className="p-6 max-h-[calc(90vh-120px)] overflow-y-auto">
@@ -122,7 +81,7 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
               ) : (
                 <div className="space-y-4">
                   <img 
-                    src={video.thumbnailUrl || video.thumbnail || ''} 
+                    src={getThumbnailUrl(video)} 
                     alt={video.title || ''}
                     className="w-full rounded-lg"
                   />
@@ -257,8 +216,7 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </BaseModal>
   );
 };
 

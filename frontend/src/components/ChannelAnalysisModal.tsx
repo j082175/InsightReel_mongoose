@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import BaseModal from './BaseModal';
+import { formatViews } from '../utils/formatters';
 
 interface ChannelData {
   name: string;
@@ -29,7 +31,6 @@ const ChannelAnalysisModal: React.FC<ChannelAnalysisModalProps> = ({
   channelName, 
   onClose 
 }) => {
-  const [isAnimating, setIsAnimating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [channelData, setChannelData] = useState<ChannelData | null>(null);
 
@@ -70,71 +71,45 @@ const ChannelAnalysisModal: React.FC<ChannelAnalysisModalProps> = ({
 
   useEffect(() => {
     if (channelName) {
-      const timer = setTimeout(() => setIsAnimating(true), 10);
-      
       // 실제 API 호출 시뮬레이션
       setLoading(true);
       setTimeout(() => {
         setChannelData(generateMockChannelData(channelName));
         setLoading(false);
       }, 1500);
-      
-      return () => clearTimeout(timer);
-    } else {
-      setIsAnimating(false);
     }
   }, [channelName]);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    if (channelName) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [channelName, onClose]);
 
   if (!channelName) return null;
 
-  const formatNumber = (num: number) => {
-    if (num >= 10000) return (num / 10000).toFixed(0) + '만';
-    if (num >= 1000) return (num / 1000).toFixed(1) + '천';
-    return num.toLocaleString();
-  };
+
+  const footer = (
+    <>
+      <button 
+        onClick={onClose}
+        className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+      >
+        닫기
+      </button>
+      {channelData && (
+        <button className="px-4 py-2 text-sm text-white bg-indigo-600 rounded hover:bg-indigo-700 transition-colors">
+          채널 구독 추가
+        </button>
+      )}
+    </>
+  );
 
   return (
-    <div 
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ${
-        isAnimating ? 'bg-black bg-opacity-75' : 'bg-black bg-opacity-0'
-      }`}
-      onClick={onClose}
+    <BaseModal
+      isOpen={!!channelName}
+      onClose={onClose}
+      title="📊 채널 분석"
+      size="xl"
+      showFooter={true}
+      footer={footer}
     >
-      <div 
-        className={`bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto transition-all duration-200 ease-in-out ${
-          isAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
-        }`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* 모달 헤더 */}
-        <div className="flex justify-between items-center p-6 border-b">
-          <h2 className="text-xl font-bold text-gray-900">📊 채널 분석</h2>
-          <button 
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl font-light"
-          >
-            ×
-          </button>
-        </div>
-
-        {/* 모달 본문 */}
-        <div className="p-6">
+      <div className="p-6">
           {loading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
@@ -151,7 +126,7 @@ const ChannelAnalysisModal: React.FC<ChannelAnalysisModalProps> = ({
                 />
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">{channelData.name}</h3>
-                  <p className="text-sm text-gray-600">구독자 {formatNumber(channelData.subscriberCount)}명</p>
+                  <p className="text-sm text-gray-600">구독자 {formatViews(channelData.subscriberCount)}명</p>
                 </div>
               </div>
 
@@ -162,11 +137,11 @@ const ChannelAnalysisModal: React.FC<ChannelAnalysisModalProps> = ({
                   <p className="text-sm text-gray-600">총 영상 수</p>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg text-center">
-                  <p className="text-2xl font-bold text-green-600">{formatNumber(channelData.totalViews)}</p>
+                  <p className="text-2xl font-bold text-green-600">{formatViews(channelData.totalViews)}</p>
                   <p className="text-sm text-gray-600">총 조회수</p>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg text-center">
-                  <p className="text-2xl font-bold text-purple-600">{formatNumber(channelData.avgViews)}</p>
+                  <p className="text-2xl font-bold text-purple-600">{formatViews(channelData.avgViews)}</p>
                   <p className="text-sm text-gray-600">평균 조회수</p>
                 </div>
                 <div className="bg-orange-50 p-4 rounded-lg text-center">
@@ -231,7 +206,7 @@ const ChannelAnalysisModal: React.FC<ChannelAnalysisModalProps> = ({
                           {video.title}
                         </h5>
                         <p className="text-xs text-gray-500">
-                          {formatNumber(video.views)} 조회수
+                          {formatViews(video.views)} 조회수
                         </p>
                       </div>
                     </div>
@@ -245,24 +220,8 @@ const ChannelAnalysisModal: React.FC<ChannelAnalysisModalProps> = ({
               <p className="mt-2">채널 데이터를 불러올 수 없습니다.</p>
             </div>
           )}
-        </div>
-
-        {/* 모달 푸터 */}
-        <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
-          <button 
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
-          >
-            닫기
-          </button>
-          {channelData && (
-            <button className="px-4 py-2 text-sm text-white bg-indigo-600 rounded hover:bg-indigo-700 transition-colors">
-              채널 구독 추가
-            </button>
-          )}
-        </div>
       </div>
-    </div>
+    </BaseModal>
   );
 };
 

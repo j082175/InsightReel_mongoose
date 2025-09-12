@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatViews } from '../utils/formatters';
 
 interface ContentIdea {
   id: number;
@@ -92,11 +93,6 @@ const ContentIdeaPage: React.FC = () => {
 
   const allCategories = Array.from(new Set(ideas.map(idea => idea.category)));
 
-  const formatNumber = (num: number) => {
-    if (num >= 10000) return (num / 10000).toFixed(0) + '만';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return num.toString();
-  };
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -209,7 +205,7 @@ const ContentIdeaPage: React.FC = () => {
               <div>
                 <h4 className="font-medium text-gray-900 mb-1">예상 조회수</h4>
                 <p className="text-2xl font-bold text-green-600">
-                  {formatNumber(selectedIdea.estimatedViews)}
+                  {formatViews(selectedIdea.estimatedViews)}
                 </p>
               </div>
               <div>
@@ -394,7 +390,7 @@ const ContentIdeaPage: React.FC = () => {
                   <div className="flex items-center gap-6 mb-3 text-sm text-gray-600">
                     <div className="flex items-center gap-1">
                       <span className="text-green-600 font-medium">
-                        {formatNumber(idea.estimatedViews)}
+                        {formatViews(idea.estimatedViews)}
                       </span>
                       <span>예상 조회수</span>
                     </div>

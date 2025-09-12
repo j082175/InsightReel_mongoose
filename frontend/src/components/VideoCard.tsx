@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 import { Eye, Play } from 'lucide-react';
 import { formatViews, formatDate, getDurationLabel } from '../utils/formatters';
 import { getPlatformStyle } from '../utils/platformStyles';
+import { getVideoId, getThumbnailUrl, getViewCount } from '../utils/videoUtils';
+import { Video } from '../types';
 
 interface VideoCardProps {
   video: {
@@ -19,8 +21,8 @@ interface VideoCardProps {
     viewCount?: number;
     uploadDate: string;
   };
-  onClick?: (video: any) => void;
-  onInfoClick?: (video: any) => void;
+  onClick?: (video: Video) => void;
+  onInfoClick?: (video: Video) => void;
   onChannelClick?: (channelName: string) => void;
   isSelectMode?: boolean;
   isSelected?: boolean;
@@ -28,7 +30,7 @@ interface VideoCardProps {
   showArchiveInfo?: boolean;
 }
 
-const VideoCard: React.FC<VideoCardProps> = ({ 
+const VideoCard: React.FC<VideoCardProps> = memo(({ 
   video, 
   onClick, 
   onInfoClick, 
@@ -38,18 +40,26 @@ const VideoCard: React.FC<VideoCardProps> = ({
   onSelectToggle,
   showArchiveInfo 
 }) => {
-  const views = video.views || video.viewCount || 0;
-  const thumbnailSrc = video.thumbnailUrl || video.thumbnail;
+  const views = getViewCount(video);
+  const thumbnailSrc = getThumbnailUrl(video);
+  const videoId = getVideoId(video);
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     if (isSelectMode && onSelectToggle) {
-      onSelectToggle(video.id || video._id || video.videoId!);
+      onSelectToggle(videoId);
     } else if (onClick) {
       onClick(video);
     } else if (!isSelectMode) {
       window.open(video.url, '_blank', 'noopener,noreferrer');
     }
-  };
+  }, [isSelectMode, onSelectToggle, videoId, onClick, video]);
+
+  const handleCheckboxChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    e.stopPropagation();
+    if (onSelectToggle) {
+      onSelectToggle(videoId);
+    }
+  }, [onSelectToggle, videoId]);
 
   return (
     <div className="group cursor-pointer">
@@ -87,12 +97,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
               <input
                 type="checkbox"
                 checked={isSelected || false}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  if (onSelectToggle) {
-                    onSelectToggle(video.id || video._id || video.videoId!);
-                  }
-                }}
+                onChange={handleCheckboxChange}
                 className="w-5 h-5 rounded border-2 border-white bg-black/70 backdrop-blur-sm"
               />
             )}
@@ -130,6 +135,6 @@ const VideoCard: React.FC<VideoCardProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default VideoCard;

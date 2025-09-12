@@ -10,7 +10,7 @@
  * 4. FieldMapper 매핑 일관성 확인
  */
 
-const { FieldMapper } = require('../server/types/field-mapper');
+const { FieldMapper } = require('../server/types/field-mapper_deprecated');
 const axios = require('axios');
 
 // 중요 필드 정의

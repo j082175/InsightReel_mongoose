@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 
 interface SelectionActionBarProps {
   isVisible: boolean;
@@ -11,7 +11,7 @@ interface SelectionActionBarProps {
   additionalActions?: React.ReactNode;
 }
 
-const SelectionActionBar: React.FC<SelectionActionBarProps> = ({
+const SelectionActionBar: React.FC<SelectionActionBarProps> = memo(({
   isVisible,
   selectedCount,
   totalCount,
@@ -25,6 +25,14 @@ const SelectionActionBar: React.FC<SelectionActionBarProps> = ({
 
   const isAllSelected = selectedCount === totalCount;
 
+  const handleSelectToggle = useCallback(() => {
+    if (isAllSelected) {
+      onClearSelection();
+    } else {
+      onSelectAll();
+    }
+  }, [isAllSelected, onClearSelection, onSelectAll]);
+
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 z-40">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -33,7 +41,7 @@ const SelectionActionBar: React.FC<SelectionActionBarProps> = ({
             {selectedCount}{itemType} 선택됨
           </span>
           <button
-            onClick={isAllSelected ? onClearSelection : onSelectAll}
+            onClick={handleSelectToggle}
             className="text-sm text-indigo-600 hover:text-indigo-800"
           >
             {isAllSelected ? '전체 해제' : '전체 선택'}
@@ -57,6 +65,6 @@ const SelectionActionBar: React.FC<SelectionActionBarProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default SelectionActionBar;

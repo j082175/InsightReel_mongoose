@@ -81,7 +81,7 @@ const TrendingCollectionPage: React.FC = () => {
 
     try {
       let endpoint = '';
-      let requestBody: any = {
+      let requestBody: CollectionFilters & { groupIds?: string[]; channels?: string[] } = {
         ...filters
       };
 
