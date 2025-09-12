@@ -126,7 +126,7 @@ trendingVideoSchema.index({ groupId: 1, collectionDate: -1 });
 trendingVideoSchema.index({ batchId: 1, collectionDate: -1 });
 trendingVideoSchema.index({ platform: 1, views: -1 });
 trendingVideoSchema.index({ duration: 1, views: -1 });
-trendingVideoSchema.index({ videoId: 1, batchId: 1 }, { unique: true }); // 배치별 중복 방지
+trendingVideoSchema.index({ videoId: 1 }, { unique: true }); // 전역 중복 방지
 trendingVideoSchema.index({ channelId: 1, collectionDate: -1 });
 
 // 정적 메서드

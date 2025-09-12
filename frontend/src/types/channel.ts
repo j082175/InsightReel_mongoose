@@ -113,6 +113,9 @@ export interface Channel extends ChannelCore, ChannelAIAnalysis, ChannelClusterI
   viewsLast7Days?: number;      // last7DaysViews와 동일
   avgVideoDuration?: number;    // avgDurationSeconds와 동일
   
+  // 분석 상태 (UI용)
+  analysisStatus?: 'pending' | 'analyzing' | 'completed' | 'error' | 'active' | 'inactive';
+  
   // 차트 데이터 (UI용)
   dailyViewsLast7Days?: number[];
   dailyViewsLast30d?: number[];

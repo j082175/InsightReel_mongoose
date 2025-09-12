@@ -1,6 +1,11 @@
 // 호환성을 위한 번들 버전 - ES5 문법으로 변환
 
-import { PLATFORMS } from './constants.js';
+// PLATFORMS 상수를 직접 정의 (import 대신)
+const PLATFORMS = {
+    INSTAGRAM: 'INSTAGRAM',
+    TIKTOK: 'TIKTOK', 
+    YOUTUBE: 'YOUTUBE'
+};
 
 (function () {
     'use strict';
@@ -5216,12 +5221,12 @@ import { PLATFORMS } from './constants.js';
                 setInterval(() => {
                     if (window.location.href !== this.currentUrl) {
                         this.currentUrl = window.location.href;
-                        setTimeout(() => this.addYouTubeButton(), 1000);
+                        setTimeout(() => this.addYouTubeButton(), 200);
                     }
-                }, 1000);
+                }, 500);
 
                 // 초기 버튼 추가
-                setTimeout(() => this.addYouTubeButton(), 2000);
+                setTimeout(() => this.addYouTubeButton(), 500);
             }
 
             addYouTubeButton() {
@@ -5275,29 +5280,383 @@ import { PLATFORMS } from './constants.js';
             }
 
             addShortsButton(videoId) {
-                // 기존 버튼 확인
-                if (document.querySelector('.youtube-analysis-button')) return;
+                console.log('🔍 ImprovedTube 방식 Shorts 분석 버튼 주입 시도 시작', window.location.href);
+                
+                // 기존 버튼 확인 및 제거
+                const existing = document.querySelector('.youtube-analysis-button');
+                if (existing) {
+                    console.log('🗑️ 기존 Shorts 버튼 제거');
+                    existing.remove();
+                }
 
-                // 액션 버튼들이 있는 영역을 더 구체적으로 찾기
-                const actionsArea =
-                    document.querySelector('#actions') ||
-                    document.querySelector('[data-e2e="video-side-actions"]') ||
-                    document.querySelector('#shorts-container');
+                // 현재 페이지의 DOM 구조 로깅
+                console.log('📊 현재 Shorts 페이지 DOM 구조 분석:');
+                console.log('- ytd-shorts:', !!document.querySelector('ytd-shorts'));
+                console.log('- actions:', !!document.querySelector('#actions'));
+                console.log('- shorts-player:', !!document.querySelector('#shorts-player'));
+                console.log('- shorts elements:', document.querySelectorAll('[id*="shorts"], [class*="shorts"]').length);
 
-                if (!actionsArea) return;
+                // ImprovedTube 패턴: Shorts 페이지 컨테이너 후보들 (세로 액션 버튼 영역만 선택)
+                const shortsContainers = [
+                    // 최우선: 가장 성공률 높은 순서로 재배열
+                    'ytd-reel-video-renderer #actions',
+                    '#actions', 
+                    'ytd-reel-video-renderer ytd-reel-player-overlay-renderer #actions',
+                    'ytd-shorts ytd-reel-player-overlay-renderer #actions',
+                    'ytd-shorts #player ytd-reel-player-overlay-renderer #actions', 
+                    
+                    // 2순위: 더 구체적인 액션 영역 
+                    'ytd-reel-video-renderer #actions[class*="overlay"]',
+                    'ytd-shorts [class*="overlay"] #actions',
+                    
+                    // 3순위: 좋아요 버튼이 실제로 있는 컨테이너의 부모
+                    'ytd-toggle-button-renderer[aria-label*="like" i]',
+                    'ytd-button-renderer[class*="like"]'
+                ];
+
+                console.log(`🔍 ${shortsContainers.length}개 셀렉터로 Shorts 컨테이너 검색 시작`);
+
+                let actionsArea = null;
+                for (let i = 0; i < shortsContainers.length; i++) {
+                    const selector = shortsContainers[i];
+                    try {
+                        console.log(`🔍 시도 ${i + 1}/${shortsContainers.length}: ${selector}`);
+                        const container = document.querySelector(selector);
+                        
+                        if (container) {
+                            const style = window.getComputedStyle(container);
+                            const isVisible = style.display !== 'none' && 
+                                           style.visibility !== 'hidden' && 
+                                           container.offsetWidth > 0 && 
+                                           container.offsetHeight > 0;
+                            console.log(`   📋 요소 발견! 가시성: ${isVisible ? '✅' : '❌'}`);
+                            console.log(`   📐 크기: ${container.offsetWidth}x${container.offsetHeight}`);
+                            
+                            // 크기 필터링: 세로 액션 영역은 보통 폭이 좁고 높이가 김 (대략 50~100px 폭)
+                            const isRightSize = container.offsetWidth < 150; // 너무 넓은 컨테이너 제외
+                            console.log(`   📏 크기 적절성: ${isRightSize ? '✅' : '❌'} (폭 ${container.offsetWidth}px)`);
+                            
+                            if (isVisible && isRightSize) {
+                                console.log(`🎯 Shorts 컨테이너 선택됨: ${selector}`);
+                                actionsArea = container;
+                                break;
+                            } else if (isVisible && !isRightSize) {
+                                console.log(`⚠️ 크기가 너무 커서 스킵 (폭 ${container.offsetWidth}px > 150px)`);
+                            }
+                        } else {
+                            console.log(`   ❌ 요소 없음`);
+                        }
+                    } catch (error) {
+                        console.warn(`⚠️ 셀렉터 오류 ${selector}:`, error.message);
+                    }
+                }
+
+                if (!actionsArea) {
+                    console.log('🔍 모든 Shorts 셀렉터 실패 - 추가 DOM 분석:');
+                    const allShortsElements = document.querySelectorAll('*[id*="shorts"], *[class*="shorts"], *[id*="reel"], *[class*="reel"], *[id*="action"], *[class*="action"]');
+                    console.log(`📋 Shorts/액션 관련 요소 ${allShortsElements.length}개 발견:`);
+                    allShortsElements.forEach((el, index) => {
+                        if (index < 10) {
+                            console.log(`   ${index + 1}. ${el.tagName}${el.id ? '#' + el.id : ''}${el.className ? '.' + el.className.split(' ').slice(0, 2).join('.') : ''}`);
+                        }
+                    });
+                    return;
+                }
 
                 const button = document.createElement('button');
-                button.className = 'youtube-analysis-button';
-                button.textContent = 'Shorts 분석';
+                button.className = 'youtube-analysis-button insightreel-shorts-button';
+                button.textContent = '📱 Shorts 분석';
                 button.title = 'YouTube Shorts를 AI로 분석하여 저장합니다';
 
-                button.addEventListener('click', () =>
-                    this.analyzeYouTubeVideo(videoId, true),
-                );
-                actionsArea.appendChild(button);
+                // 기본 버튼 텍스트 설정 (스타일은 포지셔닝에서 처리)
+                button.style.fontFamily = '-apple-system, BlinkMacSystemFont, sans-serif';
 
-                Utils.log('success', 'YouTube Shorts 버튼 추가됨');
+                // 호버 효과
+                button.addEventListener('mouseenter', () => {
+                    button.style.transform = 'scale(1.1)';
+                    button.style.boxShadow = '0 8px 20px rgba(255, 107, 107, 0.5)';
+                });
+                
+                button.addEventListener('mouseleave', () => {
+                    button.style.transform = 'scale(1)';
+                    button.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+                });
+
+                button.addEventListener('click', () => this.analyzeYouTubeVideo(videoId, true));
+                
+                // 스마트 포지셔닝: 기존 버튼들과 겹치지 않게 배치
+                this.insertShortsButtonSmartly(actionsArea, button);
+
+                console.log('✅ ImprovedTube 방식 Shorts 분석 버튼 주입 성공!');
             }
+
+            /**
+             * Shorts 버튼 스마트 포지셔닝 - 일단 기존 컨테이너에 직접 추가 (디버깅)
+             */
+            insertShortsButtonSmartly(container, button) {
+                console.log('🎯 Shorts 버튼 직접 배치 시작 (디버깅 모드)');
+                
+                // 먼저 기존 컨테이너에 직접 추가해보자 (맨 아래)
+                console.log('📍 전략: 기존 컨테이너 맨 아래에 추가');
+                container.appendChild(button);
+                
+                // 매우 눈에 띄는 스타일로 설정
+                this.adjustButtonForDirectPosition(button, container);
+            }
+
+            /**
+             * 오른쪽 버튼 컨테이너 생성 (디버깅용 - 항상 새로 생성)
+             */
+            createRightButtonContainer(originalContainer) {
+                // 기존 컨테이너가 있으면 제거하고 새로 생성
+                const existingContainer = document.querySelector('.insightreel-right-container');
+                if (existingContainer) {
+                    console.log('🗑️ 기존 컨테이너 제거 후 새로 생성');
+                    existingContainer.remove();
+                }
+                
+                console.log('🏗️ 새로운 오른쪽 컨테이너 생성 시작');
+                console.log('📊 원본 컨테이너:', {
+                    tag: originalContainer.tagName,
+                    width: originalContainer.offsetWidth,
+                    height: originalContainer.offsetHeight
+                });
+                
+                // 새로운 오른쪽 컨테이너 생성
+                rightContainer = document.createElement('div');
+                rightContainer.className = 'insightreel-right-container';
+                rightContainer.style.cssText = `
+                    position: absolute !important;
+                    right: -70px !important;
+                    top: 20px !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    gap: 8px !important;
+                    z-index: 9999 !important;
+                    pointer-events: auto !important;
+                    background: rgba(255,0,0,0.1) !important;
+                    border: 2px solid red !important;
+                    min-width: 50px !important;
+                    min-height: 50px !important;
+                `;
+                
+                // 원본 컨테이너를 상대 위치로 설정
+                if (window.getComputedStyle(originalContainer).position === 'static') {
+                    originalContainer.style.position = 'relative';
+                    console.log('📍 원본 컨테이너를 relative로 설정');
+                }
+                
+                originalContainer.appendChild(rightContainer);
+                console.log('✅ 오른쪽 버튼 컨테이너 생성 완료');
+                console.log('📍 컨테이너 추가됨:', rightContainer.getBoundingClientRect());
+                return rightContainer;
+            }
+
+            /**
+             * 오른쪽 위치용 버튼 스타일 조정 (디버깅용 - 매우 눈에 띄게)
+             */
+            adjustButtonForRightPosition(button) {
+                console.log('🎨 오른쪽 위치 버튼 스타일 적용');
+                button.style.cssText = `
+                    width: 50px !important;
+                    height: 50px !important;
+                    border-radius: 25px !important;
+                    font-size: 10px !important;
+                    line-height: 1.1 !important;
+                    padding: 4px !important;
+                    background: linear-gradient(45deg, #ff0000, #ff6b6b) !important;
+                    color: white !important;
+                    border: 3px solid yellow !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    text-align: center !important;
+                    cursor: pointer !important;
+                    transition: all 0.2s ease !important;
+                    z-index: 10000 !important;
+                    white-space: nowrap !important;
+                    box-shadow: 0 6px 20px rgba(255, 0, 0, 0.6) !important;
+                    margin: 0 !important;
+                    opacity: 1 !important;
+                `;
+                console.log('🎨 디버깅용 매우 눈에 띄는 스타일 적용 완료');
+            }
+
+            /**
+             * 플로팅 오른쪽 배치용 스타일 조정 (디버깅용 - 보이는 위치에 우선 배치)
+             */
+            adjustButtonForFloatingRight(button, container) {
+                // 컨테이너를 상대 위치로 설정
+                if (window.getComputedStyle(container).position === 'static') {
+                    container.style.position = 'relative';
+                }
+                
+                console.log('🔍 컨테이너 정보:', {
+                    width: container.offsetWidth,
+                    height: container.offsetHeight,
+                    position: window.getComputedStyle(container).position,
+                    overflow: window.getComputedStyle(container).overflow
+                });
+                
+                // 임시로 더 안전한 위치에 배치 (화면에 보이도록)
+                button.style.cssText = `
+                    position: absolute !important;
+                    right: -60px !important;
+                    top: 10px !important;
+                    width: 48px !important;
+                    height: 48px !important;
+                    border-radius: 24px !important;
+                    font-size: 10px !important;
+                    line-height: 1.1 !important;
+                    padding: 4px !important;
+                    background: linear-gradient(45deg, #ff6b6b, #ee5a24) !important;
+                    color: white !important;
+                    border: none !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    text-align: center !important;
+                    cursor: pointer !important;
+                    transition: all 0.3s ease !important;
+                    z-index: 9999 !important;
+                    white-space: nowrap !important;
+                    box-shadow: 0 6px 16px rgba(255, 107, 107, 0.4) !important;
+                    backdrop-filter: blur(15px) !important;
+                    opacity: 0.9 !important;
+                `;
+                
+                console.log('✅ 오른쪽 플로팅 배치 완료 (디버깅 위치)');
+                console.log('📍 버튼 위치:', {
+                    right: button.style.right,
+                    top: button.style.top,
+                    zIndex: button.style.zIndex
+                });
+            }
+
+            /**
+             * 직접 배치용 스타일 - overflow 문제 해결 (수정된 버전)
+             */
+            adjustButtonForDirectPosition(button, container) {
+                console.log('🎨 overflow 문제 해결 스타일 적용 시작');
+                
+                // 컨테이너 overflow 설정 확인 및 수정
+                const containerStyle = window.getComputedStyle(container);
+                console.log('📊 컨테이너 overflow:', containerStyle.overflow);
+                
+                if (containerStyle.position === 'static') {
+                    container.style.position = 'relative';
+                }
+                
+                // overflow 문제 해결: 컨테이너의 overflow를 visible로 설정
+                container.style.overflow = 'visible';
+                console.log('🔧 컨테이너 overflow를 visible로 수정');
+                
+                // 부모 컨테이너들도 확인
+                let parent = container.parentElement;
+                let level = 1;
+                while (parent && level <= 3) {
+                    const parentOverflow = window.getComputedStyle(parent).overflow;
+                    console.log(`📊 부모 ${level} overflow:`, parentOverflow);
+                    if (parentOverflow === 'hidden') {
+                        parent.style.overflow = 'visible';
+                        console.log(`🔧 부모 ${level} overflow를 visible로 수정`);
+                    }
+                    parent = parent.parentElement;
+                    level++;
+                }
+                
+                // 버튼을 컨테이너 내부 오른쪽에 배치 (overflow 없이)
+                button.style.cssText = `
+                    position: absolute !important;
+                    right: -40px !important;
+                    top: 50% !important;
+                    transform: translateY(-50%) !important;
+                    width: 36px !important;
+                    height: 36px !important;
+                    border-radius: 18px !important;
+                    font-size: 9px !important;
+                    line-height: 1.1 !important;
+                    padding: 2px !important;
+                    background: linear-gradient(45deg, #ff6b6b, #ee5a24) !important;
+                    color: white !important;
+                    border: none !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    text-align: center !important;
+                    cursor: pointer !important;
+                    z-index: 9999 !important;
+                    opacity: 1 !important;
+                    visibility: visible !important;
+                    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.6) !important;
+                    backdrop-filter: blur(8px) !important;
+                `;
+                
+                console.log('🎨 overflow 해결 스타일 적용 완료');
+                console.log('📍 버튼 추가된 컨테이너:', container.children.length, '개 자식 요소');
+                
+                // 2초 후에 버튼이 실제로 DOM에 있는지 확인
+                setTimeout(() => {
+                    const checkButton = document.querySelector('.youtube-analysis-button');
+                    console.log('🔍 2초 후 버튼 확인:', !!checkButton);
+                    if (checkButton) {
+                        const rect = checkButton.getBoundingClientRect();
+                        console.log('📍 버튼 실제 위치:', rect);
+                        console.log('👁️ 버튼 가시성:', {
+                            display: checkButton.style.display,
+                            visibility: checkButton.style.visibility,
+                            opacity: checkButton.style.opacity
+                        });
+                    }
+                }, 2000);
+            }
+
+            /**
+             * 버튼 겹침 감지 및 자동 위치 조정
+             */
+            adjustButtonIfOverlapping(button, existingButtons) {
+                setTimeout(() => {
+                    const buttonRect = button.getBoundingClientRect();
+                    
+                    for (const existingBtn of existingButtons) {
+                        const existingRect = existingBtn.getBoundingClientRect();
+                        
+                        // 겹침 감지 (10px 여유 공간 포함)
+                        const isOverlapping = !(
+                            buttonRect.right + 10 < existingRect.left ||
+                            buttonRect.left > existingRect.right + 10 ||
+                            buttonRect.bottom + 10 < existingRect.top ||
+                            buttonRect.top > existingRect.bottom + 10
+                        );
+                        
+                        if (isOverlapping) {
+                            console.log('⚠️ 버튼 겹침 감지 - 위치 조정');
+                            
+                            // 방법 1: 아래쪽으로 이동
+                            button.style.marginTop = '16px';
+                            
+                            // 방법 2: 여전히 겹치면 좀 더 아래로
+                            setTimeout(() => {
+                                const newButtonRect = button.getBoundingClientRect();
+                                const stillOverlapping = !(
+                                    newButtonRect.right + 10 < existingRect.left ||
+                                    newButtonRect.left > existingRect.right + 10 ||
+                                    newButtonRect.bottom + 10 < existingRect.top ||
+                                    newButtonRect.top > existingRect.bottom + 10
+                                );
+                                
+                                if (stillOverlapping) {
+                                    console.log('⚠️ 여전히 겹침 - 더 아래로 이동');
+                                    button.style.marginTop = '24px';
+                                }
+                            }, 100);
+                            
+                            break;
+                        }
+                    }
+                }, 200); // DOM 렌더링 완료 후 체크
+            }
+
 
             async analyzeYouTubeVideo(videoId, isShorts) {
                 console.log(

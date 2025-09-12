@@ -23,16 +23,18 @@ export interface VideoCore {
   description?: string;
   analysisContent?: string;
   
-  // 성과 지표
-  likes: number;
-  commentsCount: number;
+  // 성과 지표 (선택적)
+  likes?: number;
+  commentsCount?: number;
   
   // URL 정보
   url: string;
   thumbnailUrl?: string;
   
+  // 제목 (필수)
+  title: string;
+  
   // 레거시 호환성 필드
-  title?: string;
   shares?: number;
   videoUrl?: string;
   topComments?: string;
@@ -94,14 +96,19 @@ export interface SystemMetadata {
 // ===== 전체 Video 인터페이스 조합 =====
 export interface Video extends VideoCore, ChannelInfo, AIAnalysis, YouTubeSpecific, SystemMetadata {
   // UI 전용 필드
-  id?: string;
+  id?: string | number;
+  videoId?: string;            // 비디오 고유 ID
   thumbnail?: string;          // thumbnailUrl과 동일
   channelAvatar?: string;
+  channelAvatarUrl?: string;   // channelAvatar와 동일
   viewCount?: number;          // views와 동일
   daysAgo?: number;
   isTrending?: boolean;
   embedUrl?: string;
   aspectRatio?: '16:9' | '9:16';
+  
+  // AI 분석 결과 (VideoModal용)
+  analysisResult?: AIAnalysisResult;
   
   // 아카이브 전용 필드
   archivedAt?: string;

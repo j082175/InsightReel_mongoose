@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext } from 'react';
+import { useState, createContext, useContext } from 'react';
 import { CollectionBatch, Video } from './types';
 import { SettingsProvider } from './contexts/SettingsContext';
 import Header from './components/Header';

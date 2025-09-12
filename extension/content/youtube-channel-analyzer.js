@@ -62,36 +62,89 @@ class YouTubeChannelAnalyzer {
                url.includes('/user/');
     }
 
-    // 디바운싱된 페이지 로드 처리
+    // ImprovedTube 방식: 안정적인 페이지 로드 처리
     debouncedHandlePageLoad() {
         // 기존 타이머 취소
         if (this.handlePageLoadTimeout) {
             clearTimeout(this.handlePageLoadTimeout);
         }
         
-        // 200ms 후 실행 (여러 이벤트가 동시에 발생해도 마지막 하나만 실행)
+        // ImprovedTube 패턴: DOM이 안정화될 때까지 적절한 지연
         this.handlePageLoadTimeout = setTimeout(() => {
-            this.handlePageLoad();
-        }, 200);
+            this.handlePageLoadWithRetry();
+        }, 500); // 더 안정적인 지연 시간
     }
 
-    // 버튼 상태 지속 모니터링 - 제거됨 (더 이상 페이지에 버튼을 추가하지 않음)
+    // ImprovedTube 방식: 재시도 로직이 포함된 페이지 로드 처리
+    async handlePageLoadWithRetry() {
+        // DOM Ready 상태 확인
+        if (document.readyState === 'loading') {
+            await new Promise(resolve => {
+                document.addEventListener('DOMContentLoaded', resolve, { once: true });
+            });
+        }
+
+        // YouTube 기본 구조가 로드될 때까지 대기
+        await this.waitForYouTubeBasicStructure();
+        
+        // 기존 handlePageLoad 실행
+        this.handlePageLoad();
+    }
+
+    // YouTube 기본 구조 로드 대기 (ImprovedTube 패턴)
+    async waitForYouTubeBasicStructure(maxWait = 5000) {
+        const startTime = Date.now();
+        
+        while (Date.now() - startTime < maxWait) {
+            const ytdApp = document.querySelector('ytd-app');
+            const masthead = document.querySelector('#masthead');
+            
+            if (ytdApp && masthead) {
+                console.log('✅ YouTube 기본 구조 로드 완료');
+                return true;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        console.log('⚠️ YouTube 기본 구조 로드 대기 시간 초과');
+        return false;
+    }
+
+    // 버튼 상태 지속 모니터링 - ImprovedTube 방식으로 재활성화
     startButtonMonitoring() {
-        console.log('🚫 버튼 모니터링이 비활성화됨 - 확장 프로그램 팝업 사용');
-        // 기존 모니터링 정지
+        console.log('👀 ImprovedTube 방식 버튼 모니터링 시작');
+        
+        // 기존 모니터링 정리
         if (this.buttonCheckInterval) {
             clearInterval(this.buttonCheckInterval);
-            this.buttonCheckInterval = null;
         }
+        
+        // ImprovedTube 패턴: 더 안정적인 모니터링 (5초 간격)
+        this.buttonCheckInterval = setInterval(() => {
+            // 채널 페이지이고 버튼이 없으면 재시도
+            if (this.isChannelPage(location.href) && !document.querySelector('#youtube-channel-collect-btn')) {
+                console.log('🔄 버튼이 사라짐 - ImprovedTube 방식으로 재생성 시도');
+                this.injectChannelButtonWithRetry();
+            }
+        }, 5000); // 5초마다 체크
     }
 
-    // 페이지 로드 처리 - 더 이상 버튼 추가하지 않음
+    // 페이지 로드 처리 - ImprovedTube 패턴으로 활성화
     handlePageLoad() {
         console.log('🔍 페이지 로드 처리:', location.href);
-        console.log('🚫 페이지 버튼 추가 비활성화됨 - 확장 프로그램 팝업 사용');
         
-        // 기존 버튼이 있으면 제거
-        this.removeCollectButton();
+        // 채널 페이지인지 확인
+        if (!this.isChannelPage(location.href)) {
+            console.log('🚫 채널 페이지가 아님, 버튼 추가 스킵');
+            this.removeCollectButton(); // 기존 버튼만 제거
+            return;
+        }
+        
+        console.log('✅ 채널 페이지 감지됨 - ImprovedTube 방식으로 버튼 추가 시작');
+        
+        // ImprovedTube 방식으로 채널 헤더 대기 후 버튼 추가
+        this.waitForChannelHeader();
     }
 
     // 버튼 추가 시도 - 제거됨 (더 이상 페이지에 버튼을 추가하지 않음)
@@ -160,8 +213,299 @@ class YouTubeChannelAnalyzer {
 
     // 채널 수집 버튼 추가 - 제거됨 (확장 프로그램 팝업으로 이동)
     addCollectButton() {
-        console.log('🚫 채널 수집 버튼이 확장 프로그램 팝업으로 이동됨');
-        return false; // 더 이상 페이지에 버튼 추가하지 않음
+        console.log('📊 ImprovedTube 방식으로 채널 수집 버튼 추가 중...');
+        
+        // ImprovedTube 패턴: 안정적인 버튼 주입
+        this.injectChannelButtonWithRetry();
+    }
+
+    // ImprovedTube 방식: 재시도 로직을 포함한 안정적인 버튼 주입
+    async injectChannelButtonWithRetry(maxRetries = 5, retryDelay = 500) {
+        for (let i = 0; i < maxRetries; i++) {
+            const success = this.tryInjectChannelButton();
+            
+            if (success) {
+                console.log(`✅ 채널 버튼 주입 성공 (${i + 1}번째 시도)`);
+                return true;
+            }
+            
+            if (i < maxRetries - 1) {
+                console.log(`⏳ 채널 버튼 주입 재시도 ${i + 1}/${maxRetries}`);
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+            }
+        }
+        
+        console.log(`❌ 채널 버튼 주입 실패 (${maxRetries}회 시도 후)`);
+        return false;
+    }
+
+    // ImprovedTube 방식: 다중 셀렉터 fallback으로 안정적인 컨테이너 찾기
+    tryInjectChannelButton() {
+        console.log('🔍 채널 버튼 주입 시도 시작 - 현재 URL:', window.location.href);
+        
+        // 기존 버튼이 있으면 제거 (중복 방지)
+        const existingButton = document.querySelector('#youtube-channel-collect-btn');
+        if (existingButton) {
+            console.log('🗑️ 기존 버튼 제거');
+            existingButton.remove();
+        }
+
+        // 현재 페이지의 DOM 구조 로깅
+        console.log('📊 현재 DOM 구조 분석:');
+        console.log('- ytd-app:', !!document.querySelector('ytd-app'));
+        console.log('- masthead:', !!document.querySelector('#masthead'));
+        console.log('- channel elements:', document.querySelectorAll('[id*="channel"], [class*="channel"]').length);
+
+        // ImprovedTube 패턴: 채널 페이지 컨테이너 후보들 (우선순위별)
+        const channelContainers = [
+            // 1순위: 최신 YouTube 채널 헤더 구조 (2024/2025)
+            'ytd-c4-tabbed-header-renderer #inner-header-container',
+            'ytd-c4-tabbed-header-renderer .page-header-view-model-wiz__page-header-headline',
+            'ytd-c4-tabbed-header-renderer ytd-subscribe-button-renderer',
+            
+            // 2순위: 기존 채널 헤더 구조
+            'ytd-channel-header-renderer #buttons',
+            'ytd-c4-tabbed-header-renderer #buttons',
+            'ytd-channel-header-renderer ytd-subscribe-button-renderer',
+            
+            // 3순위: 구독 버튼 컨테이너들
+            '#subscribe-button',
+            'ytd-subscribe-button-renderer',
+            '[class*="subscribe-button"]',
+            'button[aria-label*="구독"]',
+            'button[aria-label*="Subscribe"]',
+            
+            // 4순위: 채널 메뉴/탭 영역
+            'ytd-channel-sub-menu-renderer #primary-items',
+            'ytd-two-column-browse-results-renderer #chips-content',
+            'yt-chip-cloud-chip-renderer',
+            
+            // 5순위: 채널 헤더 전체
+            'ytd-channel-header-renderer',
+            'ytd-c4-tabbed-header-renderer',
+            
+            // 6순위: 백업 위치들
+            '#channel-header',
+            '.ytd-channel-header-renderer',
+            '[class*="channel-header"]',
+            
+            // 7순위: 2024/2025 YouTube 새로운 구조 대응
+            'div[class*="page-header-view-model"]',
+            '[class*="page-header-headline"]',
+            '[data-target-id*="subscribe"]',
+            '[role="button"][class*="subscribe"]',
+            
+            // 8순위: Generic 버튼 컨테이너들
+            '[role="banner"] [class*="buttons"]',
+            '.top-level-buttons',
+            '#top-level-buttons-computed',
+            
+            // 9순위: 최후의 수단 - 아무 버튼이라도 있는 곳
+            'ytd-app [role="button"]',
+            '#contents button'
+        ];
+
+        console.log(`🔍 ${channelContainers.length}개 셀렉터로 컨테이너 검색 시작`);
+
+        for (let i = 0; i < channelContainers.length; i++) {
+            const selector = channelContainers[i];
+            try {
+                console.log(`🔍 시도 ${i + 1}/${channelContainers.length}: ${selector}`);
+                const container = document.querySelector(selector);
+                
+                if (container) {
+                    const isVisible = this.isElementVisible(container);
+                    console.log(`   📋 요소 발견! 가시성: ${isVisible ? '✅' : '❌'}`);
+                    console.log(`   📐 크기: ${container.offsetWidth}x${container.offsetHeight}`);
+                    
+                    if (isVisible) {
+                        console.log(`🎯 컨테이너 선택됨: ${selector}`);
+                        return this.createAndInjectButton(container, selector);
+                    }
+                } else {
+                    console.log(`   ❌ 요소 없음`);
+                }
+            } catch (error) {
+                console.warn(`⚠️ 셀렉터 오류 ${selector}:`, error.message);
+            }
+        }
+        
+        // 모든 셀렉터 실패시 추가 디버깅
+        console.log('🔍 모든 셀렉터 실패 - 추가 DOM 분석:');
+        const allChannelElements = document.querySelectorAll('*[id*="channel"], *[class*="channel"], *[id*="subscribe"], *[class*="subscribe"]');
+        console.log(`📋 채널/구독 관련 요소 ${allChannelElements.length}개 발견:`);
+        allChannelElements.forEach((el, index) => {
+            if (index < 10) { // 처음 10개만 로깅
+                console.log(`   ${index + 1}. ${el.tagName}${el.id ? '#' + el.id : ''}${el.className ? '.' + el.className.split(' ').join('.') : ''}`);
+            }
+        });
+        
+        return false; // 모든 시도 실패
+    }
+
+    // 요소가 실제로 화면에 보이는지 확인 (ImprovedTube 패턴)
+    isElementVisible(element) {
+        if (!element) return false;
+        
+        const style = window.getComputedStyle(element);
+        return style.display !== 'none' && 
+               style.visibility !== 'hidden' && 
+               element.offsetWidth > 0 && 
+               element.offsetHeight > 0;
+    }
+
+    // 컨테이너에 따라 적절한 위치에 버튼 생성 및 주입
+    createAndInjectButton(container, selector) {
+        console.log(`🎨 버튼 생성 및 주입: ${selector}`);
+        const button = this.createChannelButton();
+        
+        let injectionSuccessful = false;
+        
+        try {
+            // 컨테이너 타입에 따라 주입 방식 결정
+            if (selector.includes('#buttons') || selector.includes('subscribe-button')) {
+                console.log('📍 버튼 그룹 스타일로 주입');
+                // 구독 버튼 옆에 추가
+                if (selector.includes('subscribe-button') || selector.includes('subscribe')) {
+                    container.insertAdjacentElement('afterend', button);
+                } else {
+                    container.appendChild(button);
+                }
+                
+                // 버튼 그룹에 맞는 스타일 적용
+                button.style.cssText = `
+                    background: linear-gradient(45deg, #ff6b6b, #ee5a24) !important;
+                    color: white !important;
+                    border: none !important;
+                    border-radius: 18px !important;
+                    padding: 8px 16px !important;
+                    font-weight: 500 !important;
+                    font-size: 14px !important;
+                    cursor: pointer !important;
+                    margin: 0 8px !important;
+                    display: inline-block !important;
+                    transition: all 0.2s ease !important;
+                    z-index: 1000 !important;
+                    white-space: nowrap !important;
+                `;
+                injectionSuccessful = true;
+                
+            } else if (selector.includes('primary-items') || selector.includes('chips-content') || selector.includes('chip')) {
+                console.log('📍 탭/칩 스타일로 주입');
+                // 탭 메뉴에 추가
+                container.appendChild(button);
+                button.style.cssText = `
+                    background: linear-gradient(45deg, #ff6b6b, #ee5a24) !important;
+                    color: white !important;
+                    border: none !important;
+                    border-radius: 20px !important;
+                    padding: 10px 18px !important;
+                    font-weight: 600 !important;
+                    font-size: 14px !important;
+                    cursor: pointer !important;
+                    margin: 0 12px !important;
+                    display: inline-block !important;
+                    transition: all 0.3s ease !important;
+                    z-index: 1000 !important;
+                    white-space: nowrap !important;
+                `;
+                injectionSuccessful = true;
+                
+            } else if (selector.includes('header-headline') || selector.includes('page-header-view-model')) {
+                console.log('📍 헤더 라인에 인라인 스타일로 주입');
+                // 최신 YouTube 헤더 구조에 맞게 주입
+                container.appendChild(button);
+                button.style.cssText = `
+                    background: linear-gradient(45deg, #ff6b6b, #ee5a24) !important;
+                    color: white !important;
+                    border: none !important;
+                    border-radius: 18px !important;
+                    padding: 8px 16px !important;
+                    font-weight: 500 !important;
+                    font-size: 14px !important;
+                    cursor: pointer !important;
+                    margin-left: 16px !important;
+                    display: inline-block !important;
+                    transition: all 0.2s ease !important;
+                    z-index: 1000 !important;
+                    white-space: nowrap !important;
+                `;
+                injectionSuccessful = true;
+                
+            } else {
+                console.log('📍 일반 컨테이너에 플로팅 스타일로 주입');
+                // 헤더에 플로팅 버튼으로 추가
+                const headerStyle = window.getComputedStyle(container);
+                if (headerStyle.position === 'static') {
+                    container.style.position = 'relative';
+                }
+                
+                container.appendChild(button);
+                button.style.cssText = `
+                    background: linear-gradient(45deg, #ff6b6b, #ee5a24) !important;
+                    color: white !important;
+                    border: none !important;
+                    border-radius: 20px !important;
+                    padding: 10px 18px !important;
+                    font-weight: 600 !important;
+                    font-size: 14px !important;
+                    cursor: pointer !important;
+                    position: absolute !important;
+                    top: 20px !important;
+                    right: 20px !important;
+                    z-index: 1000 !important;
+                    white-space: nowrap !important;
+                    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3) !important;
+                `;
+                injectionSuccessful = true;
+            }
+            
+            if (injectionSuccessful) {
+                console.log('✅ 버튼 주입 성공!');
+                return true;
+            } else {
+                console.log('❌ 버튼 주입 실패');
+                return false;
+            }
+            
+        } catch (error) {
+            console.error('⚠️ 버튼 주입 중 오류:', error);
+            return false;
+        }
+    }
+
+    // 채널 버튼 생성 (기존 로직 유지)
+    createChannelButton() {
+        const button = document.createElement('button');
+        button.id = 'youtube-channel-collect-btn';
+        button.innerHTML = `<span>📊 채널 수집</span>`;
+        button.title = '이 채널의 비디오들을 수집하여 분석합니다';
+        
+        // 호버 효과 추가
+        this.addButtonHoverEffects(button);
+        
+        // 클릭 이벤트
+        button.addEventListener('click', () => this.showCollectModal());
+        
+        // 전역 참조 저장
+        this.channelButton = button;
+        
+        return button;
+    }
+
+    // 버튼 호버 효과 (모든 스타일에 공통 적용)
+    addButtonHoverEffects(button) {
+        button.addEventListener('mouseenter', () => {
+            button.style.transform = 'translateY(-2px)';
+            button.style.boxShadow = '0 6px 16px rgba(255, 107, 107, 0.4)';
+            button.style.background = 'linear-gradient(45deg, #ff5252, #d32f2f)';
+        });
+
+        button.addEventListener('mouseleave', () => {
+            button.style.transform = 'translateY(0)';
+            button.style.boxShadow = '0 4px 12px rgba(255, 107, 107, 0.3)';
+            button.style.background = 'linear-gradient(45deg, #ff6b6b, #ee5a24)';
+        });
     }
 
     // 채널 헤더 오른쪽 빈 공간에 버튼 추가 (가장 우선적 위치)

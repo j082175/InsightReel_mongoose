@@ -13,7 +13,9 @@ export class YouTubeHandler extends BasePlatformHandler {
     // YouTube 특화 설정
     this.isShorts = false;
     this.videoId = null;
+    this.buttonMonitorInterval = null; // 버튼 모니터링 인터벌
     this.setupPageDetection();
+    this.startButtonMonitoring(); // 지속적인 버튼 모니터링 시작
   }
 
   /**
@@ -22,15 +24,27 @@ export class YouTubeHandler extends BasePlatformHandler {
   setupPageDetection() {
     this.detectPageType();
     
-    // YouTube SPA 네비게이션 감지
+    // YouTube 공식 SPA 네비게이션 이벤트 감지 (ImprovedTube 패턴)
+    window.addEventListener('yt-navigate-finish', () => {
+      this.log('info', 'YouTube 페이지 네비게이션 감지됨', window.location.href);
+      
+      // 페이지 변경 후 적절한 지연을 두고 재초기화
+      setTimeout(() => {
+        this.detectPageType();
+        this.enhancePage();
+      }, 500); // 더 짧은 지연으로 반응성 개선
+    });
+    
+    // 백업: URL 변화 감지 (기존 방식 유지)
     let lastUrl = window.location.href;
     setInterval(() => {
       if (window.location.href !== lastUrl) {
         lastUrl = window.location.href;
+        this.log('info', 'URL 변화 감지 (백업 방식)', lastUrl);
         setTimeout(() => {
           this.detectPageType();
           this.enhancePage();
-        }, 1000); // 페이지 로딩 대기
+        }, 1000);
       }
     }, CONSTANTS.TIMEOUTS.URL_CHECK_INTERVAL);
   }
@@ -43,9 +57,23 @@ export class YouTubeHandler extends BasePlatformHandler {
     this.isShorts = url.includes('/shorts/');
     this.videoId = this.extractVideoId(url);
     
-    this.log('info', `페이지 타입 감지: ${this.isShorts ? 'Shorts' : '일반 영상'}`, {
+    // 정확한 페이지 타입 판단
+    let pageType = '';
+    if (this.isShorts) {
+      pageType = 'Shorts';
+    } else if (this.isChannelPage()) {
+      pageType = '채널';
+    } else if (this.videoId) {
+      pageType = '일반 영상';
+    } else {
+      pageType = '기타';
+    }
+    
+    this.log('info', `페이지 타입 감지: ${pageType}`, {
       url,
-      videoId: this.videoId
+      videoId: this.videoId,
+      isShorts: this.isShorts,
+      isChannel: this.isChannelPage()
     });
   }
 
@@ -91,121 +119,193 @@ export class YouTubeHandler extends BasePlatformHandler {
   }
 
   /**
-   * 페이지 향상 (SPA 네비게이션 대응)
+   * 페이지 향상 (SPA 네비게이션 대응, ImprovedTube 패턴)
    */
-  enhancePage() {
-    if (!this.videoId) {
-      this.log('warn', '비디오 ID를 찾을 수 없음');
+  async enhancePage() {
+    // DOM Ready 상태 확인 (ImprovedTube 방식)
+    if (document.readyState === 'loading') {
+      await new Promise(resolve => {
+        document.addEventListener('DOMContentLoaded', resolve, { once: true });
+      });
+    }
+    
+    // YouTube 페이지가 완전히 로드될 때까지 추가 대기
+    await this.waitForYouTubeReady();
+    
+    if (!this.videoId && !this.isChannelPage()) {
+      this.log('warn', '비디오 ID를 찾을 수 없음 (채널 페이지 아님)');
       return;
     }
 
+    // 순차적으로 기능 적용
     this.enhanceSaveButtons();
+    await this.addAnalysisButtons();
   }
 
   /**
-   * 분석 버튼 추가
+   * YouTube가 완전히 로드될 때까지 대기
    */
-  addAnalysisButtons() {
+  async waitForYouTubeReady(maxWait = 10000) {
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < maxWait) {
+      // YouTube 기본 요소들이 로드되었는지 확인
+      const ytdApp = document.querySelector('ytd-app');
+      const masthead = document.querySelector('#masthead');
+      
+      if (ytdApp && masthead) {
+        this.log('info', 'YouTube 기본 구조 로드 완료');
+        return;
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    this.log('warn', 'YouTube 로드 대기 시간 초과');
+  }
+
+  /**
+   * 채널 페이지인지 확인
+   */
+  isChannelPage() {
+    const path = window.location.pathname;
+    return path.includes('/channel/') || path.includes('/c/') || path.includes('/@');
+  }
+
+  /**
+   * 분석 버튼 추가 (페이지 타입에 따라 적절한 버튼만 추가)
+   */
+  async addAnalysisButtons() {
+    const url = window.location.href;
+    const isChannel = this.isChannelPage();
+    const hasVideoId = !!this.videoId;
+    
+    this.log('info', '🔍 분석 버튼 추가 결정:', {
+      url,
+      isShorts: this.isShorts,
+      isChannel,
+      hasVideoId,
+      videoId: this.videoId
+    });
+    
     if (this.isShorts) {
-      this.addShortsAnalysisButton();
+      this.log('info', '📱 Shorts 분석 버튼 추가 선택');
+      await this.addShortsAnalysisButton();
+    } else if (isChannel) {
+      this.log('info', '📊 채널 분석 버튼 추가 선택');
+      await this.addChannelAnalysisButton();
+    } else if (hasVideoId) {
+      this.log('info', '🎬 영상 분석 버튼 추가 선택');
+      await this.addVideoAnalysisButton();
     } else {
-      this.addVideoAnalysisButton();
+      this.log('warn', '❓ 알 수 없는 페이지 타입 - 버튼 추가 스킵');
     }
   }
 
   /**
-   * Shorts용 분석 버튼 추가
+   * 현재 페이지가 채널 페이지인지 확인
+   * @returns {boolean} 채널 페이지 여부
    */
-  addShortsAnalysisButton() {
-    const shortsContainer = document.querySelector(CONSTANTS.SELECTORS.YOUTUBE.SHORTS_CONTAINER);
-    if (!shortsContainer) {
-      this.log('warn', 'Shorts 컨테이너를 찾을 수 없음');
-      return;
+  isChannelPage() {
+    const url = window.location.href;
+    return url.includes('/channel/') || 
+           url.includes('/@') || 
+           url.includes('/c/') ||
+           url.includes('/user/');
+  }
+
+  /**
+   * Shorts용 분석 버튼 추가 (ImprovedTube 방식으로 완전 개선)
+   */
+  async addShortsAnalysisButton() {
+    const button = this.createAnalysisButton('📱 Shorts 분석');
+    
+    // UI Manager의 새로운 Shorts 전용 주입 메서드 사용
+    const success = await this.uiManager.injectButtonWithRetry(
+      this.uiManager.injectYouTubeShortsButton,
+      button,
+      'youtube-shorts-analysis-button'
+    );
+
+    if (success) {
+      this.log('success', '✅ ImprovedTube 방식 Shorts 분석 버튼 추가 완료');
+    } else {
+      this.log('error', '❌ Shorts 분석 버튼 추가 실패 - 모든 재시도 후');
+    }
+  }
+
+  /**
+   * 일반 영상용 분석 버튼 추가 (ImprovedTube 방식으로 완전 개선)
+   */
+  async addVideoAnalysisButton() {
+    const button = this.createAnalysisButton('🎬 영상 분석');
+    
+    // UI Manager의 향상된 비디오 버튼 주입 사용 (이미 스타일링 포함)
+    const success = await this.uiManager.injectButtonWithRetry(
+      this.uiManager.injectYouTubeVideoButton,
+      button,
+      'youtube-video-analysis-button'
+    );
+
+    if (success) {
+      this.log('success', '✅ ImprovedTube 방식 영상 분석 버튼 추가 완료');
+    } else {
+      this.log('error', '❌ 영상 분석 버튼 추가 실패 - 모든 재시도 후');
+    }
+  }
+
+  /**
+   * 채널 페이지용 분석 버튼 추가 (신규)
+   */
+  async addChannelAnalysisButton() {
+    // 채널 페이지인지 확인
+    if (!window.location.pathname.includes('/channel/') && !window.location.pathname.includes('/c/') && !window.location.pathname.includes('/@')) {
+      return; // 채널 페이지가 아니면 스킵
     }
 
-    // 기존 버튼 확인
-    if (shortsContainer.querySelector('.youtube-analysis-button')) {
-      return;
-    }
+    const button = this.createAnalysisButton('📊 채널 분석');
+    
+    // UI Manager의 안정적인 채널 버튼 주입 사용
+    const success = await this.uiManager.injectButtonWithRetry(
+      this.uiManager.injectYouTubeChannelButton,
+      button,
+      'youtube-channel-analysis-button'
+    );
 
-    const button = this.createAnalysisButton('YouTube Shorts 분석');
-    
-    // Shorts 액션 버튼 영역에 추가
-    const actionsArea = shortsContainer.querySelector('#actions') || 
-                       shortsContainer.querySelector('.ytd-shorts-video-actions');
-    
-    if (actionsArea) {
+    if (success) {
+      // 채널 페이지에 적합한 스타일
       button.style.cssText = `
         position: relative !important;
-        margin: 8px 0 !important;
-        width: 48px !important;
-        height: 48px !important;
-        border-radius: 24px !important;
-        font-size: 10px !important;
-        line-height: 1.2 !important;
-        padding: 2px !important;
-        background: rgba(0, 0, 0, 0.8) !important;
+        margin: 0 12px !important;
+        padding: 10px 20px !important;
+        font-size: 14px !important;
+        background: linear-gradient(45deg, #ff6b6b, #4ecdc4) !important;
         color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        text-align: center !important;
-        backdrop-filter: blur(10px) !important;
+        border: none !important;
+        border-radius: 25px !important;
+        cursor: pointer !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease !important;
+        white-space: nowrap !important;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.3) !important;
+        z-index: 1000 !important;
       `;
+
+      // 호버 효과
+      button.addEventListener('mouseenter', () => {
+        button.style.transform = 'translateY(-2px) !important';
+        button.style.boxShadow = '0 4px 15px rgba(0,0,0,0.4) !important';
+      });
       
-      actionsArea.appendChild(button);
-      this.log('success', 'Shorts 분석 버튼 추가됨');
+      button.addEventListener('mouseleave', () => {
+        button.style.transform = 'translateY(0) !important';
+        button.style.boxShadow = '0 2px 10px rgba(0,0,0,0.3) !important';
+      });
+
+      this.log('success', '채널 분석 버튼 추가됨 (안정적 방식)');
+    } else {
+      this.log('error', '채널 분석 버튼 추가 실패');
     }
-  }
-
-  /**
-   * 일반 영상용 분석 버튼 추가
-   */
-  addVideoAnalysisButton() {
-    // 기존 액션 버튼들 찾기 (좋아요, 공유 등)
-    const actionButtons = document.querySelector('#top-level-buttons-computed') ||
-                         document.querySelector('#menu-container') ||
-                         document.querySelector('.ytd-menu-renderer');
-
-    if (!actionButtons) {
-      this.log('warn', '액션 버튼 영역을 찾을 수 없음');
-      return;
-    }
-
-    // 기존 버튼 확인
-    if (actionButtons.querySelector('.youtube-analysis-button')) {
-      return;
-    }
-
-    const button = this.createAnalysisButton('영상 분석');
-    
-    button.style.cssText = `
-      position: relative !important;
-      margin: 0 8px !important;
-      padding: 8px 16px !important;
-      font-size: 14px !important;
-      background: #ff0000 !important;
-      color: white !important;
-      border: none !important;
-      border-radius: 18px !important;
-      cursor: pointer !important;
-      font-weight: 500 !important;
-      transition: all 0.2s ease !important;
-      white-space: nowrap !important;
-    `;
-
-    // 호버 효과
-    button.addEventListener('mouseenter', () => {
-      button.style.background = '#cc0000 !important';
-    });
-    
-    button.addEventListener('mouseleave', () => {
-      button.style.background = '#ff0000 !important';
-    });
-
-    actionButtons.appendChild(button);
-    this.log('success', '일반 영상 분석 버튼 추가됨');
   }
 
   /**
@@ -394,5 +494,59 @@ export class YouTubeHandler extends BasePlatformHandler {
    */
   endProcessing() {
     this.isProcessing = false;
+  }
+
+  /**
+   * 지속적인 버튼 모니터링 시작 (ImprovedTube 방식)
+   */
+  startButtonMonitoring() {
+    this.log('info', '👀 YouTube 버튼 지속 모니터링 시작');
+    
+    // 기존 모니터링 정리
+    if (this.buttonMonitorInterval) {
+      clearInterval(this.buttonMonitorInterval);
+    }
+    
+    // 5초마다 버튼 상태 체크
+    this.buttonMonitorInterval = setInterval(() => {
+      this.checkAndRestoreButtons();
+    }, 5000);
+  }
+
+  /**
+   * 버튼 상태 체크 및 복원
+   */
+  checkAndRestoreButtons() {
+    const url = window.location.href;
+    const isChannel = this.isChannelPage();
+    const hasVideoId = !!this.videoId;
+    
+    // 현재 페이지 타입에 따라 해당 버튼이 있는지 체크
+    if (this.isShorts) {
+      // Shorts 페이지: Shorts 분석 버튼 체크
+      if (!document.querySelector('.youtube-shorts-analysis-button')) {
+        this.log('info', '🔄 Shorts 분석 버튼이 사라짐 - 재생성 시도');
+        this.addShortsAnalysisButton();
+      }
+    } else if (isChannel) {
+      // 채널 페이지: 채널 수집 버튼 체크 (이미 별도 모니터링 있음)
+      // youtube-channel-analyzer.js에서 처리
+    } else if (hasVideoId) {
+      // 일반 영상 페이지: 영상 분석 버튼 체크
+      if (!document.querySelector('.youtube-video-analysis-button')) {
+        this.log('info', '🔄 영상 분석 버튼이 사라짐 - 재생성 시도');
+        this.addVideoAnalysisButton();
+      }
+    }
+  }
+
+  /**
+   * 소멸자 - 모니터링 정리
+   */
+  destroy() {
+    if (this.buttonMonitorInterval) {
+      clearInterval(this.buttonMonitorInterval);
+      this.buttonMonitorInterval = null;
+    }
   }
 }

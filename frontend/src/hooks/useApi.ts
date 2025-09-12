@@ -208,9 +208,12 @@ export const useCollectTrending = () => {
       queryClient.invalidateQueries({ queryKey: ['videos'] });
       queryClient.invalidateQueries({ queryKey: ['trendingStats'] });
       queryClient.invalidateQueries({ queryKey: ['quotaStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['api-status'] }); // API 상태 즉시 새로고침
       console.log('✅ 트렌딩 영상 수집 완료');
     },
     onError: (error) => {
+      // 실패해도 API 상태는 업데이트 (일부 API 사용했을 수 있음)
+      queryClient.invalidateQueries({ queryKey: ['api-status'] });
       console.error('❌ 트렌딩 영상 수집 실패:', error);
     },
   });

@@ -47,15 +47,20 @@ class GroupTrendingCollector {
       // 수집된 영상들을 TrendingVideo로 변환 및 저장
       const savedVideos = [];
       let savedCount = 0;
+      let duplicateCount = 0;
+      let totalFoundCount = 0;
 
       for (const channelResult of (results.videos || [])) {
         if (channelResult.videos && channelResult.videos.length > 0) {
+          totalFoundCount += channelResult.videos.length;
           for (const video of channelResult.videos) {
             try {
               const trendingVideo = await this.saveTrendingVideo(video, group);
               if (trendingVideo) {
                 savedVideos.push(trendingVideo);
                 savedCount++;
+              } else {
+                duplicateCount++;
               }
             } catch (error) {
               ServerLogger.error(`영상 저장 실패 (${video.id?.videoId || 'unknown'}):`, error.message);
@@ -67,7 +72,7 @@ class GroupTrendingCollector {
       // 그룹의 마지막 수집 시간 업데이트
       await group.updateLastCollected();
 
-      ServerLogger.success(`✅ 그룹 "${group.name}" 수집 완료: ${savedCount}개 영상 저장`);
+      ServerLogger.success(`✅ 그룹 "${group.name}" 수집 완료: ${savedCount}개 새 영상 저장 (${duplicateCount}개 중복 스킵, 총 ${totalFoundCount}개 발견)`);
 
       return {
         groupId,
@@ -154,8 +159,10 @@ class GroupTrendingCollector {
   async saveTrendingVideo(videoData, group, batchId = null) {
     try {
       // 기존 영상 중복 체크
-      const existingVideo = await TrendingVideo.findOne({ videoId: videoData.id?.videoId });
+      const videoId = videoData.id?.videoId;
+      const existingVideo = await TrendingVideo.findOne({ videoId: videoId });
       if (existingVideo) {
+        ServerLogger.warn(`⚠️ 중복 영상 스킵: ${videoData.snippet?.title} (${videoId})`);
         return null; // 이미 존재하는 영상
       }
 

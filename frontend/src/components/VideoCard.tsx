@@ -6,21 +6,7 @@ import { getVideoId, getThumbnailUrl, getViewCount } from '../utils/videoUtils';
 import { Video } from '../types';
 
 interface VideoCardProps {
-  video: {
-    _id?: string;
-    videoId?: string;
-    id?: string | number;
-    title: string;
-    url: string;
-    thumbnailUrl?: string;
-    thumbnail?: string;
-    channelName: string;
-    platform: 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK';
-    duration: 'SHORT' | 'MID' | 'LONG';
-    views?: number;
-    viewCount?: number;
-    uploadDate: string;
-  };
+  video: Video;
   onClick?: (video: Video) => void;
   onInfoClick?: (video: Video) => void;
   onChannelClick?: (channelName: string) => void;
@@ -89,7 +75,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
                 {video.platform}
               </span>
               <span className="bg-black/70 text-white px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm">
-                {getDurationLabel(video.duration)}
+                {getDurationLabel(video.duration || 'LONG')}
               </span>
             </div>
             {/* 선택 모드 체크박스 */}
@@ -112,7 +98,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
                   WebkitBoxOrient: 'vertical',
                   overflow: 'hidden'
                 }}>
-              {video.title}
+              {video.title || 'Untitled'}
             </h3>
             
             <div className="text-gray-200 text-xs mb-1 font-medium">

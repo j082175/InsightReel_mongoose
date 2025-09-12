@@ -8,6 +8,9 @@ export * from './video';
 export * from './channel';
 export * from './api';
 
+// Import specific types
+import type { Video } from './video';
+
 // Hook Return Types
 export interface UseVideosResult {
   data: Video[];

@@ -46,6 +46,7 @@ class MultiKeyManager {
    */
   loadKeys() {
     const keys = [];
+    const keySet = new Set(); // 중복 제거용
     
     // 1. 기본 환경변수에서 로드
     const safetyMargin = parseInt(process.env.YOUTUBE_API_SAFETY_MARGIN) || 9500;
@@ -54,7 +55,13 @@ class MultiKeyManager {
       { name: '키 1', key: process.env.YOUTUBE_KEY_1, quota: safetyMargin },
       { name: '키 2', key: process.env.YOUTUBE_KEY_2, quota: safetyMargin },
       { name: '키 3', key: process.env.YOUTUBE_KEY_3, quota: safetyMargin }
-    ].filter(item => item.key); // 유효한 키만 필터
+    ].filter(item => {
+      if (!item.key || keySet.has(item.key)) {
+        return false; // 유효하지 않거나 중복된 키 제외
+      }
+      keySet.add(item.key);
+      return true;
+    });
     
     keys.push(...envKeys);
     

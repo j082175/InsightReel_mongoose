@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { formatViews } from '../utils/formatters';
+import SearchFilterBar from '../components/SearchFilterBar';
+import { useSearch } from '../hooks/useSearch';
+import { useFilter } from '../hooks/useFilter';
 
 interface TrendData {
   id: number;
@@ -15,10 +18,6 @@ interface TrendData {
 
 const ContentDiscoveryPage: React.FC = () => {
   const [trends, setTrends] = useState<TrendData[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [platformFilter, setPlatformFilter] = useState('All');
-  const [difficultyFilter, setDifficultyFilter] = useState('All');
-  const [categoryFilter, setCategoryFilter] = useState('All');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const mockTrends: TrendData[] = [
@@ -83,14 +82,36 @@ const ContentDiscoveryPage: React.FC = () => {
     setTrends(mockTrends);
   }, []);
 
-  const filteredTrends = trends.filter(trend => {
-    const matchesSearch = trend.keyword.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         trend.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPlatform = platformFilter === 'All' || trend.platform === platformFilter;
-    const matchesDifficulty = difficultyFilter === 'All' || trend.difficulty === difficultyFilter;
-    const matchesCategory = categoryFilter === 'All' || trend.category === categoryFilter;
-    return matchesSearch && matchesPlatform && matchesDifficulty && matchesCategory;
-  });
+  // Use search hook for keyword and category search
+  const { searchTerm, setSearchTerm, filteredData: searchedTrends } = useSearch<TrendData>(
+    trends,
+    {
+      searchFields: ['keyword', 'category'],
+      defaultSearchTerm: ''
+    }
+  );
+
+  // Use filter hook for platform, difficulty, and category filters
+  const { 
+    filters, 
+    updateFilter, 
+    filteredData: filteredTrends 
+  } = useFilter<TrendData>(
+    searchedTrends,
+    {
+      defaultFilters: {
+        platform: 'All',
+        difficulty: 'All',
+        category: 'All'
+      },
+      filterFunctions: {
+        platform: (item, value) => value === 'All' || item.platform === value,
+        difficulty: (item, value) => value === 'All' || item.difficulty === value,
+        category: (item, value) => value === 'All' || item.category === value
+      }
+    }
+  );
+
 
   const allCategories = Array.from(new Set(trends.map(t => t.category)));
 
@@ -153,19 +174,18 @@ const ContentDiscoveryPage: React.FC = () => {
 
       {/* 메인 콘텐츠 */}
       <div className="bg-white rounded-lg shadow">
-        {/* 필터 및 검색 */}
+        {/* 검색 및 필터 */}
         <div className="p-6 border-b">
-          <div className="flex flex-wrap items-center gap-4 mb-4">
-            <input
-              type="text"
-              placeholder="키워드, 카테고리 검색..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-md w-64"
-            />
+          <SearchFilterBar
+            searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
+            placeholder="키워드, 카테고리 검색..."
+            showFilters={true}
+            className="mb-0 shadow-none"
+          >
             <select
-              value={platformFilter}
-              onChange={(e) => setPlatformFilter(e.target.value)}
+              value={filters.platform || 'All'}
+              onChange={(e) => updateFilter('platform', e.target.value)}
               className="border-gray-300 rounded-md"
             >
               <option value="All">모든 플랫폼</option>
@@ -174,8 +194,8 @@ const ContentDiscoveryPage: React.FC = () => {
               <option value="Instagram">Instagram</option>
             </select>
             <select
-              value={difficultyFilter}
-              onChange={(e) => setDifficultyFilter(e.target.value)}
+              value={filters.difficulty || 'All'}
+              onChange={(e) => updateFilter('difficulty', e.target.value)}
               className="border-gray-300 rounded-md"
             >
               <option value="All">모든 난이도</option>
@@ -184,8 +204,8 @@ const ContentDiscoveryPage: React.FC = () => {
               <option value="Hard">어려움</option>
             </select>
             <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              value={filters.category || 'All'}
+              onChange={(e) => updateFilter('category', e.target.value)}
               className="border-gray-300 rounded-md"
             >
               <option value="All">모든 카테고리</option>
@@ -203,8 +223,8 @@ const ContentDiscoveryPage: React.FC = () => {
             >
               {isAnalyzing ? '분석 중...' : '🔄 새로고침'}
             </button>
-          </div>
-          <div className="text-sm text-gray-500">
+          </SearchFilterBar>
+          <div className="text-sm text-gray-500 px-4">
             총 {filteredTrends.length}개 트렌드
           </div>
         </div>

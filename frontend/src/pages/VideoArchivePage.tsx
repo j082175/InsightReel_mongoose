@@ -7,18 +7,17 @@ import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import VideoListItem from '../components/VideoListItem';
 import ChannelAnalysisModal from '../components/ChannelAnalysisModal';
 import VideoCard from '../components/VideoCard';
+import SearchFilterBar from '../components/SearchFilterBar';
 
 import { PLATFORMS } from '../types/api';
 import { formatViews } from '../utils/formatters';
 import { useSelection } from '../hooks/useSelection';
+import { useSearch } from '../hooks/useSearch';
+import { useFilter } from '../hooks/useFilter';
 import SelectionActionBar from '../components/SelectionActionBar';
 
 const VideoArchivePage: React.FC = () => {
   const [archivedVideos, setArchivedVideos] = useState<ExtendedVideo[]>([]);
-  const [filteredVideos, setFilteredVideos] = useState<ExtendedVideo[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTag, setSelectedTag] = useState('All');
-  const [selectedCategory, setSelectedCategory] = useState('All');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [gridSize, setGridSize] = useState(2);
   const [isSelectMode, setIsSelectMode] = useState(false);
@@ -32,6 +31,36 @@ const VideoArchivePage: React.FC = () => {
   } | null>(null);
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
   const [showTagModal, setShowTagModal] = useState(false);
+  
+  // Search and filter hooks
+  const searchResult = useSearch(archivedVideos, {
+    searchFields: ['title', 'channelName', 'tags'],
+    defaultSearchTerm: ''
+  });
+  
+  // Extract all available tags and categories for filter options
+  const allTags = Array.from(new Set(archivedVideos.flatMap(video => video.tags || [])));
+  const allCategories = Array.from(new Set(archivedVideos.map(video => video.category || '미분류')));
+  
+  const filterResult = useFilter(searchResult.filteredData, {
+    defaultFilters: {
+      selectedTag: 'All',
+      selectedCategory: 'All'
+    },
+    filterFunctions: {
+      selectedTag: (item: ExtendedVideo, value: string) => {
+        if (value === 'All') return true;
+        return (item.tags || []).includes(value);
+      },
+      selectedCategory: (item: ExtendedVideo, value: string) => {
+        if (value === 'All') return true;
+        return item.category === value;
+      }
+    }
+  });
+  
+  // Final filtered videos combining search and filter results
+  const filteredVideos = filterResult.filteredData;
   
   // API에서 실제 비디오 데이터 가져오기
   const { data: apiVideos = [], isLoading, error } = useVideos();
@@ -174,18 +203,22 @@ const VideoArchivePage: React.FC = () => {
 
         // 키워드 처리 - 문자열이면 배열로 변환
         let keywordsArray: string[] = [];
-        if (typeof video.keywords === 'string') {
-          keywordsArray = video.keywords.split(',').map(k => k.trim()).filter(k => k.length > 0);
-        } else if (Array.isArray(video.keywords)) {
-          keywordsArray = video.keywords;
+        if (video.keywords) {
+          if (typeof video.keywords === 'string') {
+            keywordsArray = (video.keywords as string).split(',').map(k => k.trim()).filter(k => k.length > 0);
+          } else if (Array.isArray(video.keywords)) {
+            keywordsArray = video.keywords;
+          }
         }
 
         // 해시태그 처리 - 배열 형태로 통일
         let hashtagsArray: string[] = [];
-        if (typeof video.hashtags === 'string') {
-          hashtagsArray = video.hashtags.split(',').map(h => h.trim()).filter(h => h.length > 0);
-        } else if (Array.isArray(video.hashtags)) {
-          hashtagsArray = video.hashtags;
+        if (video.hashtags) {
+          if (typeof video.hashtags === 'string') {
+            hashtagsArray = (video.hashtags as string).split(',').map(h => h.trim()).filter(h => h.length > 0);
+          } else if (Array.isArray(video.hashtags)) {
+            hashtagsArray = video.hashtags;
+          }
         }
 
         const extendedVideo: ExtendedVideo = {
@@ -214,21 +247,6 @@ const VideoArchivePage: React.FC = () => {
     }
   }, [apiVideos]);
 
-  useEffect(() => {
-    let filtered = archivedVideos.filter(video => {
-      const matchesSearch = (video.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (video.channelName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (video.tags || []).some((tag: string) => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-      const matchesTag = selectedTag === 'All' || (video.tags || []).includes(selectedTag);
-      const matchesCategory = selectedCategory === 'All' || video.category === selectedCategory;
-      return matchesSearch && matchesTag && matchesCategory;
-    });
-    setFilteredVideos(filtered);
-  }, [archivedVideos, searchTerm, selectedTag, selectedCategory]);
-
-  // 모든 태그와 카테고리 추출
-  const allTags = Array.from(new Set(archivedVideos.flatMap(video => video.tags || [])));
-  const allCategories = Array.from(new Set(archivedVideos.map(video => video.category || '미분류')));
 
 
   const handleSelectToggle = (videoId: string | number) => {
@@ -382,50 +400,59 @@ const VideoArchivePage: React.FC = () => {
 
       {/* 메인 콘텐츠 */}
       <div className="bg-white rounded-lg shadow">
-        {/* 필터 및 컨트롤 */}
+        {/* 검색 및 필터 */}
+        <SearchFilterBar
+          searchTerm={searchResult.searchTerm}
+          onSearchTermChange={searchResult.setSearchTerm}
+          placeholder="영상, 채널, 태그 검색..."
+          showFilters={true}
+        >
+          <select
+            value={filterResult.filters.selectedCategory || 'All'}
+            onChange={(e) => filterResult.updateFilter('selectedCategory', e.target.value)}
+            className="border-gray-300 rounded-md"
+          >
+            <option value="All">모든 카테고리</option>
+            {allCategories.map(category => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+          </select>
+          <select
+            value={filterResult.filters.selectedTag || 'All'}
+            onChange={(e) => filterResult.updateFilter('selectedTag', e.target.value)}
+            className="border-gray-300 rounded-md"
+          >
+            <option value="All">모든 태그</option>
+            {allTags.map(tag => (
+              <option key={tag} value={tag}>#{tag}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => setShowTagModal(true)}
+            className="px-4 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
+          >
+            태그 관리
+          </button>
+        </SearchFilterBar>
+        
+        {/* 컨트롤 및 통계 */}
         <div className="p-6 border-b">
           <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-            <div className="flex flex-wrap items-center gap-4">
-              <input
-                type="text"
-                placeholder="영상, 채널, 태그 검색..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-md w-64"
-              />
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="border-gray-300 rounded-md"
-              >
-                <option value="All">모든 카테고리</option>
-                {allCategories.map(category => (
-                  <option key={category} value={category}>{category}</option>
-                ))}
-              </select>
-              <select
-                value={selectedTag}
-                onChange={(e) => setSelectedTag(e.target.value)}
-                className="border-gray-300 rounded-md"
-              >
-                <option value="All">모든 태그</option>
-                {allTags.map(tag => (
-                  <option key={tag} value={tag}>#{tag}</option>
-                ))}
-              </select>
-              <button
-                onClick={() => setShowTagModal(true)}
-                className="px-4 py-2 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
-              >
-                태그 관리
-              </button>
+            <div className="text-sm text-gray-500">
+              총 {filteredVideos.length}개 영상
+              {searchResult.searchTerm && (
+                <span className="ml-2 text-blue-600">
+                  (검색: "{searchResult.searchTerm}")
+                </span>
+              )}
+              {filterResult.activeFilterCount > 0 && (
+                <span className="ml-2 text-green-600">
+                  ({filterResult.activeFilterCount}개 필터 적용)
+                </span>
+              )}
             </div>
             
             <ViewControls />
-          </div>
-          
-          <div className="text-sm text-gray-500">
-            총 {filteredVideos.length}개 영상
           </div>
         </div>
 

@@ -496,5 +496,622 @@ export class UIManager {
     
     return notification;
   }
+
+  // ===== YouTube 전용 안정적인 DOM 조작 메서드들 =====
+
+  /**
+   * YouTube 페이지에서 안정적인 컨테이너 찾기 (ImprovedTube 패턴)
+   * @param {Array<string>} selectors - 후보 셀렉터들
+   * @param {string} context - 컨텍스트 (로깅용)
+   * @returns {HTMLElement|null} 찾은 컨테이너 또는 null
+   */
+  findStableYouTubeContainer(selectors, context = 'YouTube Container') {
+    for (const selector of selectors) {
+      try {
+        const container = document.querySelector(selector);
+        if (container && this.isElementVisible(container)) {
+          Utils.log('success', `${context} 컨테이너 발견`, selector);
+          return container;
+        }
+      } catch (error) {
+        Utils.log('warn', `${context} 셀렉터 실패: ${selector}`, error.message);
+      }
+    }
+    
+    Utils.log('warn', `${context} 컨테이너를 찾을 수 없음`, selectors);
+    return null;
+  }
+
+  /**
+   * 요소가 실제로 화면에 보이는지 확인
+   * @param {HTMLElement} element - 확인할 요소
+   * @returns {boolean} 표시 여부
+   */
+  isElementVisible(element) {
+    if (!element) return false;
+    
+    const style = window.getComputedStyle(element);
+    return style.display !== 'none' && 
+           style.visibility !== 'hidden' && 
+           element.offsetWidth > 0 && 
+           element.offsetHeight > 0;
+  }
+
+  /**
+   * YouTube 채널 페이지에 안정적으로 버튼 추가
+   * @param {HTMLButtonElement} button - 추가할 버튼
+   * @param {string} buttonClass - 중복 방지용 클래스명
+   * @returns {boolean} 성공 여부
+   */
+  injectYouTubeChannelButton(button, buttonClass = 'insightreel-channel-button') {
+    // 중복 방지: 기존 버튼이 있으면 제거
+    const existing = document.querySelector(`.${buttonClass}`);
+    if (existing) {
+      existing.remove();
+      Utils.log('info', '기존 버튼 제거됨', buttonClass);
+    }
+
+    // 채널 페이지 컨테이너 후보들 (ImprovedTube 패턴)
+    const channelContainers = [
+      'ytd-channel-sub-menu-renderer #primary-items', // 주요 위치
+      'ytd-two-column-browse-results-renderer #chips-content', // 대체 위치
+      '#channel-header ytd-subscribe-button-renderer', // 구독 버튼 근처
+      '.ytd-c4-tabbed-header-renderer #subscribe-button', // 헤더 영역
+      'ytd-channel-header-renderer #buttons' // 버튼 그룹 영역
+    ];
+
+    const container = this.findStableYouTubeContainer(channelContainers, 'Channel Page');
+    
+    if (container) {
+      button.classList.add(buttonClass);
+      
+      // 적절한 위치에 삽입 (기존 요소들과 조화)
+      if (container.id === 'primary-items' || container.id === 'chips-content') {
+        container.appendChild(button);
+      } else {
+        container.insertAdjacentElement('afterend', button);
+      }
+      
+      Utils.log('success', '채널 페이지 버튼 주입 성공', container.tagName);
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * YouTube 비디오 페이지에 안정적으로 버튼 추가 (ImprovedTube 방식으로 완전 개선)
+   * @param {HTMLButtonElement} button - 추가할 버튼
+   * @param {string} buttonClass - 중복 방지용 클래스명
+   * @returns {boolean} 성공 여부
+   */
+  injectYouTubeVideoButton(button, buttonClass = 'insightreel-video-button') {
+    Utils.log('info', '🔍 영상 분석 버튼 주입 시도 시작', window.location.href);
+    
+    // 중복 방지
+    const existing = document.querySelector(`.${buttonClass}`);
+    if (existing) {
+      Utils.log('info', '🗑️ 기존 영상 버튼 제거');
+      existing.remove();
+    }
+
+    // 현재 페이지의 DOM 구조 로깅
+    Utils.log('info', '📊 현재 비디오 페이지 DOM 구조 분석:');
+    Utils.log('info', '- ytd-watch-flexy:', !!document.querySelector('ytd-watch-flexy'));
+    Utils.log('info', '- actions:', !!document.querySelector('#actions'));
+    Utils.log('info', '- top-level-buttons:', !!document.querySelector('#top-level-buttons-computed'));
+    Utils.log('info', '- video elements:', document.querySelectorAll('[id*="video"], [class*="video"]').length);
+
+    // ImprovedTube 패턴: 비디오 페이지 컨테이너 후보들 (우선순위별, 25+ 셀렉터)
+    const videoContainers = [
+      // 1순위: 최신 YouTube Watch 페이지 구조 (2024/2025)
+      'ytd-watch-flexy #actions #top-level-buttons-computed',
+      'ytd-watch-metadata #actions-inner',
+      'ytd-video-primary-info-renderer #menu-container',
+      
+      // 2순위: 기존 액션 버튼 영역
+      '#actions ytd-menu-renderer',
+      '#top-level-buttons-computed',
+      'ytd-video-primary-info-renderer #menu',
+      '#actions-inner',
+      
+      // 3순위: 좋아요/싫어요 버튼 근처
+      'ytd-segmented-like-dislike-button-renderer',
+      'ytd-toggle-button-renderer[class*="like"]',
+      '#segmented-like-dislike-button',
+      
+      // 4순위: 공유/저장 버튼 근처  
+      'ytd-button-renderer[class*="share"]',
+      'ytd-download-button-renderer',
+      'ytd-playlist-add-to-option-renderer',
+      
+      // 5순위: Watch 헤더 영역
+      '#watch-header [role="button"]',
+      'ytd-watch-flexy #primary-inner',
+      '.ytd-watch-flexy #actions',
+      
+      // 6순위: 2024/2025 새로운 구조
+      '[class*="watch-active-metadata"] #actions',
+      'ytd-watch-metadata #actions',
+      '[data-target-id*="watch"] #buttons',
+      
+      // 7순위: 메타데이터 영역
+      '#meta-contents #actions',
+      'ytd-video-owner-renderer #subscribe-button',
+      '.ytd-video-secondary-info-renderer #actions',
+      
+      // 8순위: Generic 버튼 컨테이너들
+      '[role="main"] [role="button"]',
+      '#primary [class*="button"]',
+      'ytd-app [class*="action"]',
+      
+      // 9순위: 최후의 수단
+      '#columns #primary',
+      '#primary-inner',
+      'ytd-watch-flexy'
+    ];
+
+    Utils.log('info', `🔍 ${videoContainers.length}개 셀렉터로 비디오 컨테이너 검색 시작`);
+
+    for (let i = 0; i < videoContainers.length; i++) {
+      const selector = videoContainers[i];
+      try {
+        Utils.log('info', `🔍 시도 ${i + 1}/${videoContainers.length}: ${selector}`);
+        const container = document.querySelector(selector);
+        
+        if (container) {
+          const isVisible = this.isElementVisible(container);
+          Utils.log('info', `   📋 요소 발견! 가시성: ${isVisible ? '✅' : '❌'}`);
+          Utils.log('info', `   📐 크기: ${container.offsetWidth}x${container.offsetHeight}`);
+          
+          if (isVisible) {
+            Utils.log('success', `🎯 비디오 컨테이너 선택됨: ${selector}`);
+            return this.createAndInjectVideoButton(container, selector, button, buttonClass);
+          }
+        } else {
+          Utils.log('info', `   ❌ 요소 없음`);
+        }
+      } catch (error) {
+        Utils.log('warn', `⚠️ 셀렉터 오류 ${selector}:`, error.message);
+      }
+    }
+    
+    // 모든 셀렉터 실패시 추가 디버깅
+    Utils.log('warn', '🔍 모든 비디오 셀렉터 실패 - 추가 DOM 분석:');
+    const allVideoElements = document.querySelectorAll('*[id*="video"], *[class*="video"], *[id*="watch"], *[class*="watch"], *[id*="action"], *[class*="action"]');
+    Utils.log('info', `📋 비디오/액션 관련 요소 ${allVideoElements.length}개 발견:`);
+    allVideoElements.forEach((el, index) => {
+      if (index < 10) {
+        Utils.log('info', `   ${index + 1}. ${el.tagName}${el.id ? '#' + el.id : ''}${el.className ? '.' + el.className.split(' ').slice(0, 2).join('.') : ''}`);
+      }
+    });
+
+    return false;
+  }
+
+  /**
+   * 비디오 컨테이너에 따라 적절한 위치에 버튼 생성 및 주입
+   * @param {HTMLElement} container - 컨테이너
+   * @param {string} selector - 사용된 셀렉터
+   * @param {HTMLButtonElement} button - 버튼
+   * @param {string} buttonClass - 클래스
+   * @returns {boolean} 성공 여부
+   */
+  createAndInjectVideoButton(container, selector, button, buttonClass) {
+    Utils.log('info', `🎨 비디오 버튼 생성 및 주입: ${selector}`);
+    
+    try {
+      button.classList.add(buttonClass);
+      
+      // 컨테이너 타입에 따라 주입 방식 결정
+      if (selector.includes('top-level-buttons') || selector.includes('actions-inner')) {
+        Utils.log('info', '📍 액션 버튼 그룹에 추가');
+        container.appendChild(button);
+        
+        // YouTube 액션 버튼 스타일
+        button.style.cssText = `
+          background: linear-gradient(45deg, #ff6b6b, #ee5a24) !important;
+          color: white !important;
+          border: none !important;
+          border-radius: 18px !important;
+          padding: 8px 16px !important;
+          font-weight: 500 !important;
+          font-size: 14px !important;
+          cursor: pointer !important;
+          margin: 0 8px !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          transition: all 0.2s ease !important;
+          z-index: 1000 !important;
+          white-space: nowrap !important;
+          height: 36px !important;
+        `;
+        
+      } else if (selector.includes('like-dislike') || selector.includes('toggle-button')) {
+        Utils.log('info', '📍 좋아요/싫어요 버튼 근처에 추가');
+        container.insertAdjacentElement('afterend', button);
+        
+        // 좋아요 버튼 스타일과 유사하게
+        button.style.cssText = `
+          background: linear-gradient(45deg, #ff6b6b, #ee5a24) !important;
+          color: white !important;
+          border: none !important;
+          border-radius: 18px !important;
+          padding: 8px 16px !important;
+          font-weight: 500 !important;
+          font-size: 14px !important;
+          cursor: pointer !important;
+          margin-left: 8px !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          transition: all 0.2s ease !important;
+          z-index: 1000 !important;
+          white-space: nowrap !important;
+          height: 36px !important;
+        `;
+        
+      } else if (selector.includes('subscribe-button') || selector.includes('owner-renderer')) {
+        Utils.log('info', '📍 구독자 영역에 추가');
+        container.insertAdjacentElement('afterend', button);
+        
+        // 구독 버튼 스타일과 조화
+        button.style.cssText = `
+          background: linear-gradient(45deg, #ff6b6b, #ee5a24) !important;
+          color: white !important;
+          border: none !important;
+          border-radius: 20px !important;
+          padding: 10px 20px !important;
+          font-weight: 600 !important;
+          font-size: 14px !important;
+          cursor: pointer !important;
+          margin-left: 12px !important;
+          display: inline-flex !important;
+          align-items: center !important;
+          transition: all 0.3s ease !important;
+          z-index: 1000 !important;
+          white-space: nowrap !important;
+        `;
+        
+      } else {
+        Utils.log('info', '📍 일반 컨테이너에 플로팅 스타일로 추가');
+        container.appendChild(button);
+        
+        // 플로팅 스타일
+        const containerStyle = window.getComputedStyle(container);
+        if (containerStyle.position === 'static') {
+          container.style.position = 'relative';
+        }
+        
+        button.style.cssText = `
+          background: linear-gradient(45deg, #ff6b6b, #ee5a24) !important;
+          color: white !important;
+          border: none !important;
+          border-radius: 20px !important;
+          padding: 10px 18px !important;
+          font-weight: 600 !important;
+          font-size: 14px !important;
+          cursor: pointer !important;
+          position: absolute !important;
+          top: 10px !important;
+          right: 10px !important;
+          z-index: 1000 !important;
+          white-space: nowrap !important;
+          box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3) !important;
+        `;
+      }
+      
+      Utils.log('success', '✅ 비디오 버튼 주입 성공!');
+      return true;
+      
+    } catch (error) {
+      Utils.log('error', '⚠️ 비디오 버튼 주입 중 오류:', error);
+      return false;
+    }
+  }
+
+  /**
+   * YouTube Shorts 페이지에 안정적으로 버튼 추가 (ImprovedTube 방식으로 완전 개선)
+   * @param {HTMLButtonElement} button - 추가할 버튼
+   * @param {string} buttonClass - 중복 방지용 클래스명
+   * @returns {boolean} 성공 여부
+   */
+  injectYouTubeShortsButton(button, buttonClass = 'insightreel-shorts-button') {
+    Utils.log('info', '🔍 Shorts 분석 버튼 주입 시도 시작', window.location.href);
+    
+    // 중복 방지
+    const existing = document.querySelector(`.${buttonClass}`);
+    if (existing) {
+      Utils.log('info', '🗑️ 기존 Shorts 버튼 제거');
+      existing.remove();
+    }
+
+    // 현재 페이지의 DOM 구조 로깅
+    Utils.log('info', '📊 현재 Shorts 페이지 DOM 구조 분석:');
+    Utils.log('info', '- ytd-shorts:', !!document.querySelector('ytd-shorts'));
+    Utils.log('info', '- actions:', !!document.querySelector('#actions'));
+    Utils.log('info', '- shorts-player:', !!document.querySelector('#shorts-player'));
+    Utils.log('info', '- shorts elements:', document.querySelectorAll('[id*="shorts"], [class*="shorts"]').length);
+
+    // ImprovedTube 패턴: Shorts 페이지 컨테이너 후보들 (우선순위별, 20+ 셀렉터)
+    const shortsContainers = [
+      // 1순위: 최신 YouTube Shorts 구조 (2024/2025)
+      'ytd-shorts #actions ytd-like-button-view-model',
+      'ytd-reel-video-renderer #actions',
+      'ytd-shorts-video-actions #actions',
+      
+      // 2순위: 기존 Shorts 액션 영역
+      '#actions', 
+      '.ytd-shorts-video-actions',
+      'ytd-shorts-player-controls #actions',
+      '#shorts-inner-container #actions',
+      
+      // 3순위: Shorts 플레이어 영역
+      '#shorts-player #actions-bar',
+      'ytd-shorts-player-controls #buttons',
+      '#shorts-player ytd-like-button-renderer',
+      
+      // 4순위: 좋아요/댓글 버튼 근처
+      'ytd-toggle-button-renderer[aria-label*="like" i]',
+      'ytd-button-renderer[class*="like"]',
+      '#like-button-view-model',
+      
+      // 5순위: 공유/저장 버튼 근처
+      'ytd-button-renderer[aria-label*="Share" i]',
+      'ytd-button-renderer[aria-label*="공유" i]',
+      '[data-target-id*="share"]',
+      
+      // 6순위: Shorts 컨테이너 영역
+      'ytd-shorts-video-renderer',
+      'ytd-reel-video-renderer',
+      '#shorts-container',
+      
+      // 7순위: 2024/2025 새로운 Shorts 구조
+      '[class*="shorts-video-actions"]',
+      '[id*="reel-video"] #actions',
+      'ytd-shorts [role="button"]',
+      
+      // 8순위: Generic Shorts 컨테이너들
+      'ytd-shorts [class*="action"]',
+      '#shorts [class*="button"]',
+      '.shorts-player-controls',
+      
+      // 9순위: 최후의 수단
+      'ytd-shorts',
+      '#shorts',
+      '.shorts-container'
+    ];
+
+    Utils.log('info', `🔍 ${shortsContainers.length}개 셀렉터로 Shorts 컨테이너 검색 시작`);
+
+    for (let i = 0; i < shortsContainers.length; i++) {
+      const selector = shortsContainers[i];
+      try {
+        Utils.log('info', `🔍 시도 ${i + 1}/${shortsContainers.length}: ${selector}`);
+        const container = document.querySelector(selector);
+        
+        if (container) {
+          const isVisible = this.isElementVisible(container);
+          Utils.log('info', `   📋 요소 발견! 가시성: ${isVisible ? '✅' : '❌'}`);
+          Utils.log('info', `   📐 크기: ${container.offsetWidth}x${container.offsetHeight}`);
+          
+          if (isVisible) {
+            Utils.log('success', `🎯 Shorts 컨테이너 선택됨: ${selector}`);
+            return this.createAndInjectShortsButton(container, selector, button, buttonClass);
+          }
+        } else {
+          Utils.log('info', `   ❌ 요소 없음`);
+        }
+      } catch (error) {
+        Utils.log('warn', `⚠️ 셀렉터 오류 ${selector}:`, error.message);
+      }
+    }
+    
+    // 모든 셀렉터 실패시 추가 디버깅
+    Utils.log('warn', '🔍 모든 Shorts 셀렉터 실패 - 추가 DOM 분석:');
+    const allShortsElements = document.querySelectorAll('*[id*="shorts"], *[class*="shorts"], *[id*="reel"], *[class*="reel"], *[id*="action"], *[class*="action"]');
+    Utils.log('info', `📋 Shorts/액션 관련 요소 ${allShortsElements.length}개 발견:`);
+    allShortsElements.forEach((el, index) => {
+      if (index < 10) {
+        Utils.log('info', `   ${index + 1}. ${el.tagName}${el.id ? '#' + el.id : ''}${el.className ? '.' + el.className.split(' ').slice(0, 2).join('.') : ''}`);
+      }
+    });
+
+    return false;
+  }
+
+  /**
+   * Shorts 컨테이너에 따라 적절한 위치에 버튼 생성 및 주입
+   * @param {HTMLElement} container - 컨테이너
+   * @param {string} selector - 사용된 셀렉터
+   * @param {HTMLButtonElement} button - 버튼
+   * @param {string} buttonClass - 클래스
+   * @returns {boolean} 성공 여부
+   */
+  createAndInjectShortsButton(container, selector, button, buttonClass) {
+    Utils.log('info', `🎨 Shorts 버튼 생성 및 주입: ${selector}`);
+    
+    try {
+      button.classList.add(buttonClass);
+      
+      // 컨테이너 타입에 따라 주입 방식 결정
+      if (selector.includes('#actions') && !selector.includes('ytd-shorts ')) {
+        Utils.log('info', '📍 Shorts 액션 영역에 세로로 추가');
+        container.appendChild(button);
+        
+        // Shorts 세로 액션 버튼 스타일 (좋아요/댓글 버튼과 유사)
+        button.style.cssText = `
+          position: relative !important;
+          margin: 8px 0 !important;
+          width: 48px !important;
+          height: 48px !important;
+          border-radius: 24px !important;
+          font-size: 10px !important;
+          line-height: 1.2 !important;
+          padding: 4px !important;
+          background: rgba(0, 0, 0, 0.8) !important;
+          color: white !important;
+          border: 1px solid rgba(255, 255, 255, 0.3) !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          text-align: center !important;
+          cursor: pointer !important;
+          transition: all 0.2s ease !important;
+          backdrop-filter: blur(10px) !important;
+          z-index: 1000 !important;
+          white-space: nowrap !important;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+        `;
+        
+      } else if (selector.includes('like-button') || selector.includes('toggle-button')) {
+        Utils.log('info', '📍 좋아요 버튼 근처에 추가');
+        container.insertAdjacentElement('afterend', button);
+        
+        // 좋아요 버튼과 유사한 스타일
+        button.style.cssText = `
+          position: relative !important;
+          margin: 8px 0 !important;
+          width: 48px !important;
+          height: 48px !important;
+          border-radius: 24px !important;
+          font-size: 10px !important;
+          line-height: 1.2 !important;
+          padding: 4px !important;
+          background: linear-gradient(45deg, #ff6b6b, #ee5a24) !important;
+          color: white !important;
+          border: none !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          text-align: center !important;
+          cursor: pointer !important;
+          transition: all 0.3s ease !important;
+          z-index: 1000 !important;
+          white-space: nowrap !important;
+          box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3) !important;
+        `;
+        
+      } else if (selector.includes('share') || selector.includes('공유')) {
+        Utils.log('info', '📍 공유 버튼 근처에 추가');
+        container.insertAdjacentElement('afterend', button);
+        
+        // 공유 버튼과 유사한 스타일
+        button.style.cssText = `
+          position: relative !important;
+          margin: 8px 0 !important;
+          width: 48px !important;
+          height: 48px !important;
+          border-radius: 24px !important;
+          font-size: 10px !important;
+          line-height: 1.2 !important;
+          padding: 4px !important;
+          background: rgba(0, 0, 0, 0.8) !important;
+          color: white !important;
+          border: 1px solid rgba(255, 255, 255, 0.3) !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          text-align: center !important;
+          cursor: pointer !important;
+          transition: all 0.2s ease !important;
+          backdrop-filter: blur(10px) !important;
+          z-index: 1000 !important;
+          white-space: nowrap !important;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+        `;
+        
+      } else {
+        Utils.log('info', '📍 일반 Shorts 컨테이너에 플로팅 스타일로 추가');
+        container.appendChild(button);
+        
+        // 플로팅 스타일 (Shorts 전용)
+        const containerStyle = window.getComputedStyle(container);
+        if (containerStyle.position === 'static') {
+          container.style.position = 'relative';
+        }
+        
+        button.style.cssText = `
+          position: absolute !important;
+          top: 20px !important;
+          right: 20px !important;
+          width: 64px !important;
+          height: 64px !important;
+          border-radius: 32px !important;
+          font-size: 11px !important;
+          line-height: 1.2 !important;
+          padding: 8px !important;
+          background: linear-gradient(45deg, #ff6b6b, #ee5a24) !important;
+          color: white !important;
+          border: none !important;
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: center !important;
+          justify-content: center !important;
+          text-align: center !important;
+          cursor: pointer !important;
+          transition: all 0.3s ease !important;
+          z-index: 1000 !important;
+          white-space: nowrap !important;
+          box-shadow: 0 6px 16px rgba(255, 107, 107, 0.4) !important;
+          backdrop-filter: blur(10px) !important;
+        `;
+      }
+      
+      // 호버 효과 추가
+      button.addEventListener('mouseenter', () => {
+        button.style.transform = 'scale(1.1)';
+        button.style.boxShadow = '0 8px 20px rgba(255, 107, 107, 0.5)';
+      });
+      
+      button.addEventListener('mouseleave', () => {
+        button.style.transform = 'scale(1)';
+        button.style.boxShadow = button.style.boxShadow.replace('0.5', '0.3');
+      });
+      
+      Utils.log('success', '✅ Shorts 버튼 주입 성공!');
+      return true;
+      
+    } catch (error) {
+      Utils.log('error', '⚠️ Shorts 버튼 주입 중 오류:', error);
+      return false;
+    }
+  }
+
+  /**
+   * 타이밍 문제 해결을 위한 지연 실행 버튼 주입
+   * @param {Function} injectionFunction - 주입 함수
+   * @param {HTMLButtonElement} button - 버튼
+   * @param {string} buttonClass - 클래스명
+   * @param {number} maxRetries - 최대 재시도 횟수
+   * @param {number} retryDelay - 재시도 간격 (ms)
+   * @returns {Promise<boolean>} 성공 여부
+   */
+  async injectButtonWithRetry(injectionFunction, button, buttonClass, maxRetries = 5, retryDelay = 200) {
+    for (let i = 0; i < maxRetries; i++) {
+      const success = injectionFunction.call(this, button, buttonClass);
+      
+      if (success) {
+        Utils.log('success', `버튼 주입 성공 (${i + 1}번째 시도)`, buttonClass);
+        return true;
+      }
+      
+      if (i < maxRetries - 1) {
+        Utils.log('info', `버튼 주입 재시도 ${i + 1}/${maxRetries}`, buttonClass);
+        await this.delay(retryDelay);
+      }
+    }
+    
+    Utils.log('error', `버튼 주입 실패 (${maxRetries}회 시도 후)`, buttonClass);
+    return false;
+  }
+
+  /**
+   * Promise 기반 지연
+   * @param {number} ms - 지연 시간 (밀리초)
+   * @returns {Promise<void>}
+   */
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
   
 }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import SettingsModal from './SettingsModal';
+import { useAPIStatus } from '../hooks/useAPIStatus';
 
 interface HeaderProps {
   currentPage: string;
@@ -16,6 +17,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
   const [isProfileOpen, setProfileOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
+  
+  const { data: apiStatus, isLoading: apiLoading } = useAPIStatus();
 
   const navStructure: NavigationItem[] = [
     { id: 'dashboard', name: '대시보드' },
@@ -83,7 +86,62 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
   };
 
   return (
-    <header className="bg-white shadow-sm border-b">
+    <>
+      {/* API 상태 상단 바 */}
+      {!apiLoading && apiStatus && (
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 px-4 py-2">
+          <div className="max-w-7xl mx-auto flex justify-between items-center">
+            <div className="flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full ${
+                apiStatus.currentKey.usagePercentage > 80 ? 'bg-red-500' :
+                apiStatus.currentKey.usagePercentage > 60 ? 'bg-yellow-500' : 'bg-green-500'
+              }`}></div>
+              <span className="text-xs font-medium text-gray-700">API Status</span>
+            </div>
+            <div className="flex items-center space-x-6">
+              {/* 전체 사용량 */}
+              <span className="text-xs text-gray-600">
+                전체: <span className="font-medium text-gray-800">
+                  {apiStatus.totalUsage.used?.toLocaleString()}/{(apiStatus.totalUsage.limit / 1000).toFixed(0)}K
+                </span>
+                <span className="text-gray-500 ml-1">
+                  ({apiStatus.totalUsage.usagePercentage}%)
+                </span>
+              </span>
+              
+              {/* 현재 활성 키 */}
+              <span className="text-xs text-gray-600">
+                현재 키 ({apiStatus.currentKey.name}): <span className="font-medium text-gray-800">
+                  {apiStatus.currentKey.usage?.toLocaleString()}/{(apiStatus.currentKey.limit / 1000).toFixed(0)}K
+                </span>
+                <span className="text-gray-500 ml-1">
+                  ({apiStatus.currentKey.usagePercentage}%)
+                </span>
+              </span>
+              
+              {/* 사용가능한 키 개수 */}
+              <span className="text-xs text-gray-600">
+                키: <span className="font-medium text-gray-800">
+                  {apiStatus.availableKeys}/{apiStatus.totalKeys} 사용가능
+                </span>
+              </span>
+              
+              {/* 진행률 바 (현재 키 기준) */}
+              <div className="w-16 bg-gray-300 rounded-full h-2">
+                <div 
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    apiStatus.currentKey.usagePercentage > 80 ? 'bg-red-500' :
+                    apiStatus.currentKey.usagePercentage > 60 ? 'bg-yellow-500' : 'bg-green-500'
+                  }`}
+                  style={{ width: `${Math.min(apiStatus.currentKey.usagePercentage || 0, 100)}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      <header className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center">
@@ -143,12 +201,13 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
         </div>
       </div>
 
-      {/* 설정 모달 */}
-      <SettingsModal 
-        isOpen={isSettingsOpen} 
-        onClose={() => setSettingsOpen(false)} 
-      />
-    </header>
+        {/* 설정 모달 */}
+        <SettingsModal 
+          isOpen={isSettingsOpen} 
+          onClose={() => setSettingsOpen(false)} 
+        />
+      </header>
+    </>
   );
 };
 

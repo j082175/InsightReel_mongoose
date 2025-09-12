@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CollectionBatch } from '../types';
-import { useChannelGroups } from '../hooks/useChannelGroups';
+import { CollectionBatch, Video } from '../types';
 import { PLATFORMS } from '../types/api';
 import BaseModal from './BaseModal';
 import { formatViews } from '../utils/formatters';

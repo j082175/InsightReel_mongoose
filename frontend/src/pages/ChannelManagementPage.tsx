@@ -1,32 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import { useChannels } from '../hooks/useApi';
-import { useChannelGroups, ChannelGroup } from '../hooks/useChannelGroups';
-import { CollectionBatch, Channel } from '../types';
+import { useChannelGroups, ChannelGroup as HookChannelGroup } from '../hooks/useChannelGroups';
+import { CollectionBatch, Channel, Video } from '../types';
+
+// Local ChannelGroup interface compatible with both hook and component
+interface ChannelGroup {
+  _id?: string;
+  name: string;
+  description: string;
+  color: string;
+  channels: string[];  // Simplified to string array for component usage
+  keywords: string[];
+  isActive: boolean;
+  lastCollectedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 import { useAppContext } from '../App';
 import ChannelAnalysisModal from '../components/ChannelAnalysisModal';
 import VideoAnalysisModal from '../components/VideoAnalysisModal';
 import BulkCollectionModal from '../components/BulkCollectionModal';
 import ChannelGroupModal from '../components/ChannelGroupModal';
-import { formatViews } from '../utils/formatters';
+import SearchFilterBar from '../components/SearchFilterBar';
+import BatchCard from '../components/BatchCard';
+import VideoCard from '../components/VideoCard';
+import { formatViews, formatDate } from '../utils/formatters';
 
 import { PLATFORMS } from '../types/api';
 import { useSelection } from '../hooks/useSelection';
 import { useMultiModal } from '../hooks/useModal';
+import { useSearch } from '../hooks/useSearch';
+import { useFilter } from '../hooks/useFilter';
 import SelectionActionBar from '../components/SelectionActionBar';
 
 const ChannelManagementPage: React.FC = () => {
   const [channels, setChannels] = useState<Channel[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [platformFilter, setPlatformFilter] = useState('All');
   const channelSelection = useSelection<string>();
   const [isSelectMode, setIsSelectMode] = useState(false);
   
-  // 🎯 그룹 탭 관련 상태
+  // 🎯 탭 관련 상태
   const [activeTab, setActiveTab] = useState<'channels' | 'groups'>('channels');
   const [editingGroup, setEditingGroup] = useState<ChannelGroup | null>(null);
   
+  // 📦 그룹별 배치 관련 상태
+  const [selectedGroupForBatches, setSelectedGroupForBatches] = useState<ChannelGroup | null>(null);
+  const [groupBatches, setGroupBatches] = useState<CollectionBatch[]>([]);
+  const [batchesLoading, setBatchesLoading] = useState(false);
+  const [selectedBatch, setSelectedBatch] = useState<CollectionBatch | null>(null);
+  const [batchVideos, setBatchVideos] = useState<Video[]>([]);
+  const [showBatchVideosModal, setShowBatchVideosModal] = useState(false);
+  const [showGroupBatchesModal, setShowGroupBatchesModal] = useState(false);
+
+  // 🔧 수집 조건 상태
+  const [collectionFilters, setCollectionFilters] = useState({
+    daysBack: 7,        // 최근 n일
+    minViews: 10000,    // 최소 조회수
+    maxVideos: 50       // 최대 영상 수
+  });
+  
   // 🔥 Modal 상태 관리 통합
-  const modalTypes = ['add', 'analysis', 'collection', 'group'] as const;
+  const modalTypes = ['add', 'analysis', 'collection', 'group'];
   const { 
     modals, 
     selectedItems, 
@@ -134,12 +167,22 @@ const ChannelManagementPage: React.FC = () => {
     }
   }, [apiChannels]);
 
-  const filteredChannels = channels.filter(channel => {
-    const channelName = channel.name || '';
-    const channelPlatform = channel.platform || '';
-    const matchesSearch = channelName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPlatform = platformFilter === 'All' || channelPlatform.toLowerCase() === platformFilter.toLowerCase();
-    return matchesSearch && matchesPlatform;
+  // useEffect for fetching batches removed - now handled by group click
+
+  // 🔍 Search and Filter hooks
+  const { searchTerm, setSearchTerm, filteredData: searchedChannels } = useSearch(channels, {
+    searchFields: ['name', 'keywords'] as (keyof Channel)[],
+    defaultSearchTerm: ''
+  });
+
+  const { filters, updateFilter, filteredData: filteredChannels } = useFilter(searchedChannels, {
+    defaultFilters: { platform: 'All' },
+    filterFunctions: {
+      platform: (item: Channel, value: string) => {
+        if (value === 'All') return true;
+        return (item.platform || '').toLowerCase() === value.toLowerCase();
+      }
+    }
   });
 
 
@@ -170,16 +213,28 @@ const ChannelManagementPage: React.FC = () => {
     closeModal('collection');
   };
 
+  // Conversion functions between component and hook interfaces
+  const convertToHookFormat = (group: ChannelGroup): HookChannelGroup => ({
+    ...group,
+    channels: group.channels.map(channelName => ({ id: channelName, name: channelName }))
+  });
+
+  const convertFromHookFormat = (group: HookChannelGroup): ChannelGroup => ({
+    ...group,
+    channels: group.channels.map(ch => typeof ch === 'string' ? ch : ch.name)
+  });
+
   // 그룹 관련 핸들러들
   const handleGroupSave = async (groupData: ChannelGroup) => {
     try {
+      const hookGroupData = convertToHookFormat(groupData);
       if (editingGroup) {
         // 수정 모드
-        await updateGroup(editingGroup._id!, groupData);
+        await updateGroup(editingGroup._id!, hookGroupData);
         console.log('그룹 수정 완료:', groupData);
       } else {
         // 생성 모드
-        await createGroup(groupData);
+        await createGroup(hookGroupData);
         console.log('새 그룹 생성 완룼:', groupData);
       }
       closeModal('group');
@@ -190,9 +245,80 @@ const ChannelManagementPage: React.FC = () => {
     }
   };
 
-  const handleGroupEdit = (group: ChannelGroup) => {
-    setEditingGroup(group);
+  const handleGroupEdit = (group: HookChannelGroup) => {
+    const convertedGroup = convertFromHookFormat(group);
+    setEditingGroup(convertedGroup);
     openModal('group');
+  };
+
+  // 📦 그룹별 배치 관련 핸들러들
+  const fetchGroupBatches = async (groupId: string) => {
+    setBatchesLoading(true);
+    try {
+      // targetGroups 필드에 그룹 ID가 포함된 배치들을 조회
+      const response = await fetch(`/api/batches?limit=50&sortBy=createdAt&sortOrder=desc`);
+      const result = await response.json();
+      if (result.success) {
+        // 해당 그룹에 속하는 배치들만 필터링
+        const filteredBatches = result.data.filter((batch: CollectionBatch) => 
+          batch.targetGroups?.some((group: any) => group._id === groupId || group === groupId)
+        );
+        setGroupBatches(filteredBatches);
+      }
+    } catch (error) {
+      console.error('그룹 배치 목록 조회 실패:', error);
+    } finally {
+      setBatchesLoading(false);
+    }
+  };
+
+  const handleGroupClick = (group: ChannelGroup) => {
+    setSelectedGroupForBatches(group);
+    setShowGroupBatchesModal(true);
+    fetchGroupBatches(group._id!);
+  };
+
+  const handleCloseGroupBatchesModal = () => {
+    setShowGroupBatchesModal(false);
+    setSelectedGroupForBatches(null);
+    setGroupBatches([]);
+  };
+
+  const handleBatchClick = async (batch: CollectionBatch) => {
+    if (batch.status !== 'completed') return;
+    
+    setSelectedBatch(batch);
+    setShowBatchVideosModal(true);
+    
+    try {
+      const response = await fetch(`/api/batches/${batch._id}/videos?limit=100`);
+      const result = await response.json();
+      if (result.success) {
+        setBatchVideos(result.data);
+      }
+    } catch (error) {
+      console.error('배치 영상 목록 조회 실패:', error);
+    }
+  };
+
+  const handleBatchDelete = async (batchId: string) => {
+    if (!confirm('정말로 이 배치를 삭제하시겠습니까?')) return;
+    
+    try {
+      const response = await fetch(`/api/batches/${batchId}`, { method: 'DELETE' });
+      const result = await response.json();
+      if (result.success) {
+        // 선택된 그룹이 있으면 해당 그룹의 배치들만 새로고침
+        if (selectedGroupForBatches) {
+          fetchGroupBatches(selectedGroupForBatches._id!);
+        }
+      } else {
+        alert('배치 삭제에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('배치 삭제 실패:', error);
+      alert('배치 삭제 중 오류가 발생했습니다.');
+    }
   };
 
   const handleGroupDelete = async (groupId: string) => {
@@ -208,22 +334,53 @@ const ChannelManagementPage: React.FC = () => {
   };
 
   const handleGroupCollect = async (groupId: string) => {
+    console.log('🎯 handleGroupCollect 호출됨:', groupId);
+    
     const group = groups.find(g => g._id === groupId);
-    if (!group) return;
+    if (!group) {
+      console.error('❌ 그룹을 찾을 수 없음:', groupId);
+      return;
+    }
+    
+    console.log('✅ 그룹 찾음:', group.name, group);
     
     try {
-      console.log(`그룹 "${group.name}" 수집 시작...`);
-      const result = await collectGroupTrending(groupId, {
-        daysBack: 3,
-        minViews: 30000,
-        includeShorts: true,
-        includeLongForm: true
-      });
+      console.log(`🚀 그룹 "${group.name}" 수집 시작...`);
+      console.log('📋 수집 조건:', collectionFilters);
       
-      alert(`그룹 "${group.name}"에서 ${result.savedVideos}개 영상을 수집했습니다!`);
+      // TrendingCollectionPage와 정확히 동일한 방식 사용
+      const response = await fetch(`http://localhost:3000/api/channel-groups/collect-multiple`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          days: collectionFilters.daysBack,
+          minViews: collectionFilters.minViews,
+          maxViews: null,
+          includeShorts: true,
+          includeMidform: true,
+          includeLongForm: true,
+          keywords: [],
+          excludeKeywords: [],
+          groupIds: [groupId]
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`그룹 "${group.name}" 수집 완료!\n${data.data.totalVideosSaved || 0}개 영상이 수집되었습니다.`);
+        // 그룹 목록 새로고침
+        await refreshGroups();
+      } else {
+        alert(`수집 실패: ${data.message || '알 수 없는 오류'}`);
+      }
+      
+      console.log('✅ 수집 응답:', data);
     } catch (error) {
-      console.error('그룹 수집 실패:', error);
-      alert('그룹 수집에 실패했습니다. 다시 시도해주세요.');
+      console.error('❌ 그룹 수집 실패:', error);
+      alert(`그룹 수집에 실패했습니다: ${error.message || error}`);
     }
   };
 
@@ -431,36 +588,111 @@ const ChannelManagementPage: React.FC = () => {
           </nav>
         </div>
 
-        {/* 툴바 */}
-        <div className="p-6 border-b">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-4">
-              <input
-                type="text"
-                placeholder={activeTab === 'channels' ? "채널 검색..." : "그룹 검색..."}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-md"
-              />
-              {activeTab === 'channels' && (
-                <select
-                  value={platformFilter}
-                  onChange={(e) => setPlatformFilter(e.target.value)}
-                  className="border-gray-300 rounded-md"
-                >
-                  <option value="All">모든 플랫폼</option>
-                  <option value="youtube">YouTube</option>
-                  <option value="tiktok">TikTok</option>
-                  <option value="instagram">Instagram</option>
-                </select>
-              )}
-              <button
-                onClick={() => activeTab === 'channels' ? openModal('add') : openModal('group')}
-                className="px-4 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700"
+        {/* 🔍 Search and Filter Bar */}
+        {activeTab === 'channels' && (
+          <div className="p-6 border-b">
+            <SearchFilterBar
+              searchTerm={searchTerm}
+              onSearchTermChange={setSearchTerm}
+              placeholder={activeTab === 'channels' ? "채널 검색..." : "그룹 검색..."}
+              showFilters={true}
+              className="mb-0"
+            >
+              <select
+                value={filters.platform || 'All'}
+                onChange={(e) => updateFilter('platform', e.target.value)}
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               >
-                {activeTab === 'channels' ? '+ 채널 추가' : '+ 그룹 생성'}
+                <option value="All">모든 플랫폼</option>
+                <option value="youtube">YouTube</option>
+                <option value="tiktok">TikTok</option>
+                <option value="instagram">Instagram</option>
+              </select>
+            </SearchFilterBar>
+            
+            <div className="flex flex-wrap items-center justify-between gap-4 mt-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <button
+                  onClick={() => openModal('add')}
+                  className="px-4 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700"
+                >
+                  + 채널 추가
+                </button>
+                <button
+                  onClick={() => openModal('collection')}
+                  className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                >
+                  🎯 일괄 수집
+                </button>
+              </div>
+              
+              <button
+                onClick={() => {
+                  setIsSelectMode(!isSelectMode);
+                  channelSelection.clear();
+                }}
+                className={`px-3 py-1 text-sm rounded ${
+                  isSelectMode ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {isSelectMode ? '선택 취소' : '선택 모드'}
               </button>
-              {activeTab === 'groups' && (
+            </div>
+          </div>
+        )}
+        
+        {/* Groups Tab Toolbar */}
+        {activeTab === 'groups' && (
+          <div className="p-6 border-b">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+              <div className="flex flex-wrap items-center gap-4">
+                <input
+                  type="text"
+                  placeholder="그룹 검색..."
+                  className="px-4 py-2 border border-gray-300 rounded-md"
+                />
+                
+                {/* 수집 조건 필터 */}
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600">최근</label>
+                  <select 
+                    value={collectionFilters.daysBack}
+                    onChange={(e) => setCollectionFilters({...collectionFilters, daysBack: parseInt(e.target.value)})}
+                    className="px-3 py-2 border border-gray-300 rounded text-sm"
+                  >
+                    <option value={1}>1일</option>
+                    <option value={3}>3일</option>
+                    <option value={7}>7일</option>
+                    <option value={14}>14일</option>
+                    <option value={30}>30일</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600">최소 조회수</label>
+                  <select 
+                    value={collectionFilters.minViews}
+                    onChange={(e) => setCollectionFilters({...collectionFilters, minViews: parseInt(e.target.value)})}
+                    className="px-3 py-2 border border-gray-300 rounded text-sm"
+                  >
+                    <option value={1000}>1천</option>
+                    <option value={5000}>5천</option>
+                    <option value={10000}>1만</option>
+                    <option value={50000}>5만</option>
+                    <option value={100000}>10만</option>
+                    <option value={500000}>50만</option>
+                    <option value={1000000}>100만</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-4">
+                <button
+                  onClick={() => openModal('group')}
+                  className="px-4 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700"
+                >
+                  + 그룹 생성
+                </button>
                 <button
                   onClick={handleAllGroupsCollect}
                   disabled={isGroupsLoading}
@@ -468,30 +700,22 @@ const ChannelManagementPage: React.FC = () => {
                 >
                   {isGroupsLoading ? '수집 중...' : '🎯 전체 그룹 수집'}
                 </button>
-              )}
-              {activeTab === 'channels' && (
-                <button
-                  onClick={() => openModal('collection')}
-                  className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-                >
-                  🎯 일괄 수집
-                </button>
-              )}
+              </div>
             </div>
             
-            <button
-              onClick={() => {
-                setIsSelectMode(!isSelectMode);
-                channelSelection.clear();
-              }}
-              className={`px-3 py-1 text-sm rounded ${
-                isSelectMode ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              {isSelectMode ? '선택 취소' : '선택 모드'}
-            </button>
+            {/* 현재 설정된 조건 표시 */}
+            <div className="flex items-center gap-4 text-sm text-gray-600">
+              <span>수집 조건:</span>
+              <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                최근 {collectionFilters.daysBack}일
+              </span>
+              <span className="bg-green-100 text-green-700 px-2 py-1 rounded">
+                {collectionFilters.minViews.toLocaleString()}회 이상
+              </span>
+            </div>
           </div>
-        </div>
+        )}
+
 
         {/* 컨텐츠 영역 */}
         {activeTab === 'channels' ? (
@@ -640,27 +864,31 @@ const ChannelManagementPage: React.FC = () => {
         ) : (
           // 그룹 관리
           <div className="p-6">
-            {isGroupsLoading ? (
-              <div className="text-center py-12 text-gray-500">
-                <p className="text-lg">⏳</p>
-                <p className="mt-2">그룹 데이터를 불러오는 중...</p>
-              </div>
-            ) : groupsError && groups.length === 0 ? (
-              <div className="text-center py-12 text-red-500">
-                <p className="text-lg">❌</p>
-                <p className="mt-2">그룹 데이터 로딩에 실패했습니다.</p>
-                <p className="text-sm mt-2">{groupsError}</p>
-                <button 
-                  onClick={() => refreshGroups()}
-                  className="mt-4 px-4 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700"
-                >
-                  다시 시도
-                </button>
-              </div>
-            ) : groups.length > 0 ? (
+                {isGroupsLoading ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <p className="text-lg">⏳</p>
+                    <p className="mt-2">그룹 데이터를 불러오는 중...</p>
+                  </div>
+                ) : groupsError && groups.length === 0 ? (
+                  <div className="text-center py-12 text-red-500">
+                    <p className="text-lg">❌</p>
+                    <p className="mt-2">그룹 데이터 로딩에 실패했습니다.</p>
+                    <p className="text-sm mt-2">{groupsError}</p>
+                    <button 
+                      onClick={() => refreshGroups()}
+                      className="mt-4 px-4 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700"
+                    >
+                      다시 시도
+                    </button>
+                  </div>
+                ) : groups.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {groups.map((group) => (
-                  <div key={group._id} className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow">
+                  <div 
+                    key={group._id} 
+                    className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => handleGroupClick(group)}
+                  >
                     {/* 그룹 헤더 */}
                     <div className="p-4 border-b border-gray-100">
                       <div className="flex items-center justify-between mb-2">
@@ -714,9 +942,9 @@ const ChannelManagementPage: React.FC = () => {
                       <div>
                         <h4 className="text-xs font-medium text-gray-500 mb-2">포함 채널 ({group.channels.length}개)</h4>
                         <div className="space-y-1">
-                          {group.channels.slice(0, 3).map((channel: string | { name: string }, index: number) => (
+                          {group.channels.slice(0, 3).map((channel: { id: string; name: string }, index: number) => (
                             <div key={index} className="text-sm text-gray-700 truncate">
-                              📺 {typeof channel === 'object' ? channel.name : channel}
+                              📺 {channel.name}
                             </div>
                           ))}
                           {group.channels.length > 3 && (
@@ -757,7 +985,10 @@ const ChannelManagementPage: React.FC = () => {
                     <div className="p-4 border-t border-gray-100 bg-gray-50">
                       <div className="flex space-x-2">
                         <button
-                          onClick={() => handleGroupCollect(group._id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleGroupCollect(group._id);
+                          }}
                           disabled={!group.isActive || group.channels.length === 0}
                           className="flex-1 px-3 py-2 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                         >
@@ -780,6 +1011,7 @@ const ChannelManagementPage: React.FC = () => {
             )}
           </div>
         )}
+
       </div>
 
       {/* 선택 모드 액션 바 */}
@@ -846,6 +1078,120 @@ const ChannelManagementPage: React.FC = () => {
         editingGroup={editingGroup}
         availableChannels={channels.map(ch => ch.name || '').filter(name => name)}
       />
+
+      {/* Group Batches Modal */}
+      {showGroupBatchesModal && selectedGroupForBatches && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center space-x-3">
+                <div 
+                  className="w-4 h-4 rounded-full"
+                  style={{ backgroundColor: selectedGroupForBatches.color }}
+                ></div>
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    {selectedGroupForBatches.name}
+                  </h2>
+                  <p className="text-sm text-gray-500">
+                    {selectedGroupForBatches.channels.length}개 채널의 수집 배치 목록
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleGroupCollect(selectedGroupForBatches._id!)}
+                  className="px-4 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700"
+                >
+                  🎯 새 수집 시작
+                </button>
+                <button
+                  onClick={handleCloseGroupBatchesModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto max-h-[70vh]">
+              {batchesLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                  <span className="ml-2 text-gray-600">배치 목록 로딩중...</span>
+                </div>
+              ) : groupBatches.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {groupBatches.map((batch) => (
+                    <BatchCard
+                      key={batch._id}
+                      batch={batch}
+                      onClick={handleBatchClick}
+                      onDelete={handleBatchDelete}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <p className="text-lg">📦</p>
+                  <p className="mt-2">이 그룹에서 생성된 수집 배치가 없습니다.</p>
+                  <p className="text-sm mt-2">"새 수집 시작" 버튼을 눌러 배치를 생성해보세요!</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Videos Modal */}
+      {showBatchVideosModal && selectedBatch && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">
+                  {selectedBatch.name} - 수집된 영상
+                </h2>
+                <p className="text-gray-600 mt-1">
+                  {selectedBatch.totalVideosSaved}개 영상 | {formatDate(selectedBatch.createdAt)}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowBatchVideosModal(false);
+                  setSelectedBatch(null);
+                  setBatchVideos([]);
+                }}
+                className="text-gray-400 hover:text-gray-600 p-2"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Videos List */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {batchVideos.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-gray-500 text-lg mb-2">수집된 영상이 없습니다</div>
+                  <div className="text-gray-400">이 배치에서 수집된 영상이 없거나 데이터를 찾을 수 없습니다.</div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {batchVideos.map((video) => (
+                    <VideoCard 
+                      key={video._id} 
+                      video={video}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 };

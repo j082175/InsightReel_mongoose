@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import VideoCard from '../components/VideoCard';
 import { formatDate } from '../utils/formatters';
+import { Platform } from '../types';
 
 interface CollectionBatch {
   _id: string;
@@ -1069,7 +1070,7 @@ const BatchManagementPage: React.FC = () => {
                         url: video.url,
                         thumbnailUrl: video.thumbnailUrl,
                         channelName: video.channelName,
-                        platform: video.platform,
+                        platform: video.platform as Platform,
                         duration: video.duration,
                         views: video.views,
                         uploadDate: video.uploadDate

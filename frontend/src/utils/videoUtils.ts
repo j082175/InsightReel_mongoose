@@ -9,7 +9,7 @@ import { Video } from '../types';
  * 다양한 ID 필드 중 첫 번째로 유효한 값을 반환합니다.
  */
 export const getVideoId = (video: Video): string | number => {
-  return video.id || video._id || video.videoId || 0;
+  return video.videoId || video.id || video._id || 0;
 };
 
 /**
