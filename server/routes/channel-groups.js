@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const ChannelGroup = require('../models/ChannelGroup');
 const TrendingVideo = require('../models/TrendingVideo');
+const CollectionBatch = require('../models/CollectionBatch');
 const GroupTrendingCollector = require('../services/GroupTrendingCollector');
 const { HTTP_STATUS_CODES, ERROR_CODES, API_MESSAGES } = require('../config/api-messages');
 const { ServerLogger } = require('../utils/logger');
@@ -425,6 +426,150 @@ router.get('/:id/channels', async (req, res) => {
       success: false,
       error: ERROR_CODES.SERVER_ERROR,
       message: '그룹 채널 목록 조회에 실패했습니다.'
+    });
+  }
+});
+
+// POST /api/channel-groups/collect-multiple - 다중 그룹 트렌딩 수집 (배치 이력 자동 생성)
+router.post('/collect-multiple', async (req, res) => {
+  let batch = null;
+  
+  try {
+    const { 
+      groupIds,
+      days = 3, 
+      minViews = 30000, 
+      maxViews = null,
+      includeShorts = true, 
+      includeMidform = true, 
+      includeLongForm = true,
+      keywords = [],
+      excludeKeywords = []
+    } = req.body;
+    
+    if (!groupIds || !Array.isArray(groupIds) || groupIds.length === 0) {
+      return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        error: ERROR_CODES.INVALID_REQUEST,
+        message: '수집할 그룹 ID 목록은 필수입니다.'
+      });
+    }
+
+    ServerLogger.info(`🚀 다중 그룹 트렌딩 수집 시작: ${groupIds.length}개 그룹`);
+
+    // 그룹들 조회 및 유효성 검사
+    const groups = await ChannelGroup.find({ _id: { $in: groupIds } });
+    if (groups.length !== groupIds.length) {
+      return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        error: ERROR_CODES.INVALID_REQUEST,
+        message: '일부 그룹을 찾을 수 없습니다.'
+      });
+    }
+
+    // 모든 그룹의 채널들 수집 (채널 ID만 추출)
+    const allChannels = [];
+    const groupNames = [];
+    
+    groups.forEach(group => {
+      // 채널 ID만 추출하여 추가
+      const channelIds = group.channels.map(channel => channel.id);
+      allChannels.push(...channelIds);
+      groupNames.push(group.name);
+    });
+
+    // 중복 채널 제거
+    const uniqueChannels = [...new Set(allChannels)];
+
+    // 🔥 배치 생성 및 저장
+    const batchName = `${groupNames.join(', ')} - ${new Date().toLocaleDateString('ko-KR')} ${new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`;
+    
+    batch = new CollectionBatch({
+      name: batchName,
+      description: `${groups.length}개 그룹에서 트렌딩 영상 수집`,
+      collectionType: 'group',
+      targetGroups: groupIds,
+      criteria: {
+        daysBack: days,
+        minViews,
+        maxViews,
+        includeShorts,
+        includeMidform,
+        includeLongForm,
+        keywords,
+        excludeKeywords
+      }
+    });
+
+    await batch.save();
+    ServerLogger.info(`📝 배치 생성됨: ${batch._id} - "${batchName}"`);
+
+    // 배치 시작
+    await batch.start();
+
+    ServerLogger.info(`📊 다중 그룹 수집 대상: ${groupNames.join(', ')} (총 ${uniqueChannels.length}개 채널)`);
+
+    // GroupTrendingCollector 사용해서 수집
+    const collector = new GroupTrendingCollector();
+    const result = await collector.collectFromChannels({
+      channels: uniqueChannels,
+      daysBack: days,
+      minViews,
+      maxViews,
+      includeShorts,
+      includeMidform,
+      includeLongForm,
+      keywords,
+      excludeKeywords,
+      batchId: batch._id  // 배치 ID 전달
+    });
+
+    // 🔥 배치 완료 처리
+    await batch.complete({
+      totalVideosFound: result.totalVideosFound || 0,
+      totalVideosSaved: result.totalVideosSaved || 0,
+      quotaUsed: result.quotaUsed || 0,
+      stats: {
+        byPlatform: result.stats?.byPlatform || { YOUTUBE: result.totalVideosSaved || 0 },
+        byDuration: result.stats?.byDuration || { SHORT: 0, MID: 0, LONG: 0 },
+        avgViews: 0,
+        totalViews: 0
+      }
+    });
+
+    ServerLogger.info(`✅ 다중 그룹 트렌딩 수집 완료: ${result.totalVideosSaved}개 영상 (배치: ${batch._id})`);
+
+    res.status(HTTP_STATUS_CODES.OK).json({
+      success: true,
+      data: {
+        ...result,
+        groupsProcessed: groups.length,
+        groupNames: groupNames,
+        channelsProcessed: uniqueChannels.length,
+        batchId: batch._id,
+        batchName: batch.name
+      },
+      message: `${groups.length}개 그룹에서 ${result.totalVideosSaved}개 영상을 수집했습니다.`
+    });
+
+  } catch (error) {
+    ServerLogger.error('다중 그룹 트렌딩 수집 실패:', error);
+
+    // 🔥 배치 실패 처리
+    if (batch) {
+      try {
+        await batch.fail(error);
+        ServerLogger.info(`❌ 배치 실패 처리됨: ${batch._id}`);
+      } catch (batchError) {
+        ServerLogger.error('배치 실패 처리 중 오류:', batchError);
+      }
+    }
+
+    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      error: ERROR_CODES.SERVER_ERROR,
+      message: '다중 그룹 트렌딩 수집에 실패했습니다.',
+      batchId: batch?._id
     });
   }
 });

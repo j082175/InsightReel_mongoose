@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSelection } from '../hooks/useSelection';
 
 interface ChannelGroup {
   _id?: string;
@@ -38,13 +39,13 @@ const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
   });
 
   const [keywordInput, setKeywordInput] = useState('');
-  const [selectedChannels, setSelectedChannels] = useState<Set<string>>(new Set());
+  const channelSelection = useSelection<string>();
 
   // 편집 모드일 때 폼 데이터 설정
   useEffect(() => {
     if (editingGroup) {
       setFormData(editingGroup);
-      setSelectedChannels(new Set(editingGroup.channels));
+      channelSelection.setSelected(new Set(editingGroup.channels));
     } else {
       setFormData({
         name: '',
@@ -54,7 +55,7 @@ const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
         keywords: [],
         isActive: true
       });
-      setSelectedChannels(new Set());
+      channelSelection.clear();
     }
     setKeywordInput('');
   }, [editingGroup, isOpen]);
@@ -81,15 +82,13 @@ const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
   };
 
   const toggleChannel = (channel: string) => {
-    const newSelected = new Set(selectedChannels);
-    if (newSelected.has(channel)) {
-      newSelected.delete(channel);
-    } else {
-      newSelected.add(channel);
-    }
-    setSelectedChannels(newSelected);
-    setFormData(prev => ({ ...prev, channels: Array.from(newSelected) }));
+    channelSelection.toggle(channel);
   };
+  
+  // channelSelection이 변경될 때 formData 동기화
+  useEffect(() => {
+    setFormData(prev => ({ ...prev, channels: Array.from(channelSelection.selected) }));
+  }, [channelSelection.selected]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +100,7 @@ const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
 
     onSave({
       ...formData,
-      channels: Array.from(selectedChannels)
+      channels: Array.from(channelSelection.selected)
     });
   };
 
@@ -223,7 +222,7 @@ const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
             {/* 채널 선택 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                포함할 채널 ({selectedChannels.size}개 선택)
+                포함할 채널 ({channelSelection.count}개 선택)
               </label>
               <div className="bg-gray-50 rounded-lg p-4 max-h-40 overflow-y-auto">
                 {availableChannels.length > 0 ? (
@@ -232,7 +231,7 @@ const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
                       <label key={index} className="flex items-center">
                         <input
                           type="checkbox"
-                          checked={selectedChannels.has(channel)}
+                          checked={channelSelection.isSelected(channel)}
                           onChange={() => toggleChannel(channel)}
                           className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                         />

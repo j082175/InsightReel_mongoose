@@ -5,7 +5,10 @@ export interface ChannelGroup {
   name: string;
   description: string;
   color: string;
-  channels: string[];
+  channels: Array<{
+    id: string;
+    name: string;
+  }>;
   keywords: string[];
   isActive: boolean;
   lastCollectedAt?: string;

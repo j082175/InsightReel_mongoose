@@ -113,5 +113,154 @@
     "avgTimePerChannel": 0,
     "trendingRate": 0,
     "quotaEfficiency": 0
+  },
+  {
+    "timestamp": "2025-09-12T01:54:37.874Z",
+    "date": "2025. 9. 12.",
+    "totalChannels": 1,
+    "processedChannels": 0,
+    "totalVideos": 0,
+    "trendingVideos": 0,
+    "quotaUsed": 0,
+    "errors": [
+      {
+        "channelId": "영화미슐랭",
+        "error": "Search API 오류: Request failed with status code 400"
+      }
+    ],
+    "processingTimeMs": 499,
+    "processingTimeSeconds": "0.5",
+    "avgTimePerChannel": 0,
+    "trendingRate": 0,
+    "quotaEfficiency": 0
+  },
+  {
+    "timestamp": "2025-09-12T02:00:42.054Z",
+    "date": "2025. 9. 12.",
+    "totalChannels": 1,
+    "processedChannels": 0,
+    "totalVideos": 0,
+    "trendingVideos": 0,
+    "quotaUsed": 0,
+    "errors": [
+      {
+        "channelId": "영화미슐랭",
+        "error": "Search API 오류: Request failed with status code 400"
+      }
+    ],
+    "processingTimeMs": 490,
+    "processingTimeSeconds": "0.5",
+    "avgTimePerChannel": 0,
+    "trendingRate": 0,
+    "quotaEfficiency": 0
+  },
+  {
+    "timestamp": "2025-09-12T02:03:14.117Z",
+    "date": "2025. 9. 12.",
+    "totalChannels": 1,
+    "processedChannels": 0,
+    "totalVideos": 0,
+    "trendingVideos": 0,
+    "quotaUsed": 0,
+    "errors": [
+      {
+        "channelId": "영화미슐랭",
+        "error": "잘못된 채널 ID 형식: 영화미슐랭"
+      }
+    ],
+    "processingTimeMs": 127,
+    "processingTimeSeconds": "0.1",
+    "avgTimePerChannel": 0,
+    "trendingRate": 0,
+    "quotaEfficiency": 0
+  },
+  {
+    "timestamp": "2025-09-12T02:04:09.653Z",
+    "date": "2025. 9. 12.",
+    "totalChannels": 1,
+    "processedChannels": 0,
+    "totalVideos": 0,
+    "trendingVideos": 0,
+    "quotaUsed": 0,
+    "errors": [
+      {
+        "channelId": "영화미슐랭",
+        "error": "잘못된 채널 ID 형식: 영화미슐랭"
+      }
+    ],
+    "processingTimeMs": 116,
+    "processingTimeSeconds": "0.1",
+    "avgTimePerChannel": 0,
+    "trendingRate": 0,
+    "quotaEfficiency": 0
+  },
+  {
+    "timestamp": "2025-09-12T02:07:12.182Z",
+    "date": "2025. 9. 12.",
+    "totalChannels": 1,
+    "processedChannels": 1,
+    "totalVideos": 5,
+    "trendingVideos": 5,
+    "quotaUsed": 101,
+    "errors": [],
+    "processingTimeMs": 749,
+    "processingTimeSeconds": "0.7",
+    "avgTimePerChannel": "749",
+    "trendingRate": "100.0",
+    "quotaEfficiency": "0.05"
+  },
+  {
+    "timestamp": "2025-09-12T02:11:51.390Z",
+    "date": "2025. 9. 12.",
+    "totalChannels": 1,
+    "processedChannels": 0,
+    "totalVideos": 0,
+    "trendingVideos": 0,
+    "quotaUsed": 0,
+    "errors": [
+      {
+        "channelId": {
+          "_id": "68c3816705118b1191d73c06",
+          "id": "UCyE2OYrMxxdy69cy5lUjY3Q",
+          "name": "영화미슐랭"
+        },
+        "error": "잘못된 채널 ID 형식: {\n  _id: new ObjectId('68c3816705118b1191d73c06'),\n  id: 'UCyE2OYrMxxdy69cy5lUjY3Q',\n  name: '영화미슐랭'\n}"
+      }
+    ],
+    "processingTimeMs": 113,
+    "processingTimeSeconds": "0.1",
+    "avgTimePerChannel": 0,
+    "trendingRate": 0,
+    "quotaEfficiency": 0
+  },
+  {
+    "timestamp": "2025-09-12T02:16:11.017Z",
+    "date": "2025. 9. 12.",
+    "totalChannels": 1,
+    "processedChannels": 1,
+    "totalVideos": 2,
+    "trendingVideos": 2,
+    "quotaUsed": 101,
+    "errors": [],
+    "processingTimeMs": 753,
+    "processingTimeSeconds": "0.8",
+    "avgTimePerChannel": "753",
+    "trendingRate": "100.0",
+    "quotaEfficiency": "0.02"
+  },
+  {
+    "timestamp": "2025-09-12T02:16:23.228Z",
+    "date": "2025. 9. 12.",
+    "totalChannels": 1,
+    "processedChannels": 1,
+    "totalVideos": 8,
+    "trendingVideos": 8,
+    "quotaUsed": 101,
+    "errors": [],
+    "processingTimeMs": 748,
+    "processingTimeSeconds": "0.7",
+    "avgTimePerChannel": "748",
+    "trendingRate": "100.0",
+    "quotaEfficiency": "0.08"
   }
 ]

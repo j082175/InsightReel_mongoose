@@ -247,7 +247,7 @@ router.delete('/:id', async (req, res) => {
 // GET /api/batches/:id/videos - 배치의 영상 목록 조회
 router.get('/:id/videos', async (req, res) => {
   try {
-    const { limit = 20, offset = 0 } = req.query;
+    const { limit = 50, offset = 0 } = req.query;
     
     const batch = await CollectionBatch.findById(req.params.id);
     
@@ -259,25 +259,41 @@ router.get('/:id/videos', async (req, res) => {
       });
     }
 
-    // 배치 기간 내에 수집된 영상들 조회
-    const query = {
-      collectionDate: {
-        $gte: batch.createdAt,
-        $lte: batch.completedAt || new Date()
-      }
-    };
+    // batchId로 직접 조회 (더 정확함)
+    let query = { batchId: req.params.id };
+    
+    // batchId가 없는 기존 데이터의 경우 시간대로 폴백
+    const videosByBatchId = await TrendingVideo.countDocuments(query);
+    
+    if (videosByBatchId === 0) {
+      // batchId가 없는 경우 기간으로 조회 (기존 데이터 호환성)
+      query = {
+        collectionDate: {
+          $gte: batch.createdAt,
+          $lte: batch.completedAt || new Date()
+        }
+      };
+    }
 
     const videos = await TrendingVideo.find(query)
-      .sort({ collectionDate: -1 })
+      .sort({ collectionDate: -1, views: -1 })
       .limit(parseInt(limit))
       .skip(parseInt(offset))
       .lean();
 
     const totalCount = await TrendingVideo.countDocuments(query);
 
+    ServerLogger.info(`📋 배치 ${req.params.id} 영상 조회: ${videos.length}개 (총 ${totalCount}개)`);
+
     res.status(HTTP_STATUS_CODES.OK).json({
       success: true,
       data: videos,
+      batch: {
+        _id: batch._id,
+        name: batch.name,
+        status: batch.status,
+        totalVideosSaved: batch.totalVideosSaved || 0
+      },
       pagination: {
         total: totalCount,
         limit: parseInt(limit),

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Video } from '../types';
 import { PLATFORMS } from '../types/api';
+import { formatViews } from '../utils/formatters';
 
 interface VideoListItemProps {
   video: Video;
@@ -21,11 +22,6 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const formatViews = (num: number) => {
-    if (num >= 10000) return (num / 10000).toFixed(0) + '만';
-    if (num >= 1000) return (num / 1000).toFixed(1) + '천';
-    return num.toLocaleString();
-  };
 
   const handleClick = (_e: React.MouseEvent) => {
     if (isSelectMode) {

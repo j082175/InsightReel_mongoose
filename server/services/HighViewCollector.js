@@ -173,6 +173,12 @@ class HighViewCollector {
    * 채널의 최신 영상 검색
    */
   async searchChannelVideos(channelId, publishedAfter, publishedBefore, maxResults) {
+    // 채널 ID 형식 검증
+    if (!this.isValidChannelId(channelId)) {
+      ServerLogger.error(`❌ 잘못된 채널 ID 형식: "${channelId}" - YouTube 채널 ID는 'UC'로 시작하는 24자 문자열이어야 합니다`);
+      throw new Error(`잘못된 채널 ID 형식: ${channelId}`);
+    }
+    
     let attempts = 0;
     const maxAttempts = this.multiKeyManager.keys.length;
     
@@ -368,6 +374,17 @@ class HighViewCollector {
     } catch (error) {
       return [];
     }
+  }
+
+  /**
+   * YouTube 채널 ID 형식 검증
+   * @param {string} channelId - 검증할 채널 ID
+   * @returns {boolean} - 유효한 채널 ID인지 여부
+   */
+  isValidChannelId(channelId) {
+    // YouTube 채널 ID는 'UC'로 시작하고 24자 길이여야 함
+    const youtubeChannelIdRegex = /^UC[a-zA-Z0-9_-]{22}$/;
+    return youtubeChannelIdRegex.test(channelId);
   }
 
   /**

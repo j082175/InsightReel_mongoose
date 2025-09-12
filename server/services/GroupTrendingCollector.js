@@ -39,8 +39,10 @@ class GroupTrendingCollector {
 
       ServerLogger.info(`🎯 그룹 "${group.name}" 트렌딩 수집 시작 (${group.channels.length}개 채널)`);
 
-      // HighViewCollector로 영상 수집
-      const results = await this.highViewCollector.collectFromChannels(group.channels, options);
+      // HighViewCollector로 영상 수집 (채널 ID만 추출)
+      const channelIds = group.channels.map(channel => channel.id);
+      ServerLogger.info(`🔍 추출된 채널 IDs: ${channelIds.join(', ')}`);
+      const results = await this.highViewCollector.collectFromChannels(channelIds, options);
       
       // 수집된 영상들을 TrendingVideo로 변환 및 저장
       const savedVideos = [];
@@ -147,8 +149,9 @@ class GroupTrendingCollector {
    * YouTube API 영상 데이터를 TrendingVideo로 변환 및 저장
    * @param {Object} videoData - YouTube API 영상 데이터
    * @param {Object} group - 채널 그룹 정보
+   * @param {String} batchId - 배치 ID (선택사항)
    */
-  async saveTrendingVideo(videoData, group) {
+  async saveTrendingVideo(videoData, group, batchId = null) {
     try {
       // 기존 영상 중복 체크
       const existingVideo = await TrendingVideo.findOne({ videoId: videoData.id?.videoId });
@@ -174,6 +177,7 @@ class GroupTrendingCollector {
         // 그룹 정보
         groupId: group._id,
         groupName: group.name,
+        batchId: batchId, // 배치 ID 추가
         collectionDate: new Date(),
         collectedFrom: 'trending',
         
@@ -200,6 +204,208 @@ class GroupTrendingCollector {
       ServerLogger.error('TrendingVideo 저장 실패:', error);
       return null;
     }
+  }
+
+  /**
+   * 채널 목록에서 직접 트렌딩 영상 수집
+   * @param {Object} options - 수집 옵션 (channels 배열 포함)
+   */
+  async collectFromChannels(options = {}) {
+    try {
+      const { 
+        channels, 
+        daysBack = 3, 
+        minViews = 30000, 
+        maxViews = null,
+        includeShorts = true, 
+        includeMidform = true, 
+        includeLongForm = true,
+        keywords = [],
+        excludeKeywords = [],
+        batchId = null
+      } = options;
+
+      if (!channels || !Array.isArray(channels) || channels.length === 0) {
+        throw new Error('채널 목록이 필요합니다');
+      }
+
+      ServerLogger.info(`🎯 다중 채널 트렌딩 수집 시작: ${channels.length}개 채널`);
+
+      // 날짜 범위 설정
+      const endDate = new Date();
+      const startDate = new Date(endDate - (daysBack * 24 * 60 * 60 * 1000));
+      const publishedAfter = startDate.toISOString();
+      const publishedBefore = endDate.toISOString();
+
+      ServerLogger.info(`📅 수집 기간: ${startDate.toLocaleDateString()} ~ ${endDate.toLocaleDateString()}`);
+
+      // HighViewCollector를 사용해서 영상 수집
+      const collectorOptions = {
+        daysBack,
+        minViews,
+        maxViews,
+        includeShorts,
+        includeMidform,
+        includeLongForm,
+        keywords,
+        excludeKeywords
+      };
+
+      // 각 채널별로 직접 영상 수집 및 저장
+      let savedCount = 0;
+      const savedVideos = [];
+      let totalQuotaUsed = 0;
+
+      for (const channelId of channels) {
+        try {
+          // 개별 채널에서 영상 수집
+          const channelResult = await this.highViewCollector.collectChannelTrending(
+            channelId,
+            publishedAfter,
+            publishedBefore,
+            { 
+              minViews: collectorOptions.minViews,
+              maxResultsPerSearch: 50
+            }
+          );
+
+          totalQuotaUsed += channelResult.quotaUsed || 0;
+
+          // 수집된 영상들을 TrendingVideo로 저장
+          if (channelResult.videos && channelResult.videos.length > 0) {
+            ServerLogger.info(`🎬 채널 ${channelId}에서 ${channelResult.videos.length}개 영상 처리 시작`);
+            for (const video of channelResult.videos) {
+              try {
+                // 영상 중복 검사 (같은 배치 내에서만 중복 체크)
+                const videoId = video.id; // Videos API는 id가 직접 문자열
+                ServerLogger.info(`🔍 영상 ID 체크: ${videoId} (${video.snippet?.title})`);
+                
+                // 같은 배치 내에서만 중복 검사 (배치별 중복 방지)
+                const existingVideo = await TrendingVideo.findOne({ 
+                  videoId: videoId,
+                  batchId: batchId  // 같은 배치 내에서만 중복 체크
+                });
+                
+                if (existingVideo) {
+                  ServerLogger.info(`⏭️ 배치 내 중복 영상 건너뛰기: ${videoId} (${video.snippet?.title})`);
+                  continue; // 같은 배치에서 이미 존재하는 영상은 건너뛰기
+                }
+                
+                ServerLogger.info(`💾 새로운 영상 저장 시작: ${videoId}`);  
+
+                // Duration 분류
+                const durationSeconds = DurationClassifier.parseDuration(video.contentDetails?.duration);
+                const durationCategory = DurationClassifier.categorizeByDuration(durationSeconds);
+                
+                ServerLogger.info(`🕒 영상 길이 분류: ${video.contentDetails?.duration} → ${durationSeconds}초 → ${durationCategory}`);
+
+                const trendingVideoData = {
+                  videoId: videoId,
+                  title: video.snippet?.title,
+                  url: `https://www.youtube.com/watch?v=${videoId}`,
+                  platform: 'YOUTUBE',
+                  
+                  // 채널 정보
+                  channelName: video.snippet?.channelTitle,
+                  channelId: video.snippet?.channelId,
+                  channelUrl: `https://www.youtube.com/channel/${video.snippet?.channelId}`,
+                  
+                  // 그룹 정보 (개별 채널 수집이므로 기본값 설정)
+                  groupId: null,
+                  groupName: '개별 채널 수집',
+                  batchId: batchId, // 배치 ID 추가
+                  collectionDate: new Date(),
+                  collectedFrom: 'individual',
+                  
+                  // 통계
+                  views: parseInt(video.statistics?.viewCount) || 0,
+                  likes: parseInt(video.statistics?.likeCount) || 0,
+                  commentsCount: parseInt(video.statistics?.commentCount) || 0,
+                  
+                  // 메타데이터
+                  uploadDate: new Date(video.snippet?.publishedAt),
+                  duration: durationCategory,
+                  durationSeconds: durationSeconds,
+                  thumbnailUrl: video.snippet?.thumbnails?.high?.url,
+                  description: video.snippet?.description?.substring(0, 1000),
+                  
+                  // 키워드
+                  keywords: keywords || []
+                };
+
+                const trendingVideo = new TrendingVideo(trendingVideoData);
+                const savedVideo = await trendingVideo.save();
+                savedVideos.push(savedVideo);
+                savedCount++;
+                
+                ServerLogger.success(`✅ 영상 저장 완료: ${videoId} - ${video.snippet?.title}`);
+              } catch (saveError) {
+                ServerLogger.error(`❌ 영상 저장 실패 (${video.id || 'unknown'}):`, saveError.message);
+              }
+            }
+          }
+        } catch (channelError) {
+          ServerLogger.error(`채널 ${channelId} 수집 실패:`, channelError.message);
+        }
+      }
+
+      ServerLogger.success(`✅ 다중 채널 수집 완료: ${savedCount}개 영상 저장`);
+
+      const viewStats = this.calculateViewStats(savedVideos);
+      
+      return {
+        totalChannels: channels.length,
+        totalVideosFound: savedVideos.length,
+        totalVideosSaved: savedCount,
+        quotaUsed: totalQuotaUsed,
+        videos: savedVideos,
+        stats: {
+          byPlatform: { 
+            YOUTUBE: savedCount,
+            INSTAGRAM: 0,
+            TIKTOK: 0
+          },
+          byDuration: this.calculateDurationStats(savedVideos),
+          avgViews: viewStats.avgViews,
+          totalViews: viewStats.totalViews
+        }
+      };
+
+    } catch (error) {
+      ServerLogger.error('❌ 다중 채널 트렌딩 수집 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 영상 길이별 통계 계산
+   */
+  calculateDurationStats(videos) {
+    const stats = { SHORT: 0, MID: 0, LONG: 0 };
+    
+    videos.forEach(video => {
+      if (video.duration) {
+        stats[video.duration] = (stats[video.duration] || 0) + 1;
+      } else if (video.durationCategory) {
+        stats[video.durationCategory] = (stats[video.durationCategory] || 0) + 1;
+      }
+    });
+
+    return stats;
+  }
+
+  /**
+   * 영상 조회수 통계 계산
+   */
+  calculateViewStats(videos) {
+    if (!videos || videos.length === 0) {
+      return { avgViews: 0, totalViews: 0 };
+    }
+
+    const totalViews = videos.reduce((sum, video) => sum + (video.views || 0), 0);
+    const avgViews = Math.round(totalViews / videos.length);
+
+    return { avgViews, totalViews };
   }
 
   /**

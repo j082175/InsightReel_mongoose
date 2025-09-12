@@ -9,6 +9,8 @@ import BulkCollectionModal from '../components/BulkCollectionModal';
 import ChannelGroupModal from '../components/ChannelGroupModal';
 
 import { PLATFORMS } from '../types/api';
+import { useSelection } from '../hooks/useSelection';
+import SelectionActionBar from '../components/SelectionActionBar';
 
 const ChannelManagementPage: React.FC = () => {
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -16,7 +18,7 @@ const ChannelManagementPage: React.FC = () => {
   const [platformFilter, setPlatformFilter] = useState('All');
   const [showAddModal, setShowAddModal] = useState(false);
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
-  const [selectedChannels, setSelectedChannels] = useState<Set<string>>(new Set());
+  const channelSelection = useSelection<string>();
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [showAnalysisModal, setShowAnalysisModal] = useState(false);
   const [showCollectionModal, setShowCollectionModal] = useState(false);
@@ -151,21 +153,11 @@ const ChannelManagementPage: React.FC = () => {
   };
 
   const handleSelectToggle = (channelId: string) => {
-    const newSelection = new Set(selectedChannels);
-    if (newSelection.has(channelId)) {
-      newSelection.delete(channelId);
-    } else {
-      newSelection.add(channelId);
-    }
-    setSelectedChannels(newSelection);
+    channelSelection.toggle(channelId);
   };
 
   const handleSelectAll = () => {
-    if (selectedChannels.size === filteredChannels.length) {
-      setSelectedChannels(new Set());
-    } else {
-      setSelectedChannels(new Set(filteredChannels.map(ch => ch.id)));
-    }
+    channelSelection.selectAll(filteredChannels.map(ch => ch.id));
   };
 
   const handleCollectionComplete = (batch: CollectionBatch, videos: Video[]) => {
@@ -488,7 +480,7 @@ const ChannelManagementPage: React.FC = () => {
             <button
               onClick={() => {
                 setIsSelectMode(!isSelectMode);
-                setSelectedChannels(new Set());
+                channelSelection.clear();
               }}
               className={`px-3 py-1 text-sm rounded ${
                 isSelectMode ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -510,7 +502,7 @@ const ChannelManagementPage: React.FC = () => {
                   <th className="px-6 py-3 text-left">
                     <input
                       type="checkbox"
-                      checked={selectedChannels.size === filteredChannels.length && filteredChannels.length > 0}
+                      checked={channelSelection.count === filteredChannels.length && filteredChannels.length > 0}
                       onChange={handleSelectAll}
                       className="rounded border-gray-300"
                     />
@@ -549,7 +541,7 @@ const ChannelManagementPage: React.FC = () => {
                     <td className="px-6 py-4">
                       <input
                         type="checkbox"
-                        checked={selectedChannels.has(channel.id)}
+                        checked={channelSelection.isSelected(channel.id)}
                         onChange={() => handleSelectToggle(channel.id)}
                         className="rounded border-gray-300"
                       />
@@ -720,9 +712,9 @@ const ChannelManagementPage: React.FC = () => {
                       <div>
                         <h4 className="text-xs font-medium text-gray-500 mb-2">포함 채널 ({group.channels.length}개)</h4>
                         <div className="space-y-1">
-                          {group.channels.slice(0, 3).map((channel: string, index: number) => (
+                          {group.channels.slice(0, 3).map((channel: any, index: number) => (
                             <div key={index} className="text-sm text-gray-700 truncate">
-                              📺 {channel}
+                              📺 {typeof channel === 'object' ? channel.name : channel}
                             </div>
                           ))}
                           {group.channels.length > 3 && (
@@ -789,43 +781,34 @@ const ChannelManagementPage: React.FC = () => {
       </div>
 
       {/* 선택 모드 액션 바 */}
-      {isSelectMode && selectedChannels.size > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 z-40">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                {selectedChannels.size}개 선택됨
-              </span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button 
-                onClick={() => setShowAnalysisModal(true)}
-                className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-              >
-                📊 영상 분석
-              </button>
-              <button 
-                onClick={() => setShowCollectionModal(true)}
-                className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-              >
-                선택한 채널 수집
-              </button>
-              <button className="px-4 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700">
-                선택 삭제
-              </button>
-              <button
-                onClick={() => {
-                  setIsSelectMode(false);
-                  setSelectedChannels(new Set());
-                }}
-                className="px-4 py-2 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
-              >
-                취소
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SelectionActionBar
+        isVisible={isSelectMode}
+        selectedCount={channelSelection.count}
+        totalCount={filteredChannels.length}
+        itemType="개 채널"
+        onSelectAll={() => channelSelection.selectAll(filteredChannels.map(c => c.id))}
+        onClearSelection={() => {
+          setIsSelectMode(false);
+          channelSelection.clear();
+        }}
+        onDelete={() => console.log('채널 삭제')}
+        additionalActions={
+          <>
+            <button 
+              onClick={() => setShowAnalysisModal(true)}
+              className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+            >
+              📊 영상 분석
+            </button>
+            <button 
+              onClick={() => setShowCollectionModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+            >
+              선택한 채널 수집
+            </button>
+          </>
+        }
+      />
 
       {/* 모달들 */}
       <AddChannelModal />
@@ -835,7 +818,7 @@ const ChannelManagementPage: React.FC = () => {
       />
       <VideoAnalysisModal
         isOpen={showAnalysisModal}
-        selectedChannels={Array.from(selectedChannels).map(id => {
+        selectedChannels={Array.from(channelSelection.selected).map(id => {
           const channel = channels.find(ch => ch.id === id);
           return channel?.name || '';
         }).filter(name => name)}
@@ -843,7 +826,7 @@ const ChannelManagementPage: React.FC = () => {
       />
       <BulkCollectionModal
         isOpen={showCollectionModal}
-        selectedChannels={Array.from(selectedChannels).map(id => {
+        selectedChannels={Array.from(channelSelection.selected).map(id => {
           const channel = channels.find(ch => ch.id === id);
           return channel?.name || '';
         }).filter(name => name)}

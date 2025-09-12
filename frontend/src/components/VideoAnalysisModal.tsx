@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatViews, formatDate } from '../utils/formatters';
 
 interface AnalysisResult {
   channelName: string;
@@ -90,19 +91,6 @@ const VideoAnalysisModal: React.FC<VideoAnalysisModalProps> = ({
     setCurrentStep('분석 완료');
   };
 
-  const formatNumber = (num: number) => {
-    if (num >= 10000) return (num / 10000).toFixed(0) + '만';
-    if (num >= 1000) return (num / 1000).toFixed(1) + '천';
-    return num.toLocaleString();
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
 
   if (!isOpen) return null;
 
@@ -153,13 +141,13 @@ const VideoAnalysisModal: React.FC<VideoAnalysisModalProps> = ({
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-green-600">
-                      {formatNumber(analysisResults.reduce((sum, result) => sum + result.totalViews, 0))}
+                      {formatViews(analysisResults.reduce((sum, result) => sum + result.totalViews, 0))}
                     </p>
                     <p className="text-sm text-gray-600">총 조회수</p>
                   </div>
                   <div className="text-center">
                     <p className="text-2xl font-bold text-purple-600">
-                      {formatNumber(Math.round(analysisResults.reduce((sum, result) => sum + result.avgViews, 0) / analysisResults.length))}
+                      {formatViews(Math.round(analysisResults.reduce((sum, result) => sum + result.avgViews, 0) / analysisResults.length))}
                     </p>
                     <p className="text-sm text-gray-600">평균 조회수</p>
                   </div>
@@ -202,11 +190,11 @@ const VideoAnalysisModal: React.FC<VideoAnalysisModalProps> = ({
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">총 조회수</p>
-                          <p className="text-xl font-semibold text-gray-900">{formatNumber(result.totalViews)}</p>
+                          <p className="text-xl font-semibold text-gray-900">{formatViews(result.totalViews)}</p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">평균 조회수</p>
-                          <p className="text-xl font-semibold text-gray-900">{formatNumber(result.avgViews)}</p>
+                          <p className="text-xl font-semibold text-gray-900">{formatViews(result.avgViews)}</p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">업로드 빈도</p>
@@ -218,7 +206,7 @@ const VideoAnalysisModal: React.FC<VideoAnalysisModalProps> = ({
                         <h5 className="font-medium text-gray-900 mb-2">🏆 최고 인기 영상</h5>
                         <p className="text-sm text-gray-800 font-medium">{result.topVideo.title}</p>
                         <div className="flex justify-between text-xs text-gray-600 mt-1">
-                          <span>{formatNumber(result.topVideo.views)} 조회수</span>
+                          <span>{formatViews(result.topVideo.views)} 조회수</span>
                           <span>{formatDate(result.topVideo.publishedAt)}</span>
                         </div>
                       </div>

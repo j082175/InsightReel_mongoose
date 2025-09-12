@@ -28,9 +28,9 @@ class DurationClassifier {
    * @returns {string} 'SHORT' | 'MID' | 'LONG'
    */
   static categorizeByDuration(durationSeconds) {
-    if (durationSeconds <= 60) return 'SHORT';    // 1분 이하
-    if (durationSeconds <= 180) return 'MID';     // 1-3분
-    return 'LONG';                                // 3분 이상
+    if (durationSeconds <= 60) return 'SHORT';    // 60초 이하 (1분 이하)
+    if (durationSeconds <= 180) return 'MID';     // 61-180초 (1-3분)
+    return 'LONG';                                // 181초 이상 (3분 이상)
   }
   
   /**

@@ -16,6 +16,8 @@ import {
   Eye,
   Settings
 } from 'lucide-react';
+import VideoCard from '../components/VideoCard';
+import { formatDate } from '../utils/formatters';
 
 interface CollectionBatch {
   _id: string;
@@ -62,6 +64,22 @@ interface CollectionBatch {
   successRate?: number;
 }
 
+interface TrendingVideo {
+  _id: string;
+  videoId: string;
+  title: string;
+  url: string;
+  platform: string;
+  channelName: string;
+  channelId: string;
+  views: number;
+  likes: number;
+  uploadDate: string;
+  duration: string;
+  thumbnailUrl?: string;
+  collectionDate: string;
+}
+
 interface BatchFormData {
   name: string;
   description: string;
@@ -87,6 +105,12 @@ const BatchManagementPage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingBatch, setEditingBatch] = useState<CollectionBatch | null>(null);
   const [channelGroups, setChannelGroups] = useState<Array<{_id: string, name: string, color: string}>>([]);
+  
+  // 영상 모달 관련 상태
+  const [showVideosModal, setShowVideosModal] = useState(false);
+  const [selectedBatch, setSelectedBatch] = useState<CollectionBatch | null>(null);
+  const [batchVideos, setBatchVideos] = useState<TrendingVideo[]>([]);
+  const [videosLoading, setVideosLoading] = useState(false);
 
   // 필터 상태
   const [filters, setFilters] = useState({
@@ -229,6 +253,28 @@ const BatchManagementPage: React.FC = () => {
     }
   };
 
+  const handleViewBatchVideos = async (batch: CollectionBatch) => {
+    setSelectedBatch(batch);
+    setShowVideosModal(true);
+    setVideosLoading(true);
+
+    try {
+      const response = await fetch(`/api/batches/${batch._id}/videos?limit=100`);
+      const result = await response.json();
+      
+      if (result.success) {
+        setBatchVideos(result.data);
+      } else {
+        setError(result.message || '영상 목록 조회에 실패했습니다.');
+      }
+    } catch (error) {
+      setError('서버 연결에 실패했습니다.');
+      console.error('영상 목록 조회 실패:', error);
+    } finally {
+      setVideosLoading(false);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -269,9 +315,6 @@ const BatchManagementPage: React.FC = () => {
     }
   };
 
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleString('ko-KR');
-  };
 
   const addKeyword = (type: 'keywords' | 'excludeKeywords') => {
     const input = prompt(`${type === 'keywords' ? '포함' : '제외'} 키워드를 입력하세요:`);
@@ -412,7 +455,12 @@ const BatchManagementPage: React.FC = () => {
       {/* 배치 목록 */}
       <div className="space-y-4">
         {batches.map((batch) => (
-          <div key={batch._id} className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow">
+          <div 
+            key={batch._id} 
+            className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow cursor-pointer"
+            onClick={() => batch.status === 'completed' && handleViewBatchVideos(batch)}
+            title={batch.status === 'completed' ? '클릭하여 수집된 영상 보기' : ''}
+          >
             <div className="p-6">
               {/* 헤더 */}
               <div className="flex items-center justify-between mb-4">
@@ -437,14 +485,20 @@ const BatchManagementPage: React.FC = () => {
                   {batch.status !== 'running' && (
                     <>
                       <button
-                        onClick={() => setEditingBatch(batch)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingBatch(batch);
+                        }}
                         className="p-2 text-gray-400 hover:text-blue-500 transition-colors"
                         title="수정"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDeleteBatch(batch._id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteBatch(batch._id);
+                        }}
                         className="p-2 text-gray-400 hover:text-red-500 transition-colors"
                         title="삭제"
                       >
@@ -496,28 +550,39 @@ const BatchManagementPage: React.FC = () => {
                     <div>
                       <div className="text-sm text-gray-500">발견 영상</div>
                       <div className="font-medium text-lg">
-                        {batch.totalVideosFound.toLocaleString()}개
+                        {(batch.totalVideosFound || 0).toLocaleString()}개
                       </div>
                     </div>
                     
                     <div>
                       <div className="text-sm text-gray-500">저장 영상</div>
-                      <div className="font-medium text-lg">
-                        {batch.totalVideosSaved.toLocaleString()}개
+                      <div className="font-medium text-lg text-blue-600">
+                        {(batch.totalVideosSaved || 0).toLocaleString()}개
                       </div>
                     </div>
                     
                     <div>
                       <div className="text-sm text-gray-500">성공률</div>
-                      <div className="font-medium text-lg">
-                        {batch.successRate || 0}%
+                      <div className="font-medium text-lg text-green-600">
+                        {(() => {
+                          if (batch.totalVideosFound && batch.totalVideosFound > 0) {
+                            return Math.round((batch.totalVideosSaved / batch.totalVideosFound) * 100);
+                          }
+                          return batch.totalVideosSaved > 0 ? 100 : 0;
+                        })()}%
                       </div>
                     </div>
                     
                     <div>
                       <div className="text-sm text-gray-500">소요 시간</div>
                       <div className="font-medium text-lg">
-                        {batch.durationMinutes || 0}분
+                        {(() => {
+                          if (batch.startedAt && batch.completedAt) {
+                            const duration = Math.round((new Date(batch.completedAt).getTime() - new Date(batch.startedAt).getTime()) / (1000 * 60));
+                            return Math.max(duration, 1);
+                          }
+                          return 0;
+                        })()}분
                       </div>
                     </div>
                   </div>
@@ -528,24 +593,56 @@ const BatchManagementPage: React.FC = () => {
                       <div>
                         <div className="text-sm font-medium text-gray-700 mb-2">플랫폼별</div>
                         <div className="space-y-1">
-                          {Object.entries(batch.stats.byPlatform).map(([platform, count]) => (
+                          {batch.stats.byPlatform && Object.entries(batch.stats.byPlatform)
+                            .filter(([_, count]) => count > 0)
+                            .map(([platform, count]) => (
                             <div key={platform} className="flex justify-between text-sm">
                               <span>{platform}</span>
-                              <span>{count}개</span>
+                              <span className="font-medium">{count}개</span>
                             </div>
                           ))}
+                          {(!batch.stats.byPlatform || Object.values(batch.stats.byPlatform).every(v => v === 0)) && (
+                            <div className="text-sm text-gray-400">데이터 없음</div>
+                          )}
                         </div>
                       </div>
                       
                       <div>
                         <div className="text-sm font-medium text-gray-700 mb-2">길이별</div>
                         <div className="space-y-1">
-                          {Object.entries(batch.stats.byDuration).map(([duration, count]) => (
+                          {batch.stats.byDuration && Object.entries(batch.stats.byDuration)
+                            .filter(([_, count]) => count > 0)
+                            .map(([duration, count]) => (
                             <div key={duration} className="flex justify-between text-sm">
-                              <span>{duration === 'SHORT' ? '숏폼' : duration === 'MID' ? '미드폼' : '롱폼'}</span>
-                              <span>{count}개</span>
+                              <span>
+                                {duration === 'SHORT' ? '숏폼 (≤60초)' : 
+                                 duration === 'MID' ? '미드폼 (61-180초)' : 
+                                 '롱폼 (>180초)'}
+                              </span>
+                              <span className="font-medium">{count}개</span>
                             </div>
                           ))}
+                          {(!batch.stats.byDuration || Object.values(batch.stats.byDuration).every(v => v === 0)) && (
+                            <div className="text-sm text-gray-400">데이터 없음</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 조회수 통계 추가 */}
+                  {batch.stats && (batch.stats.avgViews > 0 || batch.stats.totalViews > 0) && (
+                    <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-200">
+                      <div className="text-center">
+                        <div className="text-sm text-gray-500">평균 조회수</div>
+                        <div className="font-medium text-lg text-orange-600">
+                          {(batch.stats.avgViews || 0).toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-sm text-gray-500">총 조회수</div>
+                        <div className="font-medium text-lg text-purple-600">
+                          {(batch.stats.totalViews || 0).toLocaleString()}
                         </div>
                       </div>
                     </div>
@@ -919,6 +1016,68 @@ const BatchManagementPage: React.FC = () => {
                   배치 생성
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 배치 영상 목록 모달 */}
+      {showVideosModal && selectedBatch && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden">
+            {/* 모달 헤더 */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">
+                  {selectedBatch.name} - 수집된 영상
+                </h2>
+                <p className="text-gray-600 mt-1">
+                  {selectedBatch.totalVideosSaved}개 영상 | {formatDate(selectedBatch.createdAt)}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowVideosModal(false);
+                  setSelectedBatch(null);
+                  setBatchVideos([]);
+                }}
+                className="text-gray-400 hover:text-gray-600 p-2"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* 영상 목록 */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {videosLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-pulse text-gray-500">영상 목록을 불러오는 중...</div>
+                </div>
+              ) : batchVideos.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-gray-500 text-lg mb-2">수집된 영상이 없습니다</div>
+                  <div className="text-gray-400">이 배치에서 수집된 영상이 없거나 데이터를 찾을 수 없습니다.</div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                  {batchVideos.map((video) => (
+                    <VideoCard 
+                      key={video._id} 
+                      video={{
+                        _id: video._id,
+                        title: video.title,
+                        url: video.url,
+                        thumbnailUrl: video.thumbnailUrl,
+                        channelName: video.channelName,
+                        platform: video.platform,
+                        duration: video.duration,
+                        views: video.views,
+                        uploadDate: video.uploadDate
+                      }} 
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

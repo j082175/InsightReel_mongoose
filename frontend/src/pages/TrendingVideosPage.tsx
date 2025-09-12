@@ -13,6 +13,8 @@ import {
   Video,
   BarChart3
 } from 'lucide-react';
+import VideoCard from '../components/VideoCard';
+import { formatViews, formatDate, getDurationLabel } from '../utils/formatters';
 
 interface TrendingVideo {
   _id: string;
@@ -141,33 +143,7 @@ const TrendingVideosPage: React.FC = () => {
     setPagination(prev => ({ ...prev, offset: newOffset }));
   };
 
-  const formatNumber = (num: number): string => {
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-    return num.toString();
-  };
 
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('ko-KR');
-  };
-
-  const getDurationLabel = (duration: string): string => {
-    switch (duration) {
-      case 'SHORT': return '숏폼';
-      case 'MID': return '미드폼';
-      case 'LONG': return '롱폼';
-      default: return duration;
-    }
-  };
-
-  const getPlatformIcon = (platform: string) => {
-    switch (platform) {
-      case 'YOUTUBE': return <Youtube className="w-4 h-4 text-red-500" />;
-      case 'INSTAGRAM': return <Instagram className="w-4 h-4 text-pink-500" />;
-      case 'TIKTOK': return <Video className="w-4 h-4 text-black" />;
-      default: return <Play className="w-4 h-4" />;
-    }
-  };
 
   if (loading && videos.length === 0) {
     return (
@@ -346,136 +322,23 @@ const TrendingVideosPage: React.FC = () => {
       )}
 
       {/* 영상 목록 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {videos.map((video) => (
-          <div key={video._id} className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow">
-            {/* 썸네일 */}
-            <div className="relative">
-              {video.thumbnailUrl ? (
-                <img 
-                  src={video.thumbnailUrl} 
-                  alt={video.title}
-                  className="w-full h-48 object-cover rounded-t-lg"
-                />
-              ) : (
-                <div className="w-full h-48 bg-gray-200 rounded-t-lg flex items-center justify-center">
-                  <Play className="w-12 h-12 text-gray-400" />
-                </div>
-              )}
-              
-              {/* 플랫폼 아이콘 */}
-              <div className="absolute top-3 left-3 bg-black bg-opacity-70 rounded-full p-2">
-                {getPlatformIcon(video.platform)}
-              </div>
-              
-              {/* 영상 길이 */}
-              <div className="absolute top-3 right-3 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
-                {getDurationLabel(video.duration)}
-              </div>
-              
-              {/* 조회수 */}
-              <div className="absolute bottom-3 right-3 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-                <Eye className="w-3 h-3" />
-                {formatNumber(video.views)}
-              </div>
-            </div>
-
-            {/* 콘텐츠 */}
-            <div className="p-4">
-              {/* 제목 */}
-              <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 leading-tight">
-                {video.title}
-              </h3>
-
-              {/* 채널 정보 */}
-              <div className="text-sm text-gray-600 mb-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{video.channelName}</span>
-                  {video.groupName && (
-                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                      {video.groupName}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* 통계 */}
-              <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
-                <div className="flex items-center gap-4">
-                  {video.likes && (
-                    <span className="flex items-center gap-1">
-                      <span>❤️</span>
-                      {formatNumber(video.likes)}
-                    </span>
-                  )}
-                  {video.commentsCount && (
-                    <span className="flex items-center gap-1">
-                      <span>💬</span>
-                      {formatNumber(video.commentsCount)}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* 카테고리 */}
-              {video.mainCategory && (
-                <div className="flex flex-wrap gap-1 mb-3">
-                  <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">
-                    {video.mainCategory}
-                  </span>
-                  {video.middleCategory && (
-                    <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">
-                      {video.middleCategory}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {/* 키워드 */}
-              {video.keywords && video.keywords.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {video.keywords.slice(0, 3).map((keyword, index) => (
-                    <span key={index} className="bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded">
-                      #{keyword}
-                    </span>
-                  ))}
-                  {video.keywords.length > 3 && (
-                    <span className="text-gray-500 text-xs">+{video.keywords.length - 3}</span>
-                  )}
-                </div>
-              )}
-
-              {/* 날짜 정보 */}
-              <div className="text-xs text-gray-400 mb-3">
-                <div>업로드: {formatDate(video.uploadDate)}</div>
-                <div>수집: {formatDate(video.collectionDate)}</div>
-              </div>
-
-              {/* 액션 버튼 */}
-              <div className="flex gap-2">
-                <a
-                  href={video.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 bg-blue-500 text-white text-sm py-2 px-3 rounded hover:bg-blue-600 transition-colors flex items-center justify-center gap-1"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  영상 보기
-                </a>
-                {video.channelUrl && (
-                  <a
-                    href={video.channelUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-gray-500 text-white text-sm py-2 px-3 rounded hover:bg-gray-600 transition-colors"
-                    title="채널 보기"
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                )}
-              </div>
-            </div>
-          </div>
+          <VideoCard 
+            key={video._id} 
+            video={{
+              _id: video._id,
+              videoId: video.videoId,
+              title: video.title,
+              url: video.url,
+              thumbnailUrl: video.thumbnailUrl,
+              channelName: video.channelName,
+              platform: video.platform,
+              duration: video.duration,
+              views: video.views,
+              uploadDate: video.uploadDate
+            }} 
+          />
         ))}
       </div>
 

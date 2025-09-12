@@ -9,7 +9,6 @@ const trendingVideoSchema = new mongoose.Schema({
   videoId: {
     type: String,
     required: true,
-    unique: true,
     trim: true
   },
   title: {
@@ -48,11 +47,17 @@ const trendingVideoSchema = new mongoose.Schema({
   groupId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'ChannelGroup',
-    required: true
+    required: false  // 개별 채널 수집 시에는 null 가능
   },
   groupName: {
     type: String,
-    required: true
+    required: false,  // 개별 채널 수집 시에는 기본값 사용
+    default: '개별 채널 수집'
+  },
+  batchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'CollectionBatch',
+    required: false  // 기존 데이터 호환성을 위해
   },
   collectionDate: {
     type: Date,
@@ -118,9 +123,10 @@ const trendingVideoSchema = new mongoose.Schema({
 
 // 복합 인덱스
 trendingVideoSchema.index({ groupId: 1, collectionDate: -1 });
+trendingVideoSchema.index({ batchId: 1, collectionDate: -1 });
 trendingVideoSchema.index({ platform: 1, views: -1 });
 trendingVideoSchema.index({ duration: 1, views: -1 });
-trendingVideoSchema.index({ videoId: 1 }, { unique: true });
+trendingVideoSchema.index({ videoId: 1, batchId: 1 }, { unique: true }); // 배치별 중복 방지
 trendingVideoSchema.index({ channelId: 1, collectionDate: -1 });
 
 // 정적 메서드

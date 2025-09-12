@@ -10,6 +10,7 @@ import ContentIdeaPage from './pages/ContentIdeaPage';
 import TrendingVideosPage from './pages/TrendingVideosPage';
 import BatchManagementPage from './pages/BatchManagementPage';
 import TrendingDashboardPage from './pages/TrendingDashboardPage';
+import TrendingCollectionPage from './pages/TrendingCollectionPage';
 
 interface AppContextType {
   collectionBatches: CollectionBatch[];
@@ -44,6 +45,7 @@ function App() {
       case 'archive': return <VideoArchivePage />;
       case 'discovery': return <ContentDiscoveryPage />;
       case 'ideas': return <ContentIdeaPage />;
+      case 'trending-collection': return <TrendingCollectionPage />;
       case 'trending-videos': return <TrendingVideosPage />;
       case 'trending-batches': return <BatchManagementPage />;
       case 'trending-dashboard': return <TrendingDashboardPage />;

@@ -127,20 +127,25 @@ collectionBatchSchema.index({ status: 1 });
 collectionBatchSchema.index({ createdAt: -1 });
 collectionBatchSchema.index({ collectionType: 1 });
 
+// 가상 필드 설정 (JSON 직렬화 시 포함)
+collectionBatchSchema.set('toJSON', { virtuals: true });
+collectionBatchSchema.set('toObject', { virtuals: true });
+
 // 가상 필드 - 수집 소요 시간 (분)
 collectionBatchSchema.virtual('durationMinutes').get(function() {
   if (this.startedAt && this.completedAt) {
-    return Math.round((this.completedAt - this.startedAt) / (1000 * 60));
+    const duration = Math.round((new Date(this.completedAt) - new Date(this.startedAt)) / (1000 * 60));
+    return Math.max(duration, 1); // 최소 1분
   }
-  return null;
+  return 0;
 });
 
 // 가상 필드 - 성공률
 collectionBatchSchema.virtual('successRate').get(function() {
-  if (this.totalVideosFound > 0) {
+  if (this.totalVideosFound && this.totalVideosFound > 0) {
     return Math.round((this.totalVideosSaved / this.totalVideosFound) * 100);
   }
-  return 0;
+  return this.totalVideosSaved > 0 ? 100 : 0; // 수집된 영상이 있으면 100%, 없으면 0%
 });
 
 // 메서드 - 배치 시작
@@ -157,7 +162,40 @@ collectionBatchSchema.methods.complete = function(results) {
   this.totalVideosFound = results.totalVideosFound || 0;
   this.totalVideosSaved = results.totalVideosSaved || 0;
   this.quotaUsed = results.quotaUsed || 0;
-  this.stats = results.stats || this.stats;
+  
+  // 기본 통계 생성 (stats가 없는 경우)
+  if (!results.stats) {
+    this.stats = {
+      byPlatform: {
+        YOUTUBE: this.totalVideosSaved,
+        INSTAGRAM: 0,
+        TIKTOK: 0
+      },
+      byDuration: {
+        SHORT: 0,
+        MID: 0,
+        LONG: 0
+      },
+      avgViews: 0,
+      totalViews: 0
+    };
+  } else {
+    this.stats = {
+      byPlatform: {
+        YOUTUBE: results.stats.byPlatform?.YOUTUBE || this.totalVideosSaved,
+        INSTAGRAM: results.stats.byPlatform?.INSTAGRAM || 0,
+        TIKTOK: results.stats.byPlatform?.TIKTOK || 0
+      },
+      byDuration: {
+        SHORT: results.stats.byDuration?.SHORT || 0,
+        MID: results.stats.byDuration?.MID || 0,
+        LONG: results.stats.byDuration?.LONG || 0
+      },
+      avgViews: results.stats.avgViews || 0,
+      totalViews: results.stats.totalViews || 0
+    };
+  }
+  
   return this.save();
 };
 

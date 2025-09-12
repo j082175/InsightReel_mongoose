@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Video } from '../types';
 import { PLATFORMS } from '../types/api';
+import { formatViews, formatDate } from '../utils/formatters';
 
 interface VideoModalProps {
   video: Video | null;
@@ -42,25 +43,6 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
 
   if (!video) return null;
 
-  const formatViews = (num: number) => {
-    if (num >= 10000) return (num / 10000).toFixed(0) + '만';
-    if (num >= 1000) return (num / 1000).toFixed(1) + '천';
-    return num.toLocaleString();
-  };
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('ko-KR', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
-      });
-    } catch {
-      return dateString;
-    }
-  };
 
   const getYouTubeEmbedUrl = (url: string) => {
     if (!url) return '';

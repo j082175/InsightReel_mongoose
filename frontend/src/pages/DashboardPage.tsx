@@ -9,6 +9,9 @@ import ChannelAnalysisModal from '../components/ChannelAnalysisModal';
 import VideoCard from '../components/VideoCard';
 
 import { PLATFORMS } from '../types/api';
+import { formatViews } from '../utils/formatters';
+import { useSelection } from '../hooks/useSelection';
+import SelectionActionBar from '../components/SelectionActionBar';
 
 const DashboardPage: React.FC = () => {
   const [filters, setFilters] = useState<FilterState>({ 
@@ -24,13 +27,15 @@ const DashboardPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [gridSize, setGridSize] = useState(1);
   const [isSelectMode, setIsSelectMode] = useState(false);
-  const [selectedVideos, setSelectedVideos] = useState<Set<number>>(new Set());
   const [itemToDelete, setItemToDelete] = useState<{
     type: 'single' | 'bulk';
     data?: Video;
     count?: number;
   } | null>(null);
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
+  
+  // 선택 관리
+  const videoSelection = useSelection<number>();
 
   // API 훅들
   const { data: apiVideos = [] } = useVideos();
@@ -173,12 +178,6 @@ const DashboardPage: React.FC = () => {
     };
   }, [filteredVideos]);
 
-  // 유틸리티 함수들
-  const formatViews = (num: number) => {
-    if (num >= 10000) return (num / 10000).toFixed(0) + '만';
-    if (num >= 1000) return (num / 1000).toFixed(1) + '천';
-    return num.toLocaleString();
-  };
 
   const handleVideoClick = (video: Video) => {
     if (isSelectMode) {
@@ -193,21 +192,11 @@ const DashboardPage: React.FC = () => {
   };
 
   const handleSelectToggle = (videoId: number) => {
-    const newSelection = new Set(selectedVideos);
-    if (newSelection.has(videoId)) {
-      newSelection.delete(videoId);
-    } else {
-      newSelection.add(videoId);
-    }
-    setSelectedVideos(newSelection);
+    videoSelection.toggle(videoId);
   };
 
   const handleSelectAll = () => {
-    if (selectedVideos.size === filteredVideos.length) {
-      setSelectedVideos(new Set());
-    } else {
-      setSelectedVideos(new Set(filteredVideos.map(v => Number(v.id))));
-    }
+    videoSelection.selectAll(filteredVideos.map(v => Number(v.id)));
   };
 
   const handleDeleteClick = (item: { type: 'single' | 'bulk'; data?: Video; count?: number }) => {
@@ -218,7 +207,7 @@ const DashboardPage: React.FC = () => {
     // 실제 삭제 로직은 여기에 구현
     console.log('삭제 확인:', itemToDelete);
     setItemToDelete(null);
-    setSelectedVideos(new Set());
+    videoSelection.clear();
     setIsSelectMode(false);
   };
 
@@ -338,7 +327,7 @@ const DashboardPage: React.FC = () => {
                 <button
                   onClick={() => {
                     setIsSelectMode(!isSelectMode);
-                    setSelectedVideos(new Set());
+                    videoSelection.clear();
                   }}
                   className={`px-3 py-1 text-sm rounded ${isSelectMode ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
                 >
@@ -364,7 +353,7 @@ const DashboardPage: React.FC = () => {
                     onInfoClick={setSelectedVideo}
                     onChannelClick={setChannelToAnalyze}
                     isSelectMode={isSelectMode}
-                    isSelected={selectedVideos.has(Number(video.id))}
+                    isSelected={videoSelection.isSelected(Number(video.id))}
                     onSelectToggle={handleSelectToggle}
                   />
                 ))}
@@ -379,40 +368,18 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* 선택 모드 액션 바 */}
-        {isSelectMode && selectedVideos.size > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 z-40">
-            <div className="max-w-7xl mx-auto flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-600">
-                  {selectedVideos.size}개 선택됨
-                </span>
-                <button
-                  onClick={handleSelectAll}
-                  className="text-sm text-indigo-600 hover:text-indigo-800"
-                >
-                  {selectedVideos.size === filteredVideos.length ? '전체 해제' : '전체 선택'}
-                </button>
-              </div>
-              <div className="flex items-center space-x-2">
-                <button 
-                  onClick={() => handleDeleteClick({ type: 'bulk', count: selectedVideos.size })}
-                  className="px-4 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700"
-                >
-                  삭제
-                </button>
-                <button
-                  onClick={() => {
-                    setIsSelectMode(false);
-                    setSelectedVideos(new Set());
-                  }}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
-                >
-                  취소
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <SelectionActionBar
+          isVisible={isSelectMode}
+          selectedCount={videoSelection.count}
+          totalCount={filteredVideos.length}
+          itemType="개"
+          onSelectAll={handleSelectAll}
+          onClearSelection={() => {
+            setIsSelectMode(false);
+            videoSelection.clear();
+          }}
+          onDelete={() => handleDeleteClick({ type: 'bulk', count: videoSelection.count })}
+        /> 
       </div>
 
       {/* 모달들 */}

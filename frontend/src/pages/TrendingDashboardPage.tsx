@@ -14,6 +14,7 @@ import {
   Filter,
   Download
 } from 'lucide-react';
+import { formatViews, formatDate, getDurationLabel } from '../utils/formatters';
 
 interface TrendingStats {
   overview: {
@@ -147,16 +148,6 @@ const TrendingDashboardPage: React.FC = () => {
     }
   };
 
-  const formatNumber = (num: number): string => {
-    if (num >= 1000000000) return `${(num / 1000000000).toFixed(1)}B`;
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
-    return num.toString();
-  };
-
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('ko-KR');
-  };
 
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
@@ -167,14 +158,6 @@ const TrendingDashboardPage: React.FC = () => {
     }
   };
 
-  const getDurationLabel = (duration: string): string => {
-    switch (duration) {
-      case 'SHORT': return '숏폼';
-      case 'MID': return '미드폼';
-      case 'LONG': return '롱폼';
-      default: return duration;
-    }
-  };
 
   const getStatusColor = (status: string): string => {
     switch (status) {
@@ -303,7 +286,7 @@ const TrendingDashboardPage: React.FC = () => {
               <div>
                 <p className="text-sm text-gray-500 mb-1">총 수집 영상</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatNumber(trendingStats.overview.totalVideos)}
+                  {formatViews(trendingStats.overview.totalVideos)}
                 </p>
               </div>
               <div className="bg-blue-100 p-3 rounded-full">
@@ -317,7 +300,7 @@ const TrendingDashboardPage: React.FC = () => {
               <div>
                 <p className="text-sm text-gray-500 mb-1">총 조회수</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatNumber(trendingStats.overview.totalViews)}
+                  {formatViews(trendingStats.overview.totalViews)}
                 </p>
               </div>
               <div className="bg-green-100 p-3 rounded-full">
@@ -331,7 +314,7 @@ const TrendingDashboardPage: React.FC = () => {
               <div>
                 <p className="text-sm text-gray-500 mb-1">총 좋아요</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatNumber(trendingStats.overview.totalLikes)}
+                  {formatViews(trendingStats.overview.totalLikes)}
                 </p>
               </div>
               <div className="bg-red-100 p-3 rounded-full">
@@ -345,7 +328,7 @@ const TrendingDashboardPage: React.FC = () => {
               <div>
                 <p className="text-sm text-gray-500 mb-1">평균 조회수</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatNumber(trendingStats.overview.avgViews)}
+                  {formatViews(trendingStats.overview.avgViews)}
                 </p>
               </div>
               <div className="bg-purple-100 p-3 rounded-full">
@@ -378,10 +361,10 @@ const TrendingDashboardPage: React.FC = () => {
                       <span className="font-medium">{item._id}</span>
                     </div>
                     <div className="text-right">
-                      <div className="font-medium">{formatNumber(item.count)}개</div>
+                      <div className="font-medium">{formatViews(item.count)}개</div>
                       <div className="text-sm text-gray-500">{percentage}%</div>
                       <div className="text-xs text-gray-400">
-                        {formatNumber(item.totalViews)} 조회수
+                        {formatViews(item.totalViews)} 조회수
                       </div>
                     </div>
                   </div>
@@ -415,10 +398,10 @@ const TrendingDashboardPage: React.FC = () => {
                       <span className="font-medium">{getDurationLabel(item._id)}</span>
                     </div>
                     <div className="text-right">
-                      <div className="font-medium">{formatNumber(item.count)}개</div>
+                      <div className="font-medium">{formatViews(item.count)}개</div>
                       <div className="text-sm text-gray-500">{percentage}%</div>
                       <div className="text-xs text-gray-400">
-                        평균 {formatNumber(item.avgViews)} 조회수
+                        평균 {formatViews(item.avgViews)} 조회수
                       </div>
                     </div>
                   </div>
@@ -473,13 +456,13 @@ const TrendingDashboardPage: React.FC = () => {
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">총 수집된 영상</span>
                 <span className="font-medium">
-                  {formatNumber(batchStats.overview.totalVideosCollected)}개
+                  {formatViews(batchStats.overview.totalVideosCollected)}개
                 </span>
               </div>
               <div className="flex justify-between items-center text-sm mt-2">
                 <span className="text-gray-500">사용된 할당량</span>
                 <span className="font-medium">
-                  {formatNumber(batchStats.overview.totalQuotaUsed)}
+                  {formatViews(batchStats.overview.totalQuotaUsed)}
                 </span>
               </div>
             </div>

@@ -16,6 +16,7 @@ const DatabaseManager = require('./config/database');
 // 간단한 채널 분석에서는 직접 사용하지 않지만 다른 API에서 필요
 const Video = require('./models/VideoModel');
 const VideoUrl = require('./models/VideoUrl');
+const CollectionBatch = require('./models/CollectionBatch');
 
 const VideoProcessor = require('./services/VideoProcessor');
 const AIAnalyzer = require('./services/AIAnalyzer');
@@ -2662,6 +2663,8 @@ app.post('/api/collect-trending', async (req, res) => {
         );
     }
 
+    let batch = null;
+
     try {
         const { channelIds, options = {} } = req.body;
 
@@ -2677,25 +2680,86 @@ app.post('/api/collect-trending', async (req, res) => {
             });
         }
 
+        // 🔥 배치 생성
+        const channelNames = channelIds.map((id, index) => `Channel ${index + 1}`);
+        const batchName = `개별 채널 수집 - ${new Date().toLocaleDateString('ko-KR')} ${new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`;
+        
+        batch = new CollectionBatch({
+            name: batchName,
+            description: `${channelIds.length}개 개별 채널에서 트렌딩 영상 수집`,
+            collectionType: 'channels',
+            targetChannels: channelIds,
+            criteria: {
+                daysBack: options.daysBack || 3,
+                minViews: options.minViews || 30000,
+                maxViews: options.maxViews || null,
+                includeShorts: options.includeShorts !== false,
+                includeMidform: options.includeMidform !== false,
+                includeLongForm: options.includeLongForm !== false,
+                keywords: options.keywords || [],
+                excludeKeywords: options.excludeKeywords || []
+            }
+        });
+
+        await batch.save();
+        ServerLogger.info(`📝 개별 채널 배치 생성됨: ${batch._id} - "${batchName}"`);
+
+        // 배치 시작
+        await batch.start();
+
         ServerLogger.info(`📊 트렌딩 수집 요청: ${channelIds.length}개 채널`, {
             channels: channelIds
                 .slice(0, 3)
                 .map((id) => `${id.substring(0, 10)}...`),
             options,
+            batchId: batch._id
         });
 
         const results = await highViewCollector.collectFromChannels(
             channelIds,
-            options,
+            {
+                ...options,
+                batchId: batch._id  // 배치 ID 전달
+            }
         );
+
+        // 🔥 배치 완료 처리
+        await batch.complete({
+            totalVideosFound: results.totalVideos || 0,
+            totalVideosSaved: results.videos?.length || 0,
+            quotaUsed: results.quotaUsed || 0,
+            stats: {
+                byPlatform: { YOUTUBE: results.videos?.length || 0 },
+                byDuration: { SHORT: 0, MID: 0, LONG: 0 },
+                avgViews: 0,
+                totalViews: 0
+            }
+        });
+
+        ServerLogger.info(`✅ 개별 채널 트렌딩 수집 완료: ${results.videos?.length || 0}개 영상 (배치: ${batch._id})`);
 
         ResponseHandler.success(
             res,
-            results,
+            {
+                ...results,
+                batchId: batch._id,
+                batchName: batch.name
+            },
             '채널 트렌딩 수집이 완료되었습니다.',
         );
     } catch (error) {
         ServerLogger.error('트렌딩 수집 실패:', error);
+
+        // 🔥 배치 실패 처리
+        if (batch) {
+            try {
+                await batch.fail(error);
+                ServerLogger.info(`❌ 개별 채널 배치 실패 처리됨: ${batch._id}`);
+            } catch (batchError) {
+                ServerLogger.error('배치 실패 처리 중 오류:', batchError);
+            }
+        }
+
         ResponseHandler.serverError(
             res,
             error,

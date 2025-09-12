@@ -9,6 +9,9 @@ import ChannelAnalysisModal from '../components/ChannelAnalysisModal';
 import VideoCard from '../components/VideoCard';
 
 import { PLATFORMS } from '../types/api';
+import { formatViews } from '../utils/formatters';
+import { useSelection } from '../hooks/useSelection';
+import SelectionActionBar from '../components/SelectionActionBar';
 
 const VideoArchivePage: React.FC = () => {
   const [archivedVideos, setArchivedVideos] = useState<ExtendedVideo[]>([]);
@@ -19,7 +22,7 @@ const VideoArchivePage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [gridSize, setGridSize] = useState(2);
   const [isSelectMode, setIsSelectMode] = useState(false);
-  const [selectedVideos, setSelectedVideos] = useState<Set<string>>(new Set());
+  const videoSelection = useSelection<string>();
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [selectedVideoForPlay, setSelectedVideoForPlay] = useState<Video | null>(null);
   const [itemToDelete, setItemToDelete] = useState<{
@@ -113,9 +116,55 @@ const VideoArchivePage: React.FC = () => {
       // DB 데이터를 ExtendedVideo 형식으로 변환
       const convertedVideos: ExtendedVideo[] = apiVideos.map((video: Video) => {
         const uploadDate = video.uploadDate || video.timestamp || video.createdAt;
-        const daysAgo = uploadDate 
-          ? Math.floor((Date.now() - new Date(uploadDate).getTime()) / (1000 * 60 * 60 * 24))
-          : 0;
+        let daysAgo = 0;
+        let normalizedUploadDate = uploadDate; // VideoCard에 전달할 정규화된 날짜
+        
+        if (uploadDate) {
+          try {
+            // 한국어 날짜 형식 처리 ('2025. 9. 9. 오전 5:37:21' 등)
+            if (uploadDate.includes && (uploadDate.includes('오전') || uploadDate.includes('오후'))) {
+              const timeMatch = uploadDate.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(오전|오후)\s*(\d{1,2}):(\d{1,2})/);
+              if (timeMatch) {
+                const [, year, month, day, ampm, hour, minute] = timeMatch;
+                let hour24 = parseInt(hour);
+                
+                // 오전/오후를 24시간 형식으로 변환
+                if (ampm === '오후' && hour24 !== 12) {
+                  hour24 += 12;
+                } else if (ampm === '오전' && hour24 === 12) {
+                  hour24 = 0;
+                }
+                
+                // 한국시간으로 Date 객체 생성 (UTC가 아닌 로컬시간으로)
+                const parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), hour24, parseInt(minute), 0);
+                if (!isNaN(parsedDate.getTime())) {
+                  daysAgo = Math.floor((Date.now() - parsedDate.getTime()) / (1000 * 60 * 60 * 24));
+                  normalizedUploadDate = parsedDate.toISOString(); // ISO 형식으로 변환
+                }
+              } else {
+                // 시간 정보가 없는 경우 날짜만 파싱
+                const dateMatch = uploadDate.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+                if (dateMatch) {
+                  const [, year, month, day] = dateMatch;
+                  const parsedDate = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+                  if (!isNaN(parsedDate.getTime())) {
+                    daysAgo = Math.floor((Date.now() - parsedDate.getTime()) / (1000 * 60 * 60 * 24));
+                    normalizedUploadDate = parsedDate.toISOString(); // ISO 형식으로 변환
+                  }
+                }
+              }
+            } else {
+              const parsedDate = new Date(uploadDate);
+              if (!isNaN(parsedDate.getTime())) {
+                daysAgo = Math.floor((Date.now() - parsedDate.getTime()) / (1000 * 60 * 60 * 24));
+                normalizedUploadDate = parsedDate.toISOString(); // ISO 형식으로 변환
+              }
+            }
+          } catch (error) {
+            console.warn('날짜 파싱 실패:', uploadDate, error);
+            daysAgo = 0;
+          }
+        }
         
         // URL 검증 및 fallback 처리
         let url = video.url;
@@ -146,6 +195,7 @@ const VideoArchivePage: React.FC = () => {
                    (video.platform?.toUpperCase() === 'TIKTOK' || video.platform === 'TIKTOK') ? 'TIKTOK' : 
                    (video.platform?.toUpperCase() === 'INSTAGRAM' || video.platform === 'INSTAGRAM') ? 'INSTAGRAM' : 'YOUTUBE',
           url: url,
+          uploadDate: normalizedUploadDate, // 정규화된 날짜 사용
           keywords: keywordsArray,
           hashtags: hashtagsArray,
           daysAgo: daysAgo,
@@ -180,28 +230,13 @@ const VideoArchivePage: React.FC = () => {
   const allTags = Array.from(new Set(archivedVideos.flatMap(video => video.tags || [])));
   const allCategories = Array.from(new Set(archivedVideos.map(video => video.category || '미분류')));
 
-  const formatViews = (num: number) => {
-    if (num >= 10000) return (num / 10000).toFixed(0) + '만';
-    return num.toLocaleString();
-  };
 
   const handleSelectToggle = (videoId: string | number) => {
-    const newSelection = new Set(selectedVideos);
-    const stringId = String(videoId);
-    if (newSelection.has(stringId)) {
-      newSelection.delete(stringId);
-    } else {
-      newSelection.add(stringId);
-    }
-    setSelectedVideos(newSelection);
+    videoSelection.toggle(String(videoId));
   };
 
   const handleSelectAll = () => {
-    if (selectedVideos.size === filteredVideos.length) {
-      setSelectedVideos(new Set());
-    } else {
-      setSelectedVideos(new Set(filteredVideos.map(v => String(v.id))));
-    }
+    videoSelection.selectAll(filteredVideos.map(v => String(v.id)));
   };
 
   const handleDeleteClick = (item: { type: 'single' | 'bulk'; data?: Video; count?: number }) => {
@@ -212,8 +247,8 @@ const VideoArchivePage: React.FC = () => {
     if (itemToDelete?.type === 'single' && itemToDelete.data) {
       setArchivedVideos(archivedVideos.filter(v => v.id !== itemToDelete.data?.id));
     } else if (itemToDelete?.type === 'bulk') {
-      setArchivedVideos(archivedVideos.filter(v => !selectedVideos.has(String(v.id))));
-      setSelectedVideos(new Set());
+      setArchivedVideos(archivedVideos.filter(v => !videoSelection.selected.has(String(v.id))));
+      videoSelection.clear();
       setIsSelectMode(false);
     }
     setItemToDelete(null);
@@ -264,7 +299,7 @@ const VideoArchivePage: React.FC = () => {
       <button
         onClick={() => {
           setIsSelectMode(!isSelectMode);
-          setSelectedVideos(new Set());
+          videoSelection.clear();
         }}
         className={`px-3 py-1 text-sm rounded ${isSelectMode ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
       >
@@ -428,7 +463,7 @@ const VideoArchivePage: React.FC = () => {
                     onInfoClick={(video) => !isSelectMode && setSelectedVideo(video)}
                     onChannelClick={setChannelToAnalyze}
                     isSelectMode={isSelectMode}
-                    isSelected={selectedVideos.has(String(video.id))}
+                    isSelected={videoSelection.isSelected(String(video.id))}
                     onSelectToggle={handleSelectToggle}
                     showArchiveInfo={true}
                   />
@@ -443,7 +478,7 @@ const VideoArchivePage: React.FC = () => {
                     onCardClick={setSelectedVideo}
                     onDeleteClick={handleDeleteClick}
                     isSelectMode={isSelectMode}
-                    isSelected={selectedVideos.has(String(video.id))}
+                    isSelected={videoSelection.isSelected(String(video.id))}
                     onSelectToggle={handleSelectToggle}
                   />
                 ))}
@@ -459,46 +494,28 @@ const VideoArchivePage: React.FC = () => {
       </div>
 
       {/* 선택 모드 액션 바 */}
-      {isSelectMode && selectedVideos.size > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 z-40">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                {selectedVideos.size}개 선택됨
-              </span>
-              <button
-                onClick={handleSelectAll}
-                className="text-sm text-indigo-600 hover:text-indigo-800"
-              >
-                {selectedVideos.size === filteredVideos.length ? '전체 해제' : '전체 선택'}
-              </button>
-            </div>
-            <div className="flex items-center space-x-2">
-              <button className="px-4 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700">
-                태그 편집
-              </button>
-              <button className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700">
-                내보내기
-              </button>
-              <button 
-                onClick={() => handleDeleteClick({ type: 'bulk', count: selectedVideos.size })}
-                className="px-4 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700"
-              >
-                삭제
-              </button>
-              <button
-                onClick={() => {
-                  setIsSelectMode(false);
-                  setSelectedVideos(new Set());
-                }}
-                className="px-4 py-2 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400"
-              >
-                취소
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SelectionActionBar
+        isVisible={isSelectMode}
+        selectedCount={videoSelection.count}
+        totalCount={filteredVideos.length}
+        itemType="개"
+        onSelectAll={handleSelectAll}
+        onClearSelection={() => {
+          setIsSelectMode(false);
+          videoSelection.clear();
+        }}
+        onDelete={() => handleDeleteClick({ type: 'bulk', count: videoSelection.count })}
+        additionalActions={
+          <>
+            <button className="px-4 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700">
+              태그 편집
+            </button>
+            <button className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700">
+              내보내기
+            </button>
+          </>
+        }
+      />
 
       {/* 모달들 */}
       <VideoModal 
