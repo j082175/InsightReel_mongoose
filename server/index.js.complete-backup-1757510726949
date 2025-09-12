@@ -5,6 +5,8 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
+const { PLATFORMS } = require('../config/api-messages');
+
 // 🚀 FieldMapper 임포트 (완전 자동화 시스템)
 const { FieldMapper } = require('./types/field-mapper');
 
@@ -689,7 +691,7 @@ app.post('/api/process-video', async (req, res) => {
         let youtubeInfo = null;
         
         // YouTube인 경우 API로 정보 수집
-        if (platform === 'YOUTUBE') {
+        if (platform === PLATFORMS.YOUTUBE) {
           ServerLogger.info('0️⃣ YouTube 정보 수집 중...');
           youtubeInfo = await videoProcessor.getYouTubeVideoInfo(videoUrl);
           ServerLogger.info(`📺 ${youtubeInfo[FieldMapper.get('CONTENT_TYPE')]} 감지: ${youtubeInfo[FieldMapper.get('TITLE')]}`);
@@ -708,7 +710,7 @@ app.post('/api/process-video', async (req, res) => {
         let analysis;
         let enrichedMetadata = { platform }; // 🆕 기본값으로 초기화
         
-        if (platform === 'YOUTUBE') {
+        if (platform === PLATFORMS.YOUTUBE) {
           // YouTube 정보를 원본 metadata에 병합 (시트 저장용)
           // 🆕 metadata가 null/undefined인 경우 빈 객체로 초기화
           if (!metadata || typeof metadata !== 'object') {

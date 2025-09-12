@@ -4,6 +4,8 @@ const path = require('path');
 const { ServerLogger } = require('../utils/logger');
 const VideoUrl = require('../models/VideoUrl');
 
+const { PLATFORMS } = require('../config/api-messages');
+
 class SheetsManager {
     constructor() {
         this.sheets = null;
@@ -827,7 +829,7 @@ class SheetsManager {
             let uploadDate;
             if (metadata.uploadDate) {
                 // YouTube의 경우 업로드 날짜와 시간 모두 표시
-                if (platform === 'YOUTUBE') {
+                if (platform === PLATFORMS.YOUTUBE) {
                     uploadDate = new Date(metadata.uploadDate).toLocaleString(
                         'ko-KR',
                     );
@@ -1284,7 +1286,7 @@ class SheetsManager {
         // 업로드 날짜 결정
         let uploadDate;
         if (metadata.uploadDate) {
-            if (platform === 'YOUTUBE') {
+            if (platform === PLATFORMS.YOUTUBE) {
                 uploadDate = new Date(metadata.uploadDate).toLocaleString(
                     'ko-KR',
                 );
@@ -1354,7 +1356,7 @@ class SheetsManager {
         }
 
         // 플랫폼별 행 데이터 구성
-        if (platform === 'YOUTUBE') {
+        if (platform === PLATFORMS.YOUTUBE) {
             return [
                 rowNumber, // 번호
                 uploadDate, // 일시
@@ -1987,7 +1989,7 @@ class SheetsManager {
 
                     // URL이 저장되는 컬럼들 확인 (플랫폼별로 다를 수 있음)
                     let urlColumns = [];
-                    if (platform === 'YOUTUBE') {
+                    if (platform === PLATFORMS.YOUTUBE) {
                         urlColumns = ['W']; // YouTube URL은 W컬럼에 저장
                     } else if (platform === 'INSTAGRAM') {
                         urlColumns = ['N']; // Instagram URL은 N컬럼에 저장

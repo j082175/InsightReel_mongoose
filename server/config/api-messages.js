@@ -115,6 +115,9 @@ const ERROR_CODES = {
 
   // 🔄 일반 에러
   INTERNAL_SERVER_ERROR: 'INTERNAL_SERVER_ERROR',
+  SERVER_ERROR: 'SERVER_ERROR', // 일반 서버 에러
+  INVALID_REQUEST: 'INVALID_REQUEST', // 잘못된 요청
+  DUPLICATE_URL: 'DUPLICATE_URL', // URL 중복
   BAD_REQUEST: 'BAD_REQUEST',
   NOT_FOUND: 'NOT_FOUND',
   METHOD_NOT_ALLOWED: 'METHOD_NOT_ALLOWED',
@@ -162,6 +165,15 @@ const HTTP_STATUS_CODES = {
 /**
  * 플랫폼별 특수 메시지
  */
+/**
+ * 플랫폼 상수 (필수 사용)
+ */
+const PLATFORMS = {
+  YOUTUBE: 'YOUTUBE',
+  INSTAGRAM: 'INSTAGRAM',
+  TIKTOK: 'TIKTOK'
+};
+
 const PLATFORM_MESSAGES = {
   INSTAGRAM: {
     UNSUPPORTED: '인스타그램 비디오는 현재 지원하지 않는 형식입니다.',
@@ -181,5 +193,6 @@ module.exports = {
   API_MESSAGES,
   ERROR_CODES,
   HTTP_STATUS_CODES,
+  PLATFORMS,
   PLATFORM_MESSAGES
 };

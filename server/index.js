@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
+const { PLATFORMS } = require('./config/api-messages');
 
 // 설정 검증 먼저 실행
 const { getConfig } = require('./config/config-validator');
@@ -26,7 +27,11 @@ const YouTubeChannelDataCollector = require('./services/YouTubeChannelDataCollec
 const { ServerLogger } = require('./utils/logger');
 const ResponseHandler = require('./utils/response-handler');
 const ApiKeyManager = require('./services/ApiKeyManager');
-const { API_MESSAGES, ERROR_CODES, HTTP_STATUS_CODES } = require('./config/api-messages');
+const {
+    API_MESSAGES,
+    ERROR_CODES,
+    HTTP_STATUS_CODES,
+} = require('./config/api-messages');
 const videoQueue = require('./utils/VideoQueue');
 
 const app = express();
@@ -206,8 +211,7 @@ app.get('/api/database/test', async (req, res) => {
             likes: 100,
             views: 1000,
             mainCategory: 'Technology',
-            description:
-                'MongoDB Atlas 연결 테스트용 비디오입니다',
+            description: 'MongoDB Atlas 연결 테스트용 비디오입니다',
             timestamp: new Date(),
             collectionTime: new Date(),
         });
@@ -482,8 +486,7 @@ app.get('/api/test-youtube-sheet', async (req, res) => {
             uploadDate: row[1],
             platform: row[2],
             channelName: row[3],
-            title:
-                row[9]?.substring(0, 50) + '...' || 'N/A',
+            title: row[9]?.substring(0, 50) + '...' || 'N/A',
         }));
 
         res.status(HTTP_STATUS_CODES.OK).json({
@@ -522,7 +525,10 @@ app.get('/api/test-sheet-structure', async (req, res) => {
             totalSheets: sheetInfo.length,
         });
     } catch (error) {
-        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ success: false, error: error.message });
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            error: error.message,
+        });
     }
 });
 
@@ -553,7 +559,10 @@ app.get('/api/test-all-sheets-count', async (req, res) => {
 
         res.status(HTTP_STATUS_CODES.OK).json({ success: true, results });
     } catch (error) {
-        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ success: false, error: error.message });
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            error: error.message,
+        });
     }
 });
 
@@ -593,7 +602,10 @@ app.get('/api/test-instagram-latest', async (req, res) => {
             message: `Instagram 시트에서 ${data.length}개 행 조회, 최신 10개 날짜 정렬 완료`,
         });
     } catch (error) {
-        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ success: false, error: error.message });
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            error: error.message,
+        });
     }
 });
 
@@ -702,7 +714,8 @@ app.post('/api/process-video', async (req, res) => {
                             platform: duplicateCheck.existingPlatform,
                             row: duplicateCheck.existingRow,
                             column: duplicateCheck.existingColumn,
-                            normalizedUrl: sheetsManager.normalizeVideoUrl(checkUrl),
+                            normalizedUrl:
+                                sheetsManager.normalizeVideoUrl(checkUrl),
                             isProcessing: duplicateCheck.isProcessing || false,
                             status: duplicateCheck.status,
                         },
@@ -777,7 +790,8 @@ app.post('/api/process-video', async (req, res) => {
                         mode: 'batch',
                         ...batchResult,
                         apiSaving: '개별 호출 대비 97% 쿼터 절약',
-                        estimatedProcessTime: '최대 60초 또는 50개 모일 때까지 대기',
+                        estimatedProcessTime:
+                            '최대 60초 또는 50개 모일 때까지 대기',
                     },
                 });
             } catch (error) {
@@ -804,13 +818,8 @@ app.post('/api/process-video', async (req, res) => {
                 useAI: useAI,
             },
             processor: async (taskData) => {
-                const {
-                    platform,
-                    videoUrl,
-                    postUrl,
-                    analysisType,
-                    useAI,
-                } = taskData;
+                const { platform, videoUrl, postUrl, analysisType, useAI } =
+                    taskData;
                 let metadata = taskData.metadata; // 🆕 재할당 가능하도록 let으로 선언
 
                 ServerLogger.info(`🎬 Processing ${platform} video:`, postUrl);
@@ -824,7 +833,7 @@ app.post('/api/process-video', async (req, res) => {
                 let youtubeInfo = null;
 
                 // YouTube인 경우 API로 정보 수집
-                if (platform === 'YOUTUBE') {
+                if (platform === PLATFORMS.YOUTUBE) {
                     ServerLogger.info('0️⃣ YouTube 정보 수집 중...');
                     youtubeInfo = await videoProcessor.getYouTubeVideoInfo(
                         videoUrl,
@@ -852,7 +861,7 @@ app.post('/api/process-video', async (req, res) => {
                 let analysis;
                 let enrichedMetadata = { platform }; // 🆕 기본값으로 초기화
 
-                if (platform === 'YOUTUBE') {
+                if (platform === PLATFORMS.YOUTUBE) {
                     // YouTube 정보를 원본 metadata에 병합 (시트 저장용)
                     // 🆕 metadata가 null/undefined인 경우 빈 객체로 초기화
                     if (!metadata || typeof metadata !== 'object') {
@@ -897,7 +906,9 @@ app.post('/api/process-video', async (req, res) => {
                         platform,
                         url: videoUrl || postUrl, // 🆕 원본 URL 추가
                         // 🆕 YouTube 전용 ID 추가
-                        videoId: youtubeInfo?.videoId || videoUrl?.match(/[?&]v=([^&]+)/)?.[1],
+                        videoId:
+                            youtubeInfo?.videoId ||
+                            videoUrl?.match(/[?&]v=([^&]+)/)?.[1],
                         channelId: youtubeInfo?.channelId,
                     };
 
@@ -918,10 +929,7 @@ app.post('/api/process-video', async (req, res) => {
                         );
 
                         // YouTube 카테고리와 AI 카테고리 일치율 비교
-                        if (
-                            youtubeInfo.category &&
-                            analysis.mainCategory
-                        ) {
+                        if (youtubeInfo.category && analysis.mainCategory) {
                             const matchResult =
                                 videoProcessor.compareCategories(
                                     youtubeInfo.category,
@@ -1134,8 +1142,7 @@ app.post('/api/process-video', async (req, res) => {
 
                         // YouTube 게시일 추출 (enrichedMetadata에서)
                         const originalPublishDate = enrichedMetadata.uploadDate
-                            ? new Date(enrichedMetadata.uploadDate,
-                              )
+                            ? new Date(enrichedMetadata.uploadDate)
                             : null;
 
                         await VideoUrl.updateStatus(
@@ -1176,7 +1183,10 @@ app.post('/api/process-video', async (req, res) => {
                         title: enrichedMetadata.title || youtubeInfo?.title,
                         uploadDate: enrichedMetadata.uploadDate || '',
                         channelId: youtubeInfo?.channelId || '',
-                        videoId: youtubeInfo?.videoId || videoUrl?.match(/[?&]v=([^&]+)/)?.[1] || '',
+                        videoId:
+                            youtubeInfo?.videoId ||
+                            videoUrl?.match(/[?&]v=([^&]+)/)?.[1] ||
+                            '',
                         channelName: (() => {
                             const channelName =
                                 enrichedMetadata.channelName ||
@@ -1185,18 +1195,24 @@ app.post('/api/process-video', async (req, res) => {
                             ServerLogger.info(
                                 `🔍 채널명 디버그: ${channelName}`,
                                 {
-                                    enrichedChannelName: enrichedMetadata.channelName,
-                                    enrichedChannelNameLegacy: enrichedMetadata.channelName,
-                                    youtubeInfoChannel: youtubeInfo?.channelName,
+                                    enrichedChannelName:
+                                        enrichedMetadata.channelName,
+                                    enrichedChannelNameLegacy:
+                                        enrichedMetadata.channelName,
+                                    youtubeInfoChannel:
+                                        youtubeInfo?.channelName,
                                     finalChannelName: channelName,
                                 },
                             );
                             return channelName;
                         })(),
-                        channelUrl: enrichedMetadata.channelUrl || youtubeInfo?.channelUrl || '',
+                        channelUrl:
+                            enrichedMetadata.channelUrl ||
+                            youtubeInfo?.channelUrl ||
+                            '',
                         tags: enrichedMetadata.tags || youtubeInfo?.tags || [],
-                        language: 
-                            enrichedMetadata.language || 
+                        language:
+                            enrichedMetadata.language ||
                             enrichedMetadata.defaultLanguage ||
                             youtubeInfo?.language ||
                             youtubeInfo?.defaultLanguage ||
@@ -1206,17 +1222,39 @@ app.post('/api/process-video', async (req, res) => {
                         categoryId: youtubeInfo?.categoryId || 0,
                         shares: enrichedMetadata.shares || 0,
                         videoUrl: finalVideoUrl || postUrl || '',
-                        topComments: enrichedMetadata.topComments || youtubeInfo?.topComments || '',
+                        topComments:
+                            enrichedMetadata.topComments ||
+                            youtubeInfo?.topComments ||
+                            '',
                         // 📈 통계 정보 추가
-                        likeRatio: enrichedMetadata.likes && enrichedMetadata.views
-                            ? ((parseInt(enrichedMetadata.likes) / parseInt(enrichedMetadata.views)) * 100).toFixed(2) + '%'
-                            : '',
-                        engagementRate: enrichedMetadata.likes && enrichedMetadata.commentsCount && enrichedMetadata.views
-                            ? (((parseInt(enrichedMetadata.likes) + parseInt(enrichedMetadata.commentsCount || 0)) / parseInt(enrichedMetadata.views)) * 100).toFixed(2) + '%'
-                            : '',
+                        likeRatio:
+                            enrichedMetadata.likes && enrichedMetadata.views
+                                ? (
+                                      (parseInt(enrichedMetadata.likes) /
+                                          parseInt(enrichedMetadata.views)) *
+                                      100
+                                  ).toFixed(2) + '%'
+                                : '',
+                        engagementRate:
+                            enrichedMetadata.likes &&
+                            enrichedMetadata.commentsCount &&
+                            enrichedMetadata.views
+                                ? (
+                                      ((parseInt(enrichedMetadata.likes) +
+                                          parseInt(
+                                              enrichedMetadata.commentsCount ||
+                                                  0,
+                                          )) /
+                                          parseInt(enrichedMetadata.views)) *
+                                      100
+                                  ).toFixed(2) + '%'
+                                : '',
                     },
                     analysis: {
-                        category: analysis.category || analysis.mainCategory || '미분류',
+                        category:
+                            analysis.category ||
+                            analysis.mainCategory ||
+                            '미분류',
                         mainCategory: analysis.mainCategory,
                         middleCategory: analysis.middleCategory,
                         keywords: analysis.keywords,
@@ -1226,7 +1264,12 @@ app.post('/api/process-video', async (req, res) => {
                         summary: analysis.summary,
                         description: analysis.description,
                         content: analysis.content,
-                        analysisContent: analysis.analysisContent || analysis.summary || analysis.description || analysis.content || null,
+                        analysisContent:
+                            analysis.analysisContent ||
+                            analysis.summary ||
+                            analysis.description ||
+                            analysis.content ||
+                            null,
                         source: analysis.source || 'gemini',
                         aiModel: analysis.aiModel || 'gemini-2.5-flash-lite',
                         processingTime: analysis.processingTime || 'N/A',
@@ -1234,16 +1277,21 @@ app.post('/api/process-video', async (req, res) => {
                         fullCategoryPath:
                             analysis.fullCategoryPath ||
                             `${analysis.mainCategory}/${analysis.middleCategory}`,
-                        categoryMatchRate:
-                            analysis.categoryMatch
-                                ? `${analysis.categoryMatch.matchScore}%`
-                                : analysis.categoryMatchRate || null,
+                        categoryMatchRate: analysis.categoryMatch
+                            ? `${analysis.categoryMatch.matchScore}%`
+                            : analysis.categoryMatchRate || null,
                         matchType: analysis.categoryMatch
                             ? analysis.categoryMatch.matchType
-                            : analysis.matchType || (analysis.source ? `${analysis.source}-analysis` : null),
+                            : analysis.matchType ||
+                              (analysis.source
+                                  ? `${analysis.source}-analysis`
+                                  : null),
                         matchReason: analysis.categoryMatch
                             ? analysis.categoryMatch.matchReason
-                            : analysis.matchReason || (analysis.source ? `${analysis.source} 분석 결과` : null),
+                            : analysis.matchReason ||
+                              (analysis.source
+                                  ? `${analysis.source} 분석 결과`
+                                  : null),
                     },
                     // 🆕 누락된 필드들 추가
                     commentsCount: enrichedMetadata.commentsCount || 0,
@@ -1251,7 +1299,9 @@ app.post('/api/process-video', async (req, res) => {
                     url: enrichedMetadata.url || videoUrl || postUrl || '',
                     files: {
                         videoPath: videoPath,
-                        thumbnailPath: Array.isArray(thumbnailPaths) ? thumbnailPaths[0] : thumbnailPaths,
+                        thumbnailPath: Array.isArray(thumbnailPaths)
+                            ? thumbnailPaths[0]
+                            : thumbnailPaths,
                         thumbnailPaths: thumbnailPaths,
                         // 🆕 비디오 상세 정보 추가
                         videoSize: videoPath ? 'N/A' : null,
@@ -1278,10 +1328,7 @@ app.post('/api/process-video', async (req, res) => {
         ServerLogger.error('비디오 처리 실패:', error);
 
         // ❌ 처리 실패 시 MongoDB에서 URL 상태를 failed로 업데이트
-        const {
-            videoUrl: errorVideoUrl,
-            postUrl: errorPostUrl,
-        } = req.body;
+        const { videoUrl: errorVideoUrl, postUrl: errorPostUrl } = req.body;
         const checkUrl = errorVideoUrl || errorPostUrl;
         if (checkUrl) {
             try {
@@ -1448,9 +1495,9 @@ app.get('/api/videos', async (req, res) => {
                 uploadDate: video.uploadDate,
                 thumbnailUrl: thumbnailUrl,
                 // url이 없고 channelName이 URL인 경우 복구
-                url: video.url ||
-                    (video.channelName &&
-                    video.channelName.startsWith('http')
+                url:
+                    video.url ||
+                    (video.channelName && video.channelName.startsWith('http')
                         ? video.channelName
                         : ''),
                 // 🚀 채널명과 핸들명을 올바르게 구분
@@ -1607,10 +1654,9 @@ app.get('/api/channels/:channelId', async (req, res) => {
                     { youtubeHandle: channelId },
                     { name: channelId },
                     {
-                        youtubeHandle:
-                            channelId.startsWith('@')
-                                ? channelId
-                                : `@${channelId}`,
+                        youtubeHandle: channelId.startsWith('@')
+                            ? channelId
+                            : `@${channelId}`,
                     },
                 ],
             });
@@ -1690,7 +1736,10 @@ app.post('/api/cache/clear', async (req, res) => {
                 '캐시가 무효화되었습니다. 다음 조회부터 새로운 데이터를 가져옵니다.',
         });
     } catch (error) {
-        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({ success: false, error: error.message });
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            error: error.message,
+        });
     }
 });
 
@@ -1911,10 +1960,7 @@ app.post(
             // 🔧 Instagram 메타데이터 보정 (author 필드 처리)
             try {
                 // author 필드가 있고 channelName이 비어있으면 매핑
-                if (
-                    metadata.author &&
-                    !metadata.channelName
-                ) {
+                if (metadata.author && !metadata.channelName) {
                     const authorUrl = metadata.author;
 
                     // URL에서 사용자명 추출
@@ -1945,10 +1991,7 @@ app.post(
                     commentsCount: metadata.commentsCount || 'null',
                 });
             } catch (error) {
-                ServerLogger.error(
-                    '❌ 메타데이터 처리 실패:',
-                    error.message,
-                );
+                ServerLogger.error('❌ 메타데이터 처리 실패:', error.message);
             }
 
             ServerLogger.info(
@@ -1958,9 +2001,7 @@ app.post(
             ServerLogger.info(
                 `📁 Uploaded file: ${
                     req.file
-                        ? `${req.file.filename} (${
-                              req.file.size
-                          } bytes)`
+                        ? `${req.file.filename} (${req.file.size} bytes)`
                         : 'None'
                 }`,
             );
@@ -2022,18 +2063,24 @@ app.post(
                                     'API_DUPLICATE_BLOB',
                                 );
 
-                                return res.status(HTTP_STATUS_CODES.CONFLICT).json({
-                                    success: false,
-                                    error: ERROR_CODES.DUPLICATE_RESOURCE,
-                                    message: errorMessage,
-                                    duplicate_info: {
-                                        platform: duplicateCheck.existingPlatform,
-                                        normalizedUrl: sheetsManager.normalizeVideoUrl(postUrl),
-                                        isProcessing: true,
-                                        status: duplicateCheck.status,
-                                        createdAt: duplicateCheck.createdAt,
-                                    },
-                                });
+                                return res
+                                    .status(HTTP_STATUS_CODES.CONFLICT)
+                                    .json({
+                                        success: false,
+                                        error: ERROR_CODES.DUPLICATE_RESOURCE,
+                                        message: errorMessage,
+                                        duplicate_info: {
+                                            platform:
+                                                duplicateCheck.existingPlatform,
+                                            normalizedUrl:
+                                                sheetsManager.normalizeVideoUrl(
+                                                    postUrl,
+                                                ),
+                                            isProcessing: true,
+                                            status: duplicateCheck.status,
+                                            createdAt: duplicateCheck.createdAt,
+                                        },
+                                    });
                             }
                         } else {
                             const rowInfo = duplicateCheck.existingRow
@@ -2055,7 +2102,10 @@ app.post(
                                     platform: duplicateCheck.existingPlatform,
                                     row: duplicateCheck.existingRow,
                                     column: duplicateCheck.existingColumn,
-                                    normalizedUrl: sheetsManager.normalizeVideoUrl(postUrl),
+                                    normalizedUrl:
+                                        sheetsManager.normalizeVideoUrl(
+                                            postUrl,
+                                        ),
                                     isProcessing: false,
                                     status: duplicateCheck.status,
                                 },
@@ -2096,9 +2146,7 @@ app.post(
                         );
                     } else {
                         ServerLogger.warn(
-                            `⚠️ URL processing 상태 등록 실패 (Blob): ${
-                                registerResult.error
-                            }`,
+                            `⚠️ URL processing 상태 등록 실패 (Blob): ${registerResult.error}`,
                         );
                     }
 
@@ -2303,9 +2351,7 @@ app.post(
                                 );
                             }
                         } else {
-                            throw new Error(
-                                `통합 저장 실패: ${result.error}`,
-                            );
+                            throw new Error(`통합 저장 실패: ${result.error}`);
                         }
                     }
 
@@ -2338,9 +2384,10 @@ app.post(
                                 : null;
 
                             // YouTube 게시일 추출 (enrichedMetadata에서)
-                            const originalPublishDate = enrichedMetadata.uploadDate
-                                ? new Date(enrichedMetadata.uploadDate)
-                                : null;
+                            const originalPublishDate =
+                                enrichedMetadata.uploadDate
+                                    ? new Date(enrichedMetadata.uploadDate)
+                                    : null;
 
                             await VideoUrl.updateStatus(
                                 normalizedUrl,
@@ -2972,15 +3019,10 @@ app.get('/api/api-keys', async (req, res) => {
                 apiKeys,
                 summary: {
                     total: apiKeys.length,
-                    active: apiKeys.filter(
-                        (k) => k.status === 'active',
-                    ).length,
-                    warning: apiKeys.filter(
-                        (k) => k.status === 'warning',
-                    ).length,
-                    error: apiKeys.filter(
-                        (k) => k.status === 'error',
-                    ).length,
+                    active: apiKeys.filter((k) => k.status === 'active').length,
+                    warning: apiKeys.filter((k) => k.status === 'warning')
+                        .length,
+                    error: apiKeys.filter((k) => k.status === 'error').length,
                 },
             },
             `${apiKeys.length}개의 API 키 정보를 조회했습니다.`,
@@ -3090,9 +3132,7 @@ app.get('/api/proxy-image', async (req, res) => {
         });
 
         if (!imageResponse.ok) {
-            throw new Error(
-                `이미지 로드 실패: ${imageResponse.status}`,
-            );
+            throw new Error(`이미지 로드 실패: ${imageResponse.status}`);
         }
 
         // Content-Type 설정
@@ -3345,9 +3385,7 @@ app.get('/api/unified-saver/validate/:platform', async (req, res) => {
         );
     } catch (error) {
         ServerLogger.error(
-            `데이터 일관성 검증 실패: ${
-                req.params.platform
-            }`,
+            `데이터 일관성 검증 실패: ${req.params.platform}`,
             error.message,
             'UNIFIED_SAVER_API',
         );
@@ -3452,6 +3490,42 @@ try {
     ServerLogger.info('🎯 채널 그룹 API 등록 완료');
 } catch (error) {
     ServerLogger.error('❌ 채널 그룹 라우트 등록 실패:', error);
+}
+
+// 📊 트렌딩 영상 API 등록
+try {
+    const trendingRoutes = require('./routes/trending');
+    app.use('/api/trending', trendingRoutes);
+    ServerLogger.info('📊 트렌딩 영상 API 등록 완료');
+} catch (error) {
+    ServerLogger.error('❌ 트렌딩 영상 라우트 등록 실패:', error);
+}
+
+// 📦 수집 배치 API 등록
+try {
+    const batchRoutes = require('./routes/batches');
+    app.use('/api/batches', batchRoutes);
+    ServerLogger.info('📦 수집 배치 API 등록 완료');
+} catch (error) {
+    ServerLogger.error('❌ 수집 배치 라우트 등록 실패:', error);
+}
+
+// 🎬 개별 영상 관리 API 등록
+try {
+    const videoRoutes = require('./routes/videos');
+    app.use('/api/videos', videoRoutes);
+    ServerLogger.info('🎬 개별 영상 관리 API 등록 완료');
+} catch (error) {
+    ServerLogger.error('❌ 개별 영상 라우트 등록 실패:', error);
+}
+
+// 📺 개별 채널 관리 API 등록
+try {
+    const channelRoutes = require('./routes/channels');
+    app.use('/api/channels', channelRoutes);
+    ServerLogger.info('📺 개별 채널 관리 API 등록 완료');
+} catch (error) {
+    ServerLogger.error('❌ 개별 채널 라우트 등록 실패:', error);
 }
 
 // 404 핸들러 (모든 라우트 등록 후 마지막에)

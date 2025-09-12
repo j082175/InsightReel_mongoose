@@ -273,7 +273,7 @@ class FieldMapper {
      * 플랫폼별 Google Sheets 매핑 반환
      */
     static getGoogleSheetsMapping(platform) {
-        if (platform === 'YOUTUBE') {
+        if (platform === PLATFORMS.YOUTUBE) {
             return {
                 1: this.get('UPLOAD_DATE'),
                 2: this.get('PLATFORM'),

@@ -8,6 +8,8 @@ import VideoAnalysisModal from '../components/VideoAnalysisModal';
 import BulkCollectionModal from '../components/BulkCollectionModal';
 import ChannelGroupModal from '../components/ChannelGroupModal';
 
+import { PLATFORMS } from '../types/api';
+
 const ChannelManagementPage: React.FC = () => {
   const [channels, setChannels] = useState<Channel[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -578,7 +580,7 @@ const ChannelManagementPage: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                      channel.platform === 'YOUTUBE' ? 'bg-red-100 text-red-700' :
+                      channel.platform === PLATFORMS.YOUTUBE ? 'bg-red-100 text-red-700' :
                       channel.platform === 'TIKTOK' ? 'bg-pink-100 text-pink-700' :
                       'bg-purple-100 text-purple-700'
                     }`}>

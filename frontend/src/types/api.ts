@@ -46,6 +46,17 @@ export const ERROR_CODES: {
   INTERNAL_SERVER_ERROR: 'INTERNAL_SERVER_ERROR'
 };
 
+// ===== 플랫폼 상수 (서버와 동일) =====
+export const PLATFORMS: {
+  readonly YOUTUBE: 'YOUTUBE';
+  readonly INSTAGRAM: 'INSTAGRAM';
+  readonly TIKTOK: 'TIKTOK';
+} = {
+  YOUTUBE: 'YOUTUBE',
+  INSTAGRAM: 'INSTAGRAM',
+  TIKTOK: 'TIKTOK'
+};
+
 // ===== API 클라이언트 타입들 =====
 export interface TrendingStats {
   count: number;

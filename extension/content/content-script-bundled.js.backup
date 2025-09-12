@@ -1,4 +1,7 @@
 // 호환성을 위한 번들 버전 - ES5 문법으로 변환
+
+import { PLATFORMS } from './constants.js';
+
 (function() {
 'use strict';
 
@@ -3448,7 +3451,7 @@ class ApiClient {
     try {
       // 🆕 설정에서 배치 모드 확인
       const settings = await this.getSettings();
-      const isBatchMode = settings.batchMode && data.platform === 'YOUTUBE';
+      const isBatchMode = settings.batchMode && data.platform === PLATFORMS.YOUTUBE;
       
       // 배치 모드일 때 mode 파라미터 추가
       if (isBatchMode) {

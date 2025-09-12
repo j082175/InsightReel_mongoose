@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Video } from '../types';
+import { PLATFORMS } from '../types/api';
 
 interface VideoModalProps {
   video: Video | null;
@@ -94,7 +95,7 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
               </h2>
               <span className="text-sm text-gray-600">{video.channelName || ''}</span>
               <span className={`ml-2 px-2 py-1 rounded-full text-xs ${
-                video.platform === 'YOUTUBE' ? 'bg-red-100 text-red-700' :
+                video.platform === PLATFORMS.YOUTUBE ? 'bg-red-100 text-red-700' :
                 video.platform === 'TIKTOK' ? 'bg-pink-100 text-pink-700' :
                 'bg-purple-100 text-purple-700'
               }`}>
@@ -121,7 +122,7 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* 영상/이미지 영역 */}
             <div className="space-y-4">
-              {video.platform === 'YOUTUBE' ? (
+              {video.platform === PLATFORMS.YOUTUBE ? (
                 <div className={`relative bg-black rounded-lg overflow-hidden ${
                   video.aspectRatio === '16:9' 
                     ? 'aspect-video' /* 16:9 롱폼 */

@@ -93,5 +93,25 @@
     "avgTimePerChannel": 0,
     "trendingRate": 0,
     "quotaEfficiency": 0
+  },
+  {
+    "timestamp": "2025-09-12T01:28:25.840Z",
+    "date": "2025. 9. 12.",
+    "totalChannels": 1,
+    "processedChannels": 0,
+    "totalVideos": 0,
+    "trendingVideos": 0,
+    "quotaUsed": 0,
+    "errors": [
+      {
+        "channelId": "영화미슐랭",
+        "error": "Search API 오류: Request failed with status code 400"
+      }
+    ],
+    "processingTimeMs": 500,
+    "processingTimeSeconds": "0.5",
+    "avgTimePerChannel": 0,
+    "trendingRate": 0,
+    "quotaEfficiency": 0
   }
 ]

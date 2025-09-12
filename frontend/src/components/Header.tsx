@@ -26,6 +26,13 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
       ]
     },
     {
+      id: 'trending', name: '트렌딩 수집', children: [
+        { id: 'trending-dashboard', name: '트렌딩 대시보드' },
+        { id: 'trending-videos', name: '수집된 영상' },
+        { id: 'trending-batches', name: '배치 관리' },
+      ]
+    },
+    {
       id: 'analysis', name: '분석 & 발굴', children: [
         { id: 'discovery', name: '소재 발굴' },
         { id: 'ideas', name: '콘텐츠 아이디어' },

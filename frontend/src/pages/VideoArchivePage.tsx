@@ -8,6 +8,8 @@ import VideoListItem from '../components/VideoListItem';
 import ChannelAnalysisModal from '../components/ChannelAnalysisModal';
 import VideoCard from '../components/VideoCard';
 
+import { PLATFORMS } from '../types/api';
+
 const VideoArchivePage: React.FC = () => {
   const [archivedVideos, setArchivedVideos] = useState<ExtendedVideo[]>([]);
   const [filteredVideos, setFilteredVideos] = useState<ExtendedVideo[]>([]);
@@ -140,14 +142,14 @@ const VideoArchivePage: React.FC = () => {
         const extendedVideo: ExtendedVideo = {
           ...video,
           id: video._id || video.id || String(Date.now()),
-          platform: (video.platform?.toUpperCase() === 'YOUTUBE' || video.platform === 'YOUTUBE') ? 'YOUTUBE' : 
+          platform: (video.platform?.toUpperCase() === 'YOUTUBE' || video.platform === PLATFORMS.YOUTUBE) ? 'YOUTUBE' : 
                    (video.platform?.toUpperCase() === 'TIKTOK' || video.platform === 'TIKTOK') ? 'TIKTOK' : 
                    (video.platform?.toUpperCase() === 'INSTAGRAM' || video.platform === 'INSTAGRAM') ? 'INSTAGRAM' : 'YOUTUBE',
           url: url,
           keywords: keywordsArray,
           hashtags: hashtagsArray,
           daysAgo: daysAgo,
-          aspectRatio: video.platform === 'YOUTUBE' ? '16:9' : '9:16',
+          aspectRatio: video.platform === PLATFORMS.YOUTUBE ? '16:9' : '9:16',
           archivedAt: video.collectionTime || video.processedAt || new Date().toISOString(),
           tags: [...hashtagsArray, ...keywordsArray].filter(Boolean),
           category: video.mainCategory || '미분류',
@@ -414,7 +416,7 @@ const VideoArchivePage: React.FC = () => {
                     video={video}
                     onClick={(video) => {
                       if (!isSelectMode) {
-                        if (video.platform === 'YOUTUBE') {
+                        if (video.platform === PLATFORMS.YOUTUBE) {
                           setSelectedVideoForPlay(video);
                         } else if (video.url && video.url !== '#') {
                           window.open(video.url, '_blank', 'noopener,noreferrer');

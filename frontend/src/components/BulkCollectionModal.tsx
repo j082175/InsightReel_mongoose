@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CollectionBatch } from '../types';
 import { useChannelGroups } from '../hooks/useChannelGroups';
+import { PLATFORMS } from '../types/api';
 
 interface CollectionFilters {
   days: number;
@@ -177,7 +178,7 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
           title: `${result.channelName}의 수집된 영상 ${videoIndex + 1}`,
           url: `https://example.com/video/${Date.now() + batchIndex * 1000 + videoIndex}`,
           uploadDate: new Date(Date.now() - Math.random() * filters.days * 24 * 60 * 60 * 1000).toISOString(),
-          platform: (result.platform === 'YOUTUBE' || result.platform === 'INSTAGRAM' || result.platform === 'TIKTOK') 
+          platform: (result.platform === PLATFORMS.YOUTUBE || result.platform === 'INSTAGRAM' || result.platform === 'TIKTOK') 
             ? result.platform
             : 'YOUTUBE',
           likes: Math.floor(Math.random() * 50000),

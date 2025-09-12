@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const { ServerLogger } = require('../utils/logger');
 
+const { PLATFORMS } = require('../config/api-messages');
+
 /**
  * 동적 카테고리 관리 클래스
  * AI가 자유롭게 생성한 카테고리 경로를 정규화하고 관리
@@ -472,7 +474,7 @@ class DynamicCategoryManager {
         };
 
         const keywordMap =
-            platform === 'YOUTUBE'
+            platform === PLATFORMS.YOUTUBE
                 ? youtubeKeywordMap
                 : tikTokInstagramKeywordMap;
 

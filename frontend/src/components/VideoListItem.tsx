@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Video } from '../types';
+import { PLATFORMS } from '../types/api';
 
 interface VideoListItemProps {
   video: Video;
@@ -96,7 +97,7 @@ const VideoListItem: React.FC<VideoListItemProps> = ({
                 <span>{formatViews(video.views || video.viewCount || 0)} 조회수</span>
                 <span>{video.daysAgo === 0 ? '오늘' : `${video.daysAgo}일 전`}</span>
                 <span className={`px-2 py-1 rounded-full ${
-                  video.platform === 'YOUTUBE' ? 'bg-red-100 text-red-700' :
+                  video.platform === PLATFORMS.YOUTUBE ? 'bg-red-100 text-red-700' :
                   video.platform === 'TIKTOK' ? 'bg-pink-100 text-pink-700' :
                   'bg-purple-100 text-purple-700'
                 }`}>

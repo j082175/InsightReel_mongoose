@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Video, ExtendedVideo } from '../types';
+import { PLATFORMS } from '../types/api';
 
 interface VideoCardProps {
   video: ExtendedVideo;
@@ -79,7 +80,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
     }
 
     // 유튜브는 모달로, 다른 플랫폼은 직접 링크 열기
-    if (video.platform === 'YOUTUBE' && onClick) {
+    if (video.platform === PLATFORMS.YOUTUBE && onClick) {
       onClick(video);
     } else if (video.url) {
       window.open(video.url, '_blank', 'noopener,noreferrer');
@@ -162,7 +163,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
 
         {/* 플랫폼 배지 (우상단) */}
         <div className={`absolute top-2 right-2 ${
-          video.platform === 'YOUTUBE' ? platformStyles.YOUTUBE.bg :
+          video.platform === PLATFORMS.YOUTUBE ? platformStyles.YOUTUBE.bg :
           video.platform === 'TIKTOK' ? platformStyles.TIKTOK.bg :
           video.platform === 'INSTAGRAM' ? platformStyles.INSTAGRAM.bg :
           'bg-gray-500'

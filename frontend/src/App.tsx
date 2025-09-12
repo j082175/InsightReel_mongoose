@@ -7,6 +7,9 @@ import ChannelManagementPage from './pages/ChannelManagementPage';
 import VideoArchivePage from './pages/VideoArchivePage';
 import ContentDiscoveryPage from './pages/ContentDiscoveryPage';
 import ContentIdeaPage from './pages/ContentIdeaPage';
+import TrendingVideosPage from './pages/TrendingVideosPage';
+import BatchManagementPage from './pages/BatchManagementPage';
+import TrendingDashboardPage from './pages/TrendingDashboardPage';
 
 interface AppContextType {
   collectionBatches: CollectionBatch[];
@@ -41,6 +44,9 @@ function App() {
       case 'archive': return <VideoArchivePage />;
       case 'discovery': return <ContentDiscoveryPage />;
       case 'ideas': return <ContentIdeaPage />;
+      case 'trending-videos': return <TrendingVideosPage />;
+      case 'trending-batches': return <BatchManagementPage />;
+      case 'trending-dashboard': return <TrendingDashboardPage />;
       default: return <DashboardPage />;
     }
   };

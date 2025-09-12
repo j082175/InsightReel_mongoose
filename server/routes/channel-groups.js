@@ -220,7 +220,7 @@ router.delete('/:id', async (req, res) => {
 // POST /api/channel-groups/:id/collect - 특정 그룹 트렌딩 수집
 router.post('/:id/collect', async (req, res) => {
   try {
-    const { daysBack = 3, minViews = 30000, includeShorts = true, includeLongForm = true } = req.body;
+    const { daysBack = 3, minViews = 30000, includeShorts = true, includeMidform = true, includeLongForm = true } = req.body;
     
     const group = await ChannelGroup.findById(req.params.id);
     if (!group) {
@@ -236,6 +236,7 @@ router.post('/:id/collect', async (req, res) => {
       daysBack,
       minViews,
       includeShorts,
+      includeMidform,
       includeLongForm
     });
 
@@ -258,13 +259,14 @@ router.post('/:id/collect', async (req, res) => {
 // POST /api/channel-groups/collect-all - 모든 활성 그룹 트렌딩 수집
 router.post('/collect-all', async (req, res) => {
   try {
-    const { daysBack = 3, minViews = 30000, includeShorts = true, includeLongForm = true } = req.body;
+    const { daysBack = 3, minViews = 30000, includeShorts = true, includeMidform = true, includeLongForm = true } = req.body;
 
     const collector = new GroupTrendingCollector();
     const results = await collector.collectAllActiveGroups({
       daysBack,
       minViews,
       includeShorts,
+      includeMidform,
       includeLongForm
     });
 
@@ -317,6 +319,112 @@ router.get('/:id/videos', async (req, res) => {
       success: false,
       error: ERROR_CODES.SERVER_ERROR,
       message: '그룹 영상 조회에 실패했습니다.'
+    });
+  }
+});
+
+// POST /api/channel-groups/:id/channels - 그룹에 채널 추가
+router.post('/:id/channels', async (req, res) => {
+  try {
+    const { channels, action = 'add' } = req.body;
+    
+    if (!channels || !Array.isArray(channels) || channels.length === 0) {
+      return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        error: ERROR_CODES.INVALID_REQUEST,
+        message: '추가할 채널 목록은 필수입니다.'
+      });
+    }
+
+    const group = await ChannelGroup.findById(req.params.id);
+    if (!group) {
+      return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
+        success: false,
+        error: ERROR_CODES.NOT_FOUND,
+        message: '채널 그룹을 찾을 수 없습니다.'
+      });
+    }
+
+    let updatedChannels = [...group.channels];
+    
+    if (action === 'add') {
+      // 채널 추가 (중복 제거)
+      const newChannels = channels.filter(channel => !updatedChannels.includes(channel));
+      updatedChannels = [...updatedChannels, ...newChannels];
+      
+      ServerLogger.info(`➕ 그룹 "${group.name}"에 ${newChannels.length}개 채널 추가`);
+      
+    } else if (action === 'remove') {
+      // 채널 제거
+      updatedChannels = updatedChannels.filter(channel => !channels.includes(channel));
+      
+      ServerLogger.info(`➖ 그룹 "${group.name}"에서 ${channels.length}개 채널 제거`);
+      
+    } else {
+      return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        error: ERROR_CODES.INVALID_REQUEST,
+        message: 'action은 "add" 또는 "remove"여야 합니다.'
+      });
+    }
+
+    group.channels = updatedChannels;
+    await group.save();
+
+    res.status(HTTP_STATUS_CODES.OK).json({
+      success: true,
+      data: group,
+      message: `채널 ${action === 'add' ? '추가' : '제거'}가 완료되었습니다.`
+    });
+
+  } catch (error) {
+    ServerLogger.error('그룹 채널 관리 실패:', error);
+    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      error: ERROR_CODES.SERVER_ERROR,
+      message: '그룹 채널 관리에 실패했습니다.'
+    });
+  }
+});
+
+// GET /api/channel-groups/:id/channels - 그룹의 채널 목록 상세 조회
+router.get('/:id/channels', async (req, res) => {
+  try {
+    const group = await ChannelGroup.findById(req.params.id);
+    
+    if (!group) {
+      return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
+        success: false,
+        error: ERROR_CODES.NOT_FOUND,
+        message: '채널 그룹을 찾을 수 없습니다.'
+      });
+    }
+
+    // 채널 목록과 각 채널의 통계 정보 반환
+    const channelsInfo = group.channels.map(channel => ({
+      name: channel,
+      // TODO: 실제 채널 모델에서 정보 조회하여 추가
+      videosCount: 0,
+      lastCollected: null,
+      status: 'active'
+    }));
+
+    res.status(HTTP_STATUS_CODES.OK).json({
+      success: true,
+      data: {
+        groupId: group._id,
+        groupName: group.name,
+        channels: channelsInfo,
+        totalChannels: group.channels.length
+      }
+    });
+
+  } catch (error) {
+    ServerLogger.error('그룹 채널 목록 조회 실패:', error);
+    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      error: ERROR_CODES.SERVER_ERROR,
+      message: '그룹 채널 목록 조회에 실패했습니다.'
     });
   }
 });

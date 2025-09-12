@@ -8,6 +8,8 @@ import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import ChannelAnalysisModal from '../components/ChannelAnalysisModal';
 import VideoCard from '../components/VideoCard';
 
+import { PLATFORMS } from '../types/api';
+
 const DashboardPage: React.FC = () => {
   const [filters, setFilters] = useState<FilterState>({ 
     days: '7', 
@@ -182,7 +184,7 @@ const DashboardPage: React.FC = () => {
     if (isSelectMode) {
       handleSelectToggle(Number(video.id));
     } else {
-      if (video.platform === 'YOUTUBE') {
+      if (video.platform === PLATFORMS.YOUTUBE) {
         setSelectedVideoForPlay(video);
       } else {
         window.open(video.url, '_blank', 'noopener,noreferrer');
