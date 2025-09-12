@@ -24,6 +24,7 @@ interface ApiKeyManagerProps {
 }
 
 const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ isModal = false }) => {
+  const queryClient = useQueryClient();
   const [apiKeys, setApiKeys] = useState<ApiKeyInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddKey, setShowAddKey] = useState(false);
@@ -41,19 +42,23 @@ const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ isModal = false }) => {
       const response = await fetch('http://localhost:3000/api/quota-status');
       const data = await response.json();
       
+      
       if (data.success && data.data.quota.allKeys) {
         // 실제 키 정보를 ApiKeyInfo 형태로 변환
         const realApiKeys: ApiKeyInfo[] = data.data.quota.allKeys.map((key: any, index: number) => {
           const [used, limit] = key.usage.split('/').map((n: string) => parseInt(n));
           // limit는 이미 안전 마진이 적용된 실제 사용 가능한 한도 (9500)
           
+          const finalStatus = (key.realStatus === 'inactive' ? 'disabled' : 
+                    key.percentage > 90 ? 'error' : 
+                    key.percentage > 80 ? 'warning' : 'active') as 'active' | 'warning' | 'error' | 'disabled';
+          
+          
           return {
-            id: `key-${index}`,
+            id: key.id || `key-${index}`, // 실제 키 ID 사용
             name: key.name,
             maskedKey: `AIza...${key.name.slice(-4)}`, // 키 이름 기반으로 마스킹
-            status: (key.percentage > 90 ? 'error' : 
-                    key.percentage > 80 ? 'warning' : 
-                    key.percentage > 0 ? 'active' : 'disabled') as 'active' | 'warning' | 'error' | 'disabled',
+            status: finalStatus,
             usage: {
               videos: { used: Math.floor(used * 0.3), limit: Math.floor(limit * 0.3) },
               channels: { used: Math.floor(used * 0.2), limit: Math.floor(limit * 0.2) },
@@ -165,16 +170,6 @@ const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ isModal = false }) => {
     }
   };
 
-  const toggleKeyStatus = async (keyId: string) => {
-    setApiKeys(prev => prev.map(key => {
-      if (key.id === keyId) {
-        const newStatus: 'active' | 'warning' | 'error' | 'disabled' = 
-          key.status === 'disabled' ? 'active' : 'disabled';
-        return { ...key, status: newStatus };
-      }
-      return key;
-    }));
-  };
 
   const deleteKey = async (keyId: string) => {
     if (confirm('정말로 이 API 키를 삭제하시겠습니까?')) {
@@ -253,12 +248,6 @@ const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ isModal = false }) => {
               </div>
               
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => toggleKeyStatus(key.id)}
-                  className="text-sm text-blue-600 hover:text-blue-800"
-                >
-                  {key.status === 'disabled' ? '활성화' : '비활성화'}
-                </button>
                 <button
                   onClick={() => deleteKey(key.id)}
                   className="text-sm text-red-600 hover:text-red-800"

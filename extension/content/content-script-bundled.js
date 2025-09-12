@@ -5365,22 +5365,24 @@ const PLATFORMS = {
 
                 const button = document.createElement('button');
                 button.className = 'youtube-analysis-button insightreel-shorts-button';
-                button.textContent = '📱 Shorts 분석';
+                button.textContent = '📱';
                 button.title = 'YouTube Shorts를 AI로 분석하여 저장합니다';
 
                 // 기본 버튼 텍스트 설정 (스타일은 포지셔닝에서 처리)
                 button.style.fontFamily = '-apple-system, BlinkMacSystemFont, sans-serif';
 
-                // 호버 효과
-                button.addEventListener('mouseenter', () => {
-                    button.style.transform = 'scale(1.1)';
-                    button.style.boxShadow = '0 8px 20px rgba(255, 107, 107, 0.5)';
-                });
+                // 호버 효과 (cssText 이후에 설정)
+                button.onmouseenter = () => {
+                    button.style.setProperty('transform', 'translateY(-50%) scale(1.1)', 'important');
+                    button.style.setProperty('background', 'linear-gradient(45deg, #ff8a8a, #ff5722)', 'important');
+                    button.style.setProperty('box-shadow', '0 8px 20px rgba(255, 107, 107, 0.7)', 'important');
+                };
                 
-                button.addEventListener('mouseleave', () => {
-                    button.style.transform = 'scale(1)';
-                    button.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
-                });
+                button.onmouseleave = () => {
+                    button.style.setProperty('transform', 'translateY(-50%) scale(1)', 'important');
+                    button.style.setProperty('background', 'linear-gradient(45deg, #ff6b6b, #ee5a24)', 'important');
+                    button.style.setProperty('box-shadow', '0 4px 12px rgba(255, 107, 107, 0.6)', 'important');
+                };
 
                 button.addEventListener('click', () => this.analyzeYouTubeVideo(videoId, true));
                 
@@ -5571,10 +5573,10 @@ const PLATFORMS = {
                     right: -40px !important;
                     top: 50% !important;
                     transform: translateY(-50%) !important;
-                    width: 36px !important;
-                    height: 36px !important;
-                    border-radius: 18px !important;
-                    font-size: 9px !important;
+                    width: 44px !important;
+                    height: 44px !important;
+                    border-radius: 22px !important;
+                    font-size: 16px !important;
                     line-height: 1.1 !important;
                     padding: 2px !important;
                     background: linear-gradient(45deg, #ff6b6b, #ee5a24) !important;
@@ -5590,6 +5592,9 @@ const PLATFORMS = {
                     visibility: visible !important;
                     box-shadow: 0 4px 12px rgba(255, 107, 107, 0.6) !important;
                     backdrop-filter: blur(8px) !important;
+                    transition: all 0.2s ease !important;
+                    overflow: hidden !important;
+                    user-select: none !important;
                 `;
                 
                 console.log('🎨 overflow 해결 스타일 적용 완료');
@@ -5863,17 +5868,19 @@ const PLATFORMS = {
       z-index: 9999;
     `;
 
-                // 호버 효과
+                // 호버 효과 (transition으로 부드럽게)
                 analysisButton.addEventListener('mouseenter', () => {
-                    analysisButton.style.transform = 'scale(1.1)';
+                    analysisButton.style.transform = 'scale(1.1) !important';
                     analysisButton.style.background =
-                        'linear-gradient(45deg, #9b59b6, #2980b9)';
+                        'linear-gradient(45deg, #9b59b6, #2980b9) !important';
+                    analysisButton.style.boxShadow = '0 8px 20px rgba(142, 68, 173, 0.6) !important';
                 });
 
                 analysisButton.addEventListener('mouseleave', () => {
-                    analysisButton.style.transform = 'scale(1)';
+                    analysisButton.style.transform = 'scale(1) !important';
                     analysisButton.style.background =
-                        'linear-gradient(45deg, #8e44ad, #3498db)';
+                        'linear-gradient(45deg, #8e44ad, #3498db) !important';
+                    analysisButton.style.boxShadow = '0 6px 20px rgba(255, 0, 0, 0.6) !important';
                 });
 
                 // 하이브리드 분석을 위한 진행 상태 추적 함수
@@ -7657,9 +7664,11 @@ const PLATFORMS = {
                             'mouseenter',
                             () => {
                                 this.channelButton.style.transform =
-                                    'translateY(-1px)';
+                                    'translateY(-1px) scale(1.05)';
+                                this.channelButton.style.background =
+                                    'linear-gradient(45deg, #ff8a8a, #ff5722)';
                                 this.channelButton.style.boxShadow =
-                                    '0 4px 12px rgba(255, 107, 107, 0.4)';
+                                    '0 4px 12px rgba(255, 107, 107, 0.6)';
                             },
                         );
 
@@ -7667,7 +7676,9 @@ const PLATFORMS = {
                             'mouseleave',
                             () => {
                                 this.channelButton.style.transform =
-                                    'translateY(0)';
+                                    'translateY(0) scale(1)';
+                                this.channelButton.style.background =
+                                    'linear-gradient(45deg, #ff6b6b, #ee5a24)';
                                 this.channelButton.style.boxShadow =
                                     '0 2px 8px rgba(255, 107, 107, 0.3)';
                             },

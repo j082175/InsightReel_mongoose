@@ -1,6 +1,7 @@
 const ytdl = require('@distube/ytdl-core');
 const axios = require('axios');
 const { ServerLogger } = require('../utils/logger');
+const { API_TIMEOUTS } = require('../config/api-constants');
 const MultiKeyManager = require('../utils/multi-key-manager');
 
 /**
@@ -218,7 +219,7 @@ class HybridYouTubeExtractor {
                     id: videoId,
                     key: availableKey.key,
                 },
-                timeout: 8000,
+                timeout: API_TIMEOUTS.YOUTUBE_API_REQUEST,
             },
         );
 
@@ -249,7 +250,7 @@ class HybridYouTubeExtractor {
                         id: snippet.channelId,
                         key: availableKey.key,
                     },
-                    timeout: 8000,
+                    timeout: API_TIMEOUTS.YOUTUBE_API_REQUEST,
                 },
             );
 
@@ -307,7 +308,7 @@ class HybridYouTubeExtractor {
                         maxResults: 3,
                         key: availableKey.key,
                     },
-                    timeout: 8000,
+                    timeout: API_TIMEOUTS.YOUTUBE_API_REQUEST,
                 },
             );
 

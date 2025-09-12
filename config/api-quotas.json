@@ -16,7 +16,7 @@
       "rpd": 1000
     },
     "youtube-data-api": {
-      "rpd": 9500
+      "rpd": 8000
     }
   },
   "api_keys": {
@@ -59,7 +59,7 @@
         "rpd": 1000
       },
       "youtube-data-api": {
-        "rpd": 9500
+        "rpd": 8000
       }
     },
     "3742b2bda3c5b7f3": {
@@ -80,7 +80,7 @@
         "rpd": 1000
       },
       "youtube-data-api": {
-        "rpd": 9500
+        "rpd": 8000
       }
     },
     "5955264c478ac562": {
@@ -101,7 +101,7 @@
         "rpd": 1000
       },
       "youtube-data-api": {
-        "rpd": 9500
+        "rpd": 8000
       }
     }
   }

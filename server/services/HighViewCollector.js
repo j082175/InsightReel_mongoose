@@ -341,26 +341,94 @@ class HighViewCollector {
   }
 
   /**
+   * 활성화된 API 키 목록 조회 (MultiKeyManager 실시간 상태 기반)
+   */
+  getActiveKeys() {
+    // MultiKeyManager가 현재 사용 가능하다고 판단하는 키들만 반환
+    try {
+      const activeKeys = [];
+      
+      for (const keyInfo of this.multiKeyManager.keys) {
+        const keyData = this.multiKeyManager.trackers.get(keyInfo.key);
+        
+        // 키가 할당량 초과 여부를 확인하여 활성 상태 결정
+        if (keyData && !keyData.tracker.isYouTubeQuotaExceeded()) {
+          activeKeys.push({
+            name: keyInfo.name,
+            apiKey: keyInfo.key
+          });
+        }
+      }
+      
+      return activeKeys;
+    } catch (error) {
+      ServerLogger.warn('활성 키 조회 실패', error.message, 'HIGH-VIEW-COLLECTOR');
+      return [];
+    }
+  }
+
+  /**
    * 현재 quota 사용 현황 (MultiKeyManager 기반)
    */
-  getQuotaStatus() {
+  async getQuotaStatus() {
     const allStatus = this.multiKeyManager.getAllUsageStatus();
+    
+    // ApiKeyManager에서 실제 키 정보 가져오기
+    const ApiKeyManager = require('./ApiKeyManager');
+    const allApiKeys = await ApiKeyManager.getAllApiKeys();
+    
+    // allStatus에 실제 키 ID와 상태 정보 추가
+    const enrichedStatus = allStatus.map((status, index) => {
+      // API 키 값으로 실제 키 정보 찾기
+      const keyInfo = this.multiKeyManager.keys[index];
+      const apiKeyData = allApiKeys.find(k => k.apiKey === keyInfo.key);
+      
+      return {
+        ...status,
+        id: apiKeyData ? apiKeyData.id : `key-${index}`, // 실제 ID 또는 fallback
+        apiKey: keyInfo.key, // API 키도 포함
+        realStatus: apiKeyData ? apiKeyData.status : 'active' // 실제 파일 상태
+      };
+    });
+    
+    // 활성화된 키 API 값들 가져오기
+    const activeKeys = this.getActiveKeys();
+    const activeApiKeys = activeKeys.map(key => key.apiKey);
+    
+    // MultiKeyManager 키들 중 활성화된 것만 필터링
+    const activeKeyInfos = this.multiKeyManager.keys.filter(keyInfo => 
+      activeApiKeys.includes(keyInfo.key)
+    );
+    
+    // 활성화된 키에 해당하는 상태만 필터링
+    const activeStatus = enrichedStatus.filter((status, index) => 
+      activeKeyInfos.some(keyInfo => keyInfo.name === status.name)
+    );
+    
+    // 활성화된 키가 없으면 첫 번째 키만 사용 (환경변수 기본키)
+    const statusToSum = activeStatus.length > 0 ? activeStatus : [enrichedStatus[0]].filter(Boolean);
+    
     let totalUsed = 0;
     let totalLimit = 0;
     
-    allStatus.forEach(status => {
+    statusToSum.forEach(status => {
       const usage = status.usage.split('/');
       totalUsed += parseInt(usage[0]);
       totalLimit += parseInt(usage[1]);
     });
     
+
     return {
       used: totalUsed,
       limit: totalLimit,
       remaining: totalLimit - totalUsed,
       usagePercent: totalLimit > 0 ? ((totalUsed / totalLimit) * 100).toFixed(1) : 0,
-      keyCount: allStatus.length,
-      allKeys: allStatus
+      keyCount: enrichedStatus.length,
+      allKeys: enrichedStatus.map(status => ({
+        ...status,
+        realStatus: status.realStatus // realStatus 필드가 확실히 포함되도록 명시
+      })),
+      activeKeyCount: statusToSum.length
     };
   }
 

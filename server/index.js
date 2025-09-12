@@ -6,6 +6,7 @@ const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const { PLATFORMS } = require('./config/api-messages');
+const { YOUTUBE_API_LIMITS } = require('./config/api-constants');
 
 // 설정 검증 먼저 실행
 const { getConfig } = require('./config/config-validator');
@@ -2779,7 +2780,7 @@ app.get('/api/debug-after-collect', (req, res) => {
 // ServerLogger.info('🧪 DEBUG: collect-trending API 등록 후 체크');
 
 // API quota 현황 조회 (MultiKeyManager 기반)
-app.get('/api/quota-status', (req, res) => {
+app.get('/api/quota-status', async (req, res) => {
     if (!highViewCollector) {
         return ResponseHandler.serverError(
             res,
@@ -2789,9 +2790,9 @@ app.get('/api/quota-status', (req, res) => {
     }
 
     try {
-        const quotaStatus = highViewCollector.getQuotaStatus();
+        const quotaStatus = await highViewCollector.getQuotaStatus();
         const safetyMargin =
-            parseInt(process.env.YOUTUBE_API_SAFETY_MARGIN) || 8000;
+            YOUTUBE_API_LIMITS.SAFETY_MARGIN;
 
         ResponseHandler.success(
             res,
@@ -3017,7 +3018,7 @@ app.get('/api/api-keys', async (req, res) => {
                         used: quotaStatus
                             ? Math.floor(quotaStatus.used / allKeys.length)
                             : estimatedPerKeyUsage,
-                        limit: 9500,
+                        limit: YOUTUBE_API_LIMITS.SAFETY_MARGIN,
                     };
                 } catch (error) {
                     ServerLogger.warn(
@@ -3051,7 +3052,7 @@ app.get('/api/api-keys', async (req, res) => {
                             realUsage.channels.used +
                             realUsage.search.used +
                             realUsage.comments.used,
-                        limit: 9500,
+                        limit: YOUTUBE_API_LIMITS.SAFETY_MARGIN,
                     };
                 }
 
@@ -3160,6 +3161,46 @@ app.delete('/api/api-keys/:keyId', async (req, res) => {
             res,
             error,
             error.message || 'API 키 삭제 중 오류가 발생했습니다.',
+        );
+    }
+});
+
+// API 키 상태 업데이트
+app.put('/api/api-keys/:keyId/status', async (req, res) => {
+    try {
+        const { keyId } = req.params;
+        const { status } = req.body;
+
+        ServerLogger.info(`🔄 API 키 상태 업데이트 요청: ${keyId} -> ${status}`);
+
+        // 입력값 검증
+        if (!status || !['active', 'inactive'].includes(status)) {
+            return ResponseHandler.clientError(res, {
+                field: 'status',
+                message: '상태는 "active" 또는 "inactive"이어야 합니다.',
+            });
+        }
+
+        // ApiKeyManager를 통해 상태 업데이트
+        const updatedKey = await ApiKeyManager.updateKeyStatus(keyId, status);
+
+        if (!updatedKey) {
+            return ResponseHandler.notFound(res, `ID가 ${keyId}인 API 키를 찾을 수 없습니다.`);
+        }
+
+        ResponseHandler.success(
+            res,
+            updatedKey,
+            `API 키 상태가 "${status}"로 성공적으로 업데이트되었습니다.`,
+        );
+
+        ServerLogger.info(`✅ API 키 ${keyId} 상태가 ${status}로 업데이트됨`);
+    } catch (error) {
+        ServerLogger.error('API 키 상태 업데이트 실패', error);
+        ResponseHandler.serverError(
+            res,
+            error,
+            error.message || 'API 키 상태 업데이트 중 오류가 발생했습니다.',
         );
     }
 });

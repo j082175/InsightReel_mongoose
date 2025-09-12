@@ -1,5 +1,6 @@
 const UsageTracker = require('./usage-tracker');
 const { ServerLogger } = require('./logger');
+const { YOUTUBE_API_LIMITS } = require('../config/api-constants');
 const fs = require('fs');
 const path = require('path');
 
@@ -20,8 +21,8 @@ class MultiKeyManager {
     this.keys = this.loadKeys();
     this.trackers = new Map();
     
-    // 안전 마진 설정 (환경변수 또는 기본값)
-    this.safetyMargin = parseInt(process.env.YOUTUBE_API_SAFETY_MARGIN) || 9500;
+    // 안전 마진 설정 (상수 파일에서 로드)
+    this.safetyMargin = YOUTUBE_API_LIMITS.SAFETY_MARGIN;
     
     this.initializeTrackers();
     
@@ -49,7 +50,7 @@ class MultiKeyManager {
     const keySet = new Set(); // 중복 제거용
     
     // 1. 기본 환경변수에서 로드
-    const safetyMargin = parseInt(process.env.YOUTUBE_API_SAFETY_MARGIN) || 9500;
+    const safetyMargin = YOUTUBE_API_LIMITS.SAFETY_MARGIN;
     const envKeys = [
       { name: '메인 키', key: process.env.GOOGLE_API_KEY, quota: safetyMargin },
       { name: '키 1', key: process.env.YOUTUBE_KEY_1, quota: safetyMargin },
@@ -65,15 +66,27 @@ class MultiKeyManager {
     
     keys.push(...envKeys);
     
-    // 2. 설정 파일에서 추가 로드 (선택사항)
+    // 2. API 키 파일에서 추가 로드 (active 상태만)
     try {
-      const configPath = path.join(__dirname, '../../config/youtube-keys.json');
-      if (fs.existsSync(configPath)) {
-        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-        keys.push(...config.keys.filter(k => k.enabled));
+      const apiKeysPath = path.join(__dirname, '../data/api-keys.json');
+      if (fs.existsSync(apiKeysPath)) {
+        const apiKeys = JSON.parse(fs.readFileSync(apiKeysPath, 'utf8'));
+        const activeApiKeys = apiKeys
+          .filter(k => k.status === 'active')
+          .filter(k => k.apiKey && !keySet.has(k.apiKey)) // 중복 제거
+          .map(k => {
+            keySet.add(k.apiKey);
+            return {
+              name: k.name,
+              key: k.apiKey,
+              quota: safetyMargin
+            };
+          });
+        keys.push(...activeApiKeys);
+        ServerLogger.info(`📁 API 키 파일에서 ${activeApiKeys.length}개 활성화 키 로드됨`, null, 'MULTI-KEY');
       }
     } catch (error) {
-      ServerLogger.warn('키 설정 파일 로드 실패', error.message, 'MULTI-KEY');
+      ServerLogger.warn('API 키 파일 로드 실패', error.message, 'MULTI-KEY');
     }
     
     return keys;

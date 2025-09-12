@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { ServerLogger } = require('./logger');
+const { YOUTUBE_API_LIMITS, GEMINI_API_LIMITS } = require('../config/api-constants');
 
 /**
  * Gemini API 사용량 추적 시스템
@@ -117,10 +118,10 @@ class UsageTracker {
         try {
             // 기본 할당량
             const defaultQuotas = {
-                'gemini-2.5-pro': { rpm: 5, tpm: 250000, rpd: 50 },
-                'gemini-2.5-flash': { rpm: 10, tpm: 250000, rpd: 250 },
-                'gemini-2.5-flash-lite': { rpm: 15, tpm: 250000, rpd: 1000 },
-                'youtube-data-api': { rpd: 9500 }, // 안전 마진: 실제 10,000에서 500 차감
+                'gemini-2.5-pro': GEMINI_API_LIMITS.PRO,
+                'gemini-2.5-flash': GEMINI_API_LIMITS.FLASH,
+                'gemini-2.5-flash-lite': GEMINI_API_LIMITS.FLASH_LITE,
+                'youtube-data-api': { rpd: YOUTUBE_API_LIMITS.SAFETY_MARGIN }, // 상수 파일 기반 안전 마진
             };
 
             // 할당량 파일이 없으면 기본값 반환
@@ -182,10 +183,10 @@ class UsageTracker {
                 'USAGE',
             );
             return {
-                'gemini-2.5-pro': { rpm: 5, tpm: 250000, rpd: 50 },
-                'gemini-2.5-flash': { rpm: 10, tpm: 250000, rpd: 250 },
-                'gemini-2.5-flash-lite': { rpm: 15, tpm: 250000, rpd: 1000 },
-                'youtube-data-api': { rpd: 9500 }, // 안전 마진: 실제 10,000에서 500 차감
+                'gemini-2.5-pro': GEMINI_API_LIMITS.PRO,
+                'gemini-2.5-flash': GEMINI_API_LIMITS.FLASH,
+                'gemini-2.5-flash-lite': GEMINI_API_LIMITS.FLASH_LITE,
+                'youtube-data-api': { rpd: YOUTUBE_API_LIMITS.SAFETY_MARGIN }, // 상수 파일 기반 안전 마진
             };
         }
     }
@@ -209,14 +210,10 @@ class UsageTracker {
             // 기본 구조 초기화
             if (!quotaConfig.default) {
                 quotaConfig.default = {
-                    'gemini-2.5-pro': { rpm: 5, tpm: 250000, rpd: 50 },
-                    'gemini-2.5-flash': { rpm: 10, tpm: 250000, rpd: 250 },
-                    'gemini-2.5-flash-lite': {
-                        rpm: 15,
-                        tpm: 250000,
-                        rpd: 1000,
-                    },
-                    'youtube-data-api': { rpd: 9500 }, // 안전 마진: 실제 10,000에서 500 차감
+                    'gemini-2.5-pro': GEMINI_API_LIMITS.PRO,
+                    'gemini-2.5-flash': GEMINI_API_LIMITS.FLASH,
+                    'gemini-2.5-flash-lite': GEMINI_API_LIMITS.FLASH_LITE,
+                    'youtube-data-api': { rpd: YOUTUBE_API_LIMITS.SAFETY_MARGIN }, // 상수 파일 기반 안전 마진
                 };
             }
 
@@ -224,18 +221,19 @@ class UsageTracker {
                 quotaConfig.api_keys = {};
             }
 
-            // 현재 API 키가 등록되어 있지 않으면 자동 등록
-            if (!quotaConfig.api_keys[this.currentApiKeyHash]) {
+            // 현재 API 키가 등록되어 있지 않으면 자동 등록, 등록되어 있어도 할당량은 강제 업데이트
+            const needsUpdate = !quotaConfig.api_keys[this.currentApiKeyHash] || 
+                                quotaConfig.api_keys[this.currentApiKeyHash]['youtube-data-api'].rpd !== YOUTUBE_API_LIMITS.SAFETY_MARGIN;
+            
+            if (needsUpdate) {
+                const existingName = quotaConfig.api_keys[this.currentApiKeyHash]?.name || `자동등록 API 키 (${this.currentApiKeyHash})`;
+                
                 quotaConfig.api_keys[this.currentApiKeyHash] = {
-                    name: `자동등록 API 키 (${this.currentApiKeyHash})`,
-                    'gemini-2.5-pro': { rpm: 5, tpm: 250000, rpd: 50 },
-                    'gemini-2.5-flash': { rpm: 10, tpm: 250000, rpd: 250 },
-                    'gemini-2.5-flash-lite': {
-                        rpm: 15,
-                        tpm: 250000,
-                        rpd: 1000,
-                    },
-                    'youtube-data-api': { rpd: 9500 }, // 안전 마진: 실제 10,000에서 500 차감
+                    name: existingName,
+                    'gemini-2.5-pro': GEMINI_API_LIMITS.PRO,
+                    'gemini-2.5-flash': GEMINI_API_LIMITS.FLASH,
+                    'gemini-2.5-flash-lite': GEMINI_API_LIMITS.FLASH_LITE,
+                    'youtube-data-api': { rpd: YOUTUBE_API_LIMITS.SAFETY_MARGIN }, // 상수 파일 기반 안전 마진
                 };
 
                 // 설정 파일에 저장
@@ -248,7 +246,7 @@ class UsageTracker {
                     this.quotasFilePath,
                     JSON.stringify(quotaConfig, null, 2),
                 );
-                // ServerLogger.info(`📊 새로운 API 키 자동 등록: ${this.currentApiKeyHash}`, null, 'USAGE');
+                ServerLogger.info(`📊 API 키 할당량 강제 업데이트: ${this.currentApiKeyHash} (YouTube: ${YOUTUBE_API_LIMITS.SAFETY_MARGIN})`, null, 'USAGE');
             }
         } catch (error) {
             ServerLogger.error('API 키 자동 등록 실패:', error, 'USAGE');

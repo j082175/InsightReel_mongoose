@@ -49,19 +49,21 @@ const fetchAPIStatus = async (): Promise<ProcessedAPIStatus> => {
   }
   
   const { quota, safetyMargin } = data.data;
-  const usedLimit = quota.limit - safetyMargin; // 안전 마진을 고려한 실제 사용 가능한 한도
+  const usedLimit = quota.limit; // 서버에서 이미 안전마진이 적용된 한도값을 보냄
   
-  // 총 키 개수
-  const totalKeys = quota.keyCount || 4;
+  // 총 키 개수 (서버에서 실제 키 개수를 받아옴)
+  const totalKeys = quota.keyCount || 3;
   
   // 현재 활성 키 찾기 (사용량이 0이 아닌 첫 번째 키)
   const activeKey = quota.allKeys?.find((key: any) => key.percentage > 0) || quota.allKeys?.[0];
   
-  // 사용 가능한 키 개수 (사용량이 80% 이하인 키들)
-  const availableKeys = quota.allKeys?.filter((key: any) => key.percentage < 80).length || 0;
+  // 사용 가능한 키 개수 (활성화되고 사용량이 80% 이하인 키들)
+  const availableKeys = quota.allKeys?.filter((key: any) => 
+    key.realStatus !== 'inactive' && key.percentage < 80
+  ).length || 0;
   
-  // 개별 키 한도 (안전 마진 적용)
-  const keyLimit = activeKey ? parseInt(activeKey.usage.split('/')[1]) - (safetyMargin / totalKeys) : 0;
+  // 개별 키 한도 (서버에서 이미 안전 마진이 적용됨)
+  const keyLimit = activeKey ? parseInt(activeKey.usage.split('/')[1]) : 0;
   const keyUsed = activeKey ? parseInt(activeKey.usage.split('/')[0]) : 0;
   
   return {

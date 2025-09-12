@@ -14,7 +14,7 @@ class ApiKeyManager {
     
     try {
       await this.loadFromFile();
-      await this.loadFromEnv();
+      await this.migrateFromEnv(); // 일회성 마이그레이션
       this.initialized = true;
       ServerLogger.info('🔑 API 키 관리자 초기화 완료');
     } catch (error) {
@@ -46,8 +46,10 @@ class ApiKeyManager {
     }
   }
 
-  async loadFromEnv() {
+  async migrateFromEnv() {
+    // 환경변수에서 키들을 추출 (중복 제거)
     const envKeys = [
+      process.env.GOOGLE_API_KEY,
       process.env.YOUTUBE_KEY_1,
       process.env.YOUTUBE_KEY_2,  
       process.env.YOUTUBE_KEY_3,
@@ -57,29 +59,45 @@ class ApiKeyManager {
       process.env.YOUTUBE_API_KEY_4
     ].filter(key => key);
 
-    envKeys.forEach((key, index) => {
-      const keyId = `env-key-${index + 1}`;
-      if (!this.apiKeys.has(keyId)) {
+    // 중복 제거
+    const uniqueKeys = [...new Set(envKeys)];
+    
+    let migratedCount = 0;
+    
+    uniqueKeys.forEach((key, index) => {
+      // 이미 파일에 존재하는 키인지 확인
+      const existing = Array.from(this.apiKeys.values())
+        .find(k => k.apiKey === key);
+      
+      if (!existing) {
+        const keyId = `migrated-key-${Date.now()}-${index}`;
         this.apiKeys.set(keyId, {
           id: keyId,
-          name: `환경변수 API Key ${index + 1}`,
+          name: `API Key ${index + 1}`,
           apiKey: key,
-          source: 'env',
-          createdAt: new Date().toISOString()
+          source: 'file', // 이제 모든 키가 file 소스
+          createdAt: new Date().toISOString(),
+          status: 'active'
         });
+        migratedCount++;
       }
     });
 
-    ServerLogger.info(`🌍 환경변수에서 ${envKeys.length}개 API 키 로드`);
+    if (migratedCount > 0) {
+      await this.saveToFile();
+      ServerLogger.info(`✅ 환경변수에서 ${migratedCount}개 키를 파일로 마이그레이션 완료`);
+    } else {
+      ServerLogger.info(`ℹ️ 마이그레이션할 새로운 환경변수 키 없음`);
+    }
   }
 
   async saveToFile() {
     try {
-      const fileKeys = Array.from(this.apiKeys.values())
-        .filter(key => key.source === 'file');
+      // 이제 모든 키가 file 소스이므로 필터링 불필요
+      const allKeys = Array.from(this.apiKeys.values());
       
-      await fs.writeFile(this.configPath, JSON.stringify(fileKeys, null, 2), 'utf8');
-      ServerLogger.info(`💾 ${fileKeys.length}개 API 키를 파일에 저장`);
+      await fs.writeFile(this.configPath, JSON.stringify(allKeys, null, 2), 'utf8');
+      ServerLogger.info(`💾 ${allKeys.length}개 API 키를 파일에 저장`);
     } catch (error) {
       ServerLogger.error('❌ API 키 파일 저장 실패:', error);
       throw error;
@@ -127,10 +145,7 @@ class ApiKeyManager {
       throw new Error('존재하지 않는 API 키입니다.');
     }
 
-    if (key.source === 'env') {
-      throw new Error('환경변수 API 키는 삭제할 수 없습니다.');
-    }
-
+    // 이제 모든 키가 삭제 가능
     this.apiKeys.delete(keyId);
     await this.saveToFile();
     
@@ -161,9 +176,8 @@ class ApiKeyManager {
     key.status = status;
     key.updatedAt = new Date().toISOString();
     
-    if (key.source === 'file') {
-      await this.saveToFile();
-    }
+    // 이제 모든 키가 파일에 저장됨
+    await this.saveToFile();
     
     ServerLogger.info('🔄 API 키 상태 변경:', { id: keyId, status });
     return key;

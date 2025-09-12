@@ -156,6 +156,15 @@ class APIClient {
     });
   }
 
+  // API 키 상태 업데이트
+  async updateApiKeyStatus(keyId: string, status: 'active' | 'inactive'): Promise<APIResponse<ApiKey>> {
+    return this.requestWithRetry({
+      url: `/api/api-keys/${keyId}/status`,
+      method: 'PUT',
+      data: { status },
+    });
+  }
+
   // 서버 상태 테스트
   async testConnection(): Promise<boolean> {
     try {
