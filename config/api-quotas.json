@@ -103,6 +103,69 @@
       "youtube-data-api": {
         "rpd": 8000
       }
+    },
+    "a94fb3419d625568": {
+      "name": "자동등록 API 키 (a94fb3419d625568)",
+      "gemini-2.5-pro": {
+        "rpm": 5,
+        "tpm": 250000,
+        "rpd": 50
+      },
+      "gemini-2.5-flash": {
+        "rpm": 10,
+        "tpm": 250000,
+        "rpd": 250
+      },
+      "gemini-2.5-flash-lite": {
+        "rpm": 15,
+        "tpm": 250000,
+        "rpd": 1000
+      },
+      "youtube-data-api": {
+        "rpd": 8000
+      }
+    },
+    "775e559d6c12013a": {
+      "name": "자동등록 API 키 (775e559d6c12013a)",
+      "gemini-2.5-pro": {
+        "rpm": 5,
+        "tpm": 250000,
+        "rpd": 50
+      },
+      "gemini-2.5-flash": {
+        "rpm": 10,
+        "tpm": 250000,
+        "rpd": 250
+      },
+      "gemini-2.5-flash-lite": {
+        "rpm": 15,
+        "tpm": 250000,
+        "rpd": 1000
+      },
+      "youtube-data-api": {
+        "rpd": 8000
+      }
+    },
+    "234b8c78a0bb3df8": {
+      "name": "자동등록 API 키 (234b8c78a0bb3df8)",
+      "gemini-2.5-pro": {
+        "rpm": 5,
+        "tpm": 250000,
+        "rpd": 50
+      },
+      "gemini-2.5-flash": {
+        "rpm": 10,
+        "tpm": 250000,
+        "rpd": 250
+      },
+      "gemini-2.5-flash-lite": {
+        "rpm": 15,
+        "tpm": 250000,
+        "rpd": 1000
+      },
+      "youtube-data-api": {
+        "rpd": 8000
+      }
     }
   }
 }

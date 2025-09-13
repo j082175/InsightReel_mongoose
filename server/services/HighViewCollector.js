@@ -383,6 +383,8 @@ class HighViewCollector {
       const keyInfo = this.multiKeyManager.keys[index];
       const apiKeyData = allApiKeys.find(k => k.apiKey === keyInfo.key);
       
+      // ID 매핑 완료
+      
       return {
         ...status,
         id: apiKeyData ? apiKeyData.id : `key-${index}`, // 실제 ID 또는 fallback

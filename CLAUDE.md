@@ -82,6 +82,25 @@ MONGODB_URI=mongodb://localhost:27017/InsightReel
    - useSearch, useFilter 커스텀 훅으로 로직 중앙화
    - 4개 주요 페이지 모두 적용 완료
 
+9. **파일 크기 제한** 🚨
+   - 새 파일 생성 시 800줄 이하 필수
+   - Claude Code 호환성 확보 (25,000 토큰 제한)
+   - 단일 책임 원칙 준수
+
+10. **보안 규칙** 🔒
+   - API 키, 비밀번호 하드코딩 절대 금지
+   - 로그에 민감 정보 출력 금지
+
+11. **Git 커밋 규칙** 📝
+   - 커밋 메시지 형식: `타입: 간단한 설명`
+   - 타입: Fix, Feature, Refactor, Performance, Docs
+   - 커밋 전 `git status`로 파일 검토 필수 (.gitignore 확인)
+
+12. **에러 처리 규칙** ⚠️
+   - 모든 비동기 함수에 try-catch 필수
+   - 사용자 친화적 에러 메시지 제공
+   - ServerLogger로 에러 로깅
+
 ### 데이터 구조 표준 (server/types/*.js)
 
 #### Video 인터페이스 (42개 필드 - video-types.js)
@@ -324,39 +343,16 @@ const VideoCard = ({ video }) => {
 
 ---
 
----
+## 📋 **CRUD API 엔드포인트**
 
-## 📋 **추가/삭제 기능 API 완비** ✅
-
-### **✅ 웹에서 완전히 작동하는 CRUD 기능들**
-
-#### **추가 기능 (POST)**
-- `POST /api/videos/add-url` - URL로 영상 추가 (플랫폼 자동 감지)
-- `POST /api/channels/add-url` - URL로 채널 추가 (중복 체크 포함)
+### **추가 기능**
+- `POST /api/videos/add-url` - URL로 영상 추가
+- `POST /api/channels/add-url` - URL로 채널 추가
 - `POST /api/channel-groups` - 채널 그룹 생성
 
-#### **삭제 기능 (DELETE)**
-- `DELETE /api/videos/:id` - 개별 영상 삭제
-- `DELETE /api/channels/:id` - 개별 채널 삭제
+### **삭제 기능**
+- `DELETE /api/videos/:id` - 영상 삭제
+- `DELETE /api/channels/:id` - 채널 삭제
 - `DELETE /api/channel-groups/:id` - 채널 그룹 삭제
 - `DELETE /api/batches/:id` - 수집 배치 삭제
 - `DELETE /api/trending/videos/:id` - 트렌딩 영상 삭제
-
-#### **웹 UI 연결 완료**
-- **채널 관리 페이지**: "+ 채널 추가" 버튼으로 URL 입력 가능
-- **선택 모드**: 체크박스 선택 후 삭제 버튼으로 일괄 삭제
-- **채널 그룹 탭**: 그룹 생성, 수정, 삭제 완전 지원
-- **DeleteConfirmationModal**: 안전한 삭제 확인 시스템
-
----
-
-**Last Updated**: 2025-09-12 (리팩토링 및 최적화 완료)  
-**Maintainer**: JUNSOOCHO
-
-### **🎉 프로젝트 현황**
-- ✅ **핵심 기능**: 모든 영상/채널/그룹 관리 기능 완료
-- ✅ **성능 최적화**: React.memo + useCallback 패턴 적용
-- ✅ **타입 안전성**: TypeScript any 타입 완전 제거
-- ✅ **UI 통일성**: BaseModal 기반 일관된 사용자 경험
-- ✅ **코드 품질**: 중복 코드 제거 및 유틸리티 함수 체계화
-- ✅ **안정성**: 프론트엔드 localhost:8000, 백엔드 localhost:3000 정상 운영
