@@ -119,6 +119,18 @@ const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ isModal = false }) => {
       const response = await apiClient.addApiKey(newKeyName, newKeyValue);
       
       if (response.success) {
+        console.log('🔍 성공 응답 상세:', response);
+        console.log('🔍 응답 data 내용:', response.data);
+        console.log('🔍 isDuplicate 값:', response.data?.isDuplicate);
+        
+        // 중복 키인 경우 특별 처리
+        if (response.data?.isDuplicate) {
+          const existingKeyName = response.data.message.match(/'([^']+)'/)?.[1] || '알 수 없음';
+          alert(`🔄 이미 등록된 API 키입니다!\n\n• 기존 키 이름: ${existingKeyName}\n• 동일한 API 키가 이미 시스템에 등록되어 있습니다.\n• 새로 추가하지 않고 기존 키를 계속 사용합니다.`);
+        } else {
+          alert('✅ API 키가 성공적으로 추가되었습니다!');
+        }
+        
         // API 키 목록을 새로고침
         await fetchApiKeyInfo();
         // API 상태 즉시 새로고침
@@ -126,7 +138,6 @@ const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ isModal = false }) => {
         setShowAddKey(false);
         setNewKeyName('');
         setNewKeyValue('');
-        console.log('✅ API 키가 성공적으로 추가되었습니다');
       } else {
         console.error('❌ API 키 추가 실패:', response.message);
         alert(`API 키 추가 실패: ${response.message}`);
@@ -137,33 +148,25 @@ const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ isModal = false }) => {
       // 서버에서 온 에러 메시지 추출
       let errorMessage = 'API 키 추가 중 오류가 발생했습니다.';
       
-      // JSON 직렬화를 통한 안전한 에러 정보 추출
-      try {
-        const errorString = JSON.stringify(error);
-        const errorData = JSON.parse(errorString);
+      // axios 에러 객체 처리
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as any;
+        const status = axiosError.response?.status;
+        const data = axiosError.response?.data;
         
-        // HTTP 에러 응답 처리
-        if (errorData.response && typeof errorData.response === 'object') {
-          const status = errorData.response.status;
-          const data = errorData.response.data;
-          
-          if (status === 400 && data && typeof data.message === 'string') {
-            if (data.message.includes('유효하지 않은')) {
-              errorMessage = '⚠️ 유효하지 않은 YouTube API 키 형식입니다.\n\n올바른 형식:\n• AIza로 시작하는 39자리 문자열\n• 예: AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
-            } else {
-              errorMessage = `⚠️ ${data.message}`;
-            }
-          } else if (status === 400) {
+        console.log('🔍 에러 응답 상세:', { status, data });
+        
+        if (status === 400) {
+          if (data?.message && data.message.includes('유효하지 않은')) {
+            errorMessage = '⚠️ 유효하지 않은 YouTube API 키 형식입니다!\n\n올바른 형식:\n• AIza로 시작하는 정확히 39자리 문자열\n• 영문자, 숫자, 하이픈(-), 언더스코어(_)만 포함\n• 예시: AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n\n입력하신 키가 올바른 YouTube API 키인지 확인해주세요.';
+          } else if (data?.message) {
+            errorMessage = `⚠️ ${data.message}`;
+          } else {
             errorMessage = '⚠️ 입력값이 올바르지 않습니다. 키 이름과 API 키를 모두 입력해주세요.';
-          } else if (status === 500 && data && typeof data.message === 'string') {
-            errorMessage = data.message;
           }
-        } else if (typeof errorData.message === 'string' && errorData.message.includes('유효하지 않은')) {
-          errorMessage = '⚠️ 유효하지 않은 YouTube API 키 형식입니다.\n\n올바른 형식:\n• AIza로 시작하는 39자리 문자열\n• 예: AIzaSyDxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+        } else if (status === 500) {
+          errorMessage = data?.message || data?.error || '서버에서 오류가 발생했습니다.';
         }
-      } catch {
-        // JSON 직렬화 실패 시 기본 메시지 사용
-        console.log('에러 정보 파싱 실패, 기본 메시지 사용');
       }
       
       alert(errorMessage);

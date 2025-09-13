@@ -3115,18 +3115,39 @@ app.post('/api/api-keys', async (req, res) => {
         }
 
         // ApiKeyManager를 통해 실제 저장
-        const newKey = await ApiKeyManager.addApiKey(name, apiKey);
+        const result = await ApiKeyManager.addApiKey(name, apiKey);
+        
+        console.log('🔍 [SERVER] ApiKeyManager 응답:', result);
+        console.log('🔍 [SERVER] isDuplicate 값:', result.isDuplicate);
 
-        ResponseHandler.success(
-            res,
-            {
-                id: newKey.id,
-                name: newKey.name,
-                maskedKey: ApiKeyManager.maskApiKey(newKey.apiKey),
-                status: newKey.status,
-            },
-            'API 키가 성공적으로 추가되었습니다.',
-        );
+        // 새 키가 추가된 경우 MultiKeyManager 재초기화
+        if (!result.isDuplicate && highViewCollector && highViewCollector.multiKeyManager) {
+            await highViewCollector.multiKeyManager.initializeFromApiKeyManager();
+            ServerLogger.info('🔄 MultiKeyManager 재초기화 완료 (키 추가 후)');
+        }
+
+        // 중복 키이거나 다른 이유로 추가되지 않은 경우
+        if (result.isDuplicate) {
+            ResponseHandler.success(
+                res,
+                {
+                    keyId: result.keyId,
+                    message: result.message,
+                    isDuplicate: true
+                },
+                result.message,
+            );
+        } else {
+            ResponseHandler.success(
+                res,
+                {
+                    keyId: result.keyId,
+                    message: result.message,
+                    isDuplicate: false
+                },
+                'API 키가 성공적으로 추가되었습니다.',
+            );
+        }
     } catch (error) {
         // 유효성 검사 실패인 경우 400 에러로 처리
         if (error.message && error.message.includes('유효하지 않은')) {
@@ -3151,6 +3172,12 @@ app.delete('/api/api-keys/:keyId', async (req, res) => {
 
         // ApiKeyManager를 통해 실제 삭제
         await ApiKeyManager.deleteApiKey(keyId);
+        
+        // MultiKeyManager 재초기화하여 삭제된 키 반영
+        if (highViewCollector && highViewCollector.multiKeyManager) {
+            await highViewCollector.multiKeyManager.initializeFromApiKeyManager();
+            ServerLogger.info('🔄 MultiKeyManager 재초기화 완료 (키 삭제 후)');
+        }
 
         ResponseHandler.success(
             res,

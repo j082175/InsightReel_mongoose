@@ -184,6 +184,27 @@ class MultiKeyManager {
       ServerLogger.info(`  ${icon} ${s.name}: ${safetyUsage} (${safetyPercentage}%)`, null, 'MULTI-KEY');
     });
   }
+
+  /**
+   * ApiKeyManager에서 키 목록을 다시 로드하여 동기화
+   */
+  async initializeFromApiKeyManager() {
+    try {
+      // 기존 trackers 정리
+      this.trackers.clear();
+      
+      // 키 목록 다시 로드
+      this.keys = this.loadKeys();
+      
+      // 새로운 trackers 초기화
+      this.initializeTrackers();
+      
+      ServerLogger.info(`🔄 MultiKeyManager 재초기화 완료: ${this.keys.length}개 키 로드`, null, 'MULTI-KEY');
+    } catch (error) {
+      ServerLogger.error('MultiKeyManager 재초기화 실패:', error, 'MULTI-KEY');
+      throw error;
+    }
+  }
 }
 
 module.exports = MultiKeyManager;

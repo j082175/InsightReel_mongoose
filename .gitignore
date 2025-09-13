@@ -41,6 +41,10 @@ yarn-error.log*
 .env.production.local
 # .env.test 파일은 커밋하여 테스트 환경 공유
 
+# API 키 저장 파일들
+server/data/api-keys.json
+server/data/
+
 # 테스트 커버리지 보고서
 coverage/
 .nyc_output

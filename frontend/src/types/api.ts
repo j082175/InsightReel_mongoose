@@ -101,8 +101,10 @@ export interface ApiKey {
 
 export interface ApiKeyCreateResult {
   success: boolean;
-  apiKey: ApiKey;
+  keyId?: string;
+  apiKey?: ApiKey;
   message: string;
+  isDuplicate?: boolean;
 }
 
 export interface ApiKeyDeleteResult {

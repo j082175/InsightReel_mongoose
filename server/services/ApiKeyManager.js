@@ -112,12 +112,19 @@ class ApiKeyManager {
       .find(key => key.apiKey === apiKey);
     
     if (existing) {
-      throw new Error('이미 등록된 API 키입니다.');
+      // 중복 키의 경우 에러 대신 성공으로 처리하되 메시지로 알림
+      ServerLogger.warn(`중복 API 키 추가 시도: ${existing.name} (기존 키 유지)`, 'API_KEY');
+      return {
+        success: true,
+        keyId: existing.id,
+        message: `이미 등록된 API 키입니다. 기존 키 '${existing.name}'을 사용합니다.`,
+        isDuplicate: true
+      };
     }
 
-    // YouTube API 키 형식 검증 (완화된 조건)
-    if (!apiKey.startsWith('AIza') && !apiKey.includes('test')) {
-      throw new Error('유효하지 않은 YouTube API 키 형식입니다.');
+    // YouTube API 키 형식 검증 (엄격한 조건)
+    if (!this.validateApiKeyFormat(apiKey)) {
+      throw new Error('유효하지 않은 YouTube API 키 형식입니다. (AIza로 시작하는 39자리 영숫자)');
     }
 
     const keyId = `user-key-${Date.now()}`;
@@ -134,7 +141,12 @@ class ApiKeyManager {
     await this.saveToFile();
     
     ServerLogger.info('✅ 새 API 키 추가:', { id: keyId, name });
-    return newKey;
+    return {
+      success: true,
+      keyId: keyId,
+      message: `API 키 '${name}'이 성공적으로 추가되었습니다.`,
+      isDuplicate: false
+    };
   }
 
   async deleteApiKey(keyId) {
@@ -181,6 +193,27 @@ class ApiKeyManager {
     
     ServerLogger.info('🔄 API 키 상태 변경:', { id: keyId, status });
     return key;
+  }
+
+  validateApiKeyFormat(apiKey) {
+    // YouTube API 키 형식 검증
+    // 1. AIza로 시작
+    // 2. 정확히 39자리
+    // 3. 영문자, 숫자, 하이픈, 언더스코어만 허용
+    // 4. 테스트 환경에서는 'test'로 시작하는 키도 허용
+    
+    if (!apiKey || typeof apiKey !== 'string') {
+      return false;
+    }
+    
+    // 테스트 환경 예외 처리
+    if (process.env.NODE_ENV === 'test' && apiKey.startsWith('test')) {
+      return true;
+    }
+    
+    // YouTube API 키 형식 검증
+    const youtubeApiKeyRegex = /^AIza[A-Za-z0-9_-]{35}$/;
+    return youtubeApiKeyRegex.test(apiKey) && apiKey.length === 39;
   }
 
   maskApiKey(apiKey) {

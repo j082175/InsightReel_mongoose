@@ -136,7 +136,7 @@ class APIClient {
     });
   }
 
-  // API 키 추가
+  // API 키 추가 (재시도 비활성화 - 중복 요청 방지)
   async addApiKey(name: string, apiKey: string): Promise<APIResponse<ApiKeyCreateResult>> {
     return this.requestWithRetry({
       url: '/api/api-keys',
@@ -145,15 +145,15 @@ class APIClient {
         name: name, 
         apiKey: apiKey 
       },
-    });
+    }, 0); // 재시도 0번으로 설정
   }
 
-  // API 키 삭제
+  // API 키 삭제 (재시도 비활성화 - 중복 요청 방지)
   async deleteApiKey(keyId: string): Promise<APIResponse<ApiKeyDeleteResult>> {
     return this.requestWithRetry({
       url: `/api/api-keys/${keyId}`,
       method: 'DELETE',
-    });
+    }, 0); // 재시도 0번으로 설정
   }
 
   // API 키 상태 업데이트
