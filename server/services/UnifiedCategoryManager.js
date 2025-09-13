@@ -941,6 +941,7 @@ ${categories.map((cat, index) => `${index + 1}. ${cat}`).join('\n')}
      * 동적 카테고리 응답 처리 (일관성 기반 깊이 조정)
      */
     processDynamicCategoryResponse(aiResponse, metadata, modelUsed) {
+        console.log('🚀 DEBUG UnifiedCategoryManager.processDynamicCategoryResponse 시작');
         try {
             // JSON 응답 파싱
             let parsedResponse;
@@ -974,10 +975,13 @@ ${categories.map((cat, index) => `${index + 1}. ${cat}`).join('\n')}
             let fullPath = parsedResponse.full_path || finalCategory;
             let mainCategory = fullPath.split(' > ')[0] || fullPath;
 
-            // middleCategory는 2번째부터 마지막까지의 전체 경로
+            // middleCategory는 2번째 요소만 (중카테고리)
             const pathParts = fullPath.split(' > ');
+            console.log('🔍 DEBUG UnifiedCategoryManager pathParts:', pathParts);
+            console.log('🔍 DEBUG UnifiedCategoryManager pathParts[1]:', pathParts[1]);
             let middleCategory =
-                pathParts.length > 1 ? pathParts.slice(1).join(' > ') : '일반';
+                pathParts.length > 1 ? pathParts[1] : '일반';
+            console.log('🔍 DEBUG UnifiedCategoryManager middleCategory 결과:', middleCategory);
 
             // fullPath에서 depth 계산
             let depth = parsedResponse.depth;
@@ -1005,12 +1009,11 @@ ${categories.map((cat, index) => `${index + 1}. ${cat}`).join('\n')}
                 );
             } else if (consistencyLevel === 'medium') {
                 // 일관성 중간: AI가 제안한 전체 카테고리 사용 (제한 없음)
-                // middleCategory 재계산 (2번째부터 마지막까지)
+                // middleCategory 재계산 (2번째 요소만)
                 const pathParts = fullPath.split(' > ');
-                middleCategory =
-                    pathParts.length > 1
-                        ? pathParts.slice(1).join(' > ')
-                        : '일반';
+                console.log('🔍 DEBUG UnifiedCategoryManager (중간일관성) pathParts:', pathParts);
+                middleCategory = pathParts.length > 1 ? pathParts[1] : '일반';
+                console.log('🔍 DEBUG UnifiedCategoryManager (중간일관성) middleCategory 결과:', middleCategory);
 
                 ServerLogger.info(
                     `✅ 일관성 중간: 전체 카테고리 사용: ${fullPath} (${consistencyReason})`,
@@ -1031,12 +1034,11 @@ ${categories.map((cat, index) => `${index + 1}. ${cat}`).join('\n')}
                     depth = 6;
                 }
 
-                // middleCategory 재계산 (2번째부터 마지막까지)
+                // middleCategory 재계산 (2번째 요소만)
                 const pathParts = fullPath.split(' > ');
-                middleCategory =
-                    pathParts.length > 1
-                        ? pathParts.slice(1).join(' > ')
-                        : '일반';
+                console.log('🔍 DEBUG UnifiedCategoryManager (높은일관성) pathParts:', pathParts);
+                middleCategory = pathParts.length > 1 ? pathParts[1] : '일반';
+                console.log('🔍 DEBUG UnifiedCategoryManager (높은일관성) middleCategory 결과:', middleCategory);
 
                 ServerLogger.success(
                     `✅ 일관성 높음으로 세부 카테고리 생성: ${fullPath} (${consistencyReason})`,

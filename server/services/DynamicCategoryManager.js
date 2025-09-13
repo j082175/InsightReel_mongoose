@@ -340,9 +340,19 @@ class DynamicCategoryManager {
                 return this.getFallbackCategory(metadata);
             }
 
+            // 🔍 디버깅: parts 배열 확인
+            ServerLogger.info('🔍 normalized.parts 배열:', normalized.parts);
+            ServerLogger.info('🔍 parts[0] (mainCategory):', normalized.parts[0]);
+            ServerLogger.info('🔍 parts[1] (middleCategory):', normalized.parts[1]);
+
+            console.log('🔍 DEBUG DynamicCategoryManager normalized.parts:', normalized.parts);
+            console.log('🔍 DEBUG DynamicCategoryManager parts[1]:', normalized.parts[1]);
+            const middleCategory = normalized.parts[1] || '일반';
+            console.log('🔍 DEBUG DynamicCategoryManager middleCategory 결과:', middleCategory);
+
             return {
                 mainCategory: normalized.parts[0],
-                middleCategory: normalized.parts[1] || '일반', // 중카테고리 추가 (호환성)
+                middleCategory: middleCategory, // 중카테고리 추가 (호환성)
                 fullPath: normalized.normalized,
                 categoryPath: normalized.parts,
                 depth: normalized.depth,

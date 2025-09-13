@@ -418,7 +418,10 @@ class AIAnalyzer {
     if (!aiResponse) {
       throw new Error('AI 응답을 받지 못했습니다');
     }
-    
+
+    // 🔍 AI 원본 응답 로깅 (댓글 분석 확인용)
+    ServerLogger.info('🤖 AI 원본 응답 (처리 전):', aiResponse.substring(0, 1000) + (aiResponse.length > 1000 ? '...[truncated]' : ''));
+
     // 동적 카테고리 응답 처리
     const processStartTime = Date.now();
     const result = this.categoryManager.processDynamicCategoryResponse(aiResponse, metadata, this.lastUsedModel);
@@ -1170,15 +1173,47 @@ class AIAnalyzer {
   // 간단한 AI 프롬프트 (일관성 향상)
   buildSimpleAnalysisPrompt(metadata) {
     const platform = metadata.platform || '소셜미디어';
-    return `이 ${platform} 영상의 스크린샷을 보고 정확한 카테고리를 분류해주세요.
 
-**이미지 분석 지침:**
-1. 화면에 보이는 주요 내용 (인물, 객체, 배경, 텍스트, 자막)
-2. 영상의 주제와 목적 (요리, 패션, 게임, 교육, 엔터테인먼트 등)
-3. 시각적 단서들 (UI, 브랜드, 로고, 환경)
+    // 댓글 데이터가 있는 경우 추가 정보로 활용
+    let commentAnalysis = '';
+    if (metadata.topComments && metadata.topComments.trim().length > 0) {
+      // 모든 댓글 활용 (길이 제한 제거)
+      const comments = metadata.topComments.trim();
+      commentAnalysis = `
+
+**⭐ 시청자 댓글 반응 분석 (매우 중요):**
+${comments}
+
+**댓글 활용 지침:**
+1. 댓글에서 나타나는 주요 키워드와 반응을 분석하세요
+2. 시청자들이 언급하는 내용의 주제를 파악하세요
+3. 댓글의 톤과 감정을 통해 영상의 장르를 추정하세요
+4. 이모티콘과 반응을 통해 엔터테인먼트/교육/정보 성격을 판단하세요
+5. 댓글 내용이 썸네일만으로는 알 수 없는 영상의 진짜 내용을 알려줍니다
+6. **💥 떡상 이유 분석**: 댓글에서 왜 사람들이 열광하는지, 어떤 포인트가 화제가 되는지 파악하세요
+
+**댓글 분석이 카테고리 판단과 인기 요인 분석에 핵심적인 역할을 합니다!**`;
+    }
+
+    return `이 ${platform} 영상의 스크린샷을 보고 정확한 카테고리를 분류해주세요.${commentAnalysis}
+
+**종합 분석 지침 (댓글 우선):**
+1. **댓글 분석 (최우선)**: 시청자 반응에서 나타나는 진짜 영상 내용과 장르 파악
+2. **이미지 분석**: 화면에 보이는 주요 내용 (인물, 객체, 배경, 텍스트, 자막)
+3. **맥락 파악**: 댓글 + 이미지를 종합하여 영상의 주제와 목적 판단
+4. **카테고리 결정**: 댓글에서 파악한 내용을 기반으로 가장 적합한 카테고리 선택
+
+**⚠️ 중요: 댓글이 있다면 댓글 내용이 카테고리 판단의 핵심 근거가 됩니다!**
 
 **카테고리 분류 체계** (반드시 이 중에서 선택):
-• 게임 → 플레이·리뷰 | 가이드·분석 | e스포츠 | 장르 전문
+
+**📋 필수 응답 필드:**
+- main_category: 대카테고리 (예: "게임")
+- middle_category: 중카테고리 (예: "가이드·분석")
+- summary: 이 영상이 왜 인기있고 떡상하고 있는지 댓글 반응을 통해 분석
+- keywords: 키워드 배열
+- hashtags: 해시태그 배열
+- confidence: 신뢰도 (0.1~1.0)
 • 과학·기술 → 디바이스 리뷰 | 프로그래밍·코딩 강좌 | 과학 이론·실험 | 미래 트렌드
 • 교육 → 외국어 강의 | 학문·교양 | 시험·자격증 대비 | 자기계발·학습법
 • How-to & 라이프스타일 → 요리·베이킹 | DIY·공예·인테리어 | 뷰티·패션 | 생활 꿀팁·가전·정리
@@ -1744,11 +1779,29 @@ JSON 형식으로 답변:
 
   buildGeminiMultiFramePrompt(metadata, frameCount) {
     const { caption = '', hashtags = [], author = '' } = metadata;
-    
-    return `이 ${frameCount}장의 이미지들은 같은 비디오에서 시간순으로 추출된 프레임들입니다. 
-전체적인 흐름과 내용을 파악하여 다음 정보를 분석해주세요:
 
-1. 전체 비디오 내용: 시간에 따른 변화와 전체적인 스토리를 설명
+    // 댓글 데이터가 있는 경우 추가 정보로 활용
+    let commentAnalysis = '';
+    if (metadata.topComments && metadata.topComments.trim().length > 0) {
+      // 모든 댓글 활용 (길이 제한 제거)
+      const comments = metadata.topComments.trim();
+      commentAnalysis = `
+
+**⭐ 시청자 댓글 반응 분석 (매우 중요):**
+${comments}
+
+**댓글 기반 카테고리 판단:**
+- 댓글에서 나타나는 반응과 키워드를 통해 영상의 실제 내용을 파악하세요
+- 시청자들의 감정 반응(웃음, 놀람, 공감 등)을 카테고리 판단에 활용하세요
+- 썸네일만으로는 알기 어려운 영상의 진짜 주제를 댓글에서 찾으세요
+- **💥 떡상 요인**: 댓글에서 이 영상이 왜 화제가 되고 인기있는지 분석하세요`;
+    }
+
+    return `이 ${frameCount}장의 이미지들은 같은 비디오에서 시간순으로 추출된 프레임들입니다.
+전체적인 흐름과 내용을 파악하여 다음 정보를 분석해주세요:${commentAnalysis}
+
+1. **전체 비디오 내용**: 댓글 반응을 통해 파악한 실제 내용 + 시간에 따른 변화와 전체적인 스토리를 설명
+   - 댓글에서 나타나는 시청자 반응이 영상의 진짜 내용을 알려줍니다
 2. 카테고리 분류 (2단계):
    **중요: 반드시 아래 구조에서만 선택하세요**:
    
