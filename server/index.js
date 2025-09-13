@@ -2806,6 +2806,7 @@ app.get('/api/quota-status', async (req, res) => {
                     resetTime: '매일 오후 4시 (한국 시간, Google 기준)',
                     safetyInfo: `안전 마진 ${safetyMargin} 적용됨`,
                 },
+                gemini: quotaStatus.gemini, // Gemini data를 top level로 노출
             },
             'API quota 현황을 조회했습니다.',
         );
@@ -3678,7 +3679,7 @@ const startServer = async () => {
 
         // 📋 채널 분석 큐 라우트는 이미 위에서 등록됨 (404 핸들러 이전)
 
-        app.listen(PORT, () => {
+        const server = app.listen(PORT, () => {
             ServerLogger.info(
                 `
 🎬 InsightReel 서버 실행중
@@ -3704,6 +3705,39 @@ const startServer = async () => {
                 'START',
             );
         });
+
+        // Graceful shutdown 처리
+        const gracefulShutdown = (signal) => {
+            ServerLogger.info(`🛑 ${signal} 신호 수신 - 서버를 안전하게 종료합니다...`, 'SHUTDOWN');
+            
+            server.close(() => {
+                ServerLogger.info('✅ HTTP 서버가 종료되었습니다', 'SHUTDOWN');
+                
+                // MongoDB 연결 종료
+                if (process.env.USE_MONGODB === 'true') {
+                    DatabaseManager.disconnect().then(() => {
+                        ServerLogger.info('✅ MongoDB 연결이 종료되었습니다', 'SHUTDOWN');
+                        process.exit(0);
+                    }).catch((err) => {
+                        ServerLogger.error('❌ MongoDB 연결 종료 실패', err.message, 'SHUTDOWN');
+                        process.exit(1);
+                    });
+                } else {
+                    process.exit(0);
+                }
+            });
+
+            // 강제 종료 타임아웃 (10초)
+            setTimeout(() => {
+                ServerLogger.error('⏰ 강제 종료 타임아웃', 'SHUTDOWN');
+                process.exit(1);
+            }, 10000);
+        };
+
+        // 시그널 핸들러 등록
+        process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+        process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+        process.on('SIGQUIT', () => gracefulShutdown('SIGQUIT'));
     } catch (error) {
         ServerLogger.error('🚨 서버 시작 실패', error.message, 'START');
         process.exit(1);

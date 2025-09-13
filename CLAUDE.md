@@ -18,6 +18,7 @@ InsightReel/
 npm run dev      # 개발 서버 (자동 재시작)
 npm start        # 프로덕션 서버
 npm test         # 테스트 실행
+npm run force-cleanup  # 모든 프로세스 강제 정리
 ```
 
 ## 🔧 환경변수 (.env)

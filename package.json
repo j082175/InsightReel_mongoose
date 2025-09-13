@@ -7,6 +7,8 @@
     "dev": "npm run kill-port && nodemon server/index.js",
     "start": "npm run kill-port && node server/index.js",
     "kill-port": "npx kill-port 3000 || echo 'Port 3000 was already free'",
+    "cleanup": "npx kill-port 3000 && npx kill-port 8000 && echo 'All ports cleaned'",
+    "force-cleanup": "node scripts/force-cleanup.js",
     "build": "webpack --mode production",
     "test": "jest",
     "test:watch": "jest --watch",

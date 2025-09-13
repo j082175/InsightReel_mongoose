@@ -418,6 +418,13 @@ class HighViewCollector {
     });
     
 
+    // Gemini API 사용량 정보 추가
+    const usageTracker = this.usageTracker; // 기존 인스턴스 사용
+    const geminiStats = usageTracker.getUsageStats();
+    
+    console.log('🔍 [SERVER] Gemini Stats:', JSON.stringify(geminiStats, null, 2));
+    
+    
     return {
       used: totalUsed,
       limit: totalLimit,
@@ -428,7 +435,34 @@ class HighViewCollector {
         ...status,
         realStatus: status.realStatus // realStatus 필드가 확실히 포함되도록 명시
       })),
-      activeKeyCount: statusToSum.length
+      activeKeyCount: statusToSum.length,
+      
+      // Gemini API 상태 정보 추가
+      gemini: {
+        pro: {
+          used: geminiStats.pro.used,
+          limit: geminiStats.pro.quota,
+          remaining: geminiStats.pro.remaining,
+          usagePercent: geminiStats.pro.percentage
+        },
+        flash: {
+          used: geminiStats.flash.used,
+          limit: geminiStats.flash.quota,
+          remaining: geminiStats.flash.remaining,
+          usagePercent: geminiStats.flash.percentage
+        },
+        flashLite: {
+          used: geminiStats.flashLite.used,
+          limit: geminiStats.flashLite.quota,
+          remaining: geminiStats.flashLite.remaining,
+          usagePercent: geminiStats.flashLite.percentage
+        },
+        total: {
+          used: geminiStats.total.used,
+          quota: geminiStats.total.quota,
+          percentage: geminiStats.total.percentage
+        }
+      }
     };
   }
 

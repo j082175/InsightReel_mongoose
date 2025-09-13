@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo, useCallback } from 'react';
 import SettingsModal from './SettingsModal';
 import { useAPIStatus } from '../hooks/useAPIStatus';
 
@@ -13,12 +13,13 @@ interface NavigationItem {
   children?: NavigationItem[];
 }
 
-const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
+const Header: React.FC<HeaderProps> = memo(({ currentPage, onNavigate }) => {
   const [isProfileOpen, setProfileOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
   
   const { data: apiStatus, isLoading: apiLoading } = useAPIStatus();
+  
 
   const navStructure: NavigationItem[] = [
     { id: 'dashboard', name: '대시보드' },
@@ -44,7 +45,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
     }
   ];
 
-  const NavItem: React.FC<{ item: NavigationItem }> = ({ item }) => {
+  const NavItem: React.FC<{ item: NavigationItem }> = memo(({ item }) => {
     const isActive = item.id === currentPage || (item.children && item.children.some((child: NavigationItem) => child.id === currentPage));
 
     if (item.children) {
@@ -83,7 +84,7 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
         {item.name}
       </button>
     );
-  };
+  });
 
   return (
     <>
@@ -138,6 +139,63 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
               </div>
             </div>
           </div>
+          
+          {/* Gemini API 상태 바 */}
+          {apiStatus.gemini && apiStatus.gemini.total && (
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100 px-4 py-2">
+              <div className="max-w-7xl mx-auto flex justify-between items-center">
+                <div className="flex items-center space-x-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    apiStatus.gemini.total.percentage > 80 ? 'bg-red-500' :
+                    apiStatus.gemini.total.percentage > 60 ? 'bg-yellow-500' : 'bg-green-500'
+                  }`}></div>
+                  <span className="text-xs font-medium text-gray-700">Gemini API Status</span>
+                </div>
+                <div className="flex items-center space-x-4">
+                  {/* Pro 모델 */}
+                  <span className="text-xs text-gray-600">
+                    Pro: <span className="font-medium text-gray-800">
+                      {apiStatus.gemini.pro.used}/{apiStatus.gemini.pro.limit}
+                    </span>
+                    <span className="text-gray-500 ml-1">
+                      ({apiStatus.gemini.pro.usagePercent}%)
+                    </span>
+                  </span>
+                  
+                  {/* Flash 모델 */}
+                  <span className="text-xs text-gray-600">
+                    Flash: <span className="font-medium text-gray-800">
+                      {apiStatus.gemini.flash.used}/{apiStatus.gemini.flash.limit}
+                    </span>
+                    <span className="text-gray-500 ml-1">
+                      ({apiStatus.gemini.flash.usagePercent}%)
+                    </span>
+                  </span>
+                  
+                  {/* Flash-Lite 모델 */}
+                  <span className="text-xs text-gray-600">
+                    Flash-Lite: <span className="font-medium text-gray-800">
+                      {apiStatus.gemini.flashLite.used}/{apiStatus.gemini.flashLite.limit}
+                    </span>
+                    <span className="text-gray-500 ml-1">
+                      ({apiStatus.gemini.flashLite.usagePercent}%)
+                    </span>
+                  </span>
+                  
+                  {/* 전체 진행률 바 */}
+                  <div className="w-16 bg-gray-300 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        apiStatus.gemini.total.percentage > 80 ? 'bg-red-500' :
+                        apiStatus.gemini.total.percentage > 60 ? 'bg-yellow-500' : 'bg-green-500'
+                      }`}
+                      style={{ width: `${Math.min(apiStatus.gemini.total.percentage || 0, 100)}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
       
@@ -209,6 +267,8 @@ const Header: React.FC<HeaderProps> = ({ currentPage, onNavigate }) => {
       </header>
     </>
   );
-};
+});
+
+Header.displayName = 'Header';
 
 export default Header;

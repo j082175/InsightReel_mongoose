@@ -19,6 +19,31 @@ interface APIStatusResponse {
     resetTime: string;
     safetyInfo: string;
   };
+  gemini?: {
+    pro: {
+      used: number;
+      limit: number;
+      remaining: number;
+      usagePercent: number;
+    };
+    flash: {
+      used: number;
+      limit: number;
+      remaining: number;
+      usagePercent: number;
+    };
+    flashLite: {
+      used: number;
+      limit: number;
+      remaining: number;
+      usagePercent: number;
+    };
+    total: {
+      used: number;
+      quota: number;
+      percentage: number;
+    };
+  };
 }
 
 interface ProcessedAPIStatus {
@@ -35,6 +60,31 @@ interface ProcessedAPIStatus {
     limit: number;
     usagePercentage: number;
   };
+  gemini?: {
+    pro: {
+      used: number;
+      limit: number;
+      remaining: number;
+      usagePercent: number;
+    };
+    flash: {
+      used: number;
+      limit: number;
+      remaining: number;
+      usagePercent: number;
+    };
+    flashLite: {
+      used: number;
+      limit: number;
+      remaining: number;
+      usagePercent: number;
+    };
+    total: {
+      used: number;
+      quota: number;
+      percentage: number;
+    };
+  };
 }
 
 const fetchAPIStatus = async (): Promise<ProcessedAPIStatus> => {
@@ -43,6 +93,7 @@ const fetchAPIStatus = async (): Promise<ProcessedAPIStatus> => {
     throw new Error('API 상태 조회 실패');
   }
   const data: { success: boolean; data: APIStatusResponse } = await response.json();
+  
   
   if (!data.success || !data.data) {
     throw new Error('API 응답 형식 오류');
@@ -79,7 +130,8 @@ const fetchAPIStatus = async (): Promise<ProcessedAPIStatus> => {
       usage: keyUsed,
       limit: keyLimit,
       usagePercentage: activeKey?.percentage || 0
-    }
+    },
+    gemini: data.data.gemini
   };
 };
 
@@ -87,8 +139,9 @@ export const useAPIStatus = () => {
   return useQuery({
     queryKey: ['api-status'],
     queryFn: fetchAPIStatus,
-    refetchInterval: 30000, // 30초마다 새로고침
+    refetchInterval: 60000, // 60초마다 새로고침 (30초 → 60초로 변경)
     retry: 1,
-    staleTime: 15000, // 15초간 캐시 유지
+    staleTime: 30000, // 30초간 캐시 유지 (15초 → 30초로 변경)
+    refetchOnWindowFocus: false, // 윈도우 포커스 시 자동 새로고침 비활성화
   });
 };
