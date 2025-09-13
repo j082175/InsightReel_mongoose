@@ -25,6 +25,8 @@ import SearchFilterBar from '../components/SearchFilterBar';
 import BatchCard from '../components/BatchCard';
 import VideoCard from '../components/VideoCard';
 import { formatViews, formatDate } from '../utils/formatters';
+import ChannelCard from '../components/ChannelCard';
+import ChannelGroupCard from '../components/ChannelGroupCard';
 
 import { PLATFORMS } from '../types/api';
 import { useSelection } from '../hooks/useSelection';
@@ -59,7 +61,7 @@ const ChannelManagementPage: React.FC = () => {
   });
   
   // 🔥 Modal 상태 관리 통합
-  const modalTypes = ['add', 'analysis', 'collection', 'group'];
+  const modalTypes = ['add', 'channelAnalysis', 'videoAnalysis', 'collection', 'group'];
   const { 
     modals, 
     selectedItems, 
@@ -69,7 +71,7 @@ const ChannelManagementPage: React.FC = () => {
   } = useMultiModal(modalTypes);
 
   // API 훅 (실제 데이터 가져오기)
-  const { data: apiChannels = [], isLoading, error } = useChannels();
+  const { data: apiChannels = [], isLoading, error, refetch: refetchChannels } = useChannels();
   const { addCollectionBatch } = useAppContext();
   const {
     groups,
@@ -333,6 +335,32 @@ const ChannelManagementPage: React.FC = () => {
     }
   };
 
+  const handleChannelDelete = async (channel: Channel) => {
+    if (!confirm(`정말로 "${channel.name}" 채널을 삭제하시겠습니까?`)) return;
+    
+    try {
+      const response = await fetch(`/api/channels/${channel.id}`, { 
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // 채널 목록 새로고침
+        refetchChannels();
+        alert('채널이 성공적으로 삭제되었습니다.');
+      } else {
+        alert(`채널 삭제에 실패했습니다: ${result.message || '알 수 없는 오류'}`);
+      }
+    } catch (error) {
+      console.error('채널 삭제 실패:', error);
+      alert('채널 삭제 중 오류가 발생했습니다. 다시 시도해주세요.');
+    }
+  };
+
   const handleGroupCollect = async (groupId: string) => {
     console.log('🎯 handleGroupCollect 호출됨:', groupId);
     
@@ -531,7 +559,7 @@ const ChannelManagementPage: React.FC = () => {
       </div>
 
       {/* 통계 카드들 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid gap-6 mb-8" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-500">전체 채널</h3>
           <p className="mt-2 text-3xl font-bold text-gray-900">{channels.length}</p>
@@ -719,148 +747,49 @@ const ChannelManagementPage: React.FC = () => {
 
         {/* 컨텐츠 영역 */}
         {activeTab === 'channels' ? (
-          <>
-            <div className="overflow-x-auto">
-            <table className="w-full">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                {isSelectMode && (
-                  <th className="px-6 py-3 text-left">
-                    <input
-                      type="checkbox"
-                      checked={channelSelection.count === filteredChannels.length && filteredChannels.length > 0}
-                      onChange={handleSelectAll}
-                      className="rounded border-gray-300"
-                    />
-                  </th>
-                )}
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  채널
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  플랫폼
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  구독자
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  영상 수
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  상태
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  마지막 확인
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  자동 수집
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  액션
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredChannels.map((channel) => (
-                <tr key={channel.id} className="hover:bg-gray-50">
-                  {isSelectMode && (
-                    <td className="px-6 py-4">
-                      <input
-                        type="checkbox"
-                        checked={channelSelection.isSelected(channel.id)}
-                        onChange={() => handleSelectToggle(channel.id)}
-                        className="rounded border-gray-300"
-                      />
-                    </td>
-                  )}
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <img 
-                        src={channel.thumbnailUrl || `https://placehold.co/100x100/3B82F6/FFFFFF?text=${(channel.name || 'C').charAt(0)}`} 
-                        alt={channel.name || ''}
-                        className="w-10 h-10 rounded-full mr-3"
-                      />
-                      <div>
-                        <button
-                          onClick={() => openModal('analysis', channel.name || '')}
-                          className="text-sm font-medium text-gray-900 hover:text-indigo-600"
-                        >
-                          {channel.name}
-                        </button>
-                        <div className="text-xs text-gray-500">{channel.url || 'URL 없음'}</div>
-                        {channel.keywords && channel.keywords.length > 0 && (
-                          <div className="text-xs text-blue-500 mt-1">
-                            키워드: {channel.keywords.slice(0, 3).join(', ')}{channel.keywords.length > 3 ? '...' : ''}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                      channel.platform === PLATFORMS.YOUTUBE ? 'bg-red-100 text-red-700' :
-                      channel.platform === 'TIKTOK' ? 'bg-pink-100 text-pink-700' :
-                      'bg-purple-100 text-purple-700'
-                    }`}>
-                      {channel.platform}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {formatViews(channel.subscribers || 0)}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {channel.totalVideos || 0}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                      channel.analysisStatus === 'active' || channel.updatedAt ? 'bg-green-100 text-green-700' :
-                      channel.analysisStatus === 'error' ? 'bg-red-100 text-red-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {channel.analysisStatus === 'active' || channel.updatedAt ? '활성' : 
-                       channel.analysisStatus === 'error' ? '오류' : '비활성'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {channel.updatedAt ? formatLastChecked(channel.updatedAt) : '미분석'}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={true}
-                        onChange={() => {}}
-                        className="rounded border-gray-300 text-indigo-600 mr-2"
-                      />
-                      <span className="text-xs text-gray-500">매일</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    <div className="flex space-x-2">
-                      <button className="text-indigo-600 hover:text-indigo-900">
-                        수집
-                      </button>
-                      <button className="text-gray-600 hover:text-gray-900">
-                        편집
-                      </button>
-                      <button className="text-red-600 hover:text-red-900">
-                        삭제
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            </table>
-          </div>
+          <div className="p-6">
+            {/* 전체 선택 버튼 (선택 모드일 때만) */}
+            {isSelectMode && (
+              <div className="flex items-center justify-between mb-4 p-3 bg-blue-50 rounded-lg">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={channelSelection.count === filteredChannels.length && filteredChannels.length > 0}
+                    onChange={handleSelectAll}
+                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    전체 선택 ({channelSelection.count}/{filteredChannels.length})
+                  </span>
+                </label>
+              </div>
+            )}
 
-            {filteredChannels.length === 0 && (
+            {/* 채널 카드 그리드 */}
+            {filteredChannels.length > 0 ? (
+              <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
+                {filteredChannels.map((channel) => (
+                  <ChannelCard
+                    key={channel.id}
+                    channel={channel}
+                    isSelected={channelSelection.isSelected(channel.id)}
+                    onSelect={handleSelectToggle}
+                    onChannelClick={(channel) => openModal('channelAnalysis', channel.name || '')}
+                    onCollect={(channel) => console.log('수집:', channel.name)}
+                    onAnalyze={(channel) => openModal('channelAnalysis', channel.name || '')}
+                    onEdit={(channel) => console.log('편집:', channel.name)}
+                    onKeywordClick={(keyword) => setSearchTerm(keyword)}
+                    showSelection={isSelectMode}
+                  />
+                ))}
+              </div>
+            ) : (
               <div className="text-center py-12 text-gray-500">
                 <p className="text-lg">😅</p>
                 <p className="mt-2">채널이 없습니다.</p>
               </div>
             )}
-          </>
+          </div>
         ) : (
           // 그룹 관리
           <div className="p-6">
@@ -882,124 +811,14 @@ const ChannelManagementPage: React.FC = () => {
                     </button>
                   </div>
                 ) : groups.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid gap-6" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
                 {groups.map((group) => (
-                  <div 
-                    key={group._id} 
-                    className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => handleGroupClick(group)}
-                  >
-                    {/* 그룹 헤더 */}
-                    <div className="p-4 border-b border-gray-100">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <div 
-                            className="w-4 h-4 rounded-full"
-                            style={{ backgroundColor: group.color }}
-                          ></div>
-                          <h3 className="font-semibold text-gray-900">{group.name}</h3>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <button
-                            onClick={() => handleGroupEdit(group)}
-                            className="p-1 text-gray-400 hover:text-gray-600 rounded"
-                            title="편집"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() => handleGroupDelete(group._id)}
-                            className="p-1 text-gray-400 hover:text-red-600 rounded"
-                            title="삭제"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </div>
-                      <p className="text-sm text-gray-600 mb-3">{group.description}</p>
-                      
-                      {/* 활성화 상태 */}
-                      <div className="flex items-center justify-between">
-                        <span className={`inline-flex px-2 py-1 text-xs rounded-full ${
-                          group.isActive 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {group.isActive ? '✅ 활성' : '⏸️ 비활성'}
-                        </span>
-                        <button
-                          onClick={() => handleGroupToggleActive(group._id)}
-                          className="text-xs text-indigo-600 hover:text-indigo-800"
-                        >
-                          {group.isActive ? '비활성화' : '활성화'}
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* 그룹 정보 */}
-                    <div className="p-4 space-y-3">
-                      {/* 채널 목록 */}
-                      <div>
-                        <h4 className="text-xs font-medium text-gray-500 mb-2">포함 채널 ({group.channels.length}개)</h4>
-                        <div className="space-y-1">
-                          {group.channels.slice(0, 3).map((channel: { id: string; name: string }, index: number) => (
-                            <div key={index} className="text-sm text-gray-700 truncate">
-                              📺 {channel.name}
-                            </div>
-                          ))}
-                          {group.channels.length > 3 && (
-                            <div className="text-xs text-gray-500">
-                              +{group.channels.length - 3}개 더
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 키워드 */}
-                      {group.keywords.length > 0 && (
-                        <div>
-                          <h4 className="text-xs font-medium text-gray-500 mb-2">키워드</h4>
-                          <div className="flex flex-wrap gap-1">
-                            {group.keywords.slice(0, 4).map((keyword: string, index: number) => (
-                              <span key={index} className="inline-flex px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                                {keyword}
-                              </span>
-                            ))}
-                            {group.keywords.length > 4 && (
-                              <span className="text-xs text-gray-500">+{group.keywords.length - 4}</span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* 마지막 수집 시간 */}
-                      <div>
-                        <h4 className="text-xs font-medium text-gray-500 mb-1">마지막 수집</h4>
-                        <div className="text-sm text-gray-700">
-                          {group.lastCollectedAt ? formatLastChecked(group.lastCollectedAt) : '수집 안함'}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 액션 버튼들 */}
-                    <div className="p-4 border-t border-gray-100 bg-gray-50">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleGroupCollect(group._id);
-                          }}
-                          disabled={!group.isActive || group.channels.length === 0}
-                          className="flex-1 px-3 py-2 bg-indigo-600 text-white text-xs rounded hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                        >
-                          🎯 수집 시작
-                        </button>
-                        <button className="px-3 py-2 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300">
-                          📊 통계 보기
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <ChannelGroupCard
+                    key={group._id}
+                    group={group}
+                    onClick={handleGroupClick}
+                    onEdit={handleGroupEdit}
+                  />
                 ))}
               </div>
             ) : (
@@ -1029,7 +848,7 @@ const ChannelManagementPage: React.FC = () => {
         additionalActions={
           <>
             <button 
-              onClick={() => openModal('analysis')}
+              onClick={() => openModal('videoAnalysis')}
               className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
             >
               📊 영상 분석
@@ -1047,16 +866,16 @@ const ChannelManagementPage: React.FC = () => {
       {/* 모달들 */}
       <AddChannelModal />
       <ChannelAnalysisModal
-        channelName={selectedItems.analysis}
-        onClose={() => closeModal('analysis')}
+        channelName={selectedItems.channelAnalysis}
+        onClose={() => closeModal('channelAnalysis')}
       />
       <VideoAnalysisModal
-        isOpen={modals.analysis}
+        isOpen={modals.videoAnalysis}
         selectedChannels={Array.from(channelSelection.selected).map(id => {
           const channel = channels.find(ch => ch.id === id);
           return channel?.name || '';
         }).filter(name => name)}
-        onClose={() => closeModal('analysis')}
+        onClose={() => closeModal('videoAnalysis')}
       />
       <BulkCollectionModal
         isOpen={modals.collection}

@@ -349,6 +349,7 @@ export class YouTubeHandler extends BasePlatformHandler {
     }
   }
 
+
   /**
    * 안전한 YouTube 비디오 분석 처리
    * @returns {Promise<boolean>} 성공 여부
@@ -405,7 +406,7 @@ export class YouTubeHandler extends BasePlatformHandler {
   }
 
   /**
-   * 메타데이터 추출
+   * 메타데이터 추출 (기존 호환성 유지)
    */
   extractMetadata() {
     const metadata = {
@@ -452,7 +453,7 @@ export class YouTubeHandler extends BasePlatformHandler {
         metadata.description = descElement.textContent?.trim().substring(0, 200);
       }
 
-      this.log('info', 'YouTube 메타데이터 추출됨', metadata);
+      this.log('info', 'YouTube 메타데이터 추출됨 (기본)', metadata);
       
     } catch (error) {
       this.log('warn', 'YouTube 메타데이터 추출 중 오류', error);
@@ -460,6 +461,15 @@ export class YouTubeHandler extends BasePlatformHandler {
 
     return metadata;
   }
+
+
+
+
+
+
+
+
+
 
   /**
    * 향상 스킵 여부 확인
@@ -539,6 +549,10 @@ export class YouTubeHandler extends BasePlatformHandler {
       }
     }
   }
+
+
+
+
 
   /**
    * 소멸자 - 모니터링 정리

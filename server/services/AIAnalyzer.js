@@ -4,6 +4,7 @@ const path = require('path');
 const { ServerLogger } = require('../utils/logger');
 const UnifiedCategoryManager = require('./UnifiedCategoryManager');
 const UnifiedGeminiManager = require('../utils/unified-gemini-manager');
+const { AI } = require('../config/constants');
 // GoogleGenerativeAI는 UnifiedGeminiManager에서 처리하므로 제거
 
 class AIAnalyzer {
@@ -483,8 +484,9 @@ class AIAnalyzer {
         ServerLogger.info(`🔮 동적 다중 프레임 Gemini 호출 (시도 ${attempt + 1}/${maxRetries})`);
         
         // 🔄 통합 관리자 사용으로 변경 - 다중 이미지 지원 (thinking 모드 활성화)
-        const result = await this.geminiManager.generateContentWithImages(prompt, imageContents, { 
-          thinkingBudget: -1  // 동적 thinking 모드 
+        const result = await this.geminiManager.generateContentWithImages(prompt, imageContents, {
+          modelType: AI.MODELS.GEMINI_FLASH_LITE,  // Flash Lite 모델 명시적 지정
+          thinkingBudget: -1  // 동적 thinking 모드
         });
         
         const text = result.text;
@@ -699,8 +701,9 @@ class AIAnalyzer {
     try {
       ServerLogger.info('🚀 통합 Gemini 관리자 사용', null, 'AI');
       
-      // 통합 관리자로 단순화된 호출
+      // 통합 관리자로 단순화된 호출 - Flash Lite 모델 사용
       const result = await this.geminiManager.generateContent(prompt, imageBase64, {
+        modelType: AI.MODELS.GEMINI_FLASH_LITE,  // Flash Lite 모델 명시적 지정
         thinkingBudget: -1  // 동적 thinking 모드
       });
       
@@ -743,15 +746,20 @@ class AIAnalyzer {
     try {
       ServerLogger.info('🤖 통합 Gemini 관리자 사용', null, 'AI');
       const result = await this.geminiManager.generateContent(prompt, imageBase64, {
+        modelType: AI.MODELS.GEMINI_FLASH_LITE,  // Flash Lite 모델 명시적 지정
         thinkingBudget: -1  // 동적 thinking 모드
       });
-      
+
+      // UnifiedGeminiManager는 문자열을 직접 반환함
+      const responseText = result;
+
       // 사용된 모델 추적
-      this.lastUsedModel = result.model || 'unified-gemini';
-      
-      ServerLogger.info(`📊 모델 사용: ${result.model}`, null, 'AI');
-      
-      return result.text;
+      this.lastUsedModel = 'unified-gemini';
+
+      ServerLogger.info(`📊 모델 사용: ${this.lastUsedModel}`, null, 'AI');
+      ServerLogger.info(`🔍 Gemini 원본 응답 내용: ${responseText ? responseText.substring(0, 200) : 'null/undefined'}`, null, 'AI');
+
+      return responseText;
       
     } catch (error) {
       ServerLogger.error('통합 Gemini 호출 실패:', error, 'AI');
@@ -997,6 +1005,7 @@ class AIAnalyzer {
       
       // 🔄 통합 관리자 사용으로 변경 - 다중 이미지 재분석
       const result = await this.geminiManager.generateContentWithImages(retryPrompt, imageContents, {
+        modelType: AI.MODELS.GEMINI_FLASH_LITE,  // Flash Lite 모델 명시적 지정
         thinkingBudget: -1  // 재시도에서도 동적 thinking 모드
       });
       
@@ -1635,7 +1644,6 @@ JSON 형식으로 답변:
   async analyzeMultipleFramesWithGemini(thumbnailPaths, urlBasedCategory, metadata) {
     ServerLogger.info('🔮 Gemini 다중 프레임 분석 시작:', thumbnailPaths.length + '개');
     
-    const { AI } = require('../config/constants');
     const maxRetries = AI.RETRY.MAX_RETRIES;
     const retryDelays = AI.RETRY.RETRY_DELAYS;
     
@@ -1660,6 +1668,7 @@ JSON 형식으로 답변:
         
         // 🔄 통합 관리자 사용으로 변경 - 최종 다중 이미지 분석
         const result = await this.geminiManager.generateContentWithImages(prompt, imageContents, {
+          modelType: AI.MODELS.GEMINI_FLASH_LITE,  // Flash Lite 모델 명시적 지정
           thinkingBudget: -1  // 카테고리 분석에도 동적 thinking 모드
         });
         

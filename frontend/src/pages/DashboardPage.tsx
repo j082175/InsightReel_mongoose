@@ -11,6 +11,7 @@ import SearchFilterBar from '../components/SearchFilterBar';
 
 import { PLATFORMS } from '../types/api';
 import { formatViews } from '../utils/formatters';
+import { getVideoId } from '../utils/videoUtils';
 import { useSelection } from '../hooks/useSelection';
 import { useSearch } from '../hooks/useSearch';
 import { useFilter } from '../hooks/useFilter';
@@ -30,6 +31,7 @@ const DashboardPage: React.FC = () => {
     count?: number;
   } | null>(null);
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
+  const [deletedVideoIds, setDeletedVideoIds] = useState<Set<string>>(new Set());
   
   // 선택 관리
   const videoSelection = useSelection<number>();
@@ -105,9 +107,15 @@ const DashboardPage: React.FC = () => {
     }
   ];
 
-  // 모든 영상 데이터 통합
+  // 모든 영상 데이터 통합 (Mock 데이터 제거)
   const allVideos = useMemo(() => {
-    const combined = [...(apiVideos || []), ...collectedVideos, ...mockVideos];
+    const combined = [...(apiVideos || []), ...collectedVideos];
+    
+    console.log('📊 비디오 데이터 소스:', {
+      apiVideos: apiVideos?.length || 0,
+      collectedVideos: collectedVideos?.length || 0,
+      total: combined.length
+    });
     
     // 중복 제거 (ID 기준)
     const uniqueVideos = combined.filter((video, index, arr) => 
@@ -145,15 +153,29 @@ const DashboardPage: React.FC = () => {
     }
   });
 
-  // 배치 ID로 추가 필터링
+  // 배치 ID로 추가 필터링 및 삭제된 비디오 제외
   const filteredVideos = useMemo(() => {
-    if (selectedBatchId === 'all') {
-      return filterResult.filteredData;
+    let videos = filterResult.filteredData;
+    
+    // 배치 ID 필터링
+    if (selectedBatchId !== 'all') {
+      videos = videos.filter(video => 
+        video.batchIds?.includes(selectedBatchId) || false
+      );
     }
-    return filterResult.filteredData.filter(video => 
-      video.batchIds?.includes(selectedBatchId) || false
-    );
-  }, [filterResult.filteredData, selectedBatchId]);
+    
+    // 삭제된 비디오 제외
+    videos = videos.filter(video => {
+      const videoId = getVideoId(video);
+      const isDeleted = deletedVideoIds.has(videoId);
+      if (isDeleted) {
+        console.log('🚫 삭제된 비디오 필터링:', videoId, video.title);
+      }
+      return !isDeleted;
+    });
+    
+    return videos;
+  }, [filterResult.filteredData, selectedBatchId, deletedVideoIds]);
 
 
   // 통계 계산
@@ -194,6 +216,83 @@ const DashboardPage: React.FC = () => {
 
   const handleSelectAll = () => {
     videoSelection.selectAll(filteredVideos.map(v => Number(v.id)));
+  };
+
+  const handleVideoDelete = async (video: Video) => {
+    const videoId = getVideoId(video);
+    console.log('🗑️ handleVideoDelete 호출됨 - 실제 DB 삭제 수행:', {
+      videoId,
+      videoTitle: video.title,
+      dbId: video._id || video.id,
+      videoSource: video.source
+    });
+    
+    try {
+      // 실제 API 삭제 수행 - 올바른 컬렉션에서 바로 삭제
+      const dbId = video._id || video.id;
+      const isFromTrending = video.source === 'trending' || video.isFromTrending;
+      
+      console.log('📍 비디오 source 분석:', {
+        'video.source': video.source,
+        'video.isFromTrending': video.isFromTrending,
+        '최종 판단 isFromTrending': isFromTrending
+      });
+      
+      let response;
+      if (isFromTrending) {
+        console.log('🎯 trending API로 직접 삭제:', `DELETE /api/videos/${dbId}?fromTrending=true`);
+        response = await fetch(`http://localhost:3000/api/videos/${dbId}?fromTrending=true`, {
+          method: 'DELETE'
+        });
+      } else {
+        console.log('🎯 일반 API로 직접 삭제:', `DELETE /api/videos/${dbId}`);
+        response = await fetch(`http://localhost:3000/api/videos/${dbId}`, {
+          method: 'DELETE'
+        });
+      }
+      
+      // 성공하면 fallback 불필요, 실패하면 fallback 시도
+      if (!response.ok) {
+        console.log('⚠️ 첫 번째 삭제 실패, fallback 시도...');
+        const fallbackUrl = isFromTrending 
+          ? `http://localhost:3000/api/videos/${dbId}` 
+          : `http://localhost:3000/api/videos/${dbId}?fromTrending=true`;
+          
+        console.log('🔄 fallback URL:', fallbackUrl);
+        response = await fetch(fallbackUrl, { method: 'DELETE' });
+        
+        if (response.ok) {
+          console.log('✅ Fallback 삭제 성공');
+        } else {
+          console.log('❌ Fallback 삭제도 실패');
+        }
+      } else {
+        console.log('✅ 첫 번째 시도에서 삭제 성공 (fallback 불필요)');
+      }
+      
+      if (response.ok) {
+        console.log('✅ DB 삭제 성공! UI 업데이트 진행');
+        
+        // DB 삭제 성공 시에만 UI 업데이트
+        setDeletedVideoIds(prev => {
+          const newSet = new Set([...prev, videoId]);
+          console.log('🔄 deletedVideoIds 업데이트:', Array.from(newSet));
+          return newSet;
+        });
+        
+        // 선택 모드에서 삭제된 비디오를 선택에서 제거
+        if (isSelectMode) {
+          videoSelection.deselect(Number(video.id));
+        }
+      } else {
+        console.error('❌ DB 삭제 실패:', response.status, response.statusText);
+        // 실패 시 UI 업데이트하지 않음
+      }
+      
+    } catch (error) {
+      console.error('❌ 삭제 중 오류:', error);
+      // 에러 시 UI 업데이트하지 않음
+    }
   };
 
   const handleDeleteClick = (item: { type: 'single' | 'bulk'; data?: Video; count?: number }) => {
@@ -240,7 +339,7 @@ const DashboardPage: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* 통계 카드들 */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid gap-6 mb-8" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
           <div className="bg-white p-6 rounded-lg shadow">
             <h3 className="text-sm font-medium text-gray-500">총 영상</h3>
             <p className="mt-2 text-3xl font-bold text-gray-900">{stats.totalVideos}</p>
@@ -340,13 +439,14 @@ const DashboardPage: React.FC = () => {
           <div className="p-6">
             {filteredVideos.length > 0 ? (
               <div className={`grid ${gridLayouts[gridSize] || gridLayouts[2]} gap-6`}>
-                {filteredVideos.map(video => (
+                {filteredVideos.map((video, index) => (
                   <VideoCard 
-                    key={video.id} 
+                    key={getVideoId(video) || `video-${index}`} 
                     video={video}
                     onClick={handleVideoClick}
                     onInfoClick={setSelectedVideo}
                     onChannelClick={setChannelToAnalyze}
+                    onDelete={handleVideoDelete}
                     isSelectMode={isSelectMode}
                     isSelected={videoSelection.isSelected(Number(video.id))}
                     onSelectToggle={(id) => handleSelectToggle(Number(id))}

@@ -87,6 +87,10 @@ export interface SystemMetadata {
     status?: 'pending' | 'synced' | 'error';
   };
   
+  // 데이터 출처 정보
+  source?: 'videos' | 'trending';
+  isFromTrending?: boolean;
+  
   // Mongoose 자동 생성 필드
   createdAt?: string;
   updatedAt?: string;

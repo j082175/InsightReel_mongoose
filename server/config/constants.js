@@ -57,7 +57,10 @@ const SERVER_CONSTANTS = {
         },
 
         MODELS: {
-            GEMINI: 'gemini-2.5-flash',
+            GEMINI: 'flash-lite',
+            GEMINI_PRO: 'pro',
+            GEMINI_FLASH: 'flash',
+            GEMINI_FLASH_LITE: 'flash-lite',
         },
 
         CONFIDENCE_THRESHOLDS: {

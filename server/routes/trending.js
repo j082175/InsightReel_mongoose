@@ -76,12 +76,19 @@ router.get('/videos', async (req, res) => {
       .lean();
 
     const totalCount = await TrendingVideo.countDocuments(query);
+    
+    // 트렌딩 비디오에 source 정보 추가
+    const videosWithSource = videos.map(video => ({
+      ...video,
+      source: 'trending',
+      isFromTrending: true
+    }));
 
     ServerLogger.info(`📋 트렌딩 영상 조회: ${videos.length}개 (총 ${totalCount}개)`);
 
     res.status(HTTP_STATUS_CODES.OK).json({
       success: true,
-      data: videos,
+      data: videosWithSource,
       pagination: {
         total: totalCount,
         limit: parseInt(limit),
@@ -115,7 +122,11 @@ router.get('/videos/:id', async (req, res) => {
 
     res.status(HTTP_STATUS_CODES.OK).json({
       success: true,
-      data: video
+      data: {
+        ...video.toObject(),
+        source: 'trending',
+        isFromTrending: true
+      }
     });
 
   } catch (error) {

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Video = require('../models/VideoModel');
 const TrendingVideo = require('../models/TrendingVideo');
+const VideoUrl = require('../models/VideoUrl');
 const { HTTP_STATUS_CODES, ERROR_CODES, API_MESSAGES, PLATFORMS } = require('../config/api-messages');
 const { ServerLogger } = require('../utils/logger');
 const VideoProcessor = require('../services/VideoProcessor');
@@ -151,20 +152,34 @@ router.delete('/:id', async (req, res) => {
     
     if (fromTrending === 'true') {
       // TrendingVideo에서 삭제
+      ServerLogger.info(`🔍 TrendingVideo 컬렉션에서 삭제 시도: ${id}`);
       deletedVideo = await TrendingVideo.findByIdAndDelete(id);
       
       if (!deletedVideo) {
-        // videoId로 재시도
+        ServerLogger.info(`🔍 TrendingVideo에서 _id 실패, videoId로 재시도: ${id}`);
         deletedVideo = await TrendingVideo.findOneAndDelete({ videoId: id });
+      }
+      
+      if (deletedVideo) {
+        ServerLogger.info(`✅ TrendingVideo에서 삭제 성공: ${deletedVideo.title || deletedVideo._id}`);
+      } else {
+        ServerLogger.info(`❌ TrendingVideo에서 삭제 실패: ${id}`);
       }
       
     } else {
       // 일반 Video 모델에서 삭제
+      ServerLogger.info(`🔍 Video 컬렉션에서 삭제 시도: ${id}`);
       deletedVideo = await Video.findByIdAndDelete(id);
       
       if (!deletedVideo) {
-        // URL로 재시도
+        ServerLogger.info(`🔍 Video에서 _id 실패, URL로 재시도: ${id}`);
         deletedVideo = await Video.findOneAndDelete({ url: id });
+      }
+      
+      if (deletedVideo) {
+        ServerLogger.info(`✅ Video에서 삭제 성공: ${deletedVideo.title || deletedVideo._id}`);
+      } else {
+        ServerLogger.info(`❌ Video에서 삭제 실패: ${id}`);
       }
     }
     
@@ -174,6 +189,74 @@ router.delete('/:id', async (req, res) => {
         error: ERROR_CODES.NOT_FOUND,
         message: '영상을 찾을 수 없습니다.'
       });
+    }
+    
+    // 일반 비디오 삭제 시에만 중복 체크 데이터도 함께 삭제
+    if (fromTrending !== 'true' && deletedVideo.url) {
+      try {
+        const sheetsManager = new SheetsManager();
+        const normalizedUrl = sheetsManager.normalizeVideoUrl(deletedVideo.url);
+        
+        // 디버깅: 삭제할 비디오 정보 로그
+        ServerLogger.info(`🔍 중복 체크 삭제 대상 비디오 URL: ${deletedVideo.url}`);
+        ServerLogger.info(`🔍 정규화된 URL: ${normalizedUrl}`);
+        
+        // YouTube videoId 추출 (더 정확한 매칭)
+        let videoId = null;
+        if (deletedVideo.url.includes('youtube.com') || deletedVideo.url.includes('youtu.be')) {
+          const videoIdMatch = deletedVideo.url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i);
+          if (videoIdMatch) {
+            videoId = videoIdMatch[1];
+            ServerLogger.info(`🔍 추출된 videoId: ${videoId}`);
+          }
+        }
+        
+        // 먼저 관련 중복 체크 데이터가 있는지 확인
+        const existingDuplicateCheck = await VideoUrl.find({
+          $or: [
+            { normalizedUrl: normalizedUrl },
+            { originalUrl: deletedVideo.url },
+            { normalizedUrl: deletedVideo.url },
+            ...(videoId ? [
+              { normalizedUrl: { $regex: videoId, $options: 'i' } },
+              { originalUrl: { $regex: videoId, $options: 'i' } },
+              { videoId: videoId },
+              { videoId: { $regex: videoId, $options: 'i' } }
+            ] : [])
+          ]
+        });
+        
+        ServerLogger.info(`🔍 찾은 중복 체크 데이터: ${existingDuplicateCheck.length}개`);
+        if (existingDuplicateCheck.length > 0) {
+          existingDuplicateCheck.forEach((item, index) => {
+            ServerLogger.info(`   ${index + 1}. normalizedUrl: ${item.normalizedUrl}, originalUrl: ${item.originalUrl}, videoId: ${item.videoId || 'N/A'}`);
+          });
+        }
+        
+        // 실제 삭제 실행
+        const duplicateCheckResult = await VideoUrl.deleteMany({
+          $or: [
+            { normalizedUrl: normalizedUrl },
+            { originalUrl: deletedVideo.url },
+            { normalizedUrl: deletedVideo.url },
+            ...(videoId ? [
+              { normalizedUrl: { $regex: videoId, $options: 'i' } },
+              { originalUrl: { $regex: videoId, $options: 'i' } },
+              { videoId: videoId },
+              { videoId: { $regex: videoId, $options: 'i' } }
+            ] : [])
+          ]
+        });
+        
+        if (duplicateCheckResult.deletedCount > 0) {
+          ServerLogger.info(`🧹 비디오 중복 체크 데이터 삭제: ${duplicateCheckResult.deletedCount}개 (videoId: ${videoId || 'N/A'})`);
+        } else {
+          ServerLogger.warn(`⚠️ 삭제할 중복 체크 데이터를 찾지 못했습니다.`);
+        }
+      } catch (duplicateCheckError) {
+        ServerLogger.warn(`⚠️ 비디오 중복 체크 데이터 삭제 실패: ${duplicateCheckError.message}`);
+        // 중복 체크 데이터 삭제 실패는 치명적이지 않으므로 계속 진행
+      }
     }
     
     ServerLogger.info(`✅ 영상 삭제 완료: ${deletedVideo.title || deletedVideo._id}`);
@@ -198,14 +281,14 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// GET /api/videos - 영상 목록 조회 (기존 API와 호환)
+// GET /api/videos - 영상 목록 조회 (모든 컬렉션에서 가져오기)
 router.get('/', async (req, res) => {
   try {
     const { 
       limit = 20, 
       offset = 0, 
       platform, 
-      fromTrending = false,
+      fromTrending = 'both', // 🎯 기본적으로 모든 컬렉션에서 가져오기
       sortBy = 'createdAt',
       sortOrder = 'desc'
     } = req.query;
@@ -218,9 +301,10 @@ router.get('/', async (req, res) => {
     const sortOptions = {};
     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
     
-    let videos, totalCount;
+    let videos = [], totalCount = 0;
     
     if (fromTrending === 'true') {
+      // 트렌딩 비디오만 가져오기
       videos = await TrendingVideo.find(query)
         .sort(sortOptions)
         .limit(parseInt(limit))
@@ -228,7 +312,15 @@ router.get('/', async (req, res) => {
         .lean();
       
       totalCount = await TrendingVideo.countDocuments(query);
-    } else {
+      
+      videos = videos.map(video => ({
+        ...video,
+        source: 'trending',
+        isFromTrending: true
+      }));
+      
+    } else if (fromTrending === 'false') {
+      // 일반 비디오만 가져오기
       videos = await Video.find(query)
         .sort(sortOptions)
         .limit(parseInt(limit))
@@ -236,6 +328,49 @@ router.get('/', async (req, res) => {
         .lean();
       
       totalCount = await Video.countDocuments(query);
+      
+      videos = videos.map(video => ({
+        ...video,
+        source: 'videos',
+        isFromTrending: false
+      }));
+      
+    } else {
+      // 🎯 both: 모든 컬렉션에서 가져오기
+      const [trendingVideos, regularVideos] = await Promise.all([
+        TrendingVideo.find(query).sort(sortOptions).lean(),
+        Video.find(query).sort(sortOptions).lean()
+      ]);
+      
+      // source 정보 추가
+      const trendingWithSource = trendingVideos.map(video => ({
+        ...video,
+        source: 'trending',
+        isFromTrending: true
+      }));
+      
+      const regularWithSource = regularVideos.map(video => ({
+        ...video,
+        source: 'videos',
+        isFromTrending: false
+      }));
+      
+      // 합치고 정렬
+      const allVideos = [...trendingWithSource, ...regularWithSource];
+      allVideos.sort((a, b) => {
+        const aValue = a[sortBy] || new Date(0);
+        const bValue = b[sortBy] || new Date(0);
+        
+        if (sortOrder === 'desc') {
+          return new Date(bValue) - new Date(aValue);
+        } else {
+          return new Date(aValue) - new Date(bValue);
+        }
+      });
+      
+      // 페이징 적용
+      videos = allVideos.slice(parseInt(offset), parseInt(offset) + parseInt(limit));
+      totalCount = allVideos.length;
     }
     
     res.status(HTTP_STATUS_CODES.OK).json({

@@ -1,15 +1,18 @@
-import React, { memo, useCallback } from 'react';
-import { Eye, Play } from 'lucide-react';
+import React, { memo, useCallback, useState } from 'react';
+import { Eye, Play, MoreVertical } from 'lucide-react';
 import { formatViews, formatDate, getDurationLabel } from '../utils/formatters';
 import { getPlatformStyle } from '../utils/platformStyles';
 import { getVideoId, getThumbnailUrl, getViewCount } from '../utils/videoUtils';
 import { Video } from '../types';
+import DeleteConfirmModal from './DeleteConfirmModal';
+import NotificationModal from './NotificationModal';
 
 interface VideoCardProps {
   video: Video;
   onClick?: (video: Video) => void;
   onInfoClick?: (video: Video) => void;
   onChannelClick?: (channelName: string) => void;
+  onDelete?: (video: Video) => void;
   isSelectMode?: boolean;
   isSelected?: boolean;
   onSelectToggle?: (id: string | number) => void;
@@ -21,14 +24,34 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
   onClick, 
   onInfoClick, 
   onChannelClick,
+  onDelete,
   isSelectMode,
   isSelected,
   onSelectToggle,
   showArchiveInfo 
 }) => {
+  console.log('🎬 VideoCard 렌더링:', {
+    videoId: video._id || video.id,
+    title: video.title?.substring(0, 30) + '...',
+    hasOnDelete: !!onDelete
+  });
   const views = getViewCount(video);
   const thumbnailSrc = getThumbnailUrl(video);
   const videoId = getVideoId(video);
+  
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    type: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+  }>({
+    show: false,
+    type: 'info',
+    title: '',
+    message: ''
+  });
 
   const handleClick = useCallback(() => {
     if (isSelectMode && onSelectToggle) {
@@ -46,6 +69,147 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
       onSelectToggle(videoId);
     }
   }, [onSelectToggle, videoId]);
+
+  const handleDelete = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowDeleteModal(true);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (onDelete) {
+      console.log('🎯 onDelete prop이 있어서 콜백만 호출하고 내장 삭제 로직은 건너뜀');
+      setIsDeleting(true);
+      try {
+        await onDelete(video);
+        setShowDeleteModal(false);
+      } catch (error) {
+        console.error('삭제 실패:', error);
+      } finally {
+        setIsDeleting(false);
+      }
+      return;
+    }
+    
+    console.log('⚠️ onDelete prop이 없어서 내장 삭제 로직 실행');
+    
+    // 기본 삭제 로직
+    setIsDeleting(true);
+    try {
+      // 삭제에는 데이터베이스 ID (_id 또는 id) 사용
+      const dbId = video._id || video.id;
+      if (!dbId) {
+        throw new Error('비디오 ID를 찾을 수 없습니다');
+      }
+      
+      console.log('삭제할 비디오 정보:', {
+        dbId,
+        videoSource: video.source,
+        isFromTrending: video.isFromTrending,
+        isTrending: video.isTrending,
+        title: video.title
+      });
+      
+      // 비디오 출처에 따라 적절한 삭제 API 호출  
+      const isFromTrending = video.source === 'trending' || video.isFromTrending || video.isTrending;
+      
+      console.log('🔍 삭제 시도 전 비디오 source 분석:', {
+        'video.source': video.source,
+        'video.isFromTrending': video.isFromTrending,  
+        'video.isTrending': video.isTrending,
+        'isFromTrending 결정': isFromTrending
+      });
+      
+      let response;
+      if (isFromTrending) {
+        // 트렌딩 컬렉션에서 삭제 (source 정보가 있으면 정확한 API 사용)
+        response = await fetch(`http://localhost:3000/api/videos/${dbId}?fromTrending=true`, {
+          method: 'DELETE'
+        });
+      } else {
+        // 일반 비디오 컬렉션에서 삭제
+        response = await fetch(`http://localhost:3000/api/videos/${dbId}`, {
+          method: 'DELETE'
+        });
+      }
+      
+      // 첫 번째 시도 실패 시 fallback 시도 (source 정보 관계없이)
+      if (!response.ok) {
+        console.log('첫 번째 삭제 시도 실패, fallback 시도 중...', {
+          originalUrl: response.url,
+          status: response.status,
+          videoSource: video.source,
+          isFromTrending
+        });
+        const fallbackUrl = isFromTrending 
+          ? `http://localhost:3000/api/videos/${dbId}` 
+          : `http://localhost:3000/api/videos/${dbId}?fromTrending=true`;
+          
+        response = await fetch(fallbackUrl, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          console.log('Fallback 삭제 성공:', fallbackUrl);
+        } else {
+          console.log('Fallback 삭제도 실패:', {
+            url: fallbackUrl,
+            status: response.status,
+            statusText: response.statusText
+          });
+        }
+      }
+      
+      if (response.ok) {
+        setShowDeleteModal(false);
+        setNotification({
+          show: true,
+          type: 'success',
+          title: '삭제 완료',
+          message: '영상이 성공적으로 삭제되었습니다.'
+        });
+        
+        // 부모 컴포넌트에 삭제 완료 알림 (UI 업데이트용)
+        console.log('✅ 삭제 성공, onDelete 콜백 호출:', {
+          hasOnDelete: !!onDelete,
+          videoId: video._id || video.id,
+          videoTitle: video.title
+        });
+        if (onDelete) {
+          onDelete(video);
+          console.log('📞 onDelete 콜백 실행 완료');
+        } else {
+          console.warn('⚠️ onDelete 콜백이 없습니다');
+        }
+        
+        // 삭제 성공했으므로 return으로 함수 종료
+        return;
+      }
+      
+      // 삭제 실패 시 에러 처리
+      setNotification({
+        show: true,
+        type: 'error',
+        title: '삭제 실패',
+        message: '영상 삭제에 실패했습니다. 다시 시도해주세요.'
+      });
+      setIsDeleting(false);
+    } catch (error) {
+      console.error('삭제 실패:', error);
+      setNotification({
+        show: true,
+        type: 'error',
+        title: '오류 발생',
+        message: '삭제 중 오류가 발생했습니다. 다시 시도해주세요.'
+      });
+      setIsDeleting(false);
+    }
+  }, [onDelete, video]);
+
+  const handleCloseModal = useCallback(() => {
+    if (!isDeleting) {
+      setShowDeleteModal(false);
+    }
+  }, [isDeleting]);
 
   return (
     <div className="group cursor-pointer">
@@ -78,15 +242,30 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
                 {getDurationLabel(video.duration || 'LONG')}
               </span>
             </div>
-            {/* 선택 모드 체크박스 */}
-            {isSelectMode && (
-              <input
-                type="checkbox"
-                checked={isSelected || false}
-                onChange={handleCheckboxChange}
-                className="w-5 h-5 rounded border-2 border-white bg-black/70 backdrop-blur-sm"
-              />
-            )}
+            
+            <div className="flex gap-1">
+              {/* 선택 모드 체크박스 */}
+              {isSelectMode && (
+                <input
+                  type="checkbox"
+                  checked={isSelected || false}
+                  onChange={handleCheckboxChange}
+                  className="w-5 h-5 rounded border-2 border-white bg-black/70 backdrop-blur-sm"
+                />
+              )}
+              
+              {/* 삭제 버튼 */}
+              {!isSelectMode && (
+                <button
+                  onClick={handleDelete}
+                  className="p-2 text-white hover:text-red-400 hover:bg-red-500/30 rounded-full backdrop-blur-sm bg-black/80 transition-colors z-10 relative"
+                  title="영상 삭제"
+                  style={{ minWidth: '32px', minHeight: '32px' }}
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
           
           {/* 하단 오버레이 - 제목 & 채널 & 통계 */}
@@ -119,6 +298,27 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
           </div>
         </div>
       </div>
+
+      {/* 삭제 확인 모달 */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={handleCloseModal}
+        onConfirm={handleConfirmDelete}
+        title="영상 삭제"
+        message="이 영상을 삭제하시겠습니까? 삭제된 영상은 복구할 수 없습니다."
+        itemName={video.title || 'Untitled'}
+        isLoading={isDeleting}
+      />
+
+      {/* 알림 모달 */}
+      <NotificationModal
+        isOpen={notification.show}
+        onClose={() => setNotification(prev => ({ ...prev, show: false }))}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        autoClose={notification.type === 'success' ? 2000 : undefined}
+      />
     </div>
   );
 });

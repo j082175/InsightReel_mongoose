@@ -39,18 +39,15 @@ const VideoCore = {
   
   // 레거시 호환성 필드
   title: commonFieldOptions,
-  shares: numberFieldOptions,
-  videoUrl: commonFieldOptions,
   topComments: commonFieldOptions
 };
 
-// ===== 채널 정보 (하이브리드 방식 - 최소 정보만) =====
+// ===== 채널 정보 (기본 4개 필드) =====
 const ChannelInfo = {
-  channelName: { ...commonFieldOptions, index: true },  // 검색/표시용
-  channelUrl: commonFieldOptions,                       // 표시용
-  subscribers: numberFieldOptions,                      // 표시용 (스냅샷)
-  channelVideos: numberFieldOptions                     // 표시용 (스냅샷)
-  // 참고: 전문 채널 분석은 별도 Channel 모델 사용
+  channelName: { ...commonFieldOptions, index: true },
+  channelUrl: commonFieldOptions,
+  subscribers: numberFieldOptions,
+  channelVideos: numberFieldOptions
 };
 
 // ===== AI 분석 결과 =====
@@ -66,7 +63,7 @@ const AIAnalysis = {
   matchReason: commonFieldOptions
 };
 
-// ===== YouTube 전용 필드 =====
+// ===== YouTube 전용 필드 (확장) =====
 const YouTubeSpecific = {
   youtubeHandle: commonFieldOptions,
   comments: commonFieldOptions,
@@ -85,16 +82,26 @@ const YouTubeSpecific = {
   language: commonFieldOptions
 };
 
+
 // ===== 시스템 메타데이터 =====
 const SystemMetadata = {
   collectionTime: dateFieldOptions,
-  timestamp: dateFieldOptions,
-  processedAt: { type: String, required: false, default: () => new Date().toISOString() },
-  sheetsRowData: { type: Object, required: false } // Google Sheets 원본 데이터
+  processedAt: { type: String, required: false, default: () => new Date().toISOString() }
 };
 
-// ===== 전체 Video 스키마 조합 =====
+// ===== 전체 Video 스키마 조합 (기본 39개 필드) =====
 const createVideoSchema = () => {
+  return {
+    ...VideoCore,           // 15개
+    ...ChannelInfo,         // 4개 (기본)
+    ...AIAnalysis,          // 9개
+    ...YouTubeSpecific,     // 8개
+    ...SystemMetadata       // 3개
+  };
+};
+
+// ===== 기본 스키마 (기존 호환성) =====
+const createBasicVideoSchema = () => {
   return {
     ...VideoCore,
     ...ChannelInfo,
@@ -105,10 +112,14 @@ const createVideoSchema = () => {
 };
 
 module.exports = {
+  // 기존 컴포넌트들
   VideoCore,
   ChannelInfo,
   AIAnalysis,
   YouTubeSpecific,
   SystemMetadata,
-  createVideoSchema
+  
+  // 스키마 생성 함수들
+  createVideoSchema,        // 39개 필드 (기본 버전)
+  createBasicVideoSchema   // 39개 필드 (기존 호환성)
 };

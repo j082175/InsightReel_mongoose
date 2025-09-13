@@ -216,6 +216,91 @@ router.delete('/:id', async (req, res) => {
       }
     }
     
+    // 중복 체크 컬렉션에서도 제거 (진짜 중복 체크 데이터)
+    try {
+      const ChannelUrl = require('../models/ChannelUrl');
+      
+      ServerLogger.info(`🔍 중복체크 삭제 시도 - 채널 정보: ${JSON.stringify({
+        id: deletedChannel.id,
+        name: deletedChannel.name,
+        url: deletedChannel.url
+      })}`);
+      
+      // @ 포함한 핸들명 생성
+      const handleWithAt = deletedChannel.customUrl ? `@${deletedChannel.customUrl}` : `@${deletedChannel.name}`;
+      
+      // 먼저 삭제될 데이터 조회 (더 광범위한 조건으로)
+      const toDeleteDocs = await ChannelUrl.find({
+        $or: [
+          { normalizedChannelId: deletedChannel.id },  // 채널 ID로 찾기
+          { normalizedChannelId: deletedChannel.name }, // 채널명으로 찾기
+          { normalizedChannelId: `@${deletedChannel.name}` }, // @채널명으로 찾기
+          { normalizedChannelId: deletedChannel.customUrl }, // 커스텀URL로 찾기
+          { normalizedChannelId: `@${deletedChannel.customUrl}` }, // @커스텀URL로 찾기
+          { originalChannelIdentifier: deletedChannel.id }, // 원본 식별자가 채널 ID인 경우
+          { originalChannelIdentifier: deletedChannel.url }, // 원본 식별자가 URL인 경우
+          { originalChannelIdentifier: deletedChannel.name }, // 원본 식별자가 이름인 경우
+          { originalChannelIdentifier: `@${deletedChannel.name}` }, // @이름인 경우
+          { originalChannelIdentifier: deletedChannel.customUrl }, // 커스텀 URL인 경우
+          { originalChannelIdentifier: `@${deletedChannel.customUrl}` }, // @커스텀 URL인 경우
+          { 'channelInfo.name': deletedChannel.name } // 채널 정보의 이름으로 찾기
+        ]
+      });
+      
+      ServerLogger.info(`🔍 삭제 대상 중복체크 문서 ${toDeleteDocs.length}개 발견:`);
+      toDeleteDocs.forEach((doc, index) => {
+        ServerLogger.info(`  ${index + 1}. normalizedChannelId: ${doc.normalizedChannelId}, originalChannelIdentifier: ${doc.originalChannelIdentifier}`);
+      });
+      
+      // 채널 ID로 중복 체크 데이터 삭제 (더 광범위한 조건으로)
+      const duplicateCheckResult = await ChannelUrl.deleteMany({
+        $or: [
+          { normalizedChannelId: deletedChannel.id },  // 채널 ID로 찾기
+          { normalizedChannelId: deletedChannel.name }, // 채널명으로 찾기
+          { normalizedChannelId: `@${deletedChannel.name}` }, // @채널명으로 찾기
+          { normalizedChannelId: deletedChannel.customUrl }, // 커스텀URL로 찾기
+          { normalizedChannelId: `@${deletedChannel.customUrl}` }, // @커스텀URL로 찾기
+          { originalChannelIdentifier: deletedChannel.id }, // 원본 식별자가 채널 ID인 경우
+          { originalChannelIdentifier: deletedChannel.url }, // 원본 식별자가 URL인 경우
+          { originalChannelIdentifier: deletedChannel.name }, // 원본 식별자가 이름인 경우
+          { originalChannelIdentifier: `@${deletedChannel.name}` }, // @이름인 경우
+          { originalChannelIdentifier: deletedChannel.customUrl }, // 커스텀 URL인 경우
+          { originalChannelIdentifier: `@${deletedChannel.customUrl}` }, // @커스텀 URL인 경우
+          { 'channelInfo.name': deletedChannel.name } // 채널 정보의 이름으로 찾기
+        ]
+      });
+      
+      ServerLogger.info(`✅ 중복체크 컬렉션에서 채널 제거 완료: ${duplicateCheckResult.deletedCount}개 문서 삭제`);
+      
+      if (duplicateCheckResult.deletedCount === 0 && toDeleteDocs.length > 0) {
+        ServerLogger.warn(`⚠️ 경고: 삭제 대상 ${toDeleteDocs.length}개가 있었지만 실제 삭제는 0개`);
+      }
+      
+    } catch (duplicateError) {
+      ServerLogger.error(`❌ 중복체크 컬렉션 업데이트 실패: ${duplicateError.message}`);
+      ServerLogger.error(`❌ 중복체크 삭제 스택: ${duplicateError.stack}`);
+    }
+    
+    // 파일 시스템의 channels.json에서도 제거 (백업용)
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const channelsFilePath = path.join(__dirname, '../data/channels.json');
+      
+      if (fs.existsSync(channelsFilePath)) {
+        const channelsData = JSON.parse(fs.readFileSync(channelsFilePath, 'utf8'));
+        const updatedChannels = channelsData.filter(ch => 
+          ch.id !== deletedChannel.id && 
+          ch._id !== deletedChannel._id.toString()
+        );
+        
+        fs.writeFileSync(channelsFilePath, JSON.stringify(updatedChannels, null, 2));
+        ServerLogger.info(`✅ channels.json에서 채널 제거 완료: ${deletedChannel.name}`);
+      }
+    } catch (fileError) {
+      ServerLogger.warn(`channels.json 업데이트 실패: ${fileError.message}`);
+    }
+    
     ServerLogger.info(`✅ 채널 삭제 완료: ${deletedChannel.name} (${deletedChannel.id})`);
     
     res.status(HTTP_STATUS_CODES.OK).json({
@@ -293,6 +378,35 @@ router.get('/', async (req, res) => {
       success: false,
       error: ERROR_CODES.DATA_FETCH_FAILED,
       message: '채널 목록 조회에 실패했습니다.'
+    });
+  }
+});
+
+// GET /api/channels/debug/duplicate-check - 중복체크 컬렉션 데이터 조회 (디버깅용)
+router.get('/debug/duplicate-check', async (req, res) => {
+  try {
+    const ChannelUrl = require('../models/ChannelUrl');
+    
+    // 모든 중복체크 데이터 조회
+    const duplicateCheckData = await ChannelUrl.find({}).limit(20).lean();
+    
+    ServerLogger.info(`🔍 중복체크 컬렉션 데이터 ${duplicateCheckData.length}개 조회`);
+    duplicateCheckData.forEach((doc, index) => {
+      ServerLogger.info(`  ${index + 1}. normalizedChannelId: "${doc.normalizedChannelId}", originalChannelIdentifier: "${doc.originalChannelIdentifier}", platform: "${doc.platform}"`);
+    });
+    
+    res.status(HTTP_STATUS_CODES.OK).json({
+      success: true,
+      data: duplicateCheckData,
+      count: duplicateCheckData.length
+    });
+    
+  } catch (error) {
+    ServerLogger.error('중복체크 컬렉션 조회 실패:', error);
+    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      error: ERROR_CODES.SERVER_ERROR,
+      message: '중복체크 컬렉션 조회에 실패했습니다.'
     });
   }
 });

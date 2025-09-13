@@ -373,7 +373,7 @@ const VideoArchivePage: React.FC = () => {
       </div>
 
       {/* 통계 카드들 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid gap-6 mb-8" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-500">보관된 영상</h3>
           <p className="mt-2 text-3xl font-bold text-gray-900">{archivedVideos.length}</p>

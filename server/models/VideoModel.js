@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { createVideoSchema } = require('../types/video-types');
+const { createBasicVideoSchema } = require('../types/video-types');
 
 /**
  * 🚀 Video 모델 (새 인터페이스 기반)
@@ -13,7 +13,7 @@ const { createVideoSchema } = require('../types/video-types');
  * - SystemMetadata: 시스템 메타데이터
  */
 
-const videoSchema = new mongoose.Schema(createVideoSchema(), {
+const videoSchema = new mongoose.Schema(createBasicVideoSchema(), {
     timestamps: true,
     collection: 'videos',
     toJSON: {
@@ -61,12 +61,10 @@ videoSchema.statics.getRecentVideos = function (
 videoSchema.methods.updateStats = function (
     likes,
     views,
-    shares,
     commentsCount,
 ) {
     this.likes = likes || this.likes;
     this.views = views || this.views;
-    this.shares = shares || this.shares;
     this.commentsCount = commentsCount || this.commentsCount;
 
     return this.save();
@@ -205,8 +203,6 @@ videoSchema.statics.createOrUpdateFromVideoUrl = async function (
 
         // 레거시 호환성 필드
         title: metadata.title || originalUrl.split('/').pop() || '미분류',
-        shares: metadata.shares || 0,
-        timestamp: originalPublishDate || new Date(),
         processedAt: processedAt || new Date(),
         topComments: metadata.topComments || '',
     };
