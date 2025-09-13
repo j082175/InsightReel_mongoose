@@ -16,6 +16,7 @@ const SERVER_CONSTANTS = {
 
     // 📱 플랫폼
     PLATFORMS: {
+        YOUTUBE: 'YOUTUBE',
         INSTAGRAM: 'INSTAGRAM',
         TIKTOK: 'TIKTOK',
     },
@@ -120,6 +121,15 @@ const SERVER_CONSTANTS = {
         SHEETS_ERROR: 'SHEETS_ERROR',
         FILE_ERROR: 'FILE_ERROR',
         NETWORK_ERROR: 'NETWORK_ERROR',
+    },
+
+    // 📊 기본 수집 옵션
+    DEFAULT_COLLECTION: {
+        DAYS_BACK: 7,
+        MIN_VIEWS: 10000,
+        INCLUDE_SHORTS: true,
+        INCLUDE_MIDFORM: true,
+        INCLUDE_LONGFORM: true,
     },
 };
 

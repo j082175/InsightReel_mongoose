@@ -3,6 +3,7 @@ const ChannelGroup = require('../models/ChannelGroup');
 const TrendingVideo = require('../models/TrendingVideo');
 const DurationClassifier = require('../utils/duration-classifier');
 const { ServerLogger } = require('../utils/logger');
+const { PLATFORMS } = require('../config/api-messages');
 
 /**
  * 🎯 그룹별 트렌딩 영상 수집기
@@ -174,7 +175,7 @@ class GroupTrendingCollector {
         videoId: videoData.id?.videoId,
         title: videoData.snippet?.title,
         url: `https://www.youtube.com/watch?v=${videoData.id?.videoId}`,
-        platform: 'YOUTUBE',
+        platform: PLATFORMS.YOUTUBE,
         
         // 채널 정보
         channelName: videoData.snippet?.channelTitle,
@@ -221,8 +222,8 @@ class GroupTrendingCollector {
     try {
       const { 
         channels, 
-        daysBack = 3, 
-        minViews = 30000, 
+        daysBack = 7,
+        minViews = 10000, 
         maxViews = null,
         includeShorts = true, 
         includeMidform = true, 
@@ -239,10 +240,12 @@ class GroupTrendingCollector {
       ServerLogger.info(`🎯 다중 채널 트렌딩 수집 시작: ${channels.length}개 채널`);
 
       // 날짜 범위 설정
+      console.log('🔍 DEBUG GroupTrendingCollector: daysBack =', daysBack);
       const endDate = new Date();
       const startDate = new Date(endDate - (daysBack * 24 * 60 * 60 * 1000));
       const publishedAfter = startDate.toISOString();
       const publishedBefore = endDate.toISOString();
+      console.log('🔍 DEBUG GroupTrendingCollector: 계산된 날짜 범위:', { startDate: startDate.toISOString(), endDate: endDate.toISOString() });
 
       ServerLogger.info(`📅 수집 기간: ${startDate.toLocaleDateString()} ~ ${endDate.toLocaleDateString()}`);
 
@@ -310,7 +313,7 @@ class GroupTrendingCollector {
                   videoId: videoId,
                   title: video.snippet?.title,
                   url: `https://www.youtube.com/watch?v=${videoId}`,
-                  platform: 'YOUTUBE',
+                  platform: PLATFORMS.YOUTUBE,
                   
                   // 채널 정보
                   channelName: video.snippet?.channelTitle,

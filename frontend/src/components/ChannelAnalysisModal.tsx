@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import BaseModal from './BaseModal';
 import { formatViews } from '../utils/formatters';
+import { getViewCount } from '../utils/videoUtils';
 
 interface ChannelData {
   name: string;
@@ -206,7 +207,7 @@ const ChannelAnalysisModal: React.FC<ChannelAnalysisModalProps> = ({
                           {video.title}
                         </h5>
                         <p className="text-xs text-gray-500">
-                          {formatViews(video.views)} 조회수
+                          {formatViews(getViewCount(video))} 조회수
                         </p>
                       </div>
                     </div>

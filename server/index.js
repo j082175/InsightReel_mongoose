@@ -7,6 +7,7 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const { PLATFORMS } = require('./config/api-messages');
 const { YOUTUBE_API_LIMITS } = require('./config/api-constants');
+const SERVER_CONSTANTS = require('./config/constants');
 
 // 설정 검증 먼저 실행
 const { getConfig } = require('./config/config-validator');
@@ -17,6 +18,7 @@ const DatabaseManager = require('./config/database');
 // 간단한 채널 분석에서는 직접 사용하지 않지만 다른 API에서 필요
 const Video = require('./models/VideoModel');
 const VideoUrl = require('./models/VideoUrl');
+const { normalizeVideosResponse } = require('./utils/response-normalizer');
 const CollectionBatch = require('./models/CollectionBatch');
 
 const VideoProcessor = require('./services/VideoProcessor');
@@ -1490,33 +1492,37 @@ app.get('/api/videos', async (req, res) => {
                 }
             }
 
+            // _id 필드 제거 (toJSON 역할)
+            const { _id, __v, ...cleanVideo } = video;
+
             return {
-                ...video,
-                // 🚀 직접 필드 접근
+                ...cleanVideo,
+                // 필수 필드 정리
                 timestamp: video.uploadDate || video.timestamp,
                 uploadDate: video.uploadDate,
                 thumbnailUrl: thumbnailUrl,
+                // 표준 ID: MongoDB _id만 사용
+                id: video._id ? video._id.toString() : undefined,
+                // 표준 조회수: views만 사용
+                views: cleanVideo.views || 0,
                 // url이 없고 channelName이 URL인 경우 복구
                 url:
                     video.url ||
                     (video.channelName && video.channelName.startsWith('http')
                         ? video.channelName
                         : ''),
-                // 🚀 채널명과 핸들명을 올바르게 구분
+                // 채널명과 핸들명을 올바르게 구분
                 channelName:
                     video.channelName &&
                     !video.channelName.startsWith('http') &&
                     !video.channelName.startsWith('@')
                         ? video.channelName
                         : '알 수 없는 채널',
-                thumbnail: thumbnailUrl, // 레거시 호환
-                channelAvatarUrl: '',
-                channelAvatar: '',
-                viewCount: video.views,
-                daysAgo: 0,
-                isTrending: false,
-                // 🐛 디버깅: LIKES 필드 명시적 처리
+                // LIKES 필드 명시적 처리
                 likes: video.likes !== undefined ? video.likes : null,
+                // source 정보 추가 (API 레벨에서만)
+                source: 'videos',
+                isFromTrending: false
             };
         });
 
@@ -2693,8 +2699,8 @@ app.post('/api/collect-trending', async (req, res) => {
             collectionType: 'channels',
             targetChannels: channelIds,
             criteria: {
-                daysBack: options.daysBack || 3,
-                minViews: options.minViews || 30000,
+                daysBack: options.daysBack || SERVER_CONSTANTS.DEFAULT_COLLECTION.DAYS_BACK,
+                minViews: options.minViews || SERVER_CONSTANTS.DEFAULT_COLLECTION.MIN_VIEWS,
                 maxViews: options.maxViews || null,
                 includeShorts: options.includeShorts !== false,
                 includeMidform: options.includeMidform !== false,

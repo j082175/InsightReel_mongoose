@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { FRONTEND_CONSTANTS } from '../config/constants';
 
 export interface ChannelGroup {
   _id?: string;
@@ -170,10 +171,10 @@ export const useChannelGroups = () => {
     setError(null);
 
     const defaultOptions = {
-      daysBack: 3,
-      minViews: 30000,
-      includeShorts: true,
-      includeLongForm: true,
+      daysBack: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.DAYS_BACK,
+      minViews: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.MIN_VIEWS,
+      includeShorts: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_SHORTS,
+      includeLongForm: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_LONGFORM,
       ...options
     };
 
@@ -216,10 +217,10 @@ export const useChannelGroups = () => {
     setError(null);
 
     const defaultOptions = {
-      daysBack: 3,
-      minViews: 30000,
-      includeShorts: true,
-      includeLongForm: true,
+      daysBack: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.DAYS_BACK,
+      minViews: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.MIN_VIEWS,
+      includeShorts: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_SHORTS,
+      includeLongForm: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_LONGFORM,
       ...options
     };
 

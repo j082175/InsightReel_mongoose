@@ -22,8 +22,8 @@ class HighViewCollector {
     
     // 기본 설정 (사용자가 오버라이드 가능)
     this.defaultConfig = {
-      daysBack: 3,           // 기본 3일 (사용자 설정 가능)
-      minViews: 30000,       // 기본 3만 조회수 (사용자 설정 가능)
+      daysBack: 7,           // 기본 7일 (사용자 설정 가능)
+      minViews: 10000,       // 기본 1만 조회수 (사용자 설정 가능)
       maxResultsPerSearch: 50,
       batchSize: 50
     };
@@ -144,7 +144,9 @@ class HighViewCollector {
     );
     totalQuotaUsed += searchQuota;
 
+    console.log(`🔍 DEBUG: 채널 ${channelId}에서 검색된 영상 수: ${searchResults.length}개`);
     if (searchResults.length === 0) {
+      console.log(`❌ DEBUG: 채널 ${channelId}에서 검색된 영상이 없습니다 (기간: ${publishedAfter} ~ ${publishedBefore})`);
       return { totalVideos: 0, trendingVideos: 0, videos: [] };
     }
 
@@ -155,7 +157,9 @@ class HighViewCollector {
     // 3단계: 조회수 필터링
     const trendingVideos = videosWithStats.filter(video => {
       const viewCount = parseInt(video.statistics?.viewCount || 0);
-      return viewCount >= config.minViews;
+      const isHighView = viewCount >= config.minViews;
+      console.log(`🔍 DEBUG: ${video.snippet?.title || '제목없음'} - 조회수: ${viewCount.toLocaleString()}회 (기준: ${config.minViews.toLocaleString()}회) - ${isHighView ? '✅ 통과' : '❌ 제외'}`);
+      return isHighView;
     });
 
     ServerLogger.info(`📈 ${channelId}: ${trendingVideos.length}/${videosWithStats.length}개 고조회수 (quota: ${totalQuotaUsed})`);
@@ -203,8 +207,17 @@ class HighViewCollector {
         this.multiKeyManager.trackAPI(availableKey.key, 'youtube-search', true);
         ServerLogger.info(`🔍 Search API 호출 성공: ${channelId} (키: ${availableKey.name})`);
 
+        const items = response.data.items || [];
+        console.log(`🔍 DEBUG: YouTube Search API 응답 - ${items.length}개 항목 발견`);
+        console.log(`🔍 DEBUG: 검색 조건 - 채널: ${channelId}, 기간: ${publishedAfter} ~ ${publishedBefore}`);
+
+        // 첫 번째 몇 개 영상의 기본 정보 로깅
+        items.slice(0, 3).forEach((item, index) => {
+          console.log(`🔍 DEBUG: [${index + 1}] ${item.snippet?.title || '제목없음'} (${item.snippet?.publishedAt})`);
+        });
+
         return {
-          results: response.data.items || [],
+          results: items,
           quotaUsed: 100
         };
 

@@ -3,9 +3,10 @@ import { CollectionBatch, Channel, Video } from '../types';
 import { useChannelGroups, ChannelGroup } from '../hooks/useChannelGroups';
 import { useChannels } from '../hooks/useApi';
 import { PLATFORMS } from '../types/api';
+import { FRONTEND_CONSTANTS } from '../config/constants';
 
 interface CollectionFilters {
-  days: number;
+  daysBack: number;
   minViews: number;
   maxViews: number | null;
   includeShorts: boolean;
@@ -30,12 +31,12 @@ const TrendingCollectionPage: React.FC = () => {
   });
   
   const [filters, setFilters] = useState<CollectionFilters>({
-    days: 3,
-    minViews: 30000,
+    daysBack: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.DAYS_BACK,
+    minViews: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.MIN_VIEWS,
     maxViews: null,
-    includeShorts: true,
-    includeMidform: true,
-    includeLongForm: true,
+    includeShorts: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_SHORTS,
+    includeMidform: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_MIDFORM,
+    includeLongForm: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_LONGFORM,
     keywords: [],
     excludeKeywords: []
   });
@@ -248,8 +249,8 @@ const TrendingCollectionPage: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium mb-2">수집 기간</label>
                 <select
-                  value={filters.days}
-                  onChange={(e) => setFilters(prev => ({ ...prev, days: Number(e.target.value) }))}
+                  value={filters.daysBack}
+                  onChange={(e) => setFilters(prev => ({ ...prev, daysBack: Number(e.target.value) }))}
                   className="w-full p-2 border border-gray-300 rounded-md"
                 >
                   <option value={1}>최근 1일</option>

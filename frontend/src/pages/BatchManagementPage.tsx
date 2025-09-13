@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  Play, 
-  Pause, 
-  Trash2, 
-  Edit, 
+import {
+  Plus,
+  Play,
+  Pause,
+  Trash2,
+  Edit,
   Calendar,
   Clock,
   CheckCircle,
@@ -19,6 +19,7 @@ import {
 import VideoCard from '../components/VideoCard';
 import { formatDate } from '../utils/formatters';
 import { Platform } from '../types';
+import { FRONTEND_CONSTANTS } from '../config/constants';
 
 interface CollectionBatch {
   _id: string;
@@ -136,8 +137,8 @@ const BatchManagementPage: React.FC = () => {
     targetGroups: [],
     targetChannels: [],
     criteria: {
-      daysBack: 3,
-      minViews: 30000,
+      daysBack: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.DAYS_BACK,
+      minViews: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.MIN_VIEWS,
       maxViews: '',
       includeShorts: true,
       includeMidform: true,
@@ -284,8 +285,8 @@ const BatchManagementPage: React.FC = () => {
       targetGroups: [],
       targetChannels: [],
       criteria: {
-        daysBack: 3,
-        minViews: 30000,
+        daysBack: 7,
+        minViews: 10000,
         maxViews: '',
         includeShorts: true,
         includeMidform: true,
@@ -862,7 +863,7 @@ const BatchManagementPage: React.FC = () => {
                         value={formData.criteria.daysBack}
                         onChange={(e) => setFormData(prev => ({
                           ...prev,
-                          criteria: { ...prev.criteria, daysBack: parseInt(e.target.value) || 3 }
+                          criteria: { ...prev.criteria, daysBack: parseInt(e.target.value) || FRONTEND_CONSTANTS.DEFAULT_COLLECTION.DAYS_BACK }
                         }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
@@ -1062,19 +1063,9 @@ const BatchManagementPage: React.FC = () => {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                   {batchVideos.map((video) => (
-                    <VideoCard 
-                      key={video._id} 
-                      video={{
-                        _id: video._id,
-                        title: video.title,
-                        url: video.url,
-                        thumbnailUrl: video.thumbnailUrl,
-                        channelName: video.channelName,
-                        platform: video.platform as Platform,
-                        duration: video.duration,
-                        views: video.views,
-                        uploadDate: video.uploadDate
-                      }} 
+                    <VideoCard
+                      key={video._id}
+                      video={video as any}
                     />
                   ))}
                 </div>

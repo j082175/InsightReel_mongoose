@@ -2,6 +2,7 @@ import React, { memo, useCallback, useState } from 'react';
 import { MoreVertical, PlayCircle, Settings } from 'lucide-react';
 import DeleteConfirmModal from './DeleteConfirmModal';
 import NotificationModal from './NotificationModal';
+import { FRONTEND_CONSTANTS } from '../config/constants';
 
 interface ChannelGroup {
   _id?: string;
@@ -146,11 +147,11 @@ const ChannelGroupCard: React.FC<ChannelGroupCardProps> = memo(({
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          daysBack: 3,
-          minViews: 30000,
-          includeShorts: true,
-          includeMidform: true,
-          includeLongForm: true
+          daysBack: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.DAYS_BACK,
+          minViews: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.MIN_VIEWS,
+          includeShorts: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_SHORTS,
+          includeMidform: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_MIDFORM,
+          includeLongForm: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_LONGFORM
         })
       });
       

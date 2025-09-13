@@ -11,6 +11,7 @@ import SearchFilterBar from '../components/SearchFilterBar';
 
 import { PLATFORMS } from '../types/api';
 import { formatViews } from '../utils/formatters';
+import { getViewCount } from '../utils/videoUtils';
 import { useSelection } from '../hooks/useSelection';
 import { useSearch } from '../hooks/useSearch';
 import { useFilter } from '../hooks/useFilter';
@@ -392,7 +393,7 @@ const VideoArchivePage: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-500">총 조회수</h3>
           <p className="mt-2 text-3xl font-bold text-gray-900">
-            {formatViews(archivedVideos.reduce((sum, v) => sum + (v.views || 0), 0))}
+            {formatViews(archivedVideos.reduce((sum, v) => sum + getViewCount(v), 0))}
           </p>
           <p className="mt-1 text-sm text-gray-600">보관된 콘텐츠</p>
         </div>

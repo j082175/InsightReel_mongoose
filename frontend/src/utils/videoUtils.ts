@@ -6,24 +6,24 @@ import { Video } from '../types';
 
 /**
  * 비디오 ID를 추출합니다.
- * 다양한 ID 필드 중 첫 번째로 유효한 값을 반환합니다.
+ * ⚡ 단순화됨: 이제 id 필드만 사용
  */
-export const getVideoId = (video: Video): string | number => {
-  return video.videoId || video.id || video._id || 0;
+export const getVideoId = (video: Video): string => {
+  return video.id || '';
 };
 
 /**
  * 썸네일 URL을 추출합니다.
- * 다양한 썸네일 필드 중 첫 번째로 유효한 값을 반환합니다.
+ * ⚡ 단순화됨: 이제 thumbnailUrl 필드만 사용
  */
 export const getThumbnailUrl = (video: Video): string => {
-  return video.thumbnailUrl || video.thumbnail || '';
+  return video.thumbnailUrl || '';
 };
 
 /**
  * 조회수를 추출합니다.
- * views 또는 viewCount 중 유효한 값을 반환합니다.
+ * ⚡ 단순화됨: 이제 views 필드만 사용
  */
 export const getViewCount = (video: Video): number => {
-  return video.views || video.viewCount || 0;
+  return video.views || 0;
 };

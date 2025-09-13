@@ -3,9 +3,10 @@ import { CollectionBatch, Video } from '../types';
 import { PLATFORMS } from '../types/api';
 import BaseModal from './BaseModal';
 import { formatViews } from '../utils/formatters';
+import { FRONTEND_CONSTANTS } from '../config/constants';
 
 interface CollectionFilters {
-  days: number;
+  daysBack: number;
   minViews: number;
   maxViews: number | null;
   minDuration: number | null;
@@ -41,13 +42,13 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
   onCollectionComplete
 }) => {
   const [filters, setFilters] = useState<CollectionFilters>({
-    days: 2,
-    minViews: 50000,
+    daysBack: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.DAYS_BACK,
+    minViews: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.MIN_VIEWS,
     maxViews: null,
     minDuration: null,
     maxDuration: null,
-    includeShorts: true,
-    includeLongForm: true,
+    includeShorts: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_SHORTS,
+    includeLongForm: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_LONGFORM,
     keywords: [],
     excludeKeywords: []
   });
@@ -178,7 +179,7 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
           id: String(Date.now() + batchIndex * 1000 + videoIndex),
           title: `${result.channelName}의 수집된 영상 ${videoIndex + 1}`,
           url: `https://example.com/video/${Date.now() + batchIndex * 1000 + videoIndex}`,
-          uploadDate: new Date(Date.now() - Math.random() * filters.days * 24 * 60 * 60 * 1000).toISOString(),
+          uploadDate: new Date(Date.now() - Math.random() * filters.daysBack * 24 * 60 * 60 * 1000).toISOString(),
           platform: (result.platform === PLATFORMS.YOUTUBE || result.platform === 'INSTAGRAM' || result.platform === 'TIKTOK') 
             ? result.platform
             : 'YOUTUBE',
@@ -191,7 +192,7 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
           keywords: filters.keywords,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          daysAgo: Math.floor(Math.random() * filters.days),
+          daysAgo: Math.floor(Math.random() * filters.daysBack),
           aspectRatio: '16:9',
           channelAvatarUrl: `https://placehold.co/100x100/3B82F6/FFFFFF?text=${result.channelName.charAt(0)}`,
           isTrending: Math.random() > 0.7,
@@ -377,8 +378,8 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
                         최근 기간
                       </label>
                       <select
-                        value={filters.days}
-                        onChange={(e) => handleFilterChange('days', parseInt(e.target.value))}
+                        value={filters.daysBack}
+                        onChange={(e) => handleFilterChange('daysBack', parseInt(e.target.value))}
                         className="w-full border-gray-300 rounded-md shadow-sm"
                       >
                         <option value={1}>최근 1일</option>
@@ -583,7 +584,7 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <h4 className="font-medium text-yellow-800 mb-2">📊 예상 수집 조건</h4>
                 <ul className="text-sm text-yellow-700 space-y-1">
-                  <li>• 최근 {filters.days}일 내 업로드된 영상</li>
+                  <li>• 최근 {filters.daysBack}일 내 업로드된 영상</li>
                   <li>• {formatViews(filters.minViews)} 조회수 이상{filters.maxViews ? ` ~ ${formatViews(filters.maxViews)} 이하` : ''}</li>
                   <li>• 영상 타입: {
                     filters.includeShorts && filters.includeLongForm ? '숏폼 + 롱폼' :

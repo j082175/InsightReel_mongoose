@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useChannels } from '../hooks/useApi';
 import { useChannelGroups, ChannelGroup as HookChannelGroup } from '../hooks/useChannelGroups';
 import { CollectionBatch, Channel, Video } from '../types';
+import { FRONTEND_CONSTANTS } from '../config/constants';
 
 // Local ChannelGroup interface compatible with both hook and component
 interface ChannelGroup {
@@ -55,8 +56,8 @@ const ChannelManagementPage: React.FC = () => {
 
   // 🔧 수집 조건 상태
   const [collectionFilters, setCollectionFilters] = useState({
-    daysBack: 7,        // 최근 n일
-    minViews: 10000,    // 최소 조회수
+    daysBack: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.DAYS_BACK,        // 최근 n일
+    minViews: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.MIN_VIEWS,    // 최소 조회수
     maxVideos: 50       // 최대 영상 수
   });
   
@@ -216,10 +217,33 @@ const ChannelManagementPage: React.FC = () => {
   };
 
   // Conversion functions between component and hook interfaces
-  const convertToHookFormat = (group: ChannelGroup): HookChannelGroup => ({
-    ...group,
-    channels: group.channels.map(channelName => ({ id: channelName, name: channelName }))
-  });
+  const convertToHookFormat = async (group: ChannelGroup): Promise<HookChannelGroup> => {
+    // 채널 이름으로 실제 채널 ID 조회
+    const channelsWithIds = await Promise.all(
+      group.channels.map(async (channelName) => {
+        try {
+          // 채널 이름으로 실제 채널 정보 조회
+          const channel = channels.find(ch => ch.name === channelName);
+          if (channel && channel.id) {
+            console.log('✅ 채널 이름 → 채널 ID:', channelName, '→', channel.id);
+            return { id: channel.id, name: channelName };
+          } else {
+            console.warn('⚠️ 채널을 찾을 수 없음:', channelName);
+            // 찾을 수 없는 경우 일단 이름을 ID로 사용 (기존 동작)
+            return { id: channelName, name: channelName };
+          }
+        } catch (error) {
+          console.error('❌ 채널 조회 실패:', channelName, error);
+          return { id: channelName, name: channelName };
+        }
+      })
+    );
+
+    return {
+      ...group,
+      channels: channelsWithIds
+    };
+  };
 
   const convertFromHookFormat = (group: HookChannelGroup): ChannelGroup => ({
     ...group,
@@ -229,15 +253,18 @@ const ChannelManagementPage: React.FC = () => {
   // 그룹 관련 핸들러들
   const handleGroupSave = async (groupData: ChannelGroup) => {
     try {
-      const hookGroupData = convertToHookFormat(groupData);
+      console.log('🔍 그룹 저장 시작:', groupData);
+      const hookGroupData = await convertToHookFormat(groupData);
+      console.log('🔍 변환된 그룹 데이터:', hookGroupData);
+
       if (editingGroup) {
         // 수정 모드
         await updateGroup(editingGroup._id!, hookGroupData);
-        console.log('그룹 수정 완료:', groupData);
+        console.log('✅ 그룹 수정 완료:', groupData);
       } else {
         // 생성 모드
         await createGroup(hookGroupData);
-        console.log('새 그룹 생성 완룼:', groupData);
+        console.log('✅ 새 그룹 생성 완료:', groupData);
       }
       closeModal('group');
       setEditingGroup(null);
@@ -383,7 +410,7 @@ const ChannelManagementPage: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          days: collectionFilters.daysBack,
+          daysBack: collectionFilters.daysBack,  // 필드명 통일
           minViews: collectionFilters.minViews,
           maxViews: null,
           includeShorts: true,
@@ -428,10 +455,10 @@ const ChannelManagementPage: React.FC = () => {
     try {
       console.log('전체 활성 그룹 수집 시작...');
       const result = await collectAllActiveGroups({
-        daysBack: 3,
-        minViews: 30000,
-        includeShorts: true,
-        includeLongForm: true
+        daysBack: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.DAYS_BACK,
+        minViews: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.MIN_VIEWS,
+        includeShorts: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_SHORTS,
+        includeLongForm: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_LONGFORM
       });
       
       alert(`${result.successGroups}/${result.totalGroups}개 그룹에서 총 ${result.totalVideos}개 영상을 수집했습니다!`);

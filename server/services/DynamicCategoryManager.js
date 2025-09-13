@@ -263,7 +263,7 @@ class DynamicCategoryManager {
     /**
      * 동적 카테고리 경로 정규화
      */
-    normalizeCategoryPath(rawPath, platform = 'YOUTUBE') {
+    normalizeCategoryPath(rawPath, platform = PLATFORMS.YOUTUBE) {
         if (!rawPath || typeof rawPath !== 'string') {
             return null;
         }
@@ -326,7 +326,7 @@ class DynamicCategoryManager {
             }
 
             // 카테고리 경로 정규화 (플랫폼 정보 포함)
-            const platform = metadata.platform || 'YOUTUBE';
+            const platform = metadata.platform || PLATFORMS.YOUTUBE;
             const normalized = this.normalizeCategoryPath(
                 categoryData.full_path,
                 platform,
@@ -383,7 +383,7 @@ class DynamicCategoryManager {
      */
     getFallbackCategory(metadata) {
         // 플랫폼별 적절한 기본 카테고리 선택
-        const platform = metadata.platform || 'YOUTUBE';
+        const platform = metadata.platform || PLATFORMS.YOUTUBE;
         const validCategories = this.getMainCategoriesForPlatform(platform);
 
         // 메타데이터에서 키워드 추출하여 가장 적합한 대카테고리 선택
@@ -719,7 +719,7 @@ class DynamicCategoryManager {
         const normalizedPlatform = platform?.toUpperCase();
 
         // YouTube는 기존 15개 카테고리 사용
-        if (normalizedPlatform === 'YOUTUBE') {
+        if (normalizedPlatform === PLATFORMS.YOUTUBE) {
             return this.PLATFORM_CATEGORIES.youtube;
         }
 
@@ -745,7 +745,7 @@ class DynamicCategoryManager {
 
     buildDynamicCategoryPrompt(metadata) {
         // 플랫폼에 따라 다른 대카테고리 사용
-        const platform = metadata.platform || 'YOUTUBE';
+        const platform = metadata.platform || PLATFORMS.YOUTUBE;
         const categories = this.getMainCategoriesForPlatform(platform);
 
         ServerLogger.info(
@@ -825,7 +825,7 @@ class DynamicCategoryManager {
      * @returns {string} 콘텐츠 시그니처
      */
     generateContentSignature(metadata) {
-        const { caption = '', hashtags = [], platform = 'YOUTUBE' } = metadata;
+        const { caption = '', hashtags = [], platform = PLATFORMS.YOUTUBE } = metadata;
 
         // 키워드 추출 및 정규화
         const text = (caption + ' ' + hashtags.join(' ')).toLowerCase();

@@ -77,18 +77,31 @@ router.get('/videos', async (req, res) => {
 
     const totalCount = await TrendingVideo.countDocuments(query);
     
-    // 트렌딩 비디오에 source 정보 추가
-    const videosWithSource = videos.map(video => ({
-      ...video,
-      source: 'trending',
-      isFromTrending: true
-    }));
+    // 트렌딩 비디오에 source 정보 추가, _id 제거, 프론트엔드 유틸리티 우선순위에 맞게 필드명 제공
+    const videosWithSource = videos.map(video => {
+      const { _id, __v, batchId, collectionDate, ...cleanVideo } = video;
+      return {
+        ...cleanVideo,
+        // 표준 ID: MongoDB _id만 사용 (videoId 필드 제거됨)
+        id: video._id ? video._id.toString() : undefined,
+        // 표준 조회수: views만 사용
+        views: cleanVideo.views || 0,
+        // 표준 썸네일: thumbnailUrl만 사용
+        thumbnailUrl: cleanVideo.thumbnailUrl || '',
+        // 배치 관련 필드
+        batchIds: batchId ? [batchId] : [],
+        collectedAt: collectionDate,
+        // API 메타 정보
+        source: 'trending',
+        isFromTrending: true
+      };
+    });
 
     ServerLogger.info(`📋 트렌딩 영상 조회: ${videos.length}개 (총 ${totalCount}개)`);
 
     res.status(HTTP_STATUS_CODES.OK).json({
       success: true,
-      data: videosWithSource,
+      data: videosWithSource,  // 프론트엔드 호환성을 위해 직접 배열 반환
       pagination: {
         total: totalCount,
         limit: parseInt(limit),

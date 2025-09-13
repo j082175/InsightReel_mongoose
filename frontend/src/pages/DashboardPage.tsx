@@ -11,7 +11,7 @@ import SearchFilterBar from '../components/SearchFilterBar';
 
 import { PLATFORMS } from '../types/api';
 import { formatViews } from '../utils/formatters';
-import { getVideoId } from '../utils/videoUtils';
+import { getVideoId, getViewCount } from '../utils/videoUtils';
 import { useSelection } from '../hooks/useSelection';
 import { useSearch } from '../hooks/useSearch';
 import { useFilter } from '../hooks/useFilter';
@@ -148,7 +148,7 @@ const DashboardPage: React.FC = () => {
       },
       views: (video: Video, value: string) => {
         const minViews = parseInt(value);
-        return (video.views || 0) >= minViews;
+        return getViewCount(video) >= minViews;
       }
     }
   });
@@ -181,7 +181,7 @@ const DashboardPage: React.FC = () => {
   // 통계 계산
   const stats = useMemo(() => {
     const totalVideos = filteredVideos.length;
-    const totalViews = filteredVideos.reduce((sum, video) => sum + (video.views || 0), 0);
+    const totalViews = filteredVideos.reduce((sum, video) => sum + getViewCount(video), 0);
     const totalLikes = filteredVideos.reduce((sum, video) => sum + (video.likes || 0), 0);
     const initialCounts: Record<string, number> = {};
     const platformCounts = filteredVideos.reduce((acc, video) => {

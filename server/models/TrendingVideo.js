@@ -5,12 +5,7 @@ const mongoose = require('mongoose');
  * 그룹별 트렌딩 수집으로 얻은 영상들을 개별 분석 영상과 분리 저장
  */
 const trendingVideoSchema = new mongoose.Schema({
-  // 기본 비디오 정보
-  videoId: {
-    type: String,
-    required: true,
-    trim: true
-  },
+  // 기본 비디오 정보 (이제 MongoDB _id만 사용)
   title: {
     type: String,
     required: true,
@@ -126,7 +121,7 @@ trendingVideoSchema.index({ groupId: 1, collectionDate: -1 });
 trendingVideoSchema.index({ batchId: 1, collectionDate: -1 });
 trendingVideoSchema.index({ platform: 1, views: -1 });
 trendingVideoSchema.index({ duration: 1, views: -1 });
-trendingVideoSchema.index({ videoId: 1 }, { unique: true }); // 전역 중복 방지
+// videoId 인덱스 제거됨 - 이제 MongoDB _id만 사용
 trendingVideoSchema.index({ channelId: 1, collectionDate: -1 });
 
 // 정적 메서드

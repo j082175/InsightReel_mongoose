@@ -221,7 +221,9 @@ router.delete('/:id', async (req, res) => {
 // POST /api/channel-groups/:id/collect - 특정 그룹 트렌딩 수집
 router.post('/:id/collect', async (req, res) => {
   try {
-    const { daysBack = 3, minViews = 30000, includeShorts = true, includeMidform = true, includeLongForm = true } = req.body;
+    const { daysBack = 7, minViews = 10000, includeShorts = true, includeMidform = true, includeLongForm = true } = req.body;
+    console.log('🔍 DEBUG: 채널 그룹 개별 수집 요청 파라미터:', { daysBack, minViews, includeShorts, includeMidform, includeLongForm });
+    console.log('🔍 DEBUG: req.body 전체:', req.body);
     
     const group = await ChannelGroup.findById(req.params.id);
     if (!group) {
@@ -260,7 +262,7 @@ router.post('/:id/collect', async (req, res) => {
 // POST /api/channel-groups/collect-all - 모든 활성 그룹 트렌딩 수집
 router.post('/collect-all', async (req, res) => {
   try {
-    const { daysBack = 3, minViews = 30000, includeShorts = true, includeMidform = true, includeLongForm = true } = req.body;
+    const { daysBack = 7, minViews = 10000, includeShorts = true, includeMidform = true, includeLongForm = true } = req.body;
 
     const collector = new GroupTrendingCollector();
     const results = await collector.collectAllActiveGroups({
@@ -435,18 +437,24 @@ router.post('/collect-multiple', async (req, res) => {
   let batch = null;
   
   try {
-    const { 
+    const {
       groupIds,
-      days = 3, 
-      minViews = 30000, 
+      days = 7,
+      daysBack = days || 7, // daysBack와 days 둘 다 지원
+      minViews = 10000,
       maxViews = null,
-      includeShorts = true, 
-      includeMidform = true, 
+      includeShorts = true,
+      includeMidform = true,
       includeLongForm = true,
       keywords = [],
       excludeKeywords = []
     } = req.body;
-    
+
+    console.log('🔍 DEBUG: 다중 채널 그룹 수집 요청 파라미터:', {
+      groupIds, days, daysBack, minViews, maxViews, includeShorts, includeMidform, includeLongForm, keywords, excludeKeywords
+    });
+    console.log('🔍 DEBUG: req.body 전체:', req.body);
+
     if (!groupIds || !Array.isArray(groupIds) || groupIds.length === 0) {
       return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
         success: false,
@@ -467,16 +475,51 @@ router.post('/collect-multiple', async (req, res) => {
       });
     }
 
-    // 모든 그룹의 채널들 수집 (채널 ID만 추출)
+    // 모든 그룹의 채널들 수집 및 실제 YouTube 채널 ID 조회
     const allChannels = [];
     const groupNames = [];
-    
-    groups.forEach(group => {
-      // 채널 ID만 추출하여 추가
-      const channelIds = group.channels.map(channel => channel.id);
+
+    for (const group of groups) {
+      console.log('🔍 DEBUG: 그룹 정보:', {
+        name: group.name,
+        channels: group.channels
+      });
+
+      // 채널 이름으로 실제 YouTube 채널 ID 조회
+      const channelIds = [];
+      for (const channel of group.channels) {
+        try {
+          // Channel 컬렉션에서 실제 채널 정보 조회
+          const Channel = require('../models/Channel');
+          let actualChannel;
+
+          if (typeof channel === 'object' && channel.name) {
+            // 채널 이름으로 조회
+            actualChannel = await Channel.findOne({ name: channel.name });
+            console.log('🔍 DEBUG: 채널명', channel.name, '→ 조회 결과:', actualChannel?.id);
+          } else if (typeof channel === 'string') {
+            // 문자열인 경우도 채널 이름으로 조회
+            actualChannel = await Channel.findOne({ name: channel });
+            console.log('🔍 DEBUG: 채널명', channel, '→ 조회 결과:', actualChannel?.id);
+          }
+
+          if (actualChannel && actualChannel.id) {
+            channelIds.push(actualChannel.id);
+            console.log('✅ DEBUG: 실제 YouTube 채널 ID 사용:', actualChannel.id);
+          } else {
+            console.log('❌ DEBUG: 채널을 찾을 수 없음:', channel.name || channel);
+            // 기존 값 그대로 사용 (실패할 것이지만 로깅 목적)
+            channelIds.push(channel.id || channel);
+          }
+        } catch (error) {
+          console.error('❌ DEBUG: 채널 조회 실패:', error.message);
+          channelIds.push(channel.id || channel);
+        }
+      }
+
       allChannels.push(...channelIds);
       groupNames.push(group.name);
-    });
+    }
 
     // 중복 채널 제거
     const uniqueChannels = [...new Set(allChannels)];
@@ -490,7 +533,7 @@ router.post('/collect-multiple', async (req, res) => {
       collectionType: 'group',
       targetGroups: groupIds,
       criteria: {
-        daysBack: days,
+        daysBack: daysBack,
         minViews,
         maxViews,
         includeShorts,
