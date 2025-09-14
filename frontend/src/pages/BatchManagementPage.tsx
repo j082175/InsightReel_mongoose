@@ -16,10 +16,10 @@ import {
   Eye,
   Settings
 } from 'lucide-react';
-import VideoCard from '../components/VideoCard';
-import { formatDate } from '../utils/formatters';
-import { Platform } from '../types';
-import { FRONTEND_CONSTANTS } from '../config/constants';
+import { VideoCard } from '../shared/components';
+import { formatDate } from '../shared/utils';
+import { Platform } from '../shared/types';
+import { FRONTEND_CONSTANTS } from '../shared/config';
 
 interface CollectionBatch {
   _id: string;

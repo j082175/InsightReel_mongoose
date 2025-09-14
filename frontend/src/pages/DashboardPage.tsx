@@ -1,21 +1,17 @@
 import React, { useState, useMemo } from 'react';
-import { useVideos, useTrendingStats, useQuotaStatus, useServerStatus, useCollectTrending } from '../hooks/useApi';
-import { Video, FilterState } from '../types';
-import { useAppContext } from '../App';
-import VideoModal from '../components/VideoModal';
-import VideoOnlyModal from '../components/VideoOnlyModal';
-import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
-import ChannelAnalysisModal from '../components/ChannelAnalysisModal';
-import VideoCard from '../components/VideoCard';
-import SearchFilterBar from '../components/SearchFilterBar';
+import { useVideos, useTrendingStats, useQuotaStatus, useServerStatus, useCollectTrending } from '../shared/hooks';
+import { Video, FilterState } from '../shared/types';
+import { useAppContext } from '../app/providers';
+import { VideoModal, VideoOnlyModal } from '../features/video-analysis';
+import { DeleteConfirmationModal } from '../shared/ui';
+import { ChannelAnalysisModal } from '../features/channel-management';
+import { VideoCard, SearchBar } from '../shared/components';
 
-import { PLATFORMS } from '../types/api';
-import { formatViews } from '../utils/formatters';
-import { getVideoId, getViewCount } from '../utils/videoUtils';
-import { useSelection } from '../hooks/useSelection';
-import { useSearch } from '../hooks/useSearch';
-import { useFilter } from '../hooks/useFilter';
-import SelectionActionBar from '../components/SelectionActionBar';
+import { PLATFORMS } from '../shared/types/api';
+import { formatViews } from '../shared/utils';
+import { getVideoId, getViewCount } from '../shared/utils/videoUtils';
+import { useSelection, useSearch, useFilter } from '../shared/hooks';
+import { ActionBar } from '../shared/components';
 
 const DashboardPage: React.FC = () => {
   const [selectedBatchId, setSelectedBatchId] = useState<string>('all');
@@ -369,7 +365,7 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* 검색 및 필터 바 */}
-        <SearchFilterBar
+        <SearchBar
           searchTerm={searchResult.searchTerm}
           onSearchTermChange={searchResult.setSearchTerm}
           placeholder="영상, 채널, 키워드 검색..."
@@ -423,7 +419,7 @@ const DashboardPage: React.FC = () => {
               {isSelectMode ? '선택 취소' : '선택 모드'}
             </button>
           </div>
-        </SearchFilterBar>
+        </SearchBar>
 
         {/* 결과 정보 */}
         <div className="bg-white rounded-lg shadow mb-4 p-4">
@@ -441,7 +437,7 @@ const DashboardPage: React.FC = () => {
               <div className={`grid ${gridLayouts[gridSize] || gridLayouts[2]} gap-6`}>
                 {filteredVideos.map((video, index) => (
                   <VideoCard 
-                    key={getVideoId(video) || `video-${index}`} 
+                    key={getVideoId(video)} 
                     video={video}
                     onClick={handleVideoClick}
                     onInfoClick={setSelectedVideo}
@@ -463,7 +459,7 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* 선택 모드 액션 바 */}
-        <SelectionActionBar
+        <ActionBar
           isVisible={isSelectMode}
           selectedCount={videoSelection.count}
           totalCount={filteredVideos.length}

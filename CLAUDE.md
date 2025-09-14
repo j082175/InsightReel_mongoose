@@ -12,23 +12,72 @@
    - MongoDB `_id` → API `id` 변환만 허용 (단 1개)
 
 2. **상수 시스템 필수 사용** 📝
-   - `HTTP_STATUS_CODES.OK` (200 대신)
-   - `ERROR_CODES.NOT_FOUND` (하드코딩 대신)
-   - `PLATFORMS.YOUTUBE` ('YOUTUBE' 대신)
+   **🎯 목적: 하드코딩된 값들을 중앙 관리하여 일관성 및 유지보수성 향상**
+
+   ### **📁 상수 파일 위치**
+   ```bash
+   server/config/api-messages.js     # HTTP 상태, 에러 코드, 플랫폼 상수
+   server/config/constants.js        # 서버 설정 상수 (수집 옵션, AI 설정)
+   frontend/src/shared/config/       # 프론트엔드 상수 (서버와 동일한 값들)
+   ```
+
+   ### **✅ 사용 방법**
+   ```javascript
+   // ❌ 하드코딩 금지
+   if (response.status === 200) { ... }
+   if (platform === 'YOUTUBE') { ... }
+
+   // ✅ 상수 사용 (올바른 방법)
+   import { HTTP_STATUS_CODES, PLATFORMS } from '../config/api-messages';
+
+   if (response.status === HTTP_STATUS_CODES.OK) { ... }
+   if (platform === PLATFORMS.YOUTUBE) { ... }
+   ```
+
+   ### **🔢 주요 상수 카테고리**
+   - **HTTP_STATUS_CODES**: `.OK`, `.NOT_FOUND`, `.SERVER_ERROR` 등
+   - **ERROR_CODES**: 애플리케이션별 에러 코드
+   - **PLATFORMS**: `.YOUTUBE`, `.INSTAGRAM`, `.TIKTOK`
+   - **DEFAULT_COLLECTION**: 수집 기본값들 (기간, 최소 조회수 등)
 
 3. **파일 크기 제한** 📏
-   - 새 파일 생성 시 1500줄 이하 필수
-   - Claude Code 호환성 확보 (25,000 토큰 제한)
+   **🎯 목적: Claude Code가 파일을 효율적으로 읽고 처리할 수 있도록 크기 제한**
+
+   ### **📊 제한 기준**
+   ```
+   새 파일 생성 시: 최대 1,500줄
+   기존 파일 수정 시: 가급적 1,500줄 이하 유지 (필수 아님)
+   ```
+
+   ### **🔍 이유**
+   - **Claude Code 토큰 제한**: 약 25,000 토큰 (1,500줄 ≈ 15,000~20,000 토큰)
+   - **읽기 성능**: 큰 파일일수록 Claude가 전체 내용 파악에 시간 소요
+   - **단일 책임 원칙**: 파일이 너무 크면 여러 책임을 가질 가능성 높음
+
+   ### **✅ 대응 방법**
+   ```bash
+   # 파일이 1,500줄 초과할 것 같다면
+   1. 기능별로 파일 분리
+   2. 공통 로직은 utils/ 폴더로 추출
+   3. 컴포넌트는 하위 컴포넌트로 분할
+
+   # 예시: 큰 페이지 컴포넌트 분할
+   DashboardPage.tsx (1,800줄)
+   ↓ 분할
+   DashboardPage.tsx (600줄) + StatsSection.tsx (400줄) + ChartsSection.tsx (500줄)
+   ```
 
 4. **중복 구현 금지** 🔄
    - 기존 유틸리티 함수 재사용 (`formatters.ts`, `videoUtils.ts`)
-   - 기존 컴포넌트 재활용 (`BaseModal`, `VideoCard`)
+   - 기존 컴포넌트 재활용 (`Modal`, `VideoCard`)
 
 ### **💡 코딩 전 체크리스트**
-- [ ] 중복 필드 생성하지 않았나?
-- [ ] 상수 대신 하드코딩 하지 않았나?
-- [ ] 새 파일이 1500줄 이하인가?
-- [ ] 기존 컴포넌트 재활용했나?
+- [ ] 중복 필드 생성하지 않았나? (id/videoId, views/viewCount 등)
+- [ ] 상수 대신 하드코딩 하지 않았나? (HTTP_STATUS_CODES.OK, PLATFORMS.YOUTUBE 등)
+- [ ] 새 파일이 1500줄 이하인가? (Claude Code 토큰 제한)
+- [ ] 기존 컴포넌트 재활용했나? (Modal, VideoCard, SearchBar 등)
+- [ ] **FSD 구조**를 따르고 있나? (app→pages→features→shared 순서)
+- [ ] **Import 경로**가 FSD 규칙에 맞나? (`../shared/components`, `../features/xxx` 등)
 
 **⚠️ 이 규칙들을 위반하면 전체 시스템 일관성이 깨집니다!**
 
@@ -37,65 +86,12 @@
 ## 🎯 프로젝트 개요
 YouTube/Instagram/TikTok 비디오를 자동으로 다운로드하고 AI(Gemini)로 분석 후 Google Sheets에 저장하는 시스템
 
-## 🏗️ 프로젝트 구조
-```
-InsightReel/
-├── server/               # Express 백엔드
-├── extension/            # Chrome 확장 프로그램
-├── frontend/             # React 대시보드
-├── scripts/              # 유틸리티 스크립트
-└── downloads/            # 비디오 저장소
-```
-
-## 💻 주요 명령어
-```bash
-npm run dev      # 개발 서버 (자동 재시작)
-npm start        # 프로덕션 서버
-npm test         # 테스트 실행
-npm run force-cleanup  # 모든 프로세스 강제 정리
-```
-
-## 🔧 환경변수 (.env)
-```bash
-# 서버
-PORT=3000
-
-# Gemini API
-USE_GEMINI=true
-GOOGLE_API_KEY=your-gemini-key
-GEMINI_FALLBACK_STRATEGY=multi-pro  # 폴백 전략 선택
-  # flash: 단일 API 키에서 Pro → Flash 모델로 폴백
-  # multi-pro: 여러 API 키의 Pro 모델을 순차적으로 시도
-
-# Google Sheets
-GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
-
-# MongoDB (선택사항)
-MONGODB_URI=mongodb://localhost:27017/InsightReel
-```
+---
 
 ## 📝 코딩 규칙
 
 ### 필수 준수사항
-1. **상수 시스템 사용**
-   - **API 메시지 상수** (`server/config/api-messages.js`)
-     - HTTP 상태 코드: `HTTP_STATUS_CODES.OK` (200 대신)
-     - 에러 코드: `ERROR_CODES.NOT_FOUND` (하드코딩 대신)
-     - 플랫폼: `PLATFORMS.YOUTUBE` ('YOUTUBE' 대신)
-
-   - **서버 상수** (`server/config/constants.js`)
-     - 기본 수집 옵션:
-       - `DEFAULT_COLLECTION.DAYS_BACK: 7` (최근 7일 기준)
-       - `DEFAULT_COLLECTION.MIN_VIEWS: 10000` (최소 조회수 10,000)
-       - `DEFAULT_COLLECTION.INCLUDE_SHORTS: true` (숏폼 포함 여부)
-     - AI 설정:
-       - `AI.RETRY.MAX_RETRIES: 3` (최대 재시도 횟수)
-       - `AI.RETRY.TIMEOUT: 120000` (AI 분석 타임아웃 2분)
-
-   - **프론트엔드 상수** (`frontend/src/config/constants.ts`)
-     - 동일한 상수들을 프론트엔드용으로 정의
-
-2. **TypeScript 규칙** ✅
+1. **TypeScript 규칙** ✅
    - `any` 타입 완전 제거 완료
    - 모든 컴포넌트에서 구체적 타입 정의 적용
    - Video, Channel 인터페이스 기반 타입 안전성 확보
@@ -110,7 +106,7 @@ MONGODB_URI=mongodb://localhost:27017/InsightReel
    - utils/formatters.ts, utils/platformStyles.ts 모듈 구축
    - 모든 컴포넌트에서 통일된 포맷팅 규칙 적용
 
-6. **BaseModal 공통 컴포넌트** ✅
+6. **Modal 공통 컴포넌트** ✅
    - 모든 모달의 UI 일관성과 재사용성 확보
    - 모달 크기, 스타일, 애니메이션 통일
    - 중복 모달 코드 90% 감소
@@ -122,7 +118,7 @@ MONGODB_URI=mongodb://localhost:27017/InsightReel
    - 기능이 중복되는 페이지나 컴포넌트 생성 최소화
 
 8. **검색/필터 모듈화** ✅
-   - SearchFilterBar 공통 컴포넌트로 모든 검색 UI 통일
+   - SearchBar 공통 컴포넌트로 모든 검색 UI 통일
    - useSearch, useFilter 커스텀 훅으로 로직 중앙화
    - 4개 주요 페이지 모두 적용 완료
 
@@ -145,54 +141,68 @@ MONGODB_URI=mongodb://localhost:27017/InsightReel
    - 사용자 친화적 에러 메시지 제공
    - ServerLogger로 에러 로깅
 
-13. **ID 필드 및 API 응답 표준화 규칙** 🎯 ✅
-   - **절대 원칙**: MongoDB `_id` → API `id` 변환 **단 1개만 허용**
-   - **중복 필드 금지**: `videoId`, `viewCount`, `thumbnail` 등 절대 생성 금지
-   - **표준 필드만 사용**: `id`, `views`, `thumbnailUrl` (단일 필드 원칙)
-   - **API 응답 구조**: 모든 엔드포인트에서 동일한 필드명 사용
-   - **프론트엔드 유틸리티**: `getVideoId()`, `getViewCount()`, `getThumbnailUrl()` 단순 접근만
-   - **⚠️ 경고**: 이 규칙을 위반하면 다시 혼란스러운 상태로 되돌아감!
+13. **필드명 완전 통일 규칙** 🎯 ✅
 
-### 데이터 구조 표준 (server/types/*.js)
+   **🎯 핵심 원칙: MongoDB → API → 프론트엔드 모든 계층에서 필드명 통일**
 
-#### Video 인터페이스 (42개 필드 - video-types.js)
-```javascript
-// VideoCore - 기본 비디오 정보
-title, url, platform, uploadDate, description
-views, likes, commentsCount, shares
-keywords[], hashtags[], mentions[]
+   | 계층 | `_id` 필드 | 나머지 필드들 | 예시 |
+   |------|-----------|--------------|------|
+   | **MongoDB** | `_id: "123abc"` | `views: 1000, title: "제목", uploadDate: "2024-01-01"` | 원본 |
+   | **API 응답** | `id: "123abc"` | `views: 1000, title: "제목", uploadDate: "2024-01-01"` | _id→id만 변환 |
+   | **프론트엔드** | `video.id` | `video.views, video.title, video.uploadDate` | API와 완전 동일 |
 
-// ChannelInfo - 채널 정보
-channelName, channelUrl, subscribers
+   ### **✅ 허용되는 유일한 변환**
+   ```javascript
+   // MongoDB → API 응답 시 _id만 id로 변환 (단 1개)
+   MongoDB: { _id: "abc123", views: 1000, title: "제목" }
+   API:     { id: "abc123",  views: 1000, title: "제목" }  // _id만 변환, 나머지 동일
+   ```
 
-// AIAnalysis - AI 분석 결과
-mainCategory, middleCategory, confidence
-fullCategoryPath, categoryDepth
+   ### **🚫 절대 금지 - 중복/다른 필드명**
+   ```javascript
+   // ❌ 이런 중복 필드 절대 생성 금지
+   {
+     id: "123",
+     videoId: "123",        // 중복!
+     views: 1000,
+     viewCount: 1000,       // 중복!
+     thumbnailUrl: "url",
+     thumbnail: "url"       // 중복!
+   }
+   ```
 
-// YouTubeSpecific - YouTube 전용
-youtubeHandle, duration, contentType
-monetized, language
+   ### **✅ 올바른 단일 필드 사용**
+   ```javascript
+   // ✅ 모든 계층에서 이 형태로만 사용
+   {
+     id: "abc123",           // MongoDB _id → id (유일한 변환)
+     title: "영상 제목",      // 모든 계층 동일
+     views: 1000,           // 모든 계층 동일
+     thumbnailUrl: "https://...", // 모든 계층 동일
+     uploadDate: "2024-01-01"     // 모든 계층 동일
+   }
+   ```
 
-// SystemMetadata - 시스템 메타
-collectionTime, timestamp, processedAt
-```
+   ### **📋 프론트엔드 접근 방식**
+   ```typescript
+   // ✅ 직접 접근 (권장)
+   const videoId = video.id;
+   const views = video.views;
+   const thumbnail = video.thumbnailUrl;
 
-#### Channel 인터페이스 (32개 필드 - channel-types.js)
-```javascript
-// ChannelCore - 기본 채널 정보
-id, name, url, platform
-subscribers, contentType
+   // ❌ 복잡한 fallback 금지
+   // const id = video.videoId || video.id || video._id;
+   ```
 
-// ChannelAIAnalysis - AI 분석
-keywords[], aiTags[], categoryInfo
-majorCategory, middleCategory, subCategory
+   **⚠️ 이 규칙을 위반하면 필드 접근이 혼란스러워지고 버그가 급증합니다!**
 
-// ChannelClusterInfo - 클러스터링
-clusterIds[], suggestedClusters[]
+14. **FSD 아키텍처 규칙** 🏗️ ✅ **[2024.09 신규]**
+   - **레이어 순서 준수**: app → pages → features → shared → entities
+   - **의존성 방향**: 상위 레이어가 하위 레이어를 import (역방향 금지)
+   - **Feature 격리**: features 간 직접 import 최소화, shared 레이어 활용
+   - **Public API**: 각 레이어마다 index.ts로 명확한 Public API 제공
+   - **Import 경로**: FSD 경로 사용 필수 (`../shared/components` 등)
 
-// ChannelStats - 통계
-totalViews, totalVideos, uploadFrequency
-```
 
 ---
 
@@ -258,30 +268,64 @@ totalViews, totalVideos, uploadFrequency
 - `GET /api/test-sheets` - Google Sheets 연결 테스트
 - `GET /api/config/health` - 설정 상태 확인
 
-## 🎨 **프론트엔드 최적화 및 공통 시스템** ✅
+## 🎨 **FSD (Feature-Sliced Design) 아키텍처** ✅ **[2024.09 업데이트]**
 
-### **🧱 완전 리팩토링된 구조**
-성능 최적화와 코드 재사용성을 위한 체계적 구조:
+### **🏗️ FSD 완전 마이그레이션 완료**
+현대적이고 확장 가능한 Feature-Sliced Design 아키텍처로 전환 완료:
 
 ```
-🧱 frontend/src/
-├── components/
-│   ├── BaseModal.tsx           # 공통 모달 컴포넌트
-│   ├── VideoCard.tsx           # React.memo + useCallback 최적화
-│   └── SelectionActionBar.tsx  # useCallback 최적화
-├── hooks/
-│   ├── useModal.ts            # 모달 상태 관리 훅
-│   └── useSelection.ts        # 선택 상태 관리 훅  
-├── utils/
-│   ├── formatters.ts          # 포맷팅 함수들
-│   ├── platformStyles.ts      # 플랫폼 스타일링
-│   ├── videoUtils.ts          # 비디오 유틸리티 함수
-│   └── logger.ts              # 개발환경 로깅 유틸리티
-└── types/
-    ├── video.ts               # Video 타입 정의
-    ├── channel.ts             # Channel 타입 정의
-    └── video-card.ts          # VideoCard 전용 타입
+🏗️ frontend/src/ (FSD 구조)
+├── app/                    # 앱 레이어
+│   ├── providers/         # AppProvider, SettingsProvider
+│   └── routing/          # PageRouter, 라우팅 설정
+├── pages/                 # 페이지 레이어
+│   ├── DashboardPage.tsx
+│   ├── ChannelManagementPage.tsx
+│   └── TrendingCollectionPage.tsx
+├── features/              # 기능 레이어 (비즈니스 로직)
+│   ├── channel-management/
+│   │   ├── ui/           # ChannelCard, ChannelGroupModal 등
+│   │   ├── model/        # useChannelGroups, channelStore
+│   │   └── api/          # 채널 관련 API
+│   ├── video-analysis/
+│   │   ├── ui/           # VideoModal, VideoAnalysisModal 등
+│   │   └── model/        # 비디오 분석 로직
+│   ├── trending-collection/
+│   │   ├── ui/           # BulkCollectionModal, BatchCard 등
+│   │   └── model/        # 수집 로직
+│   └── content-discovery/
+└── shared/               # 공유 레이어
+    ├── components/       # VideoCard, SearchBar, ActionBar
+    ├── ui/              # Modal, DeleteConfirmModal 등
+    ├── hooks/           # useApi, useModal, useSelection
+    ├── utils/           # formatters, platformStyles
+    ├── types/           # Video, Channel 타입 정의
+    ├── services/        # API 클라이언트
+    └── config/          # 상수 정의
 ```
+
+### **🎯 FSD Import 규칙**
+```typescript
+// ✅ FSD 기반 올바른 import 경로
+import { VideoCard, SearchBar } from '../shared/components';
+import { useVideos, useChannels } from '../shared/hooks';
+import { formatViews, formatDate } from '../shared/utils';
+import { Video, Channel } from '../shared/types';
+
+// Feature 간 의존성
+import { ChannelAnalysisModal } from '../features/channel-management';
+import { VideoAnalysisModal } from '../features/video-analysis';
+
+// App 레이어 의존성
+import { useAppContext } from '../app/providers';
+```
+
+### **🚀 FSD 아키텍처 주요 이점**
+1. **📦 모듈성**: 기능별 독립적 개발 및 테스트 가능
+2. **🔄 재사용성**: Shared 레이어의 컴포넌트와 훅 재활용
+3. **🎯 명확한 의존성**: 레이어별 명확한 import 규칙
+4. **📈 확장성**: 새로운 기능 추가 시 일관된 구조 유지
+5. **👥 팀 협업**: 기능별 담당자 분리 용이
 
 ### **📦 formatters.ts - 포맷팅 유틸리티**
 
@@ -363,8 +407,8 @@ const VideoCard = ({ video }) => {
 - **useCallback**: 이벤트 핸들러 함수들 메모이제이션 적용
 - **컴포넌트 최적화**: 핵심 렌더링 성능 20-30% 향상
 
-#### **🧱 BaseModal 시스템**
-- **통합 모달 컴포넌트**: 모든 모달을 BaseModal 기반으로 통일
+#### **🧱 Modal 시스템**
+- **통합 모달 컴포넌트**: 모든 모달을 공통 Modal 컴포넌트 기반으로 통일
 - **적용 완료된 모달들**:
   - BulkCollectionModal, ChannelAnalysisModal, VideoAnalysisModal
   - DeleteConfirmationModal, SettingsModal
@@ -379,7 +423,7 @@ const VideoCard = ({ video }) => {
 다음 컴포넌트들이 공통 유틸리티 함수 사용으로 리팩토링 완료:
 - VideoCard.tsx, VideoAnalysisModal.tsx, BulkCollectionModal.tsx
 - ChannelAnalysisModal.tsx, SelectionActionBar.tsx
-- 모든 모달 컴포넌트들 (BaseModal 기반)
+- 모든 모달 컴포넌트들 (Modal 기반)
 
 ### **⚠️ 중요 규칙**
 1. **중복 구현 금지**: 위 유틸리티 함수들을 각 컴포넌트에서 재정의하지 말 것

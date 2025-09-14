@@ -77,16 +77,13 @@ router.get('/videos', async (req, res) => {
 
     const totalCount = await TrendingVideo.countDocuments(query);
     
-    // 트렌딩 비디오에 source 정보 추가, _id 제거, 프론트엔드 유틸리티 우선순위에 맞게 필드명 제공
+    // 트렌딩 비디오에 source 정보 추가, _id 유지
     const videosWithSource = videos.map(video => {
-      const { _id, __v, batchId, collectionDate, ...cleanVideo } = video;
+      const { __v, batchId, collectionDate, ...cleanVideo } = video;
       return {
         ...cleanVideo,
-        // 표준 ID: MongoDB _id만 사용 (videoId 필드 제거됨)
-        id: video._id ? video._id.toString() : undefined,
-        // 표준 조회수: views만 사용
+        // MongoDB _id 그대로 사용 (변환 없음)
         views: cleanVideo.views || 0,
-        // 표준 썸네일: thumbnailUrl만 사용
         thumbnailUrl: cleanVideo.thumbnailUrl || '',
         // 배치 관련 필드
         batchIds: batchId ? [batchId] : [],

@@ -14,7 +14,7 @@ import {
   Filter,
   Download
 } from 'lucide-react';
-import { formatViews, formatDate, getDurationLabel } from '../utils/formatters';
+import { formatViews, formatDate, getDurationLabel } from '../shared/utils';
 
 interface TrendingStats {
   overview: {

@@ -314,16 +314,10 @@ router.get('/', async (req, res) => {
       totalCount = await TrendingVideo.countDocuments(query);
       
       videos = videos.map(video => {
-        const { _id, __v, batchId, collectionDate, ...cleanVideo } = video;
+        const { __v, batchId, collectionDate, ...cleanVideo } = video;
         return {
           ...cleanVideo,
-          // 프론트엔드 유틸리티 함수 우선순위에 맞게 필드명 제공 (TrendingVideo용)
-          videoId: video.videoId || cleanVideo.videoId,
-          id: video.videoId || cleanVideo.id,
-          thumbnailUrl: cleanVideo.thumbnailUrl,
-          thumbnail: cleanVideo.thumbnailUrl,
-          views: cleanVideo.views,
-          viewCount: cleanVideo.views,
+          // MongoDB _id 그대로 사용, 중복 필드 제거
           batchIds: batchId ? [batchId] : cleanVideo.batchIds || [],
           collectedAt: collectionDate || cleanVideo.collectedAt,
           source: 'trending',
@@ -342,16 +336,10 @@ router.get('/', async (req, res) => {
       totalCount = await Video.countDocuments(query);
       
       videos = videos.map(video => {
-        const { _id, __v, ...cleanVideo } = video;
+        const { __v, ...cleanVideo } = video;
         return {
           ...cleanVideo,
-          // 프론트엔드 유틸리티 함수 우선순위에 맞게 필드명 제공 (일반 Video용)
-          videoId: cleanVideo.id || cleanVideo.videoId,
-          id: cleanVideo.id || cleanVideo.videoId,
-          thumbnailUrl: cleanVideo.thumbnailUrl,
-          thumbnail: cleanVideo.thumbnailUrl,
-          views: cleanVideo.views,
-          viewCount: cleanVideo.views,
+          // MongoDB _id 그대로 사용, 중복 필드 제거
           source: 'videos',
           isFromTrending: false
         };
@@ -364,18 +352,12 @@ router.get('/', async (req, res) => {
         Video.find(query).sort(sortOptions).lean()
       ]);
       
-      // source 정보 추가, _id 제거, 프론트엔드 유틸리티 우선순위에 맞게 필드명 제공 (TrendingVideo용)
+      // source 정보 추가, MongoDB _id 그대로 사용
       const trendingWithSource = trendingVideos.map(video => {
-        const { _id, __v, batchId, collectionDate, ...cleanVideo } = video;
+        const { __v, batchId, collectionDate, ...cleanVideo } = video;
         return {
           ...cleanVideo,
-          // 프론트엔드 유틸리티 함수 우선순위에 맞게 필드명 제공
-          videoId: video.videoId,
-          id: video.videoId,
-          thumbnailUrl: cleanVideo.thumbnailUrl,
-          thumbnail: cleanVideo.thumbnailUrl,
-          views: cleanVideo.views,
-          viewCount: cleanVideo.views,
+          // MongoDB _id 그대로 사용, 중복 필드 제거
           batchIds: batchId ? [batchId] : [],
           collectedAt: collectionDate,
           source: 'trending',
@@ -384,16 +366,10 @@ router.get('/', async (req, res) => {
       });
 
       const regularWithSource = regularVideos.map(video => {
-        const { _id, __v, ...cleanVideo } = video;
+        const { __v, ...cleanVideo } = video;
         return {
           ...cleanVideo,
-          // 프론트엔드 유틸리티 함수 우선순위에 맞게 필드명 제공 (일반 Video용)
-          videoId: cleanVideo.id || cleanVideo.videoId,  // 일반 Video는 id가 기본
-          id: cleanVideo.id || cleanVideo.videoId,
-          thumbnailUrl: cleanVideo.thumbnailUrl,
-          thumbnail: cleanVideo.thumbnailUrl,
-          views: cleanVideo.views,
-          viewCount: cleanVideo.views,
+          // MongoDB _id 그대로 사용, 중복 필드 제거
           source: 'videos',
           isFromTrending: false
         };

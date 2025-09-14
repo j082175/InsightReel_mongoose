@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { formatViews } from '../utils/formatters';
-import SearchFilterBar from '../components/SearchFilterBar';
-import { useSearch } from '../hooks/useSearch';
-import { useFilter } from '../hooks/useFilter';
+import { formatViews } from '../shared/utils';
+import { SearchBar } from '../shared/components';
+import { useSearch } from '../shared/hooks';
+import { useFilter } from '../shared/hooks';
+import { Platform } from '../shared/types';
 
 interface TrendData {
   id: number;
   keyword: string;
-  platform: 'YouTube' | 'TikTok' | 'Instagram' | 'All';
+  platform: Platform | 'All';
   growth: number;
   volume: number;
   difficulty: 'Easy' | 'Medium' | 'Hard';
@@ -24,7 +25,7 @@ const ContentDiscoveryPage: React.FC = () => {
     {
       id: 1,
       keyword: 'AI 그림 생성',
-      platform: 'YouTube',
+      platform: 'YOUTUBE' as Platform,
       growth: 234,
       volume: 45000,
       difficulty: 'Medium',
@@ -35,7 +36,7 @@ const ContentDiscoveryPage: React.FC = () => {
     {
       id: 2,
       keyword: '홈 카페',
-      platform: 'Instagram',
+      platform: 'INSTAGRAM' as Platform,
       growth: 189,
       volume: 128000,
       difficulty: 'Easy',
@@ -46,7 +47,7 @@ const ContentDiscoveryPage: React.FC = () => {
     {
       id: 3,
       keyword: '챗GPT 활용법',
-      platform: 'YouTube',
+      platform: 'YOUTUBE' as Platform,
       growth: 412,
       volume: 89000,
       difficulty: 'Medium',
@@ -57,7 +58,7 @@ const ContentDiscoveryPage: React.FC = () => {
     {
       id: 4,
       keyword: '요가 루틴',
-      platform: 'TikTok',
+      platform: 'TIKTOK' as Platform,
       growth: 78,
       volume: 234000,
       difficulty: 'Easy',
@@ -68,7 +69,7 @@ const ContentDiscoveryPage: React.FC = () => {
     {
       id: 5,
       keyword: '투자 공부',
-      platform: 'YouTube',
+      platform: 'YOUTUBE' as Platform,
       growth: 156,
       volume: 67000,
       difficulty: 'Hard',
@@ -176,7 +177,7 @@ const ContentDiscoveryPage: React.FC = () => {
       <div className="bg-white rounded-lg shadow">
         {/* 검색 및 필터 */}
         <div className="p-6 border-b">
-          <SearchFilterBar
+          <SearchBar
             searchTerm={searchTerm}
             onSearchTermChange={setSearchTerm}
             placeholder="키워드, 카테고리 검색..."
@@ -189,9 +190,9 @@ const ContentDiscoveryPage: React.FC = () => {
               className="border-gray-300 rounded-md"
             >
               <option value="All">모든 플랫폼</option>
-              <option value="YouTube">YouTube</option>
-              <option value="TikTok">TikTok</option>
-              <option value="Instagram">Instagram</option>
+              <option value="YOUTUBE">YouTube</option>
+              <option value="TIKTOK">TikTok</option>
+              <option value="INSTAGRAM">Instagram</option>
             </select>
             <select
               value={filters.difficulty || 'All'}
@@ -223,7 +224,7 @@ const ContentDiscoveryPage: React.FC = () => {
             >
               {isAnalyzing ? '분석 중...' : '🔄 새로고침'}
             </button>
-          </SearchFilterBar>
+          </SearchBar>
           <div className="text-sm text-gray-500 px-4">
             총 {filteredTrends.length}개 트렌드
           </div>
@@ -240,9 +241,9 @@ const ContentDiscoveryPage: React.FC = () => {
                       {trend.keyword}
                     </h3>
                     <span className={`px-2 py-1 text-xs rounded-full ${
-                      trend.platform === 'YouTube' ? 'bg-red-100 text-red-700' :
-                      trend.platform === 'TikTok' ? 'bg-pink-100 text-pink-700' :
-                      trend.platform === 'Instagram' ? 'bg-purple-100 text-purple-700' :
+                      trend.platform === 'YOUTUBE' ? 'bg-red-100 text-red-700' :
+                      trend.platform === 'TIKTOK' ? 'bg-pink-100 text-pink-700' :
+                      trend.platform === 'INSTAGRAM' ? 'bg-purple-100 text-purple-700' :
                       'bg-gray-100 text-gray-700'
                     }`}>
                       {trend.platform}

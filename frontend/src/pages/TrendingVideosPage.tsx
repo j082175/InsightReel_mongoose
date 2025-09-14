@@ -13,8 +13,8 @@ import {
   Video,
   BarChart3
 } from 'lucide-react';
-import VideoCard from '../components/VideoCard';
-import { formatViews, formatDate, getDurationLabel } from '../utils/formatters';
+import { VideoCard } from '../shared/components';
+import { formatViews, formatDate, getDurationLabel } from '../shared/utils';
 
 interface TrendingVideo {
   _id: string;

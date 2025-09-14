@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { CollectionBatch, Channel, Video } from '../types';
-import { useChannelGroups, ChannelGroup } from '../hooks/useChannelGroups';
-import { useChannels } from '../hooks/useApi';
-import { PLATFORMS } from '../types/api';
-import { FRONTEND_CONSTANTS } from '../config/constants';
+import { CollectionBatch, Channel, Video } from '../shared/types';
+import { useChannelGroups, ChannelGroup } from '../features/channel-management/model/useChannelGroups';
+import { useChannels } from '../shared/hooks';
+import { PLATFORMS } from '../shared/types/api';
+import { FRONTEND_CONSTANTS } from '../shared/config';
 
 interface CollectionFilters {
   daysBack: number;
@@ -169,7 +169,7 @@ const TrendingCollectionPage: React.FC = () => {
                 ) : (
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {channelGroups.map((group, index) => (
-                      <label key={group._id || `group-${index}`} className="flex items-center p-3 border rounded-lg hover:bg-gray-50">
+                      <label key={group._id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50">
                         <input
                           type="checkbox"
                           checked={collectionTarget.selectedGroups.includes(group._id || '')}
@@ -217,7 +217,7 @@ const TrendingCollectionPage: React.FC = () => {
                 ) : (
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {channels.map((channel, index) => (
-                      <label key={channel.id || `channel-${index}`} className="flex items-center p-3 border rounded-lg hover:bg-gray-50">
+                      <label key={channel._id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50">
                         <input
                           type="checkbox"
                           checked={collectionTarget.selectedChannels.includes(channel.id || '')}

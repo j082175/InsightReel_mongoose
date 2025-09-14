@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useChannels } from '../hooks/useApi';
-import { useChannelGroups, ChannelGroup as HookChannelGroup } from '../hooks/useChannelGroups';
-import { CollectionBatch, Channel, Video } from '../types';
-import { FRONTEND_CONSTANTS } from '../config/constants';
+import { useChannels } from '../shared/hooks';
+import { useChannelGroups, ChannelGroup as HookChannelGroup } from '../features/channel-management/model/useChannelGroups';
+import { CollectionBatch, Channel, Video } from '../shared/types';
+import { FRONTEND_CONSTANTS } from '../shared/config';
 
 // Local ChannelGroup interface compatible with both hook and component
 interface ChannelGroup {
@@ -17,24 +17,21 @@ interface ChannelGroup {
   createdAt?: string;
   updatedAt?: string;
 }
-import { useAppContext } from '../App';
-import ChannelAnalysisModal from '../components/ChannelAnalysisModal';
-import VideoAnalysisModal from '../components/VideoAnalysisModal';
-import BulkCollectionModal from '../components/BulkCollectionModal';
-import ChannelGroupModal from '../components/ChannelGroupModal';
-import SearchFilterBar from '../components/SearchFilterBar';
-import BatchCard from '../components/BatchCard';
-import VideoCard from '../components/VideoCard';
-import { formatViews, formatDate } from '../utils/formatters';
-import ChannelCard from '../components/ChannelCard';
-import ChannelGroupCard from '../components/ChannelGroupCard';
+import { useAppContext } from '../app/providers';
+import { ChannelAnalysisModal } from '../features/channel-management';
+import { VideoAnalysisModal } from '../features/video-analysis';
+import { BulkCollectionModal } from '../features/trending-collection';
+import { ChannelGroupModal } from '../features/channel-management';
+import { SearchBar } from '../shared/components';
+import { BatchCard } from '../features/trending-collection';
+import { VideoCard } from '../shared/components';
+import { formatViews, formatDate } from '../shared/utils';
+import { ChannelCard } from '../features/channel-management';
+import ChannelGroupCard from '../features/channel-management/ui/ChannelGroupCard';
 
-import { PLATFORMS } from '../types/api';
-import { useSelection } from '../hooks/useSelection';
-import { useMultiModal } from '../hooks/useModal';
-import { useSearch } from '../hooks/useSearch';
-import { useFilter } from '../hooks/useFilter';
-import SelectionActionBar from '../components/SelectionActionBar';
+import { PLATFORMS } from '../shared/types/api';
+import { useSelection, useMultiModal, useSearch, useFilter } from '../shared/hooks';
+import { ActionBar } from '../shared/components';
 
 const ChannelManagementPage: React.FC = () => {
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -86,88 +83,11 @@ const ChannelManagementPage: React.FC = () => {
     refreshGroups
   } = useChannelGroups();
 
-  // Mock 데이터 - 새 인터페이스 표준 사용
-  const mockChannels: Channel[] = [
-    {
-      id: '1',
-      name: '개발왕 김코딩',
-      platform: 'YOUTUBE',
-      url: 'https://youtube.com/@kimcoding',
-      subscribers: 1250000,
-      totalVideos: 342,
-      updatedAt: '2024-01-15T10:30:00',
-      analysisStatus: 'active',
-      thumbnailUrl: 'https://placehold.co/100x100/3B82F6/FFFFFF?text=K',
-      createdAt: '2024-01-01T00:00:00',
-      description: '개발 관련 콘텐츠를 제작하는 채널',
-      keywords: ['개발', '프로그래밍', '코딩']
-    },
-    {
-      id: '2',
-      name: '요리하는 남자',
-      platform: 'TIKTOK',
-      url: 'https://tiktok.com/@cookingman',
-      subscribers: 3450000,
-      totalVideos: 567,
-      updatedAt: '2024-01-15T09:15:00',
-      analysisStatus: 'active',
-      thumbnailUrl: 'https://placehold.co/100x100/F43F5E/FFFFFF?text=C',
-      createdAt: '2024-01-01T00:00:00',
-      description: '남성 요리 크리에이터',
-      keywords: ['요리', '레시피', '남자요리']
-    },
-    {
-      id: '3',
-      name: '카페찾아 삼만리',
-      platform: 'INSTAGRAM',
-      url: 'https://instagram.com/cafe_explorer',
-      subscribers: 89000,
-      totalVideos: 124,
-      updatedAt: '2024-01-14T18:00:00',
-      analysisStatus: 'inactive',
-      thumbnailUrl: 'https://placehold.co/100x100/8B5CF6/FFFFFF?text=T',
-      createdAt: '2024-01-01T00:00:00',
-      description: '전국 카페 탐방 콘텐츠',
-      keywords: ['카페', '맛집', '여행']
-    },
-    {
-      id: '4',
-      name: '냥냥펀치',
-      platform: 'YOUTUBE',
-      url: 'https://youtube.com/@nyangpunch',
-      subscribers: 567000,
-      totalVideos: 89,
-      updatedAt: '2024-01-15T11:00:00',
-      analysisStatus: 'error',
-      thumbnailUrl: 'https://placehold.co/100x100/F97316/FFFFFF?text=P',
-      createdAt: '2024-01-01T00:00:00',
-      description: '고양이 관련 콘텐츠',
-      keywords: ['고양이', '펫', '동물']
-    },
-    {
-      id: '5',
-      name: '캠핑은 장비빨',
-      platform: 'YOUTUBE',
-      url: 'https://youtube.com/@campinggear',
-      subscribers: 234000,
-      totalVideos: 156,
-      updatedAt: '2024-01-15T08:45:00',
-      analysisStatus: 'active',
-      thumbnailUrl: 'https://placehold.co/100x100/22C55E/FFFFFF?text=C',
-      createdAt: '2024-01-01T00:00:00',
-      description: '캠핑 장비 리뷰',
-      keywords: ['캠핑', '장비', '아웃도어']
-    }
-  ];
 
 
   useEffect(() => {
-    // API 데이터가 있으면 사용, 없으면 mock 데이터 사용
-    if (apiChannels.length > 0) {
-      setChannels(apiChannels);
-    } else {
-      setChannels(mockChannels);
-    }
+    // 실제 API 데이터만 사용
+    setChannels(apiChannels);
   }, [apiChannels]);
 
   // useEffect for fetching batches removed - now handled by group click
@@ -646,7 +566,7 @@ const ChannelManagementPage: React.FC = () => {
         {/* 🔍 Search and Filter Bar */}
         {activeTab === 'channels' && (
           <div className="p-6 border-b">
-            <SearchFilterBar
+            <SearchBar
               searchTerm={searchTerm}
               onSearchTermChange={setSearchTerm}
               placeholder={activeTab === 'channels' ? "채널 검색..." : "그룹 검색..."}
@@ -663,7 +583,7 @@ const ChannelManagementPage: React.FC = () => {
                 <option value="tiktok">TikTok</option>
                 <option value="instagram">Instagram</option>
               </select>
-            </SearchFilterBar>
+            </SearchBar>
             
             <div className="flex flex-wrap items-center justify-between gap-4 mt-4">
               <div className="flex flex-wrap items-center gap-4">
@@ -797,7 +717,7 @@ const ChannelManagementPage: React.FC = () => {
               <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))' }}>
                 {filteredChannels.map((channel) => (
                   <ChannelCard
-                    key={channel.id}
+                    key={channel._id}
                     channel={channel}
                     isSelected={channelSelection.isSelected(channel.id)}
                     onSelect={handleSelectToggle}
@@ -861,7 +781,7 @@ const ChannelManagementPage: React.FC = () => {
       </div>
 
       {/* 선택 모드 액션 바 */}
-      <SelectionActionBar
+      <ActionBar
         isVisible={isSelectMode}
         selectedCount={channelSelection.count}
         totalCount={filteredChannels.length}

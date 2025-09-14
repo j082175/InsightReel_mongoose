@@ -1,21 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Video, ExtendedVideo } from '../types';
-import { useVideos } from '../hooks/useApi';
-import VideoModal from '../components/VideoModal';
-import VideoOnlyModal from '../components/VideoOnlyModal';
-import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
-import VideoListItem from '../components/VideoListItem';
-import ChannelAnalysisModal from '../components/ChannelAnalysisModal';
-import VideoCard from '../components/VideoCard';
-import SearchFilterBar from '../components/SearchFilterBar';
+import { Video, ExtendedVideo } from '../shared/types';
+import { useVideos } from '../shared/hooks';
+import { VideoModal, VideoOnlyModal } from '../features/video-analysis';
+import { DeleteConfirmationModal } from '../shared/ui';
+import { VideoListItem } from '../features/video-analysis';
+import { ChannelAnalysisModal } from '../features/channel-management';
+import { VideoCard, SearchBar } from '../shared/components';
 
-import { PLATFORMS } from '../types/api';
-import { formatViews } from '../utils/formatters';
-import { getViewCount } from '../utils/videoUtils';
-import { useSelection } from '../hooks/useSelection';
-import { useSearch } from '../hooks/useSearch';
-import { useFilter } from '../hooks/useFilter';
-import SelectionActionBar from '../components/SelectionActionBar';
+import { PLATFORMS } from '../shared/types/api';
+import { formatViews } from '../shared/utils';
+import { getViewCount } from '../shared/utils/videoUtils';
+import { useSelection, useSearch, useFilter } from '../shared/hooks';
+import { ActionBar } from '../shared/components';
 
 const VideoArchivePage: React.FC = () => {
   const [archivedVideos, setArchivedVideos] = useState<ExtendedVideo[]>([]);
@@ -402,7 +398,7 @@ const VideoArchivePage: React.FC = () => {
       {/* 메인 콘텐츠 */}
       <div className="bg-white rounded-lg shadow">
         {/* 검색 및 필터 */}
-        <SearchFilterBar
+        <SearchBar
           searchTerm={searchResult.searchTerm}
           onSearchTermChange={searchResult.setSearchTerm}
           placeholder="영상, 채널, 태그 검색..."
@@ -434,7 +430,7 @@ const VideoArchivePage: React.FC = () => {
           >
             태그 관리
           </button>
-        </SearchFilterBar>
+        </SearchBar>
         
         {/* 컨트롤 및 통계 */}
         <div className="p-6 border-b">
@@ -475,7 +471,7 @@ const VideoArchivePage: React.FC = () => {
               <div className={`grid ${gridLayouts[gridSize] || gridLayouts[2]} gap-6`}>
                 {filteredVideos.map(video => (
                   <VideoCard 
-                    key={video.id} 
+                    key={video._id} 
                     video={video}
                     onClick={(video) => {
                       if (!isSelectMode) {
@@ -501,7 +497,7 @@ const VideoArchivePage: React.FC = () => {
               <div className="space-y-4">
                 {filteredVideos.map(video => (
                   <VideoListItem 
-                    key={video.id} 
+                    key={video._id} 
                     video={video}
                     onCardClick={setSelectedVideo}
                     onDeleteClick={handleDeleteClick}
@@ -522,7 +518,7 @@ const VideoArchivePage: React.FC = () => {
       </div>
 
       {/* 선택 모드 액션 바 */}
-      <SelectionActionBar
+      <ActionBar
         isVisible={isSelectMode}
         selectedCount={videoSelection.count}
         totalCount={filteredVideos.length}
