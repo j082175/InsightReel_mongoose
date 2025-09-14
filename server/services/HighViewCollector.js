@@ -52,7 +52,8 @@ class HighViewCollector {
       totalVideos: 0,
       trendingVideos: 0,
       quotaUsed: 0,
-      errors: []
+      errors: [],
+      videos: [] // 수집된 비디오 데이터 저장용
     };
 
     // 날짜 범위 설정 - 사용자가 직접 지정 가능
@@ -94,16 +95,26 @@ class HighViewCollector {
         }
 
         const channelResult = await this.collectChannelTrending(
-          channelId, 
-          publishedAfter, 
-          publishedBefore, 
+          channelId,
+          publishedAfter,
+          publishedBefore,
           config
         );
-        
+
         results.processedChannels++;
         results.totalVideos += channelResult.totalVideos;
         results.trendingVideos += channelResult.trendingVideos;
         results.quotaUsed = channelResult.quotaUsed;
+
+        // 채널별 비디오 데이터를 결과에 추가
+        if (channelResult.videos && channelResult.videos.length > 0) {
+          results.videos.push({
+            channelId: channelId,
+            videos: channelResult.videos,
+            totalVideos: channelResult.totalVideos,
+            trendingVideos: channelResult.trendingVideos
+          });
+        }
 
         ServerLogger.info(`✅ ${channelId}: ${channelResult.trendingVideos}/${channelResult.totalVideos}개 고조회수`);
 
