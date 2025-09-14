@@ -56,14 +56,14 @@ const BatchManagementPage: React.FC = () => {
   // Event Handlers
   const handleBatchClick = useCallback((batch: CollectionBatch) => {
     if (isSelectMode) {
-      if (selectedBatches.has(batch._id)) {
-        deselectBatch(batch._id);
+      if (selectedBatches.has(batch.id)) {
+        deselectBatch(batch.id);
       } else {
-        selectBatch(batch._id);
+        selectBatch(batch.id);
       }
     } else {
       // 배치 상세 보기 또는 영상 목록 열기
-      openVideoList(batch._id);
+      openVideoList(batch.id);
     }
   }, [isSelectMode, selectedBatches, deselectBatch, selectBatch, openVideoList]);
 
@@ -85,7 +85,7 @@ const BatchManagementPage: React.FC = () => {
 
   const handleBatchDelete = useCallback(async (batch: CollectionBatch) => {
     try {
-      await deleteBatch(batch._id);
+      await deleteBatch(batch.id);
       console.log('✅ 배치 삭제 성공:', batch.name);
     } catch (error) {
       console.error('❌ 배치 삭제 실패:', error);
@@ -250,13 +250,13 @@ const BatchManagementPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {batches.map((batch) => (
                   <BatchCard
-                    key={batch._id}
+                    key={batch.id}
                     batch={batch}
                     onClick={handleBatchClick}
                     onDelete={(b) => handleDeleteClick({ type: 'single', data: b })}
-                    onViewVideos={() => openVideoList(batch._id)}
+                    onViewVideos={() => openVideoList(batch.id)}
                     isSelectMode={isSelectMode}
-                    isSelected={selectedBatches.has(batch._id)}
+                    isSelected={selectedBatches.has(batch.id)}
                     onSelectToggle={handleSelectToggle}
                   />
                 ))}
@@ -309,7 +309,7 @@ const BatchManagementPage: React.FC = () => {
         onClose={closeVideoList}
         videos={batchVideos}
         loading={videoLoading}
-        batchName={batches.find(b => b._id === batchStore.selectedBatchId)?.name || ''}
+        batchName={batches.find(b => b.id === batchStore.selectedBatchId)?.name || ''}
       />
 
       <DeleteConfirmationModal

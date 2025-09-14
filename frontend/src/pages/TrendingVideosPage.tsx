@@ -232,7 +232,7 @@ const TrendingVideosPage: React.FC = () => {
             >
               <option value="">전체</option>
               {channelGroups.map(group => (
-                <option key={group._id} value={group._id}>{group.name}</option>
+                <option key={group.id} value={group.id}>{group.name}</option>
               ))}
             </select>
           </div>
@@ -325,11 +325,11 @@ const TrendingVideosPage: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {videos.map((video) => (
           <VideoCard
-            key={video._id}
+            key={video.id}
             video={video as any}
 onDelete={(deletedVideo) => {
               // UI에서 삭제된 비디오 제거 (VideoCard가 이미 DB 삭제 처리함)
-              setVideos(prev => prev.filter(v => v._id !== deletedVideo._id));
+              setVideos(prev => prev.filter(v => v.id !== deletedVideo.id));
               setPagination(prev => ({
                 ...prev,
                 total: prev.total - 1

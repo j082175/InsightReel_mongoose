@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Video, ExtendedVideo } from '../shared/types';
 import { useVideos } from '../shared/hooks';
 import { VideoModal, VideoOnlyModal } from '../features/video-analysis';
@@ -35,9 +35,15 @@ const VideoArchivePage: React.FC = () => {
     defaultSearchTerm: ''
   });
   
-  // Extract all available tags and categories for filter options
-  const allTags = Array.from(new Set(archivedVideos.flatMap(video => video.tags || [])));
-  const allCategories = Array.from(new Set(archivedVideos.map(video => video.category || '미분류')));
+  // Extract all available tags and categories for filter options (memoized)
+  const allTags = useMemo(() =>
+    Array.from(new Set(archivedVideos.flatMap(video => video.tags || []))),
+    [archivedVideos]
+  );
+  const allCategories = useMemo(() =>
+    Array.from(new Set(archivedVideos.map(video => video.category || '미분류'))),
+    [archivedVideos]
+  );
   
   const filterResult = useFilter(searchResult.filteredData, {
     defaultFilters: {
@@ -220,7 +226,7 @@ const VideoArchivePage: React.FC = () => {
 
         const extendedVideo: ExtendedVideo = {
           ...video,
-          id: video._id,  // MongoDB _id is always present
+          id: video.id,  // MongoDB _id is always present
           platform: (video.platform?.toUpperCase() === 'YOUTUBE' || video.platform === PLATFORMS.YOUTUBE) ? 'YOUTUBE' : 
                    (video.platform?.toUpperCase() === 'TIKTOK' || video.platform === 'TIKTOK') ? 'TIKTOK' : 
                    (video.platform?.toUpperCase() === 'INSTAGRAM' || video.platform === 'INSTAGRAM') ? 'INSTAGRAM' : 'YOUTUBE',
@@ -251,7 +257,7 @@ const VideoArchivePage: React.FC = () => {
   };
 
   const handleSelectAll = () => {
-    videoSelection.selectAll(filteredVideos.map(v => v._id));
+    videoSelection.selectAll(filteredVideos.map(v => v.id));
   };
 
   const handleDeleteClick = (item: { type: 'single' | 'bulk'; data?: Video; count?: number }) => {
@@ -260,9 +266,9 @@ const VideoArchivePage: React.FC = () => {
 
   const handleDeleteConfirm = () => {
     if (itemToDelete?.type === 'single' && itemToDelete.data) {
-      setArchivedVideos(archivedVideos.filter(v => v._id !== itemToDelete.data?._id));
+      setArchivedVideos(archivedVideos.filter(v => v.id !== itemToDelete.data?.id));
     } else if (itemToDelete?.type === 'bulk') {
-      setArchivedVideos(archivedVideos.filter(v => !videoSelection.selected.has(v._id)));
+      setArchivedVideos(archivedVideos.filter(v => !videoSelection.selected.has(v.id)));
       videoSelection.clear();
       setIsSelectMode(false);
     }
@@ -471,7 +477,7 @@ const VideoArchivePage: React.FC = () => {
               <div className={`grid ${gridLayouts[gridSize] || gridLayouts[2]} gap-6`}>
                 {filteredVideos.map((video, index) => (
                   <VideoCard
-                    key={video._id || video.id || `video-${index}`}
+                    key={video.id || video.id || `video-${index}`}
                     video={video}
                     onClick={(video) => {
                       if (!isSelectMode) {
@@ -487,7 +493,7 @@ const VideoArchivePage: React.FC = () => {
                     onInfoClick={(video) => !isSelectMode && setSelectedVideo(video)}
                     onChannelClick={setChannelToAnalyze}
                     isSelectMode={isSelectMode}
-                    isSelected={videoSelection.isSelected(video._id)}
+                    isSelected={videoSelection.isSelected(video.id)}
                     onSelectToggle={handleSelectToggle}
                     showArchiveInfo={true}
                   />
@@ -497,12 +503,12 @@ const VideoArchivePage: React.FC = () => {
               <div className="space-y-4">
                 {filteredVideos.map(video => (
                   <VideoListItem 
-                    key={video._id} 
+                    key={video.id} 
                     video={video}
                     onCardClick={setSelectedVideo}
                     onDeleteClick={handleDeleteClick}
                     isSelectMode={isSelectMode}
-                    isSelected={videoSelection.isSelected(video._id)}
+                    isSelected={videoSelection.isSelected(video.id)}
                     onSelectToggle={handleSelectToggle}
                   />
                 ))}

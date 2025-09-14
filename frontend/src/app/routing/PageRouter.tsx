@@ -22,6 +22,12 @@ import TrendingVideosPage from '../../pages/TrendingVideosPage';
 import BatchManagementPage from '../../pages/BatchManagementPage';
 import TrendingDashboardPage from '../../pages/TrendingDashboardPage';
 
+// Test pages (development only)
+import TestMenuPage from '../../pages/TestMenuPage';
+import SharedTestPage from '../../pages/SharedTestPage';
+import FeaturesTestPage from '../../pages/FeaturesTestPage';
+import IntegrationTestPage from '../../pages/IntegrationTestPage';
+
 // ===== Page Component Mapping =====
 const PAGE_COMPONENTS: Record<string, React.ComponentType> = {
   [ROUTES.DASHBOARD.id]: DashboardPage,
@@ -33,6 +39,13 @@ const PAGE_COMPONENTS: Record<string, React.ComponentType> = {
   [ROUTES.TRENDING_VIDEOS.id]: TrendingVideosPage,
   [ROUTES.TRENDING_BATCHES.id]: BatchManagementPage,
   [ROUTES.TRENDING_DASHBOARD.id]: TrendingDashboardPage,
+  // Test pages (development only)
+  ...(process.env.NODE_ENV === 'development' && {
+    'test': TestMenuPage,
+    'test-shared': SharedTestPage,
+    'test-features': FeaturesTestPage,
+    'test-integration': IntegrationTestPage,
+  }),
 };
 
 // ===== Router Component =====

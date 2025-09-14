@@ -381,7 +381,7 @@ export const useTrendingStore = (): TrendingStoreState & TrendingStoreActions =>
   }, []);
 
   const selectAllVideos = useCallback(() => {
-    const allVideoIds = filteredVideos.map(video => video._id);
+    const allVideoIds = filteredVideos.map(video => video.id);
     setState(prev => ({
       ...prev,
       selectedVideos: new Set(allVideoIds)

@@ -108,7 +108,13 @@ class SimpleYouTubeChannelAnalyzer {
                 // URL에서 채널명 추출 (fallback)
                 const urlMatch = window.location.href.match(/\/@([^\/]+)|\/channel\/([^\/]+)|\/user\/([^\/]+)/);
                 if (urlMatch) {
-                    metadata.channelName = urlMatch[1] || urlMatch[2] || urlMatch[3];
+                    const rawChannelName = urlMatch[1] || urlMatch[2] || urlMatch[3];
+                    // URL 디코딩으로 한글 채널명 처리
+                    try {
+                        metadata.channelName = decodeURIComponent(rawChannelName);
+                    } catch (e) {
+                        metadata.channelName = rawChannelName; // 디코딩 실패시 원본 사용
+                    }
                     metadata.author = metadata.channelName;
                     console.log('✅ URL에서 채널명 추출:', metadata.channelName);
                     channelFound = true;
@@ -147,7 +153,16 @@ class SimpleYouTubeChannelAnalyzer {
     extractChannelIdFromUrl() {
         const url = window.location.href;
         const match = url.match(/\/channel\/([^\/]+)|\/user\/([^\/]+)|\/@([^\/]+)/);
-        return match ? (match[1] || match[2] || match[3]) : null;
+        if (match) {
+            const rawChannelId = match[1] || match[2] || match[3];
+            // URL 디코딩으로 한글 채널 ID 처리
+            try {
+                return decodeURIComponent(rawChannelId);
+            } catch (e) {
+                return rawChannelId; // 디코딩 실패시 원본 사용
+            }
+        }
+        return null;
     }
 
     // 채널 정보 모달 표시
@@ -1035,11 +1050,24 @@ class SimpleYouTubeChannelAnalyzer {
                 })
             });
 
+            const result = await response.json();
+
             if (!response.ok) {
+                // 409 Conflict (중복 채널) 처리
+                if (response.status === 409) {
+                    console.log('ℹ️ 이미 등록된 채널:', result.message);
+                    submitBtn.textContent = '⚠️ 이미 등록됨';
+                    submitBtn.style.background = '#ffc107';
+
+                    setTimeout(() => {
+                        document.getElementById('channel-collect-modal').remove();
+                    }, 2000);
+                    return;
+                }
+
                 throw new Error(`서버 오류: ${response.status} ${response.statusText}`);
             }
 
-            const result = await response.json();
             console.log('✅ 채널 수집 완료:', result);
 
             // 성공 표시

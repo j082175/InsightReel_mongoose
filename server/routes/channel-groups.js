@@ -6,6 +6,7 @@ const CollectionBatch = require('../models/CollectionBatch');
 const GroupTrendingCollector = require('../services/GroupTrendingCollector');
 const { HTTP_STATUS_CODES, ERROR_CODES, API_MESSAGES } = require('../config/api-messages');
 const { ServerLogger } = require('../utils/logger');
+const { normalizeChannelResponse } = require('../utils/response-normalizer');
 
 /**
  * 🎯 채널 그룹 CRUD API
@@ -29,13 +30,16 @@ router.get('/', async (req, res) => {
     const groups = await ChannelGroup.find(query)
       .sort({ updatedAt: -1 })
       .lean();
-    
-    ServerLogger.info(`📋 채널 그룹 조회: ${groups.length}개`);
-    
+
+    // _id → id 변환 적용
+    const normalizedGroups = groups.map(group => normalizeChannelResponse(group));
+
+    ServerLogger.info(`📋 채널 그룹 조회: ${normalizedGroups.length}개`);
+
     res.status(HTTP_STATUS_CODES.OK).json({
       success: true,
-      data: groups,
-      count: groups.length
+      data: normalizedGroups,
+      count: normalizedGroups.length
     });
     
   } catch (error) {
@@ -63,7 +67,7 @@ router.get('/:id', async (req, res) => {
     
     res.status(HTTP_STATUS_CODES.OK).json({
       success: true,
-      data: group
+      data: normalizeChannelResponse(group)
     });
     
   } catch (error) {
@@ -235,6 +239,7 @@ router.post('/:id/collect', async (req, res) => {
     }
 
     const collector = new GroupTrendingCollector();
+    await collector.initialize();
     const result = await collector.collectGroupTrending(req.params.id, {
       daysBack,
       minViews,
@@ -265,6 +270,7 @@ router.post('/collect-all', async (req, res) => {
     const { daysBack = 7, minViews = 10000, includeShorts = true, includeMidform = true, includeLongForm = true } = req.body;
 
     const collector = new GroupTrendingCollector();
+    await collector.initialize();
     const results = await collector.collectAllActiveGroups({
       daysBack,
       minViews,
@@ -376,7 +382,7 @@ router.post('/:id/channels', async (req, res) => {
 
     res.status(HTTP_STATUS_CODES.OK).json({
       success: true,
-      data: group,
+      data: normalizeChannelResponse(group),
       message: `채널 ${action === 'add' ? '추가' : '제거'}가 완료되었습니다.`
     });
 
@@ -554,6 +560,7 @@ router.post('/collect-multiple', async (req, res) => {
 
     // GroupTrendingCollector 사용해서 수집
     const collector = new GroupTrendingCollector();
+    await collector.initialize();
     const result = await collector.collectFromChannels({
       channels: uniqueChannels,
       daysBack: days,

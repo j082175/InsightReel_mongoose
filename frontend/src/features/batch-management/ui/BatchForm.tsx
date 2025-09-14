@@ -159,17 +159,17 @@ const BatchForm: React.FC<BatchFormProps> = ({
                 </label>
                 <div className="max-h-40 overflow-y-auto border border-gray-300 rounded p-2">
                   {channelGroups.map(group => (
-                    <label key={group._id} className="flex items-center py-1">
+                    <label key={group.id} className="flex items-center py-1">
                       <input
                         type="checkbox"
-                        checked={formData.selectedGroups.includes(group._id)}
+                        checked={formData.selectedGroups.includes(group.id)}
                         onChange={(e) => {
                           const checked = e.target.checked;
                           setFormData(prev => ({
                             ...prev,
                             selectedGroups: checked
-                              ? [...prev.selectedGroups, group._id]
-                              : prev.selectedGroups.filter(id => id !== group._id)
+                              ? [...prev.selectedGroups, group.id]
+                              : prev.selectedGroups.filter(id => id !== group.id)
                           }));
                         }}
                         className="mr-2"
@@ -190,17 +190,17 @@ const BatchForm: React.FC<BatchFormProps> = ({
                 </label>
                 <div className="max-h-40 overflow-y-auto border border-gray-300 rounded p-2">
                   {channels.map(channel => (
-                    <label key={channel._id} className="flex items-center py-1">
+                    <label key={channel.id} className="flex items-center py-1">
                       <input
                         type="checkbox"
-                        checked={formData.selectedChannels.includes(channel._id)}
+                        checked={formData.selectedChannels.includes(channel.id)}
                         onChange={(e) => {
                           const checked = e.target.checked;
                           setFormData(prev => ({
                             ...prev,
                             selectedChannels: checked
-                              ? [...prev.selectedChannels, channel._id]
-                              : prev.selectedChannels.filter(id => id !== channel._id)
+                              ? [...prev.selectedChannels, channel.id]
+                              : prev.selectedChannels.filter(id => id !== channel.id)
                           }));
                         }}
                         className="mr-2"

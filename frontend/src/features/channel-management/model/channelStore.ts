@@ -9,6 +9,8 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { shallow } from 'zustand/shallow';
+import { useMemo } from 'react';
 import { Channel } from '../../../shared/types';
 
 // ===== Channel Management State Types =====
@@ -80,7 +82,6 @@ export interface ChannelManagementActions {
   closeEditModal: () => void;
 
   // Computed
-  getFilteredChannels: () => Channel[];
   getChannelsByGroup: (groupId: string) => Channel[];
   getChannelStats: () => {
     totalChannels: number;
@@ -199,7 +200,56 @@ export const useChannelManagementStore = create<
         ),
 
       selectAllChannels: () => {
-        const filteredChannels = get().getFilteredChannels();
+        const state = get();
+        const { channels, filters } = state;
+
+        // 방어적 코딩: channels가 배열인지 확인
+        if (!Array.isArray(channels)) {
+          return;
+        }
+
+        const filteredChannels = channels.filter((channel) => {
+          // Platform filter
+          if (filters.platform !== 'ALL' && channel.platform !== filters.platform) {
+            return false;
+          }
+
+          // Content type filter
+          if (
+            filters.contentType !== 'ALL' &&
+            channel.categoryInfo?.majorCategory !== filters.contentType
+          ) {
+            return false;
+          }
+
+          // Search filter
+          if (filters.searchTerm) {
+            const searchLower = filters.searchTerm.toLowerCase();
+            const matchesName = channel.name?.toLowerCase().includes(searchLower);
+            const matchesKeywords = channel.keywords?.some((keyword) =>
+              keyword.toLowerCase().includes(searchLower)
+            );
+
+            if (!matchesName && !matchesKeywords) {
+              return false;
+            }
+          }
+
+          // Subscriber range filter
+          const subscribers = channel.subscribers || 0;
+          if (subscribers < filters.subscriberRange.min || subscribers > filters.subscriberRange.max) {
+            return false;
+          }
+
+          // Analysis status filter
+          if (filters.analysisStatus !== 'ALL') {
+            // Skip analysis status filtering for now (not implemented in interface)
+            // TODO: Implement analysis status logic when needed
+          }
+
+          return true;
+        });
+
         set(
           { selectedChannels: filteredChannels.map((channel) => channel.channelId) },
           false,
@@ -247,53 +297,7 @@ export const useChannelManagementStore = create<
         set({ editingChannel: channel }, false, 'openEditModal'),
       closeEditModal: () => set({ editingChannel: null }, false, 'closeEditModal'),
 
-      // Computed
-      getFilteredChannels: () => {
-        const { channels, filters } = get();
-
-        return channels.filter((channel) => {
-          // Platform filter
-          if (filters.platform !== 'ALL' && channel.platform !== filters.platform) {
-            return false;
-          }
-
-          // Content type filter
-          if (
-            filters.contentType !== 'ALL' &&
-            channel.contentType !== filters.contentType
-          ) {
-            return false;
-          }
-
-          // Analysis status filter
-          if (
-            filters.analysisStatus !== 'ALL' &&
-            channel.analysisStatus !== filters.analysisStatus
-          ) {
-            return false;
-          }
-
-          // Subscriber range filter
-          const subscribers = channel.subscribers || 0;
-          if (
-            subscribers < filters.subscriberRange.min ||
-            subscribers > filters.subscriberRange.max
-          ) {
-            return false;
-          }
-
-          // Search term filter
-          if (filters.searchTerm) {
-            const searchLower = filters.searchTerm.toLowerCase();
-            return (
-              channel.name.toLowerCase().includes(searchLower) ||
-              channel.description?.toLowerCase().includes(searchLower)
-            );
-          }
-
-          return true;
-        });
-      },
+      // Computed Methods
 
       getChannelsByGroup: (groupId) => {
         const { channels, channelGroups } = get();
@@ -341,7 +345,57 @@ export const useChannelManagementStore = create<
  * 필터링된 채널 목록을 반환합니다
  */
 export const useFilteredChannels = () => {
-  return useChannelManagementStore((state) => state.getFilteredChannels());
+  const channels = useChannelManagementStore(state => state.channels);
+  const filters = useChannelManagementStore(state => state.filters);
+
+  return useMemo(() => {
+    // 방어적 코딩: channels가 배열인지 확인
+    if (!Array.isArray(channels)) {
+      return [];
+    }
+
+    return channels.filter((channel) => {
+      // Platform filter
+      if (filters.platform !== 'ALL' && channel.platform !== filters.platform) {
+        return false;
+      }
+
+      // Content type filter
+      if (
+        filters.contentType !== 'ALL' &&
+        channel.categoryInfo?.majorCategory !== filters.contentType
+      ) {
+        return false;
+      }
+
+      // Search filter
+      if (filters.searchTerm) {
+        const searchLower = filters.searchTerm.toLowerCase();
+        const matchesName = channel.name?.toLowerCase().includes(searchLower);
+        const matchesKeywords = channel.keywords?.some((keyword) =>
+          keyword.toLowerCase().includes(searchLower)
+        );
+
+        if (!matchesName && !matchesKeywords) {
+          return false;
+        }
+      }
+
+      // Subscriber range filter
+      const subscribers = channel.subscribers || 0;
+      if (subscribers < filters.subscriberRange.min || subscribers > filters.subscriberRange.max) {
+        return false;
+      }
+
+      // Analysis status filter
+      if (filters.analysisStatus !== 'ALL') {
+        // Skip analysis status filtering for now (not implemented in interface)
+        // TODO: Implement analysis status logic when needed
+      }
+
+      return true;
+    });
+  }, [channels, filters]);
 };
 
 /**

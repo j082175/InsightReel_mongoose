@@ -14,12 +14,17 @@ interface ChannelGroup {
   updatedAt?: string;
 }
 
+interface Channel {
+  channelId: string;
+  name: string;
+}
+
 interface ChannelGroupModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (group: ChannelGroup) => void;
   editingGroup?: ChannelGroup | null;
-  availableChannels?: string[];
+  availableChannels?: Channel[];
 }
 
 const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
@@ -45,7 +50,11 @@ const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
   useEffect(() => {
     if (editingGroup) {
       setFormData(editingGroup);
-      channelSelection.setSelected(new Set(editingGroup.channels));
+      // editingGroup.channels가 문자열 배열인 경우 (기존 데이터)
+      const channelIds = Array.isArray(editingGroup.channels)
+        ? editingGroup.channels
+        : [];
+      channelSelection.setSelected(new Set(channelIds));
     } else {
       setFormData({
         name: '',
@@ -81,8 +90,8 @@ const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
     }));
   };
 
-  const toggleChannel = (channel: string) => {
-    channelSelection.toggle(channel);
+  const toggleChannel = (channelId: string) => {
+    channelSelection.toggle(channelId);
   };
   
   // channelSelection이 변경될 때 formData 동기화
@@ -231,11 +240,11 @@ const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
                       <label key={index} className="flex items-center">
                         <input
                           type="checkbox"
-                          checked={channelSelection.isSelected(channel)}
-                          onChange={() => toggleChannel(channel)}
+                          checked={channelSelection.isSelected(channel.channelId)}
+                          onChange={() => toggleChannel(channel.channelId)}
                           className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                         />
-                        <span className="ml-2 text-sm text-gray-700">{channel}</span>
+                        <span className="ml-2 text-sm text-gray-700">{channel.name}</span>
                       </label>
                     ))}
                   </div>

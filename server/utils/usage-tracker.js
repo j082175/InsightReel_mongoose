@@ -53,12 +53,19 @@ class UsageTracker {
         try {
             // 동기적으로 첫 번째 키만 조회 (비동기 초기화 없이)
             const apiKeysData = require('../data/api-keys.json');
-            const activeKeys = apiKeysData.filter(key => key.status === 'active');
+
+            // 방어적 프로그래밍: apiKeysData가 배열인지 확인
+            if (!Array.isArray(apiKeysData)) {
+                throw new Error('API 키 데이터 형식이 올바르지 않습니다');
+            }
+
+            const activeKeys = apiKeysData.filter(key => key && key.status === 'active');
             if (activeKeys.length > 0) {
                 return activeKeys[0].apiKey;
             }
         } catch (error) {
             // api-keys.json 파일이 없거나 읽기 실패
+            ServerLogger.warn('API 키 파일 로드 실패:', error.message, 'USAGE-TRACKER');
         }
         throw new Error('활성 API 키를 찾을 수 없습니다. ApiKeyManager에 키를 추가하세요.');
     }

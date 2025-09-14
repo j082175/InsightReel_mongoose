@@ -51,7 +51,7 @@ router.post('/add-url', async (req, res) => {
     if (detectedPlatform === PLATFORMS.YOUTUBE) {
       // YouTube 채널 처리
       const channelCollector = new YouTubeChannelDataCollector();
-      
+
       // URL에서 채널 ID 추출
       if (url.includes('/channel/')) {
         channelId = url.split('/channel/')[1].split('/')[0].split('?')[0];
@@ -64,7 +64,20 @@ router.post('/add-url', async (req, res) => {
         channelId = customUrl;
         channelName = customUrl;
       }
-      
+
+      // 기본값 설정 (필수 필드 보장)
+      if (!channelId) {
+        return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+          success: false,
+          error: ERROR_CODES.INVALID_REQUEST,
+          message: 'YouTube URL에서 채널 ID를 추출할 수 없습니다.'
+        });
+      }
+
+      if (!channelName) {
+        channelName = channelId; // channelId를 name으로 사용
+      }
+
       // YouTube API로 채널 정보 수집 시도
       try {
         const channelInfo = await channelCollector.getChannelData(channelId);
@@ -77,10 +90,24 @@ router.post('/add-url', async (req, res) => {
             subscribers: parseInt(channelInfo.statistics?.subscriberCount) || 0,
             totalViews: parseInt(channelInfo.statistics?.viewCount) || 0,
             totalVideos: parseInt(channelInfo.statistics?.videoCount) || 0,
-            description: channelInfo.snippet?.description,
-            thumbnailUrl: channelInfo.snippet?.thumbnails?.high?.url,
-            country: channelInfo.snippet?.country,
-            publishedAt: channelInfo.snippet?.publishedAt,
+            description: channelInfo.snippet?.description || '',
+            thumbnailUrl: channelInfo.snippet?.thumbnails?.high?.url || '',
+            country: channelInfo.snippet?.country || '',
+            publishedAt: channelInfo.snippet?.publishedAt || '',
+            ...metadata
+          };
+        } else {
+          // API 호출은 성공했지만 채널 정보가 없는 경우
+          channelData = {
+            channelId: channelId,
+            name: channelName,
+            url: url,
+            platform: PLATFORMS.YOUTUBE,
+            subscribers: 0,
+            totalViews: 0,
+            totalVideos: 0,
+            description: '',
+            thumbnailUrl: '',
             ...metadata
           };
         }
@@ -88,9 +115,14 @@ router.post('/add-url', async (req, res) => {
         ServerLogger.warn(`YouTube API 호출 실패, 기본 정보만 저장: ${apiError.message}`);
         channelData = {
           channelId: channelId,
-          name: channelName || channelId,
+          name: channelName,
           url: url,
           platform: PLATFORMS.YOUTUBE,
+          subscribers: 0,
+          totalViews: 0,
+          totalVideos: 0,
+          description: '',
+          thumbnailUrl: '',
           ...metadata
         };
       }
@@ -101,12 +133,26 @@ router.post('/add-url', async (req, res) => {
       const urlParts = url.split('/').filter(p => p);
       channelId = urlParts[urlParts.length - 1].split('?')[0];
       channelName = channelId;
-      
+
+      // 기본값 설정 (필수 필드 보장)
+      if (!channelId) {
+        return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+          success: false,
+          error: ERROR_CODES.INVALID_REQUEST,
+          message: `${detectedPlatform} URL에서 채널 ID를 추출할 수 없습니다.`
+        });
+      }
+
       channelData = {
         channelId: channelId,
-        name: channelName,
+        name: channelName || channelId,
         url: url,
         platform: detectedPlatform,
+        subscribers: 0,
+        totalViews: 0,
+        totalVideos: 0,
+        description: '',
+        thumbnailUrl: '',
         ...metadata
       };
     }

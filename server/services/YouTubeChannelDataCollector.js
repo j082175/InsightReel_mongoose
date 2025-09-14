@@ -156,7 +156,7 @@ class YouTubeChannelDataCollector {
                 title: channel.snippet.title,
                 description: channel.snippet.description,
                 customUrl: channel.snippet.customUrl,
-                uploadDate: channel.snippet.publishedAt,
+                publishedAt: channel.snippet.publishedAt,
                 thumbnailUrl: channel.snippet.thumbnails,
                 channelCountry: channel.snippet.country,
                 language: channel.snippet.defaultLanguage,

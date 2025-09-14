@@ -65,10 +65,10 @@ const DashboardPage: React.FC = () => {
 
   const handleVideoClick = (video: Video) => {
     if (isSelectMode) {
-      if (selectedVideos.has(video._id)) {
-        deselectVideo(video._id);
+      if (selectedVideos.has(video.id)) {
+        deselectVideo(video.id);
       } else {
-        selectVideo(video._id);
+        selectVideo(video.id);
       }
     } else {
       if (video.platform === PLATFORMS.YOUTUBE) {
@@ -97,7 +97,7 @@ const DashboardPage: React.FC = () => {
 
   const handleVideoDelete = async (video: Video) => {
     try {
-      await deleteVideo(video._id);
+      await deleteVideo(video.id);
       console.log('✅ 비디오 삭제 성공:', video.title);
     } catch (error) {
       console.error('❌ 비디오 삭제 실패:', error);
@@ -243,14 +243,14 @@ const DashboardPage: React.FC = () => {
               <div className={`grid ${gridLayouts[gridSize] || gridLayouts[2]} gap-6`}>
                 {videos.map((video) => (
                   <VideoCard
-                    key={video._id}
+                    key={video.id}
                     video={video}
                     onClick={handleVideoClick}
                     onDelete={handleVideoDelete}
                     onInfoClick={setSelectedVideo}
                     onChannelClick={setChannelToAnalyze}
                     isSelectMode={isSelectMode}
-                    isSelected={selectedVideos.has(video._id)}
+                    isSelected={selectedVideos.has(video.id)}
                     onSelectToggle={handleSelectToggle}
                   />
                 ))}

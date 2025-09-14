@@ -1,6 +1,7 @@
 {
   "name": "insightreel",
   "version": "1.0.0",
+  "type": "commonjs",
   "description": "InsightReel - 자동 영상 저장 및 AI 분석 도구",
   "main": "server/index.js",
   "scripts": {

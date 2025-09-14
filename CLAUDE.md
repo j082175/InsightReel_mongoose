@@ -542,6 +542,59 @@ const VideoCard = ({ video }) => {
 
 ---
 
+## 🔑 **API 키 관리 시스템 일원화** ✅ **[2024.09 완료]**
+
+### **🎯 주요 성과**
+기존 이중 API 키 관리 시스템(환경변수 + 데이터 파일)을 **ApiKeyManager 중앙집중식 시스템**으로 완전 통합
+
+### **🏗️ 마이그레이션 완료 내역**
+```javascript
+// ✅ 변경 후: ApiKeyManager 중앙 관리 (data/api-keys.json)
+const apiKeyManager = require('./ApiKeyManager');
+await apiKeyManager.initialize();
+const activeKeys = await apiKeyManager.getActiveApiKeys(); // 3개 활성 키 관리
+
+// ❌ 변경 전: 환경변수 직접 접근 (분산 관리)
+const apiKey = process.env.GOOGLE_API_KEY;
+const youtubeKey = process.env.YOUTUBE_API_KEY;
+```
+
+### **🛠️ 마이그레이션된 핵심 서비스**
+1. **server/services/AIAnalyzer.js** - Gemini API 키 관리
+2. **server/services/YouTubeChannelService.js** - YouTube Data API 키 관리
+3. **server/utils/unified-gemini-manager.js** - 통합 Gemini 관리자
+4. **server/config/config-validator.js** - 설정 검증 로직
+
+### **✅ 시스템 안정성 검증**
+- **서버 시작**: 3회 연속 성공 (포트 3000)
+- **API 엔드포인트**: 모든 핵심 기능 200 응답
+- **MongoDB 연결**: Atlas 클라우드 DB 연결 유지
+- **실시간 사용량 추적**: ApiKeyManager 사용량 모니터링 정상
+
+### **🎯 주요 이점**
+- **단일 진실 출처**: data/api-keys.json 파일 하나에서 모든 API 키 관리
+- **동적 키 로딩**: 서버 재시작 없이 API 키 추가/변경 가능
+- **사용량 추적**: 키별 사용 통계 및 할당량 관리
+- **장애 복구**: 키 실패 시 자동 대체 키 사용
+- **보안 향상**: 환경변수 노출 위험 제거
+
+### **📝 .env 파일 변경사항**
+```bash
+# ✅ 변경 후: 백업 주석으로 보존
+# YouTube Data API 설정 (data/api-keys.json에서 관리됨)
+# YOUTUBE_API_KEY=AIzaSy... (주석 처리)
+
+# ✅ 변경 후: ApiKeyManager가 자동 관리
+# === API 키 완전 제거됨 (ApiKeyManager에서 관리) ===
+```
+
+### **⚠️ 개발자 주의사항**
+- **환경변수 참조 금지**: `process.env.GOOGLE_API_KEY` 직접 접근 금지
+- **ApiKeyManager 필수 사용**: 모든 API 키는 ApiKeyManager를 통해서만 접근
+- **비동기 초기화**: `await apiKeyManager.initialize()` 필수 호출
+
+---
+
 ## 📋 **CRUD API 엔드포인트**
 
 ### **추가 기능**
@@ -597,21 +650,31 @@ const VideoCard = ({ video }) => {
 }
 ```
 
-### **✅ 프론트엔드에서 사용법 (근본적 해결로 단순화)**
+### **✅ 프론트엔드에서 사용법 (서버 response-normalizer.js 기반)**
 ```typescript
-// ✅ 직접 접근 (필드 통일로 항상 안전)
-const videoId = video.id;              // 항상 존재 (MongoDB _id → id 변환됨)
-const views = video.views;             // 항상 존재 (모든 계층 통일)
-const thumbnail = video.thumbnailUrl;  // 항상 존재 (모든 계층 통일)
+// ✅ 직접 접근 (서버에서 _id → id 변환 완료)
+const videoId = video.id;              // MongoDB _id가 id로 변환됨 (response-normalizer.js)
+const views = video.views;             // 단일 조회수 필드
+const thumbnail = video.thumbnailUrl;  // 단일 썸네일 필드
 
-// ✅ 채널 정보 접근 (혼란 제거됨)
-const mongoDocId = channel._id;        // MongoDB 문서 ID
-const youtubeChannelId = channel.channelId;  // YouTube 채널 ID
+// ✅ 채널 정보 접근 (서버 변환 후)
+const channelDocId = channel.id;       // MongoDB _id → id 변환
+const youtubeChannelId = channel.channelId;  // 비즈니스 채널 ID
 const channelName = channel.name;      // 채널명
 
-// ❌ Fallback 패턴 완전 불필요 (근본적 원인 해결)
-// const id = video.videoId || video.id || video._id;    // 불필요!
-// const channelId = getChannelId(channel);              // 불필요!
+// ❌ _id 필드는 프론트엔드에서 사용 금지 (서버에서 제거됨)
+// const videoId = video._id;    // undefined! 서버에서 제거됨
+// const channelId = channel._id; // undefined! 서버에서 제거됨
+```
+
+### **🔄 서버 변환 과정 (server/utils/response-normalizer.js)**
+```javascript
+// MongoDB → API 응답 변환
+const { _id, __v, ...cleanVideo } = video;  // _id 추출 및 제거
+return {
+  id: _id ? _id.toString() : undefined,     // _id → id 변환
+  ...cleanVideo                             // 나머지 필드 유지
+};
 ```
 
 ### **🎯 핵심 개선사항**

@@ -15,11 +15,30 @@ class VideoController {
         this.videoProcessor = new VideoProcessor();
         this.aiAnalyzer = new AIAnalyzer();
         this.sheetsManager = new SheetsManager();
+        this._initialized = false;
         this.stats = {
             total: 0,
             today: 0,
             lastReset: new Date().toDateString(),
         };
+
+        // 비동기 초기화 시작
+        this.initialize();
+    }
+
+    /**
+     * 비동기 초기화
+     */
+    async initialize() {
+        if (this._initialized) return;
+
+        try {
+            await this.videoProcessor.initialize();
+            this._initialized = true;
+            ServerLogger.info('✅ VideoController 초기화 완료');
+        } catch (error) {
+            ServerLogger.error('❌ VideoController 초기화 실패:', error);
+        }
     }
 
     /**

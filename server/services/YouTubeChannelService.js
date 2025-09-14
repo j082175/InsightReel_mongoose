@@ -173,7 +173,7 @@ class YouTubeChannelService {
                 parseInt(statistics.videoCount) || 0,
             channelViews:
                 parseInt(statistics.viewCount) || 0,
-            uploadDate: snippet.publishedAt || null,
+            publishedAt: snippet.publishedAt || null,
             platform: 'YOUTUBE',
             channelUrl: `https://youtube.com/channel/${channelData.id}`,
             youtubeHandleUrl: snippet.customUrl

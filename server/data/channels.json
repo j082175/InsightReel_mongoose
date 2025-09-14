@@ -96,7 +96,7 @@
     "thumbnailUrl": "https://yt3.ggpht.com/OmhtuN6bVj4IdzkiQr2ETyi8QdbhinFn-NB7FYR9x3tCnys_HzonrduJQQxq1huVWVi1EgSztw=s800-c-k-c0x00ffffff-no-rj",
     "totalVideos": 92,
     "totalViews": 129180453,
-    "updatedAt": "Sun Sep 14 2025 15:14:07 GMT+0900 (대한민국 표준시)",
+    "updatedAt": "Sun Sep 14 2025 15:19:21 GMT+0900 (대한민국 표준시)",
     "uploadFrequency": {
       "pattern": "daily",
       "avgDaysBetweenUploads": 0.98,
@@ -110,7 +110,8 @@
       "last90Days": 129180453,
       "lastYear": 129180453
     },
-    "channelId": "UCyE2OYrMxxdy69cy5lUjY3Q"
+    "channelId": "UCyE2OYrMxxdy69cy5lUjY3Q",
+    "publishedAt": "2020-08-16T05:58:57.249Z"
   },
   {
     "_id": "68c56efd0f7b3323741008ea",
@@ -209,7 +210,7 @@
     "thumbnailUrl": "https://yt3.ggpht.com/kLxA7rciY21x7nXv0-vweCXSOHW2AqqiWu2_-4QBThMpqG6wYYsB90H77avk5V4xkviSwace=s800-c-k-c0x00ffffff-no-rj",
     "totalVideos": 126,
     "totalViews": 43178835,
-    "updatedAt": "Sun Sep 14 2025 15:14:07 GMT+0900 (대한민국 표준시)",
+    "updatedAt": "Sun Sep 14 2025 15:19:21 GMT+0900 (대한민국 표준시)",
     "uploadFrequency": {
       "pattern": "multiple_per_week",
       "avgDaysBetweenUploads": 1.08,
@@ -223,7 +224,8 @@
       "last90Days": 19219657,
       "lastYear": 43178835
     },
-    "channelId": "UCMEoY3vCwq_1Oe6QiyLTiZQ"
+    "channelId": "UCMEoY3vCwq_1Oe6QiyLTiZQ",
+    "publishedAt": "2025-04-23T03:40:44.112Z"
   },
   {
     "_id": "68c592d00f7b33237410095a",
@@ -322,7 +324,7 @@
     "thumbnailUrl": "https://yt3.ggpht.com/LldY8OmtXJBA2tXOL1_1xUrKo4jjbS2b8CN1s-g9voi1l80NBOAXF2bMl6d1-92Al5PnhZAPhtU=s800-c-k-c0x00ffffff-no-rj",
     "totalVideos": 127,
     "totalViews": 282933885,
-    "updatedAt": "Sun Sep 14 2025 15:14:08 GMT+0900 (대한민국 표준시)",
+    "updatedAt": "Sun Sep 14 2025 15:19:21 GMT+0900 (대한민국 표준시)",
     "uploadFrequency": {
       "pattern": "multiple_per_week",
       "avgDaysBetweenUploads": 2.95,
@@ -336,7 +338,8 @@
       "last90Days": 2252557,
       "lastYear": 279519674
     },
-    "channelId": "UC8a0z8br6wMCZxoEufIHVjQ"
+    "channelId": "UC8a0z8br6wMCZxoEufIHVjQ",
+    "publishedAt": "2024-08-22T14:32:51.785Z"
   },
   {
     "_id": "68c6503b0f7b332374100ae5",
@@ -393,7 +396,7 @@
     "thumbnailUrl": "https://yt3.ggpht.com/BKQ3-8AYb3e6BScwLIe-oULU7xZP63O5oZ_7B8pPkzZCI9Dv2jqYGYh65GTjGUr8cWbZtFv3=s800-c-k-c0x00ffffff-no-rj",
     "totalVideos": 200,
     "totalViews": 1376967846,
-    "updatedAt": "Sun Sep 14 2025 15:14:08 GMT+0900 (대한민국 표준시)",
+    "updatedAt": "Sun Sep 14 2025 15:19:22 GMT+0900 (대한민국 표준시)",
     "uploadFrequency": {
       "pattern": "bi_weekly",
       "avgDaysBetweenUploads": 12,
@@ -406,7 +409,8 @@
       "last30Days": 1365527,
       "last90Days": 4043333,
       "lastYear": 69210809
-    }
+    },
+    "publishedAt": "2006-10-18T17:19:23.000Z"
   },
   {
     "_id": "68c65dd40f7b332374100b0c",
@@ -454,7 +458,7 @@
     "thumbnailUrl": "https://yt3.ggpht.com/r5d7TdHvYW4QjFmUAgk9dQx-bMemAXrc9_Ptv0sVQfzxcVQ6WgxE3ttH4G43yUoBi4ZWbnkS=s800-c-k-c0x00ffffff-no-rj",
     "totalVideos": 7,
     "totalViews": 3991360,
-    "updatedAt": "Sun Sep 14 2025 15:16:50 GMT+0900 (대한민국 표준시)",
+    "updatedAt": "Sun Sep 14 2025 15:19:22 GMT+0900 (대한민국 표준시)",
     "uploadFrequency": {
       "pattern": "weekly",
       "avgDaysBetweenUploads": 6.17,
@@ -467,6 +471,376 @@
       "last30Days": 2263965,
       "last90Days": 3991360,
       "lastYear": 3991360
+    },
+    "publishedAt": "2025-07-28T01:37:24.954Z"
+  },
+  {
+    "_id": "68c6ae16355ed652580f1fa4",
+    "channelId": "Thisvideoooo",
+    "name": "Thisvideoooo",
+    "url": "https://www.youtube.com/@Thisvideoooo/shorts",
+    "platform": "YOUTUBE",
+    "description": "",
+    "thumbnailUrl": "",
+    "customUrl": "",
+    "keywords": [],
+    "aiTags": [],
+    "deepInsightTags": [],
+    "allTags": [],
+    "clusterIds": [],
+    "suggestedClusters": [],
+    "dailyUploadRate": 0,
+    "avgDurationSeconds": 0,
+    "avgDurationFormatted": "",
+    "shortFormRatio": 0,
+    "averageViewsPerVideo": 0,
+    "uploadFrequency": {
+      "avgDaysBetweenUploads": 0,
+      "consistency": 0
+    },
+    "mostViewedVideo": {
+      "videoId": "",
+      "title": "",
+      "thumbnailUrl": "",
+      "viewCount": 0,
+      "likeCount": 0,
+      "commentCount": 0,
+      "duration": "",
+      "durationSeconds": 0,
+      "tags": [],
+      "categoryId": ""
+    },
+    "analysisVersion": "",
+    "version": 0,
+    "lastAnalyzedAt": "2025-09-14T11:59:18.101Z",
+    "collectedAt": "2025-09-14T11:59:18.101Z",
+    "createdAt": "2025-09-14T11:59:18.101Z",
+    "updatedAt": "2025-09-14T11:59:18.101Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6b42ffdcf5343a50570f2",
+    "channelId": "%ED%8F%AC%ED%94%84%ED%8B%B0%EB%B9%84",
+    "name": "%ED%8F%AC%ED%94%84%ED%8B%B0%EB%B9%84",
+    "url": "https://www.youtube.com/@%ED%8F%AC%ED%94%84%ED%8B%B0%EB%B9%84",
+    "platform": "YOUTUBE",
+    "description": "",
+    "thumbnailUrl": "",
+    "customUrl": "",
+    "keywords": [],
+    "aiTags": [],
+    "deepInsightTags": [],
+    "allTags": [],
+    "clusterIds": [],
+    "suggestedClusters": [],
+    "dailyUploadRate": 0,
+    "avgDurationSeconds": 0,
+    "avgDurationFormatted": "",
+    "shortFormRatio": 0,
+    "averageViewsPerVideo": 0,
+    "uploadFrequency": {
+      "avgDaysBetweenUploads": 0,
+      "consistency": 0
+    },
+    "mostViewedVideo": {
+      "videoId": "",
+      "title": "",
+      "thumbnailUrl": "",
+      "viewCount": 0,
+      "likeCount": 0,
+      "commentCount": 0,
+      "duration": "",
+      "durationSeconds": 0,
+      "tags": [],
+      "categoryId": ""
+    },
+    "analysisVersion": "",
+    "version": 0,
+    "lastAnalyzedAt": "2025-09-14T12:25:19.675Z",
+    "collectedAt": "2025-09-14T12:25:19.675Z",
+    "createdAt": "2025-09-14T12:25:19.675Z",
+    "updatedAt": "2025-09-14T12:25:19.675Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6c1d00f7b33237410161b",
+    "channelId": "UCWDSX7KF8iSkirZ6foECU0Q",
+    "__v": 0,
+    "aiTags": [],
+    "allTags": [
+      "템플릿"
+    ],
+    "analysisVersion": "1.0",
+    "averageViewsPerVideo": 531855.775,
+    "avgDurationFormatted": "22.76초",
+    "avgDurationSeconds": 23,
+    "clusterIds": [],
+    "collectedAt": "Sun Sep 14 2025 22:23:26 GMT+0900 (대한민국 표준시)",
+    "contentType": "shortform",
+    "createdAt": "Sun Sep 14 2025 22:23:26 GMT+0900 (대한민국 표준시)",
+    "customUrl": "@오냐오냐",
+    "dailyUploadRate": 1.07,
+    "deepInsightTags": [],
+    "description": "재밌고 스릴넘치는 스포츠/운동과 흥미로운 이야기로 세상을 더 유쾌하게 만들어 가겠습니다\n\nFor any questions or video removal request, please contact : ohnyaohnyaa@gmail.com\nI will remove the video immediately, and answer your inquiries within 24 hours, thank you :) \n\n",
+    "keywords": [
+      "템플릿"
+    ],
+    "last7DaysViews": 311422,
+    "lastAnalyzedAt": "Sun Sep 14 2025 22:23:26 GMT+0900 (대한민국 표준시)",
+    "mostViewedVideo": {
+      "videoId": "OQ4c6O8z8Jw",
+      "title": "제자 참교육한 수영코치",
+      "publishedAt": "2025-05-12T13:00:42.000Z",
+      "thumbnailUrl": "https://i.ytimg.com/vi/OQ4c6O8z8Jw/mqdefault.jpg",
+      "viewCount": 12194759,
+      "likeCount": 50024,
+      "commentCount": 283,
+      "duration": "PT28S",
+      "durationSeconds": 28,
+      "tags": [],
+      "categoryId": "17"
+    },
+    "name": "오냐오냐",
+    "platform": "YOUTUBE",
+    "shortFormRatio": 100,
+    "subscribers": 103000,
+    "suggestedClusters": [],
+    "thumbnailUrl": "https://yt3.ggpht.com/P-xBv313vQxavJKJH6wivwTf4itqGvKkTXRlQUOFsqO1IqWLs29NBdQ0UG3F0C8snAy5JiSmKw=s800-c-k-c0x00ffffff-no-rj",
+    "totalVideos": 200,
+    "totalViews": 106371155,
+    "updatedAt": "Sun Sep 14 2025 22:23:26 GMT+0900 (대한민국 표준시)",
+    "uploadFrequency": {
+      "pattern": "multiple_per_week",
+      "avgDaysBetweenUploads": 1.02,
+      "consistency": 0
+    },
+    "url": "https://youtube.com/channel/UCWDSX7KF8iSkirZ6foECU0Q",
+    "version": 1,
+    "viewsByPeriod": {
+      "last7Days": 311422,
+      "last30Days": 7158232,
+      "last90Days": 51357394,
+      "lastYear": 106371155
+    }
+  },
+  {
+    "_id": "68c6e69c504430eea4017861",
+    "channelId": "%EC%98%A4%EB%83%90%EC%98%A4%EB%83%90",
+    "name": "%EC%98%A4%EB%83%90%EC%98%A4%EB%83%90",
+    "url": "https://www.youtube.com/@%EC%98%A4%EB%83%90%EC%98%A4%EB%83%90/shorts",
+    "platform": "YOUTUBE",
+    "subscribers": 0,
+    "description": "",
+    "thumbnailUrl": "",
+    "customUrl": "",
+    "keywords": [],
+    "aiTags": [],
+    "deepInsightTags": [],
+    "allTags": [],
+    "clusterIds": [],
+    "suggestedClusters": [],
+    "dailyUploadRate": 0,
+    "avgDurationSeconds": 0,
+    "avgDurationFormatted": "",
+    "shortFormRatio": 0,
+    "totalVideos": 0,
+    "totalViews": 0,
+    "averageViewsPerVideo": 0,
+    "uploadFrequency": {
+      "avgDaysBetweenUploads": 0,
+      "consistency": 0
+    },
+    "mostViewedVideo": {
+      "videoId": "",
+      "title": "",
+      "thumbnailUrl": "",
+      "viewCount": 0,
+      "likeCount": 0,
+      "commentCount": 0,
+      "duration": "",
+      "durationSeconds": 0,
+      "tags": [],
+      "categoryId": ""
+    },
+    "analysisVersion": "",
+    "version": 0,
+    "lastAnalyzedAt": "2025-09-14T16:00:28.714Z",
+    "collectedAt": "2025-09-14T16:00:28.714Z",
+    "createdAt": "2025-09-14T16:00:28.714Z",
+    "updatedAt": "2025-09-14T16:00:28.714Z",
+    "__v": 0
+  },
+  {
+    "_id": "68c6e7b70f7b33237410180d",
+    "channelId": "UCYLdH0ZsasT8jXDReYSn9fw",
+    "__v": 0,
+    "aiTags": [],
+    "allTags": [
+      "템플릿"
+    ],
+    "analysisVersion": "1.0",
+    "averageViewsPerVideo": 353730.93670886074,
+    "avgDurationFormatted": "45.35443037974684초",
+    "avgDurationSeconds": 45,
+    "clusterIds": [],
+    "collectedAt": "Mon Sep 15 2025 01:05:09 GMT+0900 (대한민국 표준시)",
+    "contentType": "shortform",
+    "createdAt": "Mon Sep 15 2025 01:05:09 GMT+0900 (대한민국 표준시)",
+    "customUrl": "@썰돌프",
+    "dailyUploadRate": 0.2,
+    "deepInsightTags": [],
+    "description": "재미있는 썰 끌고갑니다~!\n",
+    "keywords": [
+      "템플릿"
+    ],
+    "last7DaysViews": 4686976,
+    "lastAnalyzedAt": "Mon Sep 15 2025 01:05:09 GMT+0900 (대한민국 표준시)",
+    "mostViewedVideo": {
+      "videoId": "ppFfCGJnQe4",
+      "title": "딸의 남자친구가 게이같을 때 확인법",
+      "publishedAt": "2025-09-10T22:00:53.000Z",
+      "thumbnailUrl": "https://i.ytimg.com/vi/ppFfCGJnQe4/mqdefault.jpg",
+      "viewCount": 4616017,
+      "likeCount": 81474,
+      "commentCount": 427,
+      "duration": "PT49S",
+      "durationSeconds": 49,
+      "tags": [],
+      "categoryId": "23"
+    },
+    "name": "썰돌프",
+    "platform": "YOUTUBE",
+    "shortFormRatio": 98.73,
+    "subscribers": 3060,
+    "suggestedClusters": [],
+    "thumbnailUrl": "https://yt3.ggpht.com/-ujK4qmyipwI_H6_W_uSrEUxSLhxHozPZ7xtQEfL6bMbz4Q8MMG52BEX1EO4Gvs2h4rVRRq6cg=s800-c-k-c0x00ffffff-no-rj",
+    "totalVideos": 79,
+    "totalViews": 27944744,
+    "updatedAt": "Mon Sep 15 2025 01:05:09 GMT+0900 (대한민국 표준시)",
+    "uploadFrequency": {
+      "pattern": "weekly",
+      "avgDaysBetweenUploads": 3.51,
+      "consistency": 0
+    },
+    "url": "https://youtube.com/channel/UCYLdH0ZsasT8jXDReYSn9fw",
+    "version": 1,
+    "viewsByPeriod": {
+      "last7Days": 4686976,
+      "last30Days": 4759468,
+      "last90Days": 4759468,
+      "lastYear": 27944744
+    }
+  },
+  {
+    "_id": "68c6ea7b0f7b332374101814",
+    "channelId": "UCG6OdUjJmcc-Y4_T6o3q68A",
+    "__v": 0,
+    "aiTags": [
+      "발로란트",
+      "e스포츠",
+      "하이라이트",
+      "프로게이머",
+      "매드무비",
+      "명장면",
+      "게임플레이",
+      "핵샷",
+      "발로란트 대회",
+      "웃긴 순간",
+      "재미있는 순간",
+      "Valorant",
+      "Valorant Highlights",
+      "Valorant Esports",
+      "발로란트"
+    ],
+    "allTags": [
+      "애딧",
+      "핵인싸 편집",
+      "순삭 개그",
+      "순간의 희열",
+      "빠른 템포",
+      "트렌디한 편집",
+      "유쾌한 순간",
+      "실력과 재미",
+      "짜릿한 플레이",
+      "반전의 묘미",
+      "시간순삭",
+      "발로란트",
+      "e스포츠",
+      "하이라이트",
+      "프로게이머",
+      "매드무비",
+      "명장면",
+      "게임플레이",
+      "핵샷",
+      "발로란트 대회",
+      "웃긴 순간",
+      "재미있는 순간",
+      "Valorant",
+      "Valorant Highlights",
+      "Valorant Esports"
+    ],
+    "analysisVersion": "1.0",
+    "averageViewsPerVideo": 708501.1666666666,
+    "avgDurationFormatted": "20.583333333333332초",
+    "avgDurationSeconds": 21,
+    "clusterIds": [],
+    "collectedAt": "Mon Sep 15 2025 01:16:57 GMT+0900 (대한민국 표준시)",
+    "contentType": "shortform",
+    "createdAt": "Mon Sep 15 2025 01:16:57 GMT+0900 (대한민국 표준시)",
+    "customUrl": "@발에딧",
+    "dailyUploadRate": 0.4,
+    "deepInsightTags": [
+      "핵인싸 편집",
+      "순삭 개그",
+      "순간의 희열",
+      "빠른 템포",
+      "트렌디한 편집",
+      "유쾌한 순간",
+      "실력과 재미",
+      "짜릿한 플레이",
+      "반전의 묘미",
+      "시간순삭"
+    ],
+    "description": "",
+    "keywords": [
+      "애딧"
+    ],
+    "last7DaysViews": 1081889,
+    "lastAnalyzedAt": "Mon Sep 15 2025 01:16:56 GMT+0900 (대한민국 표준시)",
+    "mostViewedVideo": {
+      "videoId": "xo73Q5gsj2c",
+      "title": "발로란트 대회에서 겸손해야하는 이유..",
+      "publishedAt": "2025-08-24T01:00:55.000Z",
+      "thumbnailUrl": "https://i.ytimg.com/vi/xo73Q5gsj2c/mqdefault.jpg",
+      "viewCount": 2630251,
+      "likeCount": 39626,
+      "commentCount": 236,
+      "duration": "PT18S",
+      "durationSeconds": 18,
+      "tags": [],
+      "categoryId": "22"
+    },
+    "name": "발에딧",
+    "platform": "YOUTUBE",
+    "shortFormRatio": 100,
+    "subscribers": 1870,
+    "suggestedClusters": [],
+    "thumbnailUrl": "https://yt3.ggpht.com/mfCi66q7RA5QWGLSD808m8j1wi8SEmj-g-JZzjJi2KHUrq1Sh21835zOKqJ9VBSQivbPppW-CDo=s800-c-k-c0x00ffffff-no-rj",
+    "totalVideos": 12,
+    "totalViews": 8502014,
+    "updatedAt": "Mon Sep 15 2025 01:16:57 GMT+0900 (대한민국 표준시)",
+    "uploadFrequency": {
+      "pattern": "multiple_per_week",
+      "avgDaysBetweenUploads": 2.38,
+      "consistency": 32
+    },
+    "url": "https://youtube.com/channel/UCG6OdUjJmcc-Y4_T6o3q68A",
+    "version": 1,
+    "viewsByPeriod": {
+      "last7Days": 1081889,
+      "last30Days": 8502014,
+      "last90Days": 8502014,
+      "lastYear": 8502014
     }
   }
 ]

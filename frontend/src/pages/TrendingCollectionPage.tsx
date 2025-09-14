@@ -67,10 +67,10 @@ const TrendingCollectionPage: React.FC = () => {
   // Event Handlers
   const handleVideoClick = useCallback((video: Video) => {
     if (isSelectMode) {
-      if (selectedVideos.has(video._id)) {
-        deselectVideo(video._id);
+      if (selectedVideos.has(video.id)) {
+        deselectVideo(video.id);
       } else {
-        selectVideo(video._id);
+        selectVideo(video.id);
       }
     } else {
       if (video.platform === PLATFORMS.YOUTUBE) {
@@ -99,7 +99,7 @@ const TrendingCollectionPage: React.FC = () => {
 
   const handleVideoDelete = useCallback(async (video: Video) => {
     try {
-      const response = await fetch(`/api/trending/videos/${video._id}`, {
+      const response = await fetch(`/api/trending/videos/${video.id}`, {
         method: 'DELETE'
       });
 
@@ -129,7 +129,7 @@ const TrendingCollectionPage: React.FC = () => {
       } else if (itemToDelete.type === 'bulk') {
         // 선택된 비디오들 삭제
         for (const videoId of selectedVideos) {
-          const video = trendingVideos.find(v => v._id === videoId);
+          const video = trendingVideos.find(v => v.id === videoId);
           if (video) {
             await handleVideoDelete(video);
           }
@@ -305,11 +305,11 @@ const TrendingCollectionPage: React.FC = () => {
                 <h3 className="font-medium text-gray-900 mb-2">채널 그룹 ({channelGroups.length})</h3>
                 <div className="max-h-40 overflow-y-auto border rounded-md p-2">
                   {channelGroups.map((group) => (
-                    <label key={group._id} className="flex items-center p-2 hover:bg-gray-50 rounded">
+                    <label key={group.id} className="flex items-center p-2 hover:bg-gray-50 rounded">
                       <input
                         type="checkbox"
-                        checked={collectionTarget.selectedGroups.includes(group._id)}
-                        onChange={() => handleGroupSelection(group._id)}
+                        checked={collectionTarget.selectedGroups.includes(group.id)}
+                        onChange={() => handleGroupSelection(group.id)}
                         className="mr-3"
                       />
                       <div className="flex-1">
@@ -464,13 +464,13 @@ const TrendingCollectionPage: React.FC = () => {
               <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-6">
                 {trendingVideos.map((video) => (
                   <VideoCard
-                    key={video._id}
+                    key={video.id}
                     video={video}
                     onClick={handleVideoClick}
                     onDelete={handleVideoDelete}
                     onInfoClick={setSelectedVideo}
                     isSelectMode={isSelectMode}
-                    isSelected={selectedVideos.has(video._id)}
+                    isSelected={selectedVideos.has(video.id)}
                     onSelectToggle={handleSelectToggle}
                   />
                 ))}

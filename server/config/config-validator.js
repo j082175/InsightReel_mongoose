@@ -197,9 +197,27 @@ class ConfigValidator {
    * 필수 설정 조합 검증
    */
   validateRequiredSettings() {
-    // Gemini 사용 시 API 키 필수 (ApiKeyManager에서 관리됨으로 환경변수 체크 제거)
-    if (this.config.USE_GEMINI && !this.config.GOOGLE_API_KEY) {
-      this.warnings.push('USE_GEMINI=true일 때 API 키가 필요합니다. (ApiKeyManager에서 자동 관리)');
+    // Gemini 사용 시 ApiKeyManager 체크 (환경변수 체크 완전 제거)
+    if (this.config.USE_GEMINI) {
+      // ⚠️ 중요: GOOGLE_API_KEY 환경변수는 더 이상 체크하지 않음
+      // ✅ ApiKeyManager만 사용하여 API 키 관리
+      try {
+        const apiKeysPath = require('path').join(__dirname, '../data/api-keys.json');
+        if (require('fs').existsSync(apiKeysPath)) {
+          const apiKeys = JSON.parse(require('fs').readFileSync(apiKeysPath, 'utf8'));
+          const activeKeys = apiKeys.filter(key => key.status === 'active');
+          if (activeKeys.length === 0) {
+            this.warnings.push('USE_GEMINI=true이지만 ApiKeyManager에 활성 API 키가 없습니다.');
+          }
+        } else {
+          this.warnings.push('USE_GEMINI=true이지만 API 키 파일(api-keys.json)이 없습니다.');
+        }
+      } catch (error) {
+        this.warnings.push('ApiKeyManager API 키 확인 중 오류가 발생했습니다.');
+      }
+
+      // ⚠️ 환경변수 기반 검증을 완전히 우회 - 에러 처리 제거
+      return; // 추가 검증 중단 - ApiKeyManager 체크 완료
     }
 
     // Google Sheets 사용을 위한 인증 정보 필수

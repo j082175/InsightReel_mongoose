@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Channel } from '../shared/types';
 import { SearchBar, ActionBar } from '../shared/components';
-import { ChannelCard, ChannelAnalysisModal } from '../features/channel-management';
+import { ChannelCard, ChannelAnalysisModal, ChannelGroupModal, ChannelGroupCard } from '../features/channel-management';
 import { DeleteConfirmationModal } from '../shared/ui';
 import { formatViews } from '../shared/utils';
 import {
@@ -28,6 +28,17 @@ const ChannelManagementPage: React.FC = () => {
   const { selectedChannels, toggleChannelSelection, selectAllChannels, clearSelection } = useChannelSelection();
   const { filters, updateFilters, resetFilters } = useChannelFilters();
 
+  // 디버깅용 로그
+  console.log('🔍 [DEBUG] Store 상태:', {
+    'Store channels 길이': channels.length,
+    'Store channels 데이터': channels,
+    'Filtered channels 길이': filteredChannels.length,
+    'Filtered channels 데이터': filteredChannels,
+    '현재 필터': filters,
+    'Loading 상태': isLoading,
+    'Error 상태': error
+  });
+
   // Local State
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
@@ -37,30 +48,77 @@ const ChannelManagementPage: React.FC = () => {
     count?: number;
   } | null>(null);
   const [isSelectMode, setIsSelectMode] = useState(false);
+  const [showGroupModal, setShowGroupModal] = useState(false);
+
+  // Channel Groups State
+  const [channelGroups, setChannelGroups] = useState<any[]>([]);
+  const [isLoadingGroups, setIsLoadingGroups] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<any | null>(null);
 
   // API 데이터 로드
   useEffect(() => {
     const fetchChannels = async () => {
+      console.log('🔍 [DEBUG] 채널 데이터 로드 시작');
       setLoading(true);
       try {
         const response = await fetch('/api/channels');
+        console.log('🔍 [DEBUG] API 응답 상태:', response.status);
         if (!response.ok) throw new Error('채널 데이터 조회 실패');
 
         const result = await response.json();
-        const channelsData = Array.isArray(result) ? result : result.data || result.channels || [];
+        console.log('🔍 [DEBUG] 원본 API 응답:', result);
+        console.log('🔍 [DEBUG] result 타입:', typeof result, 'Array인가?', Array.isArray(result));
+
+        const channelsData = Array.isArray(result) ? result : result.data?.channels || result.channels || [];
+        console.log('🔍 [DEBUG] 처리된 채널 데이터:', channelsData);
+        console.log('🔍 [DEBUG] 채널 개수:', channelsData.length);
 
         setChannels(channelsData);
         setError(null);
+
+        console.log('🔍 [DEBUG] setChannels 호출 완료');
       } catch (err) {
+        console.error('❌ [DEBUG] 채널 로드 에러:', err);
         setError(err instanceof Error ? err.message : '채널 데이터를 불러오는데 실패했습니다');
         setChannels([]);
       } finally {
         setLoading(false);
+        console.log('🔍 [DEBUG] 로딩 완료');
       }
     };
 
     fetchChannels();
   }, [setChannels, setLoading, setError]);
+
+  // 채널 그룹 데이터 로드
+  const fetchChannelGroups = useCallback(async () => {
+    console.log('🔍 [DEBUG] 채널 그룹 데이터 로드 시작');
+    setIsLoadingGroups(true);
+    try {
+      const response = await fetch('/api/channel-groups');
+      console.log('🔍 [DEBUG] 그룹 API 응답 상태:', response.status);
+
+      if (!response.ok) throw new Error('채널 그룹 데이터 조회 실패');
+
+      const result = await response.json();
+      console.log('🔍 [DEBUG] 그룹 API 응답:', result);
+
+      const groupsData = result.success ? result.data : [];
+      console.log('🔍 [DEBUG] 처리된 그룹 데이터:', groupsData);
+
+      setChannelGroups(groupsData);
+    } catch (err) {
+      console.error('❌ [DEBUG] 그룹 로드 에러:', err);
+      setChannelGroups([]);
+    } finally {
+      setIsLoadingGroups(false);
+      console.log('🔍 [DEBUG] 그룹 로딩 완료');
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchChannelGroups();
+  }, [fetchChannelGroups]);
 
   // Event Handlers
   const handleChannelClick = useCallback((channel: Channel) => {
@@ -136,6 +194,60 @@ const ChannelManagementPage: React.FC = () => {
     }
   }, [isSelectMode, clearSelection]);
 
+  const handleCreateGroup = useCallback(() => {
+    setShowGroupModal(true);
+  }, []);
+
+  const handleSaveGroup = useCallback(async (groupData: any) => {
+    try {
+      const method = editingGroup ? 'PUT' : 'POST';
+      const url = editingGroup
+        ? `/api/channel-groups/${editingGroup.id}`
+        : '/api/channel-groups';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(groupData)
+      });
+
+      if (!response.ok) throw new Error(`그룹 ${editingGroup ? '수정' : '생성'} 실패`);
+
+      console.log(`✅ 채널 그룹 ${editingGroup ? '수정' : '생성'} 성공`);
+      setShowGroupModal(false);
+      setEditingGroup(null);
+      // 그룹 목록 새로고침
+      fetchChannelGroups();
+    } catch (error) {
+      console.error(`❌ 그룹 ${editingGroup ? '수정' : '생성'} 실패:`, error);
+    }
+  }, [editingGroup, fetchChannelGroups]);
+
+  // 그룹 관련 이벤트 핸들러들
+  const handleGroupEdit = useCallback((group: any) => {
+    setEditingGroup(group);
+    setShowGroupModal(true);
+  }, []);
+
+  const handleGroupDelete = useCallback(async (group: any) => {
+    try {
+      const response = await fetch(`/api/channel-groups/${group.id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) throw new Error('그룹 삭제 실패');
+
+      console.log('✅ 채널 그룹 삭제 성공:', group.name);
+      // 그룹 목록 새로고침
+      fetchChannelGroups();
+    } catch (error) {
+      console.error('❌ 그룹 삭제 실패:', error);
+      throw error;
+    }
+  }, [fetchChannelGroups]);
+
   // 통계 계산
   const stats = {
     totalChannels: filteredChannels.length,
@@ -167,16 +279,33 @@ const ChannelManagementPage: React.FC = () => {
       {/* 헤더 */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">채널 관리</h1>
-              <p className="mt-1 text-sm text-gray-600">
-                등록된 채널들을 관리하고 분석하세요
-              </p>
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">채널 관리</h1>
+                  <p className="mt-1 text-sm text-gray-600">
+                    등록된 채널들을 관리하고 분석하세요
+                  </p>
+                </div>
+
+                {/* 액션 버튼들 */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleCreateGroup}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    그룹 만들기
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* 통계 요약 */}
-            <div className="flex gap-6">
+            <div className="flex gap-6 ml-8">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">{stats.totalChannels}</div>
                 <div className="text-xs text-gray-500">총 채널</div>
@@ -237,21 +366,56 @@ const ChannelManagementPage: React.FC = () => {
           </div>
         )}
 
+        {/* 채널 그룹 섹션 */}
+        {channelGroups.length > 0 && (
+          <div className="bg-white rounded-lg shadow mb-6">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">채널 그룹</h2>
+                <span className="text-sm text-gray-500">{channelGroups.length}개 그룹</span>
+              </div>
+
+              {isLoadingGroups ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="h-40 bg-gray-200 rounded-lg animate-pulse"></div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {channelGroups.map((group) => (
+                    <ChannelGroupCard
+                      key={group.id}
+                      group={group}
+                      onEdit={handleGroupEdit}
+                      onDelete={handleGroupDelete}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* 메인 콘텐츠 */}
         <div className="bg-white rounded-lg shadow">
           <div className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">채널 목록</h2>
+              <span className="text-sm text-gray-500">{filteredChannels.length}개 채널</span>
+            </div>
+
             {filteredChannels.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredChannels.map((channel) => (
                   <ChannelCard
                     key={channel.channelId}
                     channel={channel}
-                    onClick={handleChannelClick}
-                    onAnalyze={handleChannelAnalyze}
+                    onChannelClick={handleChannelClick}
                     onDelete={(ch) => handleDeleteClick({ type: 'single', data: ch })}
-                    isSelectMode={isSelectMode}
+                    showSelection={isSelectMode}
                     isSelected={selectedChannels.includes(channel.channelId)}
-                    onSelectToggle={handleSelectToggle}
+                    onSelect={handleSelectToggle}
                   />
                 ))}
               </div>
@@ -289,6 +453,17 @@ const ChannelManagementPage: React.FC = () => {
         itemToDelete={itemToDelete}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setItemToDelete(null)}
+      />
+
+      <ChannelGroupModal
+        isOpen={showGroupModal}
+        onClose={() => {
+          setShowGroupModal(false);
+          setEditingGroup(null);
+        }}
+        onSave={handleSaveGroup}
+        editingGroup={editingGroup}
+        availableChannels={channels}
       />
     </div>
   );

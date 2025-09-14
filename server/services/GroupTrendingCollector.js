@@ -12,6 +12,23 @@ const { PLATFORMS } = require('../config/api-messages');
 class GroupTrendingCollector {
   constructor() {
     this.highViewCollector = new HighViewCollector();
+    this._initialized = false;
+  }
+
+  /**
+   * 비동기 초기화
+   */
+  async initialize() {
+    if (this._initialized) return this;
+
+    try {
+      await this.highViewCollector.initialize();
+      this._initialized = true;
+      return this;
+    } catch (error) {
+      ServerLogger.error('GroupTrendingCollector 초기화 실패:', error);
+      throw error;
+    }
   }
 
   /**

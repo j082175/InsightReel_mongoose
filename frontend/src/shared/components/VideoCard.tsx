@@ -30,7 +30,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
   showArchiveInfo 
 }) => {
   console.log('🎬 VideoCard 렌더링:', {
-    videoId: video._id,  // MongoDB _id is always present
+    videoId: video.id,  // API에서 변환된 id 필드
     title: video.title?.substring(0, 30) + '...',
     hasOnDelete: !!onDelete
   });
@@ -83,8 +83,8 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
     // 기본 삭제 로직
     setIsDeleting(true);
     try {
-      // 삭제에는 데이터베이스 ID (_id 또는 id) 사용
-      const dbId = video._id;  // MongoDB _id is always present
+      // 삭제에는 API에서 변환된 id 필드 사용
+      const dbId = video.id;  // API에서 변환된 id 필드
       if (!dbId) {
         throw new Error('비디오 ID를 찾을 수 없습니다');
       }

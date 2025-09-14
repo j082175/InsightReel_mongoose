@@ -163,13 +163,17 @@ class UnifiedGeminiManager {
   /**
    * Single-Model 모드 초기화 (신규 방식)
    */
-  initSingleModelMode(options) {
-    // 단일 API 키만 사용
-    this.singleApiKey = process.env.GOOGLE_API_KEY;
-    
-    if (!this.singleApiKey) {
-      throw new Error('GOOGLE_API_KEY가 설정되지 않았습니다.');
+  async initSingleModelMode(options) {
+    // ApiKeyManager에서 API 키 로드
+    const apiKeyManager = require('../services/ApiKeyManager');
+    await apiKeyManager.initialize();
+    const activeKeys = await apiKeyManager.getActiveApiKeys();
+
+    if (activeKeys.length === 0) {
+      throw new Error('활성화된 API 키가 없습니다. ApiKeyManager에 키를 추가해주세요.');
     }
+
+    this.singleApiKey = activeKeys[0];
     
     // 단일 모델 설정
     this.singleModel = process.env.GEMINI_SINGLE_MODEL || 'gemini-2.5-pro-lite';
@@ -252,8 +256,18 @@ class UnifiedGeminiManager {
           ServerLogger.debug(`🎯 모델 시도: ${currentModel} (원본: ${modelType})`, null, 'UNIFIED');
         }
         
-        // API 키 선택 (첫 번째 키 사용)
-        const apiKey = this.apiKeys?.[0] || process.env.GOOGLE_API_KEY;
+        // API 키 선택 (폴백 모드에 따라 다른 키 사용)
+        let apiKey;
+        if (this.fallbackMode === 'model-priority' || this.fallbackMode === 'single-model') {
+          apiKey = this.singleApiKey;
+        } else {
+          apiKey = this.apiKeys?.[0]?.key;
+        }
+
+        if (!apiKey) {
+          throw new Error('API 키를 찾을 수 없습니다. 초기화가 완료되지 않았을 수 있습니다.');
+        }
+
         const genAI = new GoogleGenerativeAI(apiKey);
         
         // 모델명 매핑

@@ -1,5 +1,5 @@
 import React, { useState, memo, useCallback } from 'react';
-import SettingsModal from './SettingsModal';
+import SettingsModal from '../../ui/SettingsModal';
 import { useAPIStatus } from '../../hooks';
 import { useNavigation, ROUTE_CATEGORIES } from '../../../app/routing';
 
@@ -16,7 +16,8 @@ const Header: React.FC<HeaderProps> = memo(() => {
   const [isProfileOpen, setProfileOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [isSettingsOpen, setSettingsOpen] = useState(false);
-  
+  const [showDevMenu, setShowDevMenu] = useState(false);
+
   const { data: apiStatus, isLoading: apiLoading } = useAPIStatus();
   
 
@@ -209,12 +210,38 @@ const Header: React.FC<HeaderProps> = memo(() => {
 
           {/* 우측 프로필 영역 */}
           <div className="flex items-center space-x-4">
+            {/* 개발자 모드 버튼 (개발 환경에서만 표시) */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowDevMenu(!showDevMenu)}
+                  className="px-3 py-1 bg-yellow-500 text-black rounded text-sm font-medium hover:bg-yellow-400 transition-colors"
+                >
+                  🛠️ DEV
+                </button>
+
+                {showDevMenu && (
+                  <div className="absolute top-10 right-0 bg-white shadow-lg rounded-md border p-2 z-50 min-w-[120px]">
+                    <button
+                      onClick={() => {
+                        navigateTo('test');
+                        setShowDevMenu(false);
+                      }}
+                      className="block w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm"
+                    >
+                      📋 테스트 메뉴
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             <button className="text-gray-500 hover:text-gray-700 p-2 rounded-full">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5-5-5 5h5zm0 0v-5" />
               </svg>
             </button>
-            
+
             <button className="text-gray-500 hover:text-gray-700 p-2 rounded-full">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />

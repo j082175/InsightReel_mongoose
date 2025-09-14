@@ -16,15 +16,32 @@ class HybridYouTubeExtractor {
     constructor() {
         this.useYtdlFirst = process.env.USE_YTDL_FIRST !== 'false'; // 기본값: true
         this.ytdlTimeout = 10000; // 10초 타임아웃
+        this.multiKeyManager = null;
+        this._initialized = false;
+    }
 
-        // 멀티 키 매니저 초기화
-        this.multiKeyManager = MultiKeyManager.getInstance();
+    /**
+     * 비동기 초기화
+     */
+    async initialize() {
+        if (this._initialized) return this;
 
-        ServerLogger.info('🔧 하이브리드 YouTube 추출기 초기화', {
-            keyCount: this.multiKeyManager.keys.length,
-            ytdlFirst: this.useYtdlFirst,
-            timeout: this.ytdlTimeout,
-        });
+        try {
+            // 멀티 키 매니저 초기화
+            this.multiKeyManager = await MultiKeyManager.getInstance();
+
+            ServerLogger.info('🔧 하이브리드 YouTube 추출기 초기화', {
+                keyCount: this.multiKeyManager.keys.length,
+                ytdlFirst: this.useYtdlFirst,
+                timeout: this.ytdlTimeout,
+            });
+
+            this._initialized = true;
+            return this;
+        } catch (error) {
+            ServerLogger.error('하이브리드 YouTube 추출기 초기화 실패:', error);
+            throw error;
+        }
     }
 
     /**

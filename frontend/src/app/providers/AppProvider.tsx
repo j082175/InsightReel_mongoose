@@ -38,7 +38,7 @@ interface AppProviderProps {
 }
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [currentPage, setCurrentPage] = useState('channels'); // 디버깅을 위해 임시로 다시 변경
   const [collectionBatches, setCollectionBatches] = useState<CollectionBatchEntity[]>([]);
   const [collectedVideos, setCollectedVideos] = useState<VideoEntity[]>([]);
 

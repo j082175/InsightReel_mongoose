@@ -53,7 +53,7 @@ export const useVideoStore = (initialBatchId: string = 'all'): VideoStoreState &
   const filteredVideos = useMemo(() => {
     // 방어적 프로그래밍: videos가 배열이 아닌 경우 빈 배열로 처리
     const videosArray = Array.isArray(state.videos) ? state.videos : [];
-    let filtered = videosArray.filter(video => !state.deletedVideoIds.has(video._id));
+    let filtered = videosArray.filter(video => !state.deletedVideoIds.has(video.id));
 
     if (state.filters.keyword) {
       const keyword = state.filters.keyword.toLowerCase();
@@ -216,7 +216,7 @@ export const useVideoStore = (initialBatchId: string = 'all'): VideoStoreState &
   }, []);
 
   const selectAllVideos = useCallback(() => {
-    const allVideoIds = filteredVideos.map(video => video._id);
+    const allVideoIds = filteredVideos.map(video => video.id);
     setState(prev => ({
       ...prev,
       selectedVideos: new Set(allVideoIds)

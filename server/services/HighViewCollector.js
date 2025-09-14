@@ -13,13 +13,11 @@ class HighViewCollector {
   constructor() {
     this.queueFilePath = path.join(__dirname, '../config/trending_channels_queue.json');
     this.statsFilePath = path.join(__dirname, '../config/trending_collection_stats.json');
-    
-    // 멀티 키 관리자 초기화
-    this.multiKeyManager = MultiKeyManager.getInstance();
-    
-    // 호환성을 위한 UsageTracker (제거 예정)
+
+    this.multiKeyManager = null;
     this.usageTracker = UsageTracker.getInstance();
-    
+    this._initialized = false;
+
     // 기본 설정 (사용자가 오버라이드 가능)
     this.defaultConfig = {
       daysBack: 7,           // 기본 7일 (사용자 설정 가능)
@@ -27,8 +25,23 @@ class HighViewCollector {
       maxResultsPerSearch: 50,
       batchSize: 50
     };
+  }
 
-    ServerLogger.info(`📊 HighViewCollector 초기화 완료 - ${this.multiKeyManager.keys.length}개 API 키 로드됨`);
+  /**
+   * 비동기 초기화
+   */
+  async initialize() {
+    if (this._initialized) return this;
+
+    try {
+      this.multiKeyManager = await MultiKeyManager.getInstance();
+      this._initialized = true;
+      ServerLogger.info(`📊 HighViewCollector 초기화 완료 - ${this.multiKeyManager.keys.length}개 API 키 로드됨`);
+      return this;
+    } catch (error) {
+      ServerLogger.error('HighViewCollector 초기화 실패:', error);
+      throw error;
+    }
   }
 
   /**

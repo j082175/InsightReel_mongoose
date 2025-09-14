@@ -61,6 +61,7 @@ router.post('/add-url', async (req, res) => {
     
     // 비디오 처리
     const videoProcessor = new VideoProcessor();
+    await videoProcessor.initialize();
     const aiAnalyzer = new AIAnalyzer();
     const unifiedSaver = new UnifiedVideoSaver();
     

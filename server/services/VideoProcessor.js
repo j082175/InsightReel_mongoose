@@ -66,12 +66,30 @@ class VideoProcessor {
         this.downloadDir = path.join(__dirname, '../../downloads');
         this.thumbnailDir = path.join(this.downloadDir, 'thumbnails');
         this.youtubeApiKey = null; // ApiKeyManager에서 동적으로 로드
-
-        // 🚀 하이브리드 YouTube 추출기 초기화
-        this.hybridExtractor = new HybridYouTubeExtractor();
+        this.hybridExtractor = null; // 비동기 초기화
+        this._initialized = false;
 
         // 디렉토리 생성
         this.ensureDirectories();
+    }
+
+    /**
+     * VideoProcessor 비동기 초기화
+     */
+    async initialize() {
+        if (this._initialized) return this;
+
+        try {
+            // 하이브리드 YouTube 추출기 초기화
+            this.hybridExtractor = new HybridYouTubeExtractor();
+            await this.hybridExtractor.initialize();
+
+            this._initialized = true;
+            return this;
+        } catch (error) {
+            ServerLogger.error('VideoProcessor 초기화 실패:', error);
+            throw error;
+        }
     }
 
     ensureDirectories() {

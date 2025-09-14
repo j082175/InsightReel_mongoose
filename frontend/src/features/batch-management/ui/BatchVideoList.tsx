@@ -59,7 +59,7 @@ const BatchVideoList: React.FC<BatchVideoListProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {videos.map((video) => (
                   <VideoCard
-                    key={video._id}
+                    key={video.id}
                     video={video as any}
                     onDelete={(deletedVideo) => {
                       onVideoDelete(deletedVideo);

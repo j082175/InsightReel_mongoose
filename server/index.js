@@ -123,6 +123,16 @@ const videoProcessor = new VideoProcessor();
 const aiAnalyzer = new AIAnalyzer();
 const unifiedVideoSaver = new UnifiedVideoSaver(sheetsManager, aiAnalyzer);
 
+// VideoProcessor 비동기 초기화
+(async () => {
+    try {
+        await videoProcessor.initialize();
+        ServerLogger.info('✅ VideoProcessor 초기화 완료');
+    } catch (error) {
+        ServerLogger.error('❌ VideoProcessor 초기화 실패:', error);
+    }
+})();
+
 // 서비스 초기화 후 디버그
 app.get('/api/debug-after-services', (req, res) => {
     res.status(HTTP_STATUS_CODES.OK).json({
@@ -2628,13 +2638,16 @@ app.get('/api/test-debug', (req, res) => {
 
 // 채널 트렌딩 수집 API
 let highViewCollector;
-try {
-    highViewCollector = new HighViewCollector();
-    ServerLogger.info('✅ HighViewCollector 초기화 성공');
-} catch (error) {
-    ServerLogger.error('❌ HighViewCollector 초기화 실패:', error);
-    highViewCollector = null;
-}
+(async () => {
+    try {
+        highViewCollector = new HighViewCollector();
+        await highViewCollector.initialize();
+        ServerLogger.info('✅ HighViewCollector 초기화 성공');
+    } catch (error) {
+        ServerLogger.error('❌ HighViewCollector 초기화 실패:', error);
+        highViewCollector = null;
+    }
+})();
 
 // HighViewCollector 초기화 확인 API
 app.get('/api/debug-collector', (req, res) => {
@@ -3798,5 +3811,12 @@ const startServer = async () => {
     }
 };
 
-// 서버 시작
-startServer();
+// 서버 시작 (CommonJS 환경에서 top-level await 대신 IIFE 사용)
+(async () => {
+    try {
+        await startServer();
+    } catch (error) {
+        console.error('서버 시작 실패:', error);
+        process.exit(1);
+    }
+})();
