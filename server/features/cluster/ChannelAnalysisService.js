@@ -142,7 +142,7 @@ class ChannelAnalysisService {
             // MongoDB upsert (존재하면 업데이트, 없으면 생성)
             // Channel 스키마에서는 'id' 필드를 사용하므로 '_id' 대신 'id'로 조회
             const result = await Channel.findOneAndUpdate(
-                { id: channelData.id },
+                { channelId: channelData.channelId },
                 channelData,
                 {
                     upsert: true,
@@ -201,7 +201,7 @@ class ChannelAnalysisService {
 
             // 🚨 중복검사 - 리소스 사용 전에 즉시 확인
             const existing = await Channel.findOne({
-                id: youtubeData.id,
+                channelId: youtubeData.id,
             });
             if (existing) {
                 ServerLogger.warn(
@@ -213,7 +213,7 @@ class ChannelAnalysisService {
             }
 
             ServerLogger.info('🆕 새 채널 - 분석 진행', {
-                id: youtubeData.id,
+                channelId: youtubeData.id,
                 name: youtubeData.channelName,
             });
 
@@ -277,7 +277,7 @@ class ChannelAnalysisService {
 
             // 3. 채널 데이터 구성
             const channelData = {
-                id: youtubeData.id,
+                channelId: youtubeData.id,
                 name: youtubeData.channelName,
                 url: youtubeData.channelUrl,
                 platform: 'YOUTUBE',
@@ -444,7 +444,7 @@ class ChannelAnalysisService {
 
             // 🚨 중복검사 - 리소스 사용 전에 즉시 확인
             const existing = await Channel.findOne({
-                id: youtubeData.id,
+                channelId: youtubeData.id,
             });
             if (existing) {
                 ServerLogger.warn(
@@ -456,13 +456,13 @@ class ChannelAnalysisService {
             }
 
             ServerLogger.info('🆕 새 채널 - 분석 진행', {
-                id: youtubeData.id,
+                channelId: youtubeData.id,
                 name: youtubeData.channelName,
             });
 
             // 채널 데이터 구성
             const channelData = {
-                id: youtubeData.id,
+                channelId: youtubeData.id,
                 name: youtubeData.channelName,
                 url: youtubeData.channelUrl,
                 platform: 'YOUTUBE',
@@ -502,7 +502,7 @@ class ChannelAnalysisService {
     async createOrUpdate(channelData) {
         try {
             const channel = {
-                id: channelData.id,
+                channelId: channelData.channelId,
                 name: channelData.name,
                 url: channelData.url,
                 platform: channelData.platform || 'YOUTUBE',
@@ -585,7 +585,7 @@ class ChannelAnalysisService {
                         name: channel.name,
                         url: channel.url,
                         subscribers: channel.subscribers,
-                        id: channel.channelId
+                        channelId: channel.channelId
                     }
                 );
                 
@@ -800,7 +800,7 @@ class ChannelAnalysisService {
         try {
             // MongoDB에서 직접 업데이트
             const channel = await Channel.findOneAndUpdate(
-                { id: channelId },
+                { channelId: channelId },
                 {
                     $addToSet: { clusterIds: clusterId },
                     $set: { updatedAt: new Date() },
@@ -836,7 +836,7 @@ class ChannelAnalysisService {
         try {
             // MongoDB에서 직접 업데이트
             const channel = await Channel.findOneAndUpdate(
-                { id: channelId },
+                { channelId: channelId },
                 {
                     $pull: { clusterIds: clusterId },
                     $set: { updatedAt: new Date() },
@@ -1011,7 +1011,7 @@ class ChannelAnalysisService {
                     ],
                 },
                 {
-                    id: 1,
+                    channelId: 1,
                     name: 1,
                     keywords: 1,
                 },
