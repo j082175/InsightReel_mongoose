@@ -4,7 +4,6 @@ const AIAnalyzer = require('../services/AIAnalyzer');
 const SheetsManager = require('../services/SheetsManager');
 const ErrorHandler = require('../middleware/error-handler');
 const { ServerLogger } = require('../utils/logger');
-// const { FieldMapper } = require('../types/field-mapper'); // 제거됨 - 직접 필드 접근 사용
 
 const { PLATFORMS } = require('../config/api-messages');
 

@@ -121,7 +121,7 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
     // 기본 삭제 로직
     setIsDeleting(true);
     try {
-      const response = await fetch(`http://localhost:3000/api/channels/${channel.id}`, {
+      const response = await fetch(`http://localhost:3000/api/channels/${channel.channelId}`, {
         method: 'DELETE'
       });
       
@@ -181,7 +181,7 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
               checked={isSelected}
               onChange={(e) => {
                 e.stopPropagation();
-                onSelect?.(channel.id);
+                onSelect?.(channel.channelId);
               }}
               className="mt-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />

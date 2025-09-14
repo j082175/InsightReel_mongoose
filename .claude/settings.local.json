@@ -200,7 +200,8 @@
       "Bash(rm:*)",
       "Bash(git stash:*)",
       "Bash(git diff:*)",
-      "Bash(start http://localhost:8001)"
+      "Bash(start http://localhost:8001)",
+      "Read(//c/Users/j0821/Documents/___JUNSOOCHO___/AI보고서 모음/**)"
     ],
     "deny": [
       "Bash(curl:*)"

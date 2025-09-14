@@ -1,5 +1,4 @@
 const { ServerLogger } = require('../../utils/logger');
-// const { FieldMapper } = require('../../types/field-mapper'); // 제거됨 - 직접 필드 접근 사용
 const TagExtractor = require('./TagExtractor');
 const SimilarityCalculator = require('./SimilarityCalculator');
 const ChannelAnalysisService = require('./ChannelAnalysisService');

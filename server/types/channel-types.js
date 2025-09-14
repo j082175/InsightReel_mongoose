@@ -11,7 +11,7 @@ const dateFieldOptions = { type: String, default: () => new Date().toISOString()
 // ===== 기본 채널 정보 =====
 const ChannelCore = {
   // 기본 식별 정보
-  id: {
+  channelId: {
     type: String,
     required: true,
     unique: true,

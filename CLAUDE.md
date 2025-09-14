@@ -63,7 +63,9 @@ PORT=3000
 # Gemini API
 USE_GEMINI=true
 GOOGLE_API_KEY=your-gemini-key
-GEMINI_FALLBACK_STRATEGY=multi-pro  # multi-pro 또는 flash
+GEMINI_FALLBACK_STRATEGY=multi-pro  # 폴백 전략 선택
+  # flash: 단일 API 키에서 Pro → Flash 모델로 폴백
+  # multi-pro: 여러 API 키의 Pro 모델을 순차적으로 시도
 
 # Google Sheets
 GOOGLE_SERVICE_ACCOUNT_KEY={"type":"service_account",...}
@@ -75,18 +77,25 @@ MONGODB_URI=mongodb://localhost:27017/InsightReel
 ## 📝 코딩 규칙
 
 ### 필수 준수사항
-1. **상수 시스템 사용** (server/config/api-messages.js)
-   - HTTP 상태 코드: `HTTP_STATUS_CODES.OK` (200 대신)
-   - 에러 코드: `ERROR_CODES.NOT_FOUND` (하드코딩 대신)
-   - 플랫폼: `PLATFORMS.YOUTUBE` ('YOUTUBE' 대신)
-   - 특히 같은 값들이 자주 쓰이는 기본값들 (이를테면 7, 10000 같은것들) 무조건 상수로 만들어라 알겠냐?
+1. **상수 시스템 사용**
+   - **API 메시지 상수** (`server/config/api-messages.js`)
+     - HTTP 상태 코드: `HTTP_STATUS_CODES.OK` (200 대신)
+     - 에러 코드: `ERROR_CODES.NOT_FOUND` (하드코딩 대신)
+     - 플랫폼: `PLATFORMS.YOUTUBE` ('YOUTUBE' 대신)
 
-2. **FieldMapper 마이그레이션 진행 중**
-   - 현재 일부 레거시 코드에서 FieldMapper 사용 중
-   - 신규 코드는 직접 필드 접근 사용
-   - field-mapper_deprecated.js는 점진적 제거 예정
+   - **서버 상수** (`server/config/constants.js`)
+     - 기본 수집 옵션:
+       - `DEFAULT_COLLECTION.DAYS_BACK: 7` (최근 7일 기준)
+       - `DEFAULT_COLLECTION.MIN_VIEWS: 10000` (최소 조회수 10,000)
+       - `DEFAULT_COLLECTION.INCLUDE_SHORTS: true` (숏폼 포함 여부)
+     - AI 설정:
+       - `AI.RETRY.MAX_RETRIES: 3` (최대 재시도 횟수)
+       - `AI.RETRY.TIMEOUT: 120000` (AI 분석 타임아웃 2분)
 
-3. **TypeScript 규칙** ✅
+   - **프론트엔드 상수** (`frontend/src/config/constants.ts`)
+     - 동일한 상수들을 프론트엔드용으로 정의
+
+2. **TypeScript 규칙** ✅
    - `any` 타입 완전 제거 완료
    - 모든 컴포넌트에서 구체적 타입 정의 적용
    - Video, Channel 인터페이스 기반 타입 안전성 확보
@@ -195,7 +204,9 @@ totalViews, totalVideos, uploadFrequency
 ## 📊 **구현된 핵심 기능**
 1. ✅ **채널 그룹 관리** - 채널들을 의미있는 그룹으로 묶어 관리
 2. ✅ **조건별 트렌딩 수집** - 최근 n일, n만 조회수 이상, SHORT/MID/LONG 분류
-3. ✅ **수집 결과 분리** - 트렌딩 수집 vs 개별 분석 영상 분리 저장
+3. ✅ **수집 결과 분리**
+   - **트렌딩 수집**: `TrendingVideo` 컬렉션에 저장 (대량 수집용)
+   - **개별 분석**: `Video` 컬렉션에 저장 (상세 AI 분석 포함)
 4. ✅ **통합 웹 인터페이스** - TrendingCollectionPage로 모든 수집 기능 통합
 5. ✅ **검색 및 필터링** - 채널/영상 키워드 검색 (수동 태깅)
 
@@ -203,9 +214,12 @@ totalViews, totalVideos, uploadFrequency
 
 ### **데이터 모델**
 - `server/models/ChannelGroup.js` - 채널 그룹 모델
-- `server/models/TrendingVideo.js` - 트렌딩 영상 모델  
+- `server/models/TrendingVideo.js` - 트렌딩 영상 모델
 - `server/models/CollectionBatch.js` - 수집 배치 모델
 - `server/utils/duration-classifier.js` - 영상 길이 분류 유틸리티
+  - **SHORT**: 60초 이하 (1분 이하) - 쇼츠, 릴스 등 짧은 형식
+  - **MID**: 61-180초 (1-3분) - 중간 길이 콘텐츠
+  - **LONG**: 181초 이상 (3분 이상) - 일반 길이 영상
 
 ### **API 엔드포인트**
 - `POST /api/channel-groups` - 채널 그룹 생성
