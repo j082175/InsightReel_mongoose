@@ -7,12 +7,28 @@ const { ServerLogger } = require('../utils/logger');
  */
 class YouTubeChannelDataCollector {
     constructor() {
-        this.youtube = google.youtube({
-            version: 'v3',
-            auth: process.env.YOUTUBE_API_KEY
-        });
-        
         this.maxVideos = 30; // 분석할 최대 영상 수 (2단계)
+        this.apiKey = null; // ApiKeyManager에서 동적으로 로드
+        this.youtube = null; // 나중에 초기화
+    }
+
+    async getApiKey() {
+        if (!this.apiKey) {
+            const apiKeyManager = require('./ApiKeyManager');
+            await apiKeyManager.initialize();
+            const activeKeys = await apiKeyManager.getActiveApiKeys();
+            if (activeKeys.length === 0) {
+                throw new Error('활성화된 API 키가 없습니다. ApiKeyManager에 키를 추가해주세요.');
+            }
+            this.apiKey = activeKeys[0];
+
+            // YouTube 클라이언트 초기화
+            this.youtube = google.youtube({
+                version: 'v3',
+                auth: this.apiKey
+            });
+        }
+        return this.apiKey;
     }
 
     /**
@@ -24,6 +40,8 @@ class YouTubeChannelDataCollector {
         ServerLogger.info('🎬 YouTube 채널 데이터 수집 시작:', channelInfo);
 
         try {
+            // API 키 초기화
+            await this.getApiKey();
             // 1단계: 채널 ID 확정
             const channelId = await this.resolveChannelId(channelInfo);
             if (!channelId) {
@@ -366,6 +384,41 @@ class YouTubeChannelDataCollector {
         const seconds = parseInt(match[3]) || 0;
 
         return hours * 3600 + minutes * 60 + seconds;
+    }
+
+    /**
+     * 채널 기본 정보만 조회하는 간단한 메서드
+     * channels.js에서 사용하는 getChannelData 메서드
+     */
+    async getChannelData(channelIdOrHandle) {
+        try {
+            // API 키 초기화
+            await this.getApiKey();
+
+            // 매개변수를 조건에 따라 동적으로 구성
+            const params = {
+                part: 'snippet,statistics'
+            };
+
+            if (channelIdOrHandle.startsWith('@')) {
+                // @ 핸들인 경우
+                params.forHandle = channelIdOrHandle.replace('@', '');
+            } else {
+                // 일반 채널 ID인 경우
+                params.id = channelIdOrHandle;
+            }
+
+            const response = await this.youtube.channels.list(params);
+
+            if (response.data.items && response.data.items.length > 0) {
+                return response.data.items[0];
+            }
+
+            return null;
+        } catch (error) {
+            ServerLogger.error(`YouTube 채널 정보 조회 실패: ${error.message}`);
+            throw error;
+        }
     }
 }
 

@@ -11,9 +11,10 @@ class EnhancedMultiApiManager {
   constructor() {
     // 환경 변수에서 설정 로드
     this.fallbackStrategy = process.env.GEMINI_FALLBACK_STRATEGY || 'flash';
-    
-    // API 키들 로드
-    this.apiKeys = this.loadApiKeys();
+
+    // API 키들 로드 (초기값 빈 배열)
+    this.apiKeys = [];
+    this._initialized = false;
     
     // 각 API 키별 개별 사용량 추적기 (키별로 분리된 할당량)
     this.usageTrackers = new Map();
@@ -27,37 +28,49 @@ class EnhancedMultiApiManager {
   }
 
   /**
-   * 환경 변수에서 모든 API 키 로드
+   * 비동기 초기화
    */
-  loadApiKeys() {
+  async initialize() {
+    if (this._initialized) return this;
+
+    try {
+      this.apiKeys = await this.loadApiKeys();
+      this._initialized = true;
+      return this;
+    } catch (error) {
+      ServerLogger.error('EnhancedMultiApiManager 초기화 실패:', error, 'MULTIAPI');
+      throw error;
+    }
+  }
+
+  /**
+   * ApiKeyManager에서 모든 API 키 로드
+   */
+  async loadApiKeys() {
     const keys = [];
     
-    // 기본 키
-    if (process.env.GOOGLE_API_KEY) {
-      keys.push({
-        key: process.env.GOOGLE_API_KEY,
-        name: 'primary',
-        index: 0
-      });
-    }
-    
-    // 보조 키들 (GOOGLE_API_KEY_2, GOOGLE_API_KEY_3, ...)
-    for (let i = 2; i <= 10; i++) {
-      const key = process.env[`GOOGLE_API_KEY_${i}`];
-      if (key) {
+    try {
+      const ApiKeyManager = require('../services/ApiKeyManager');
+      await ApiKeyManager.initialize();
+      const activeApiKeys = await ApiKeyManager.getActiveApiKeys();
+
+      activeApiKeys.forEach((key, index) => {
         keys.push({
           key: key,
-          name: `secondary_${i}`,
-          index: keys.length
+          name: index === 0 ? 'primary' : `secondary_${index + 1}`,
+          index: index
         });
-        ServerLogger.info(`📍 API 키 ${i} 로드됨`, null, 'MULTIAPI');
-      }
+        ServerLogger.info(`📍 API 키 ${index + 1} 로드됨 (ApiKeyManager)`, null, 'MULTIAPI');
+      });
+    } catch (error) {
+      ServerLogger.error('🚨 ApiKeyManager 로드 실패, API 키가 없습니다.', error, 'MULTIAPI');
+      throw new Error('ApiKeyManager에서 API 키를 로드할 수 없습니다.');
     }
-    
+
     if (keys.length === 0) {
       throw new Error('최소 하나의 Google API 키가 필요합니다.');
     }
-    
+
     return keys;
   }
 

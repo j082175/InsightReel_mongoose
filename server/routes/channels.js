@@ -155,6 +155,17 @@ router.post('/add-url', async (req, res) => {
     
   } catch (error) {
     ServerLogger.error('URL로 채널 추가 실패:', error);
+
+    // MongoDB 중복 키 에러 처리
+    if (error.code === 11000 || error.message.includes('duplicate key')) {
+      return res.status(HTTP_STATUS_CODES.CONFLICT).json({
+        success: false,
+        error: ERROR_CODES.CONFLICT,
+        message: '이미 존재하는 채널입니다.',
+        details: '동일한 채널이 이미 데이터베이스에 등록되어 있습니다.'
+      });
+    }
+
     res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: ERROR_CODES.SERVER_ERROR,

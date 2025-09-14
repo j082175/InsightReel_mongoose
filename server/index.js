@@ -2880,9 +2880,13 @@ app.get('/api/api-keys', async (req, res) => {
         // ApiKeyManager에서 모든 YouTube API 키 조회
         const allYouTubeKeys = await ApiKeyManager.getAllApiKeys();
 
-        // Gemini API 키 추가
+        // Gemini API 키 추가 (ApiKeyManager에서 첫 번째 키 사용)
         const geminiKeys = [];
-        if (process.env.GOOGLE_API_KEY) {
+        const activeApiKeys = await ApiKeyManager.getActiveApiKeys();
+        if (activeApiKeys.length > 0) {
+            // 첫 번째 API 키를 Gemini용으로 사용 (YouTube + Gemini 통합)
+            const firstApiKey = activeApiKeys[0];
+
             // Gemini 사용량 조회 (aiAnalyzer 사용)
             const geminiUsage =
                 aiAnalyzer && aiAnalyzer.getGeminiUsageStats
@@ -2895,11 +2899,11 @@ app.get('/api/api-keys', async (req, res) => {
 
             geminiKeys.push({
                 id: 'gemini-main',
-                name: 'Gemini API (Main)',
-                apiKey: process.env.GOOGLE_API_KEY,
+                name: 'Gemini API (ApiKeyManager)',
+                apiKey: firstApiKey,
                 type: 'gemini',
                 usage: geminiUsage,
-                source: 'env',
+                source: 'manager',
             });
         }
 

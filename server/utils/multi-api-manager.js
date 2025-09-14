@@ -9,17 +9,18 @@ class MultiApiManager {
   constructor() {
     // 환경 변수에서 설정 로드
     this.fallbackStrategy = process.env.GEMINI_FALLBACK_STRATEGY || 'flash'; // 'flash' 또는 'multi-pro'
+
+    // API 키들 초기화
+    this.primaryApiKey = null;
+    this.secondaryApiKeys = [];
+    this._initialized = false;
     
-    // 기본 API 키
-    this.primaryApiKey = process.env.GOOGLE_API_KEY;
-    
-    // 추가 API 키들 (multi-pro 전략용)
-    this.secondaryApiKeys = this.loadSecondaryApiKeys();
-    
-    // 각 API 키별 사용량 추적기
     this.usageTrackers = new Map();
-    this.usageTrackers.set('primary', UsageTracker.getInstance());
-    
+
+    if (this.primaryApiKey) {
+      this.usageTrackers.set('primary', UsageTracker.getInstance());
+    }
+
     // 보조 키들도 추적기 생성
     this.secondaryApiKeys.forEach((key, index) => {
       this.usageTrackers.set(`secondary_${index}`, UsageTracker.getInstance());
@@ -33,22 +34,55 @@ class MultiApiManager {
   }
 
   /**
-   * 보조 API 키들 로드
+   * 비동기 초기화
    */
-  loadSecondaryApiKeys() {
-    const keys = [];
-    
-    // GOOGLE_API_KEY_2, GOOGLE_API_KEY_3, ... 형태로 환경변수에서 로드
-    for (let i = 2; i <= 10; i++) {
-      const key = process.env[`GOOGLE_API_KEY_${i}`];
-      if (key) {
-        keys.push(key);
-        ServerLogger.info(`📍 보조 API 키 ${i} 로드됨`, null, 'MULTIAPI');
-      }
+  async initialize() {
+    if (this._initialized) return this;
+
+    try {
+      const apiKeys = await this.loadApiKeys();
+      this.primaryApiKey = apiKeys[0] || null;
+      this.secondaryApiKeys = apiKeys.slice(1);
+
+      // 사용량 추적기 초기화
+      this.initializeTrackers();
+
+      this._initialized = true;
+      ServerLogger.info(`🔧 Multi API Manager 초기화: 전략=${this.fallbackStrategy}, 보조키=${this.secondaryApiKeys.length}개`, null, 'MULTIAPI');
+      return this;
+    } catch (error) {
+      ServerLogger.error('Multi API Manager 초기화 실패:', error, 'MULTIAPI');
+      throw error;
     }
-    
-    return keys;
   }
+
+  /**
+   * ApiKeyManager에서 API 키들 로드
+   */
+  async loadApiKeys() {
+    try {
+      const ApiKeyManager = require('../services/ApiKeyManager');
+      await ApiKeyManager.initialize();
+      const activeApiKeys = await ApiKeyManager.getActiveApiKeys();
+
+      if (activeApiKeys.length > 0) {
+        ServerLogger.info(`📍 ${activeApiKeys.length}개 API 키 로드됨 (ApiKeyManager)`, null, 'MULTIAPI');
+        return activeApiKeys;
+      } else {
+        throw new Error('ApiKeyManager에 활성 API 키가 없습니다.');
+      }
+    } catch (error) {
+      ServerLogger.error('🚨 ApiKeyManager 로드 실패, API 키가 없습니다.', error, 'MULTIAPI');
+      throw new Error('ApiKeyManager에서 API 키를 로드할 수 없습니다.');
+    }
+
+    return [];
+  }
+
+  /**
+   * 사용량 추적기 초기화
+   */
+  initializeTrackers() {
 
   /**
    * 현재 사용할 최적의 API 키와 모델 반환

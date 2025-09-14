@@ -13,8 +13,7 @@ class YouTubeBatchProcessor {
         this.maxBatchSize = 50; // YouTube API 최대 제한
         this.batchTimeout = 60000; // 60초 후 자동 처리
         this.isProcessing = false;
-        this.youtubeApiKey =
-            process.env.YOUTUBE_API_KEY || process.env.GOOGLE_API_KEY;
+        this.youtubeApiKey = null; // ApiKeyManager에서 동적으로 로드
         this.batchFile = path.join(
             __dirname,
             '../../data/youtube_batch_queue.json',
@@ -53,8 +52,21 @@ class YouTubeBatchProcessor {
         ServerLogger.info('📦 YouTube 배치 처리기 초기화됨', {
             maxBatchSize: this.maxBatchSize,
             batchTimeout: this.batchTimeout / 1000 + '초',
-            apiKey: !!this.youtubeApiKey,
+            apiKey: false, // ApiKeyManager에서 동적으로 로드
         });
+    }
+
+    async getApiKey() {
+        if (!this.youtubeApiKey) {
+            const apiKeyManager = require('./ApiKeyManager');
+            await apiKeyManager.initialize();
+            const activeKeys = await apiKeyManager.getActiveApiKeys();
+            if (activeKeys.length === 0) {
+                throw new Error('활성화된 API 키가 없습니다. ApiKeyManager에 키를 추가해주세요.');
+            }
+            this.youtubeApiKey = activeKeys[0];
+        }
+        return this.youtubeApiKey;
     }
 
     /**
@@ -247,7 +259,7 @@ class YouTubeBatchProcessor {
                     params: {
                         part: 'snippet,statistics,contentDetails',
                         id: videoIds,
-                        key: this.youtubeApiKey,
+                        key: await this.getApiKey(),
                     },
                     timeout: 30000,
                 },
@@ -273,7 +285,7 @@ class YouTubeBatchProcessor {
                     params: {
                         part: 'statistics,snippet',
                         id: channelIds.join(','),
-                        key: this.youtubeApiKey,
+                        key: await this.getApiKey(),
                     },
                     timeout: 30000,
                 },

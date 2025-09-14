@@ -7,10 +7,23 @@ const axios = require('axios');
  */
 class TagExtractor {
     constructor() {
-        this.geminiApiKey = process.env.GOOGLE_API_KEY;
+        this.geminiApiKey = null; // ApiKeyManager에서 동적으로 로드
         this.tagCache = new Map(); // 캐싱으로 API 호출 최적화
 
         ServerLogger.info('🏷️ TagExtractor 초기화');
+    }
+
+    async getApiKey() {
+        if (!this.geminiApiKey) {
+            const apiKeyManager = require('../../services/ApiKeyManager');
+            await apiKeyManager.initialize();
+            const activeKeys = await apiKeyManager.getActiveApiKeys();
+            if (activeKeys.length === 0) {
+                throw new Error('활성화된 API 키가 없습니다. ApiKeyManager에 키를 추가해주세요.');
+            }
+            this.geminiApiKey = activeKeys[0];
+        }
+        return this.geminiApiKey;
     }
 
     /**
@@ -131,7 +144,7 @@ class TagExtractor {
 `;
 
             const response = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${this.geminiApiKey}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${await this.getApiKey()}`,
                 {
                     contents: [
                         {

@@ -65,8 +65,7 @@ class VideoProcessor {
     constructor() {
         this.downloadDir = path.join(__dirname, '../../downloads');
         this.thumbnailDir = path.join(this.downloadDir, 'thumbnails');
-        this.youtubeApiKey =
-            process.env.YOUTUBE_API_KEY || process.env.GOOGLE_API_KEY;
+        this.youtubeApiKey = null; // ApiKeyManager에서 동적으로 로드
 
         // 🚀 하이브리드 YouTube 추출기 초기화
         this.hybridExtractor = new HybridYouTubeExtractor();
@@ -82,6 +81,19 @@ class VideoProcessor {
         if (!fs.existsSync(this.thumbnailDir)) {
             fs.mkdirSync(this.thumbnailDir, { recursive: true });
         }
+    }
+
+    async getApiKey() {
+        if (!this.youtubeApiKey) {
+            const apiKeyManager = require('./ApiKeyManager');
+            await apiKeyManager.initialize();
+            const activeKeys = await apiKeyManager.getActiveApiKeys();
+            if (activeKeys.length === 0) {
+                throw new Error('활성화된 API 키가 없습니다. ApiKeyManager에 키를 추가해주세요.');
+            }
+            this.youtubeApiKey = activeKeys[0];
+        }
+        return this.youtubeApiKey;
     }
 
     async downloadVideo(videoUrl, platform) {
@@ -888,7 +900,7 @@ class VideoProcessor {
                         videoId: videoId,
                         maxResults: Math.min(maxResults, 100), // 최대 100개
                         order: 'relevance', // relevance(관련성) or time(시간순)
-                        key: this.youtubeApiKey,
+                        key: await this.getApiKey(),
                     },
                 },
             );
@@ -1016,9 +1028,8 @@ class VideoProcessor {
     // 🔄 기존 API 전용 메서드 (폴백용)
     async getYouTubeVideoInfoLegacy(videoUrl) {
         try {
-            if (!this.youtubeApiKey) {
-                throw new Error('YouTube API 키가 설정되지 않았습니다.');
-            }
+            // API 키 초기화
+            await this.getApiKey();
 
             const videoId = this.extractYouTubeId(videoUrl);
             ServerLogger.info(`🎬 기존 API 방식 정보 수집: ${videoId}`);
@@ -1029,7 +1040,7 @@ class VideoProcessor {
                     params: {
                         part: 'snippet,statistics,contentDetails,status',
                         id: videoId,
-                        key: this.youtubeApiKey,
+                        key: await this.getApiKey(),
                     },
                 },
             );
@@ -1062,7 +1073,7 @@ class VideoProcessor {
                         params: {
                             part: 'statistics,snippet',
                             id: snippet.channelId,
-                            key: this.youtubeApiKey,
+                            key: await this.getApiKey(),
                         },
                     },
                 );

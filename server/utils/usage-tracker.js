@@ -11,7 +11,7 @@ class UsageTracker {
     static instances = new Map(); // 싱글톤 인스턴스 저장
 
     constructor(apiKey = null) {
-        const key = apiKey || process.env.GOOGLE_API_KEY;
+        const key = apiKey || this.getDefaultApiKey();
 
         // 이미 동일한 API 키로 인스턴스가 있으면 반환
         if (UsageTracker.instances.has(key)) {
@@ -25,7 +25,7 @@ class UsageTracker {
             __dirname,
             '../../config/api-quotas.json',
         );
-        this.apiKey = apiKey || process.env.GOOGLE_API_KEY;
+        this.apiKey = apiKey || this.getDefaultApiKey();
         this.currentApiKeyHash = this.apiKey
             ? this.hashApiKey(this.apiKey)
             : null;
@@ -46,12 +46,38 @@ class UsageTracker {
     }
 
     /**
+     * 기본 API 키 조회 (ApiKeyManager → 환경변수 폴백)
+     * @returns {string|null} API 키
+     */
+    static getDefaultApiKey() {
+        try {
+            // 동기적으로 첫 번째 키만 조회 (비동기 초기화 없이)
+            const apiKeysData = require('../data/api-keys.json');
+            const activeKeys = apiKeysData.filter(key => key.status === 'active');
+            if (activeKeys.length > 0) {
+                return activeKeys[0].apiKey;
+            }
+        } catch (error) {
+            // api-keys.json 파일이 없거나 읽기 실패
+        }
+        throw new Error('활성 API 키를 찾을 수 없습니다. ApiKeyManager에 키를 추가하세요.');
+    }
+
+    /**
+     * 인스턴스 메서드로 기본 API 키 조회
+     * @returns {string|null} API 키
+     */
+    getDefaultApiKey() {
+        return UsageTracker.getDefaultApiKey();
+    }
+
+    /**
      * 싱글톤 인스턴스 생성/반환
      * @param {string} apiKey - API 키
      * @returns {UsageTracker} 인스턴스
      */
     static getInstance(apiKey = null) {
-        const key = apiKey || process.env.GOOGLE_API_KEY;
+        const key = apiKey || UsageTracker.getDefaultApiKey();
 
         if (!UsageTracker.instances.has(key)) {
             new UsageTracker(key); // constructor에서 instances에 저장됨
