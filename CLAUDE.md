@@ -8,8 +8,8 @@
 
 1. **필드명 중복 절대 금지** 🚫
    - `videoId`, `viewCount`, `thumbnail` 같은 중복 필드 생성 금지
-   - 오직 `id`, `views`, `thumbnailUrl` 표준 필드만 사용
-   - MongoDB `_id` → API `id` 변환만 허용 (단 1개)
+   - 오직 `_id`, `views`, `thumbnailUrl` 표준 필드만 사용
+   - MongoDB `_id` 필드 모든 계층에서 유지 (변환 없음)
 
 2. **상수 시스템 필수 사용** 📝
    **🎯 목적: 하드코딩된 값들을 중앙 관리하여 일관성 및 유지보수성 향상**
@@ -100,6 +100,7 @@ YouTube/Instagram/TikTok 비디오를 자동으로 다운로드하고 AI(Gemini)
    - React.memo + useCallback 패턴으로 불필요한 리렌더링 방지
    - VideoCard, SelectionActionBar 등 핵심 컴포넌트 최적화 완료
    - 메모이제이션을 통한 성능 향상
+   - **Key Prop 최적화**: 모든 리스트 렌더링에서 `video._id` 사용 (안정적인 key 보장)
 
 5. **공통 유틸리티 함수 시스템** ✅
    - 날짜, 조회수, 플랫폼 관련 포맷팅 중복 구현 완전 해결
@@ -149,8 +150,8 @@ YouTube/Instagram/TikTok 비디오를 자동으로 다운로드하고 AI(Gemini)
    | 계층 | `_id` 필드 | 나머지 필드들 | 예시 |
    |------|-----------|--------------|------|
    | **MongoDB** | `_id: "123abc"` | `views: 1000, title: "제목", uploadDate: "2024-01-01"` | 원본 |
-   | **API 응답** | `id: "123abc"` | `views: 1000, title: "제목", uploadDate: "2024-01-01"` | _id→id만 변환 |
-   | **프론트엔드** | `video.id` | `video.views, video.title, video.uploadDate` | API와 완전 동일 |
+   | **API 응답** | `_id: "123abc"` | `views: 1000, title: "제목", uploadDate: "2024-01-01"` | _id 유지 (변환 없음) |
+   | **프론트엔드** | `video._id` | `video.views, video.title, video.uploadDate` | API와 완전 동일 |
 
    ### **📺 Channel 엔티티**
    | 계층 | MongoDB 문서 ID | 채널 비즈니스 ID | 나머지 필드들 |
@@ -161,9 +162,9 @@ YouTube/Instagram/TikTok 비디오를 자동으로 다운로드하고 AI(Gemini)
 
    ### **✅ 허용되는 변환 규칙**
    ```javascript
-   // Video: MongoDB → API 응답 시 _id만 id로 변환
+   // Video: MongoDB _id 필드 그대로 유지
    MongoDB: { _id: "video123", views: 1000, title: "영상 제목" }
-   API:     { id: "video123",  views: 1000, title: "영상 제목" }
+   API:     { _id: "video123", views: 1000, title: "영상 제목" }
 
    // Channel: MongoDB _id와 channelId 모두 유지
    MongoDB: { _id: "doc123", channelId: "UC123abc", name: "채널명" }
@@ -194,7 +195,7 @@ YouTube/Instagram/TikTok 비디오를 자동으로 다운로드하고 AI(Gemini)
    ```javascript
    // ✅ Video 엔티티 표준 구조
    {
-     id: "video123",          // MongoDB _id → id (유일한 변환)
+     _id: "video123",         // MongoDB _id 필드 유지
      title: "영상 제목",       // 모든 계층 동일
      views: 1000,            // 모든 계층 동일
      thumbnailUrl: "https://...", // 모든 계층 동일
@@ -215,7 +216,7 @@ YouTube/Instagram/TikTok 비디오를 자동으로 다운로드하고 AI(Gemini)
    ### **📋 프론트엔드 접근 방식 (Fallback 패턴 완전 제거)**
    ```typescript
    // ✅ Video 직접 접근 (단순하고 명확)
-   const videoId = video.id;              // 항상 존재함
+   const videoId = video._id;             // MongoDB _id 필드 사용
    const views = video.views;             // 항상 존재함
    const thumbnail = video.thumbnailUrl;  // 항상 존재함
 
