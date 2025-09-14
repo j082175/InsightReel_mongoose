@@ -487,7 +487,7 @@ const VideoArchivePage: React.FC = () => {
                     onInfoClick={(video) => !isSelectMode && setSelectedVideo(video)}
                     onChannelClick={setChannelToAnalyze}
                     isSelectMode={isSelectMode}
-                    isSelected={videoSelection.isSelected(String(video.id))}
+                    isSelected={videoSelection.isSelected(video._id)}
                     onSelectToggle={handleSelectToggle}
                     showArchiveInfo={true}
                   />
@@ -502,7 +502,7 @@ const VideoArchivePage: React.FC = () => {
                     onCardClick={setSelectedVideo}
                     onDeleteClick={handleDeleteClick}
                     isSelectMode={isSelectMode}
-                    isSelected={videoSelection.isSelected(String(video.id))}
+                    isSelected={videoSelection.isSelected(video._id)}
                     onSelectToggle={handleSelectToggle}
                   />
                 ))}

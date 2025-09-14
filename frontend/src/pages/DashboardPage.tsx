@@ -113,9 +113,9 @@ const DashboardPage: React.FC = () => {
       total: combined.length
     });
     
-    // 중복 제거 (ID 기준)
-    const uniqueVideos = combined.filter((video, index, arr) => 
-      arr.findIndex(v => v.id === video.id) === index
+    // 중복 제거 (_id 기준)
+    const uniqueVideos = combined.filter((video, index, arr) =>
+      arr.findIndex(v => v._id === video._id) === index
     );
     
     return uniqueVideos;
@@ -278,7 +278,7 @@ const DashboardPage: React.FC = () => {
         
         // 선택 모드에서 삭제된 비디오를 선택에서 제거
         if (isSelectMode) {
-          videoSelection.deselect(Number(video.id));
+          videoSelection.deselect(video._id);
         }
       } else {
         console.error('❌ DB 삭제 실패:', response.status, response.statusText);
