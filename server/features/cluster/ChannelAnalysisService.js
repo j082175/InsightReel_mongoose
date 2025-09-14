@@ -613,7 +613,7 @@ class ChannelAnalysisService {
         try {
             // MongoDB에서 직접 조회 - Channel 스키마의 'id' 필드 사용
             const channel = await Channel.findOne({
-                id: channelId,
+                channelId: channelId,
             }).lean();
             return channel || null;
         } catch (error) {
@@ -769,7 +769,7 @@ class ChannelAnalysisService {
         try {
             // MongoDB에서 삭제
             const result = await Channel.findOneAndDelete({
-                id: channelId,
+                channelId: channelId,
             });
 
             if (result) {
@@ -779,7 +779,7 @@ class ChannelAnalysisService {
                 });
 
                 ServerLogger.info('🗑️ 채널 삭제 완료', {
-                    id: channelId,
+                    channelId: channelId,
                     name: result.name,
                 });
 
