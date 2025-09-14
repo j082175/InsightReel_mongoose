@@ -1,16 +1,16 @@
-import React, { useState, useMemo } from 'react';
-import { useVideos, useTrendingStats, useQuotaStatus, useServerStatus, useCollectTrending } from '../shared/hooks';
-import { Video, FilterState } from '../shared/types';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useTrendingStats, useQuotaStatus, useServerStatus, useCollectTrending } from '../shared/hooks';
+import { Video } from '../shared/types';
 import { useAppContext } from '../app/providers';
 import { VideoModal, VideoOnlyModal } from '../features/video-analysis';
 import { DeleteConfirmationModal } from '../shared/ui';
 import { ChannelAnalysisModal } from '../features/channel-management';
 import { VideoCard, SearchBar } from '../shared/components';
+import { VideoManagement } from '../features';
 
 import { PLATFORMS } from '../shared/types/api';
 import { formatViews } from '../shared/utils';
 import { getVideoId, getViewCount } from '../shared/utils/videoUtils';
-import { useSelection, useSearch, useFilter } from '../shared/hooks';
 import { ActionBar } from '../shared/components';
 
 const DashboardPage: React.FC = () => {
@@ -20,29 +20,53 @@ const DashboardPage: React.FC = () => {
   const [selectedVideoForPlay, setSelectedVideoForPlay] = useState<Video | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [gridSize, setGridSize] = useState(1);
-  const [isSelectMode, setIsSelectMode] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{
     type: 'single' | 'bulk';
     data?: Video;
     count?: number;
   } | null>(null);
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
-  const [deletedVideoIds, setDeletedVideoIds] = useState<Set<string>>(new Set());
-  
-  // 선택 관리
-  const videoSelection = useSelection<string>();
 
-  // API 훅들
-  const { data: apiVideos = [] } = useVideos();
+  // VideoStore 사용 - 상태와 액션 분리
+  const videoStore = VideoManagement.useVideoStore(selectedBatchId);
+  const {
+    videos,
+    loading,
+    error,
+    filters,
+    selectedVideos,
+    isSelectMode,
+    fetchVideos,
+    deleteVideo,
+    deleteVideos,
+    updateFilters,
+    toggleSelectMode,
+    selectVideo,
+    deselectVideo,
+    selectAllVideos,
+    clearSelection,
+    markVideoAsDeleted
+  } = videoStore;
+
+  // 기타 API 훅들
   const { data: trendingStats } = useTrendingStats();
   const { data: quotaStatus } = useQuotaStatus();
   const { data: serverStatus } = useServerStatus();
   const collectTrendingMutation = useCollectTrending();
-  
-  // 전역 상태에서 수집된 영상과 배치 정보 가져오기
-  const { collectedVideos, collectionBatches } = useAppContext();
 
-  // Mock 데이터 - 새로운 인터페이스 형식
+  // 전역 상태에서 배치 정보 가져오기
+  const { collectionBatches } = useAppContext();
+
+  // 컴포넌트 마운트 시 비디오 데이터 로드
+  useEffect(() => {
+    fetchVideos(selectedBatchId);
+  }, [fetchVideos, selectedBatchId]);
+
+  // 선택된 비디오 개수 계산
+  const selectedCount = selectedVideos.size;
+  const totalVideos = videos.length;
+
+  // Mock 데이터 (개발용) - 새로운 인터페이스 형식
   const mockVideos: Video[] = [
     { 
       uploadDate: '2024-01-01T10:00:00',

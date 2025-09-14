@@ -7,7 +7,9 @@
     "build": "webpack --mode=production",
     "dev": "webpack --mode=development --watch",
     "clean": "rimraf dist",
-    "build:clean": "npm run clean && npm run build"
+    "build:clean": "npm run clean && npm run build",
+    "type-check": "tsc --noEmit",
+    "type-check:watch": "tsc --noEmit --watch"
   },
   "devDependencies": {
     "webpack": "^5.88.0",
@@ -16,7 +18,14 @@
     "rimraf": "^5.0.0",
     "@babel/core": "^7.22.0",
     "@babel/preset-env": "^7.22.0",
-    "babel-loader": "^9.1.0"
+    "babel-loader": "^9.1.0",
+    "css-loader": "^6.8.1",
+    "style-loader": "^3.3.3",
+    "typescript": "^5.2.0",
+    "@typescript-eslint/eslint-plugin": "^6.7.0",
+    "@typescript-eslint/parser": "^6.7.0",
+    "ts-loader": "^9.4.4",
+    "@types/chrome": "^0.0.248"
   },
   "engines": {
     "node": ">=16.0.0"

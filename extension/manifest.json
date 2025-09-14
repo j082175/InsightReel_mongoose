@@ -44,7 +44,7 @@
         "https://www.youtube.com/*",
         "https://youtu.be/*"
       ],
-      "js": ["content/youtube-channel-analyzer.js"],
+      "js": ["content/youtube-channel-analyzer-simple.js"],
       "run_at": "document_idle"
     }
   ],
