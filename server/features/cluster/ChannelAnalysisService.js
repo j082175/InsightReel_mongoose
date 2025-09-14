@@ -585,7 +585,7 @@ class ChannelAnalysisService {
                         name: channel.name,
                         url: channel.url,
                         subscribers: channel.subscribers,
-                        id: channel.id
+                        id: channel.channelId
                     }
                 );
                 

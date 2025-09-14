@@ -145,22 +145,34 @@ YouTube/Instagram/TikTok 비디오를 자동으로 다운로드하고 AI(Gemini)
 
    **🎯 핵심 원칙: MongoDB → API → 프론트엔드 모든 계층에서 필드명 통일**
 
+   ### **🎬 Video 엔티티**
    | 계층 | `_id` 필드 | 나머지 필드들 | 예시 |
    |------|-----------|--------------|------|
    | **MongoDB** | `_id: "123abc"` | `views: 1000, title: "제목", uploadDate: "2024-01-01"` | 원본 |
    | **API 응답** | `id: "123abc"` | `views: 1000, title: "제목", uploadDate: "2024-01-01"` | _id→id만 변환 |
    | **프론트엔드** | `video.id` | `video.views, video.title, video.uploadDate` | API와 완전 동일 |
 
-   ### **✅ 허용되는 유일한 변환**
+   ### **📺 Channel 엔티티**
+   | 계층 | MongoDB 문서 ID | 채널 비즈니스 ID | 나머지 필드들 |
+   |------|----------------|-----------------|--------------|
+   | **MongoDB** | `_id: "doc123"` | `channelId: "UC123abc"` | `name: "채널명", subscribers: 10000` |
+   | **API 응답** | `_id: "doc123"` | `channelId: "UC123abc"` | `name: "채널명", subscribers: 10000` |
+   | **프론트엔드** | `channel._id` | `channel.channelId` | `channel.name, channel.subscribers` |
+
+   ### **✅ 허용되는 변환 규칙**
    ```javascript
-   // MongoDB → API 응답 시 _id만 id로 변환 (단 1개)
-   MongoDB: { _id: "abc123", views: 1000, title: "제목" }
-   API:     { id: "abc123",  views: 1000, title: "제목" }  // _id만 변환, 나머지 동일
+   // Video: MongoDB → API 응답 시 _id만 id로 변환
+   MongoDB: { _id: "video123", views: 1000, title: "영상 제목" }
+   API:     { id: "video123",  views: 1000, title: "영상 제목" }
+
+   // Channel: MongoDB _id와 channelId 모두 유지
+   MongoDB: { _id: "doc123", channelId: "UC123abc", name: "채널명" }
+   API:     { _id: "doc123", channelId: "UC123abc", name: "채널명" }
    ```
 
    ### **🚫 절대 금지 - 중복/다른 필드명**
    ```javascript
-   // ❌ 이런 중복 필드 절대 생성 금지
+   // ❌ Video 중복 필드 생성 금지
    {
      id: "123",
      videoId: "123",        // 중복!
@@ -169,29 +181,52 @@ YouTube/Instagram/TikTok 비디오를 자동으로 다운로드하고 AI(Gemini)
      thumbnailUrl: "url",
      thumbnail: "url"       // 중복!
    }
-   ```
 
-   ### **✅ 올바른 단일 필드 사용**
-   ```javascript
-   // ✅ 모든 계층에서 이 형태로만 사용
+   // ❌ Channel 혼란스러운 필드명 금지
    {
-     id: "abc123",           // MongoDB _id → id (유일한 변환)
-     title: "영상 제목",      // 모든 계층 동일
-     views: 1000,           // 모든 계층 동일
-     thumbnailUrl: "https://...", // 모든 계층 동일
-     uploadDate: "2024-01-01"     // 모든 계층 동일
+     id: "123",             // 모호함! MongoDB _id vs 채널 ID?
+     channelId: "UC123",    // 이것이 정확한 채널 비즈니스 ID
+     _id: "doc123"          // 이것이 MongoDB 문서 ID
    }
    ```
 
-   ### **📋 프론트엔드 접근 방식**
-   ```typescript
-   // ✅ 직접 접근 (권장)
-   const videoId = video.id;
-   const views = video.views;
-   const thumbnail = video.thumbnailUrl;
+   ### **✅ 올바른 엔티티별 필드 사용**
+   ```javascript
+   // ✅ Video 엔티티 표준 구조
+   {
+     id: "video123",          // MongoDB _id → id (유일한 변환)
+     title: "영상 제목",       // 모든 계층 동일
+     views: 1000,            // 모든 계층 동일
+     thumbnailUrl: "https://...", // 모든 계층 동일
+     uploadDate: "2024-01-01",    // 모든 계층 동일
+     channelName: "채널명"    // 채널 정보는 channelName으로
+   }
 
-   // ❌ 복잡한 fallback 금지
-   // const id = video.videoId || video.id || video._id;
+   // ✅ Channel 엔티티 표준 구조
+   {
+     _id: "doc123",           // MongoDB 문서 ID (변환 안 함)
+     channelId: "UC123abc",   // YouTube/Instagram/TikTok 채널 ID
+     name: "채널명",          // 모든 계층 동일
+     subscribers: 10000,      // 모든 계층 동일
+     platform: "YOUTUBE"      // 모든 계층 동일
+   }
+   ```
+
+   ### **📋 프론트엔드 접근 방식 (Fallback 패턴 완전 제거)**
+   ```typescript
+   // ✅ Video 직접 접근 (단순하고 명확)
+   const videoId = video.id;              // 항상 존재함
+   const views = video.views;             // 항상 존재함
+   const thumbnail = video.thumbnailUrl;  // 항상 존재함
+
+   // ✅ Channel 직접 접근 (MongoDB _id와 비즈니스 ID 구분)
+   const mongoDocId = channel._id;        // MongoDB 문서 고유 ID
+   const youtubeChannelId = channel.channelId;  // 실제 YouTube 채널 ID
+   const channelName = channel.name;      // 채널명
+
+   // ❌ Fallback 패턴 완전 금지 (근본적 원인 해결로 불필요)
+   // const id = video.videoId || video.id || video._id;       // 금지!
+   // const channelId = channel.id || channel.channelId;       // 금지!
    ```
 
    **⚠️ 이 규칙을 위반하면 필드 접근이 혼란스러워지고 버그가 급증합니다!**
@@ -499,16 +534,27 @@ const VideoCard = ({ video }) => {
 }
 ```
 
-### **✅ 프론트엔드에서 사용법**
+### **✅ 프론트엔드에서 사용법 (근본적 해결로 단순화)**
 ```typescript
-// ✅ 단순하고 명확함
-const videoId = getVideoId(video);      // → video.id
-const views = getViewCount(video);      // → video.views
-const thumbnail = getThumbnailUrl(video); // → video.thumbnailUrl
+// ✅ 직접 접근 (필드 통일로 항상 안전)
+const videoId = video.id;              // 항상 존재 (MongoDB _id → id 변환됨)
+const views = video.views;             // 항상 존재 (모든 계층 통일)
+const thumbnail = video.thumbnailUrl;  // 항상 존재 (모든 계층 통일)
 
-// ❌ 절대 이런 복잡한 fallback 금지
-// const id = video.videoId || video.id || video._id || 0;
+// ✅ 채널 정보 접근 (혼란 제거됨)
+const mongoDocId = channel._id;        // MongoDB 문서 ID
+const youtubeChannelId = channel.channelId;  // YouTube 채널 ID
+const channelName = channel.name;      // 채널명
+
+// ❌ Fallback 패턴 완전 불필요 (근본적 원인 해결)
+// const id = video.videoId || video.id || video._id;    // 불필요!
+// const channelId = getChannelId(channel);              // 불필요!
 ```
+
+### **🎯 핵심 개선사항**
+- **근본적 해결**: Fallback 패턴 대신 필드명 완전 통일
+- **MongoDB _id vs 비즈니스 ID**: 명확한 구분으로 혼란 제거
+- **단순성**: 복잡한 유틸리티 함수 불필요
 
 ### **⚠️ 위반 시 결과**
 - 프론트엔드에서 필드 접근 혼란
@@ -517,3 +563,75 @@ const thumbnail = getThumbnailUrl(video); // → video.thumbnailUrl
 - 코드 리뷰 시간 증가
 
 **🎯 기억하세요: "한 가지 일을 한 가지 방법으로!"**
+
+---
+
+## 📊 데이터베이스 스키마 업데이트 (2024.09.14)
+
+### **ChannelGroup 스키마 변경사항** 🔄
+```javascript
+// ✅ 변경 후 (명확한 channelId 구조)
+const channelGroupSchema = {
+  name: String,
+  description: String,
+  color: String,
+  channels: [{
+    channelId: {         // 변경: id → channelId
+      type: String,
+      required: true
+    },
+    name: {
+      type: String,
+      required: true
+    }
+  }],
+  keywords: [String],
+  isActive: Boolean,
+  lastCollectedAt: Date
+};
+
+// ❌ 변경 전 (혼란스러운 구조)
+channels: [{
+  id: String,           // 모호함! MongoDB _id? 비즈니스 ID?
+  name: String
+}]
+```
+
+### **Channel 엔티티 표준 구조 (channel-types.js 기반)** 📋
+```javascript
+// ChannelCore - 기본 채널 정보 (32개 필드)
+const ChannelSchema = {
+  // 🆔 식별 정보
+  _id: ObjectId,              // MongoDB 문서 고유 ID
+  channelId: String,          // YouTube/Instagram/TikTok 채널 ID (UC123abc)
+  name: String,               // 채널명
+  url: String,                // 채널 URL
+  platform: String,          // YOUTUBE, INSTAGRAM, TIKTOK
+
+  // 📊 통계 정보
+  subscribers: Number,        // 구독자 수
+  totalViews: Number,         // 총 조회수
+  totalVideos: Number,        // 총 영상 수
+
+  // 🤖 AI 분석 결과
+  keywords: [String],         // 키워드 태그
+  categoryInfo: {
+    majorCategory: String,    // 주요 카테고리
+    middleCategory: String,   // 중간 카테고리
+    subCategory: String,      // 하위 카테고리
+    fullCategoryPath: String, // 전체 카테고리 경로
+    consistencyLevel: String  // 일관성 수준 (high/medium/low)
+  },
+
+  // 📅 메타데이터
+  lastAnalyzedAt: String,     // 최근 분석 시간 (ISO String)
+  createdAt: String,          // 생성 시간
+  updatedAt: String           // 수정 시간
+};
+```
+
+### **🎯 핵심 변경 이유**
+1. **혼란 제거**: MongoDB `_id` vs 비즈니스 `channelId` 명확한 구분
+2. **일관성**: 모든 Channel 참조에서 `channelId` 사용
+3. **확장성**: ChannelGroup에서 채널 참조 시 명확한 식별자 사용
+4. **개발자 경험**: Fallback 패턴 불필요로 코드 단순화

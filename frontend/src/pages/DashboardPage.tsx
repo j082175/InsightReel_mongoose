@@ -219,13 +219,13 @@ const DashboardPage: React.FC = () => {
     console.log('🗑️ handleVideoDelete 호출됨 - 실제 DB 삭제 수행:', {
       videoId,
       videoTitle: video.title,
-      dbId: video._id || video.id,
+      dbId: video._id,  // MongoDB _id is always present
       videoSource: video.source
     });
     
     try {
       // 실제 API 삭제 수행 - 올바른 컬렉션에서 바로 삭제
-      const dbId = video._id || video.id;
+      const dbId = video._id;  // MongoDB _id is always present
       const isFromTrending = video.source === 'trending' || video.isFromTrending;
       
       console.log('📍 비디오 source 분석:', {

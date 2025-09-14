@@ -70,7 +70,7 @@ router.post('/add-url', async (req, res) => {
         const channelInfo = await channelCollector.getChannelData(channelId);
         if (channelInfo) {
           channelData = {
-            id: channelInfo.id,
+            channelId: channelInfo.id,
             name: channelInfo.snippet?.title || channelName,
             url: `https://www.youtube.com/channel/${channelInfo.id}`,
             platform: PLATFORMS.YOUTUBE,
@@ -87,7 +87,7 @@ router.post('/add-url', async (req, res) => {
       } catch (apiError) {
         ServerLogger.warn(`YouTube API 호출 실패, 기본 정보만 저장: ${apiError.message}`);
         channelData = {
-          id: channelId,
+          channelId: channelId,
           name: channelName || channelId,
           url: url,
           platform: PLATFORMS.YOUTUBE,
@@ -103,7 +103,7 @@ router.post('/add-url', async (req, res) => {
       channelName = channelId;
       
       channelData = {
-        id: channelId,
+        channelId: channelId,
         name: channelName,
         url: url,
         platform: detectedPlatform,
@@ -114,7 +114,7 @@ router.post('/add-url', async (req, res) => {
     // 중복 체크
     const existingChannel = await Channel.findOne({
       $or: [
-        { id: channelId, platform: detectedPlatform },
+        { channelId: channelId, platform: detectedPlatform },
         { url: url }
       ]
     });
@@ -132,14 +132,14 @@ router.post('/add-url', async (req, res) => {
     const newChannel = new Channel(channelData);
     const savedChannel = await newChannel.save();
     
-    ServerLogger.info(`✅ 채널 저장 완료: ${savedChannel.name} (${savedChannel.id})`);
+    ServerLogger.info(`✅ 채널 저장 완료: ${savedChannel.name} (${savedChannel.channelId})`);
     
     // 그룹에 추가 (옵션)
     if (addToGroup) {
       try {
         const group = await ChannelGroup.findById(addToGroup);
         if (group) {
-          await group.addChannel(savedChannel.id);
+          await group.addChannel(savedChannel.channelId);
           ServerLogger.info(`✅ 채널을 그룹에 추가: ${group.name}`);
         }
       } catch (groupError) {
@@ -184,7 +184,7 @@ router.delete('/:id', async (req, res) => {
     
     if (!deletedChannel) {
       // 채널 ID로 삭제 시도
-      deletedChannel = await Channel.findOneAndDelete({ id: id });
+      deletedChannel = await Channel.findOneAndDelete({ channelId: id });
     }
     
     if (!deletedChannel) {
@@ -204,11 +204,11 @@ router.delete('/:id', async (req, res) => {
     if (removeFromGroups === 'true') {
       try {
         const groups = await ChannelGroup.find({ 
-          channels: deletedChannel.id 
+          channels: deletedChannel.channelId 
         });
         
         for (const group of groups) {
-          await group.removeChannel(deletedChannel.id);
+          await group.removeChannel(deletedChannel.channelId);
           ServerLogger.info(`✅ 그룹에서 채널 제거: ${group.name}`);
         }
       } catch (groupError) {
@@ -221,7 +221,7 @@ router.delete('/:id', async (req, res) => {
       const ChannelUrl = require('../models/ChannelUrl');
       
       ServerLogger.info(`🔍 중복체크 삭제 시도 - 채널 정보: ${JSON.stringify({
-        id: deletedChannel.id,
+        id: deletedChannel.channelId,
         name: deletedChannel.name,
         url: deletedChannel.url
       })}`);
@@ -232,12 +232,12 @@ router.delete('/:id', async (req, res) => {
       // 먼저 삭제될 데이터 조회 (더 광범위한 조건으로)
       const toDeleteDocs = await ChannelUrl.find({
         $or: [
-          { normalizedChannelId: deletedChannel.id },  // 채널 ID로 찾기
+          { normalizedChannelId: deletedChannel.channelId },  // 채널 ID로 찾기
           { normalizedChannelId: deletedChannel.name }, // 채널명으로 찾기
           { normalizedChannelId: `@${deletedChannel.name}` }, // @채널명으로 찾기
           { normalizedChannelId: deletedChannel.customUrl }, // 커스텀URL로 찾기
           { normalizedChannelId: `@${deletedChannel.customUrl}` }, // @커스텀URL로 찾기
-          { originalChannelIdentifier: deletedChannel.id }, // 원본 식별자가 채널 ID인 경우
+          { originalChannelIdentifier: deletedChannel.channelId }, // 원본 식별자가 채널 ID인 경우
           { originalChannelIdentifier: deletedChannel.url }, // 원본 식별자가 URL인 경우
           { originalChannelIdentifier: deletedChannel.name }, // 원본 식별자가 이름인 경우
           { originalChannelIdentifier: `@${deletedChannel.name}` }, // @이름인 경우
@@ -255,12 +255,12 @@ router.delete('/:id', async (req, res) => {
       // 채널 ID로 중복 체크 데이터 삭제 (더 광범위한 조건으로)
       const duplicateCheckResult = await ChannelUrl.deleteMany({
         $or: [
-          { normalizedChannelId: deletedChannel.id },  // 채널 ID로 찾기
+          { normalizedChannelId: deletedChannel.channelId },  // 채널 ID로 찾기
           { normalizedChannelId: deletedChannel.name }, // 채널명으로 찾기
           { normalizedChannelId: `@${deletedChannel.name}` }, // @채널명으로 찾기
           { normalizedChannelId: deletedChannel.customUrl }, // 커스텀URL로 찾기
           { normalizedChannelId: `@${deletedChannel.customUrl}` }, // @커스텀URL로 찾기
-          { originalChannelIdentifier: deletedChannel.id }, // 원본 식별자가 채널 ID인 경우
+          { originalChannelIdentifier: deletedChannel.channelId }, // 원본 식별자가 채널 ID인 경우
           { originalChannelIdentifier: deletedChannel.url }, // 원본 식별자가 URL인 경우
           { originalChannelIdentifier: deletedChannel.name }, // 원본 식별자가 이름인 경우
           { originalChannelIdentifier: `@${deletedChannel.name}` }, // @이름인 경우
@@ -290,7 +290,7 @@ router.delete('/:id', async (req, res) => {
       if (fs.existsSync(channelsFilePath)) {
         const channelsData = JSON.parse(fs.readFileSync(channelsFilePath, 'utf8'));
         const updatedChannels = channelsData.filter(ch => 
-          ch.id !== deletedChannel.id && 
+          ch.id !== deletedChannel.channelId && 
           ch._id !== deletedChannel._id.toString()
         );
         
@@ -301,14 +301,14 @@ router.delete('/:id', async (req, res) => {
       ServerLogger.warn(`channels.json 업데이트 실패: ${fileError.message}`);
     }
     
-    ServerLogger.info(`✅ 채널 삭제 완료: ${deletedChannel.name} (${deletedChannel.id})`);
+    ServerLogger.info(`✅ 채널 삭제 완료: ${deletedChannel.name} (${deletedChannel.channelId})`);
     
     res.status(HTTP_STATUS_CODES.OK).json({
       success: true,
       message: '채널이 삭제되었습니다.',
       data: {
         deletedId: deletedChannel._id,
-        channelId: deletedChannel.id,
+        channelId: deletedChannel.channelId,
         name: deletedChannel.name
       }
     });
@@ -346,7 +346,7 @@ router.get('/', async (req, res) => {
     if (groupId) {
       const group = await ChannelGroup.findById(groupId);
       if (group) {
-        query.id = { $in: group.channels };
+        query.channelId = { $in: group.channels };
       }
     }
     
@@ -426,7 +426,7 @@ router.get('/:id', async (req, res) => {
     }
     
     if (!channel) {
-      channel = await Channel.findOne({ id: id });
+      channel = await Channel.findOne({ channelId: id });
     }
     
     if (!channel) {
@@ -438,8 +438,8 @@ router.get('/:id', async (req, res) => {
     }
     
     // 채널이 속한 그룹 정보 추가
-    const groups = await ChannelGroup.find({ 
-      channels: channel.id 
+    const groups = await ChannelGroup.find({
+      channels: channel.channelId
     }).select('name color');
     
     const result = {

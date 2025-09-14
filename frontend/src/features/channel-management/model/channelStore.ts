@@ -135,7 +135,7 @@ export const useChannelManagementStore = create<
         set(
           (state) => ({
             channels: state.channels.map((channel) =>
-              channel.id === channelId ? { ...channel, ...updates } : channel
+              channel.channelId === channelId ? { ...channel, ...updates } : channel
             ),
           }),
           false,
@@ -145,7 +145,7 @@ export const useChannelManagementStore = create<
       removeChannel: (channelId) =>
         set(
           (state) => ({
-            channels: state.channels.filter((channel) => channel.id !== channelId),
+            channels: state.channels.filter((channel) => channel.channelId !== channelId),
             selectedChannels: state.selectedChannels.filter((id) => id !== channelId),
           }),
           false,
@@ -201,7 +201,7 @@ export const useChannelManagementStore = create<
       selectAllChannels: () => {
         const filteredChannels = get().getFilteredChannels();
         set(
-          { selectedChannels: filteredChannels.map((channel) => channel.id) },
+          { selectedChannels: filteredChannels.map((channel) => channel.channelId) },
           false,
           'selectAllChannels'
         );
@@ -300,7 +300,7 @@ export const useChannelManagementStore = create<
         const group = channelGroups.find((g) => g.id === groupId);
         if (!group) return [];
 
-        return channels.filter((channel) => group.channels.includes(channel.id));
+        return channels.filter((channel) => group.channels.some(gc => gc.channelId === channel.channelId));
       },
 
       getChannelStats: () => {

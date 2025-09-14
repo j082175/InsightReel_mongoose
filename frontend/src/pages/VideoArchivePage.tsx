@@ -220,7 +220,7 @@ const VideoArchivePage: React.FC = () => {
 
         const extendedVideo: ExtendedVideo = {
           ...video,
-          id: video._id || video.id || String(Date.now()),
+          id: video._id,  // MongoDB _id is always present
           platform: (video.platform?.toUpperCase() === 'YOUTUBE' || video.platform === PLATFORMS.YOUTUBE) ? 'YOUTUBE' : 
                    (video.platform?.toUpperCase() === 'TIKTOK' || video.platform === 'TIKTOK') ? 'TIKTOK' : 
                    (video.platform?.toUpperCase() === 'INSTAGRAM' || video.platform === 'INSTAGRAM') ? 'INSTAGRAM' : 'YOUTUBE',

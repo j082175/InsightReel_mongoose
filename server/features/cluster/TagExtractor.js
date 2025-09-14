@@ -19,7 +19,7 @@ class TagExtractor {
     async extractFromChannel(channel, contentType = 'longform') {
         try {
             // 캐시 체크
-            const cacheKey = `${channel.id}_${channel.name}`;
+            const cacheKey = `${channel.channelId}_${channel.name}`;
             if (this.tagCache.has(cacheKey)) {
                 ServerLogger.info('📋 캐시된 태그 사용', {
                     channel: channel.name,

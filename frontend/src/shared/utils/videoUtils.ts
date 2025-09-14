@@ -9,7 +9,8 @@ import { Video } from '../types';
  * ⚡ _id 통일: MongoDB _id 필드 사용
  */
 export const getVideoId = (video: Video): string => {
-  return video._id || '';
+  // MongoDB _id is always present - no fallback needed
+  return video._id;
 };
 
 /**

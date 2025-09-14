@@ -41,7 +41,7 @@ class GroupTrendingCollector {
       ServerLogger.info(`🎯 그룹 "${group.name}" 트렌딩 수집 시작 (${group.channels.length}개 채널)`);
 
       // HighViewCollector로 영상 수집 (채널 ID만 추출)
-      const channelIds = group.channels.map(channel => channel.id);
+      const channelIds = group.channels.map(channel => channel.channelId);
       ServerLogger.info(`🔍 추출된 채널 IDs: ${channelIds.join(', ')}`);
       const results = await this.highViewCollector.collectFromChannels(channelIds, options);
       

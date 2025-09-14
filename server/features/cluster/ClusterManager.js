@@ -52,7 +52,7 @@ class ClusterManager {
             });
             const channel = await this.saveChannelInfo(channelData);
             ServerLogger.info('✅ STEP 1 완룈: saveChannelInfo', {
-                channelId: channel.id,
+                channelId: channel.channelId,
             });
 
             // 2. AI 태그 추출 (보조 기능)
@@ -289,7 +289,7 @@ class ClusterManager {
         const clusters = await ClusterModel.getAll();
 
         channels.forEach((channel) => {
-            this.channelCache.set(channel.id, channel);
+            this.channelCache.set(channel.channelId, channel);
         });
 
         clusters.forEach((cluster) => {

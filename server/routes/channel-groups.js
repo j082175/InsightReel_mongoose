@@ -500,16 +500,16 @@ router.post('/collect-multiple', async (req, res) => {
           } else if (typeof channel === 'string') {
             // 문자열인 경우도 채널 이름으로 조회
             actualChannel = await Channel.findOne({ name: channel });
-            console.log('🔍 DEBUG: 채널명', channel, '→ 조회 결과:', actualChannel?.id);
+            console.log('🔍 DEBUG: 채널명', channel, '→ 조회 결과:', actualChannel?.channelId);
           }
 
-          if (actualChannel && actualChannel.id) {
-            channelIds.push(actualChannel.id);
-            console.log('✅ DEBUG: 실제 YouTube 채널 ID 사용:', actualChannel.id);
+          if (actualChannel && actualChannel.channelId) {
+            channelIds.push(actualChannel.channelId);
+            console.log('✅ DEBUG: 실제 YouTube 채널 ID 사용:', actualChannel.channelId);
           } else {
             console.log('❌ DEBUG: 채널을 찾을 수 없음:', channel.name || channel);
             // 기존 값 그대로 사용 (실패할 것이지만 로깅 목적)
-            channelIds.push(channel.id || channel);
+            channelIds.push(channel.channelId || channel);
           }
         } catch (error) {
           console.error('❌ DEBUG: 채널 조회 실패:', error.message);

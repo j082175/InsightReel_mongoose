@@ -22,7 +22,7 @@ const channelGroupSchema = new mongoose.Schema({
     match: /^#[0-9A-F]{6}$/i
   },
   channels: [{
-    id: {
+    channelId: {
       type: String,
       required: true,
       trim: true
@@ -70,14 +70,14 @@ channelGroupSchema.statics.findByKeyword = function(keyword) {
 
 // 인스턴스 메서드
 channelGroupSchema.methods.addChannel = function(channelId, channelName) {
-  if (!this.channels.find(channel => channel.id === channelId)) {
-    this.channels.push({ id: channelId, name: channelName });
+  if (!this.channels.find(channel => channel.channelId === channelId)) {
+    this.channels.push({ channelId: channelId, name: channelName });
   }
   return this.save();
 };
 
 channelGroupSchema.methods.removeChannel = function(channelId) {
-  this.channels = this.channels.filter(channel => channel.id !== channelId);
+  this.channels = this.channels.filter(channel => channel.channelId !== channelId);
   return this.save();
 };
 

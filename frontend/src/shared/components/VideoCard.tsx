@@ -30,7 +30,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
   showArchiveInfo 
 }) => {
   console.log('🎬 VideoCard 렌더링:', {
-    videoId: video._id || video.id,
+    videoId: video._id,  // MongoDB _id is always present
     title: video.title?.substring(0, 30) + '...',
     hasOnDelete: !!onDelete
   });
@@ -95,7 +95,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
     setIsDeleting(true);
     try {
       // 삭제에는 데이터베이스 ID (_id 또는 id) 사용
-      const dbId = video._id || video.id;
+      const dbId = video._id;  // MongoDB _id is always present
       if (!dbId) {
         throw new Error('비디오 ID를 찾을 수 없습니다');
       }
@@ -170,7 +170,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
         // 부모 컴포넌트에 삭제 완료 알림 (UI 업데이트용)
         console.log('✅ 삭제 성공, onDelete 콜백 호출:', {
           hasOnDelete: !!onDelete,
-          videoId: video._id || video.id,
+          videoId: video._id,  // MongoDB _id is always present
           videoTitle: video.title
         });
         if (onDelete) {

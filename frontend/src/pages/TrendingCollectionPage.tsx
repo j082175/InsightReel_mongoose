@@ -217,11 +217,11 @@ const TrendingCollectionPage: React.FC = () => {
                 ) : (
                   <div className="space-y-2 max-h-64 overflow-y-auto">
                     {channels.map((channel, index) => (
-                      <label key={channel._id} className="flex items-center p-3 border rounded-lg hover:bg-gray-50">
+                      <label key={channel.channelId} className="flex items-center p-3 border rounded-lg hover:bg-gray-50">
                         <input
                           type="checkbox"
-                          checked={collectionTarget.selectedChannels.includes(channel.id || '')}
-                          onChange={() => handleChannelSelection(channel.id || '')}
+                          checked={collectionTarget.selectedChannels.includes(channel.channelId)}
+                          onChange={() => handleChannelSelection(channel.channelId)}
                           className="h-4 w-4 text-blue-600 border-gray-300 rounded"
                         />
                         <div className="ml-3 flex-1">

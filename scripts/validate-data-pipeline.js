@@ -7,16 +7,16 @@
  * 1. API → Frontend 데이터 변환 검증
  * 2. 누락된 필드 자동 탐지
  * 3. 데이터 타입 불일치 검증
- * 4. FieldMapper 매핑 일관성 확인
+ * 4. 직접 필드 접근 일관성 확인
  */
 
-const { FieldMapper } = require('../server/types/field-mapper_deprecated');
+// FieldMapper는 deprecated되었으므로 직접 필드 접근 사용
 const axios = require('axios');
 
-// 중요 필드 정의
+// 중요 필드 정의 (직접 필드명 사용)
 const CRITICAL_FIELDS = [
-  'PLATFORM', 'TITLE', 'CHANNEL_NAME', 'LIKES', 'VIEWS', 
-  'COMMENTS_COUNT', 'URL', 'THUMBNAIL_URL', 'UPLOAD_DATE'
+  'platform', 'title', 'channelName', 'likes', 'views',
+  'commentsCount', 'url', 'thumbnailUrl', 'uploadDate'
 ];
 
 async function validateDataPipeline() {
@@ -100,27 +100,27 @@ async function validateDataPipeline() {
   }
 }
 
-// 프론트엔드 데이터 변환 로직 시뮬레이션 (VideoArchivePage.tsx 로직 복사)
+// 프론트엔드 데이터 변환 로직 시뮬레이션 (직접 필드 접근 사용)
 function simulateFrontendDataTransformation(apiVideos) {
   return apiVideos.map((video) => {
-    const channelName = video[FieldMapper.get('CHANNEL_NAME')] || '알 수 없는 채널';
-    const keywordsArray = Array.isArray(video[FieldMapper.get('KEYWORDS')]) 
-      ? video[FieldMapper.get('KEYWORDS')] 
+    const channelName = video.channelName || '알 수 없는 채널';
+    const keywordsArray = Array.isArray(video.keywords)
+      ? video.keywords
       : [];
-    const url = video[FieldMapper.get('URL')] || '#';
-    
+    const url = video.url || '#';
+
     return {
-      [FieldMapper.get('ID')]: video[FieldMapper.get('ID')] || Date.now(),
-      [FieldMapper.get('PLATFORM')]: video[FieldMapper.get('PLATFORM')] || 'YouTube',
-      [FieldMapper.get('TITLE')]: video[FieldMapper.get('TITLE')] || '',
-      [FieldMapper.get('CHANNEL_NAME')]: channelName,
-      [FieldMapper.get('VIEWS')]: video[FieldMapper.get('VIEWS')] || 0,
-      [FieldMapper.get('LIKES')]: video[FieldMapper.get('LIKES')] || 0,
-      [FieldMapper.get('COMMENTS_COUNT')]: video[FieldMapper.get('COMMENTS_COUNT')] || 0,
-      [FieldMapper.get('THUMBNAIL_URL')]: video[FieldMapper.get('THUMBNAIL_URL')] || '',
-      [FieldMapper.get('URL')]: url,
-      [FieldMapper.get('UPLOAD_DATE')]: video[FieldMapper.get('UPLOAD_DATE')] || '',
-      [FieldMapper.get('KEYWORDS')]: keywordsArray,
+      _id: video._id || Date.now(),
+      platform: video.platform || 'YouTube',
+      title: video.title || '',
+      channelName: channelName,
+      views: video.views || 0,
+      likes: video.likes || 0,
+      commentsCount: video.commentsCount || 0,
+      thumbnailUrl: video.thumbnailUrl || '',
+      url: url,
+      uploadDate: video.uploadDate || '',
+      keywords: keywordsArray,
     };
   });
 }
@@ -129,24 +129,23 @@ function validateVideoFields(video, videoIndex, stage = 'API') {
   const issues = [];
   
   // 중요 필드 누락 검사
-  CRITICAL_FIELDS.forEach(fieldKey => {
+  CRITICAL_FIELDS.forEach(fieldName => {
     try {
-      const fieldName = FieldMapper.get(fieldKey);
       const value = video[fieldName];
-      
+
       if (value === undefined || value === null) {
-        issues.push(`${stage} 비디오 ${videoIndex}: ${fieldKey}(${fieldName}) 필드 누락`);
+        issues.push(`${stage} 비디오 ${videoIndex}: ${fieldName} 필드 누락`);
       }
       
       // 타입 검증
-      if (fieldKey === 'LIKES' || fieldKey === 'VIEWS' || fieldKey === 'COMMENTS_COUNT') {
+      if (fieldName === 'likes' || fieldName === 'views' || fieldName === 'commentsCount') {
         if (value !== undefined && typeof value !== 'number') {
-          issues.push(`${stage} 비디오 ${videoIndex}: ${fieldKey} 타입 오류 (${typeof value} !== number)`);
+          issues.push(`${stage} 비디오 ${videoIndex}: ${fieldName} 타입 오류 (${typeof value} !== number)`);
         }
       }
       
     } catch (error) {
-      issues.push(`${stage} 비디오 ${videoIndex}: FieldMapper에서 ${fieldKey} 키를 찾을 수 없음`);
+      issues.push(`${stage} 비디오 ${videoIndex}: 필드 ${fieldName}에 접근할 수 없음`);
     }
   });
 

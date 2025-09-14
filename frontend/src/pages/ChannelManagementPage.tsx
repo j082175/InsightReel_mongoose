@@ -144,13 +144,13 @@ const ChannelManagementPage: React.FC = () => {
         try {
           // 채널 이름으로 실제 채널 정보 조회
           const channel = channels.find(ch => ch.name === channelName);
-          if (channel && channel.id) {
-            console.log('✅ 채널 이름 → 채널 ID:', channelName, '→', channel.id);
-            return { id: channel.id, name: channelName };
+          if (channel && channel.channelId) {
+            console.log('✅ 채널 이름 → 채널 ID:', channelName, '→', channel.channelId);
+            return { channelId: channel.channelId, name: channelName };
           } else {
             console.warn('⚠️ 채널을 찾을 수 없음:', channelName);
             // 찾을 수 없는 경우 일단 이름을 ID로 사용 (기존 동작)
-            return { id: channelName, name: channelName };
+            return { channelId: channelName, name: channelName };
           }
         } catch (error) {
           console.error('❌ 채널 조회 실패:', channelName, error);
@@ -286,7 +286,7 @@ const ChannelManagementPage: React.FC = () => {
     if (!confirm(`정말로 "${channel.name}" 채널을 삭제하시겠습니까?`)) return;
     
     try {
-      const response = await fetch(`/api/channels/${channel.id}`, { 
+      const response = await fetch(`/api/channels/${channel.channelId}`, { 
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json'
@@ -719,7 +719,7 @@ const ChannelManagementPage: React.FC = () => {
                   <ChannelCard
                     key={channel._id}
                     channel={channel}
-                    isSelected={channelSelection.isSelected(channel.id)}
+                    isSelected={channelSelection.isSelected(channel.channelId)}
                     onSelect={handleSelectToggle}
                     onChannelClick={(channel) => openModal('channelAnalysis', channel.name || '')}
                     onCollect={(channel) => console.log('수집:', channel.name)}
