@@ -246,12 +246,12 @@ const VideoArchivePage: React.FC = () => {
 
 
 
-  const handleSelectToggle = (videoId: string | number) => {
-    videoSelection.toggle(String(videoId));
+  const handleSelectToggle = (videoId: string) => {
+    videoSelection.toggle(videoId);
   };
 
   const handleSelectAll = () => {
-    videoSelection.selectAll(filteredVideos.map(v => String(v.id)));
+    videoSelection.selectAll(filteredVideos.map(v => v._id));
   };
 
   const handleDeleteClick = (item: { type: 'single' | 'bulk'; data?: Video; count?: number }) => {
@@ -260,9 +260,9 @@ const VideoArchivePage: React.FC = () => {
 
   const handleDeleteConfirm = () => {
     if (itemToDelete?.type === 'single' && itemToDelete.data) {
-      setArchivedVideos(archivedVideos.filter(v => v.id !== itemToDelete.data?.id));
+      setArchivedVideos(archivedVideos.filter(v => v._id !== itemToDelete.data?._id));
     } else if (itemToDelete?.type === 'bulk') {
-      setArchivedVideos(archivedVideos.filter(v => !videoSelection.selected.has(String(v.id))));
+      setArchivedVideos(archivedVideos.filter(v => !videoSelection.selected.has(v._id)));
       videoSelection.clear();
       setIsSelectMode(false);
     }
