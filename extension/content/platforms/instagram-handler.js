@@ -1750,48 +1750,81 @@ export class InstagramHandler extends BasePlatformHandler {
             return;
         }
 
-        // 다양한 방법으로 저장 버튼 찾기
-        let saveButton = null;
-        let buttonContainer = null;
+        // 인스타그램 액션 버튼 영역 찾기 (좋아요, 댓글, 공유, 저장 버튼이 있는 영역)
+        // 정확한 위치: 비디오 아래의 액션 섹션
+        let actionSection = null;
 
-        // 방법 1: 일반적인 저장 버튼 선택자
-        for (const selector of CONSTANTS.SELECTORS.INSTAGRAM.SAVE_BUTTONS) {
-            saveButton = Utils.safeQuerySelector(post, selector);
-            if (saveButton) {
-                this.log(
-                    'info',
-                    `게시물 ${index + 1}: 저장 버튼 발견 (선택자: ${selector})`,
-                );
-                break;
+        // 방법 1: 비디오 다음 형제 요소에서 section 찾기
+        let currentElement = video.parentElement;
+        while (currentElement && !actionSection) {
+            // 비디오 컨테이너의 다음 형제 요소들 확인
+            let sibling = currentElement.nextElementSibling;
+            while (sibling) {
+                if (sibling.tagName === 'SECTION' || sibling.querySelector('section')) {
+                    actionSection = sibling.tagName === 'SECTION' ? sibling : sibling.querySelector('section');
+                    break;
+                }
+                sibling = sibling.nextElementSibling;
+            }
+            currentElement = currentElement.parentElement;
+            if (currentElement === post.parentElement) break; // post 범위를 벗어나지 않도록
+        }
+
+        // 방법 2: post 내에서 section 찾기 (fallback)
+        if (!actionSection) {
+            const sections = post.querySelectorAll('section');
+            // 비디오 이후에 나오는 section 찾기
+            for (const section of sections) {
+                const sectionRect = section.getBoundingClientRect();
+                const videoRect = video.getBoundingClientRect();
+                // 비디오 아래에 있는 section 선택
+                if (sectionRect.top > videoRect.bottom) {
+                    actionSection = section;
+                    break;
+                }
             }
         }
 
-        // 방법 2: 액션 버튼들이 있는 영역 찾기
+        if (!actionSection) {
+            this.log('warn', `게시물 ${index + 1}: 액션 섹션을 찾을 수 없음`);
+            // 액션 섹션이 없으면 플로팅 버튼으로 추가
+            this.addFloatingAnalysisButton(post, video, index);
+            return;
+        }
+
+        // 저장 버튼 찾기 (액션 섹션 내에서)
+        let saveButton = null;
+
+        // 저장 버튼은 보통 마지막 버튼
+        const buttons = actionSection.querySelectorAll('[role="button"], button');
+        if (buttons.length >= 4) {
+            // 일반적으로 4번째 버튼이 저장 버튼 (좋아요, 댓글, 공유, 저장)
+            saveButton = buttons[3];
+        }
+
+        // SVG 아이콘으로 저장 버튼 찾기 (더 정확한 방법)
         if (!saveButton) {
-            const actionArea = Utils.safeQuerySelector(post, 'section');
-            if (actionArea) {
-                // 좋아요, 댓글, 공유, 저장 버튼들이 있는 영역
-                const buttons = actionArea.querySelectorAll('[role="button"]');
-                if (buttons.length >= 4) {
-                    saveButton = buttons[buttons.length - 1]; // 보통 마지막이 저장 버튼
-                    this.log(
-                        'info',
-                        `게시물 ${index + 1}: 액션 영역에서 저장 버튼 추정`,
-                    );
+            const svgs = actionSection.querySelectorAll('svg');
+            for (const svg of svgs) {
+                // 저장 아이콘의 특징: polygon 태그를 포함
+                if (svg.querySelector('polygon')) {
+                    saveButton = svg.closest('[role="button"]') || svg.closest('button');
+                    if (saveButton) break;
                 }
             }
         }
 
         if (!saveButton) {
             this.log('warn', `게시물 ${index + 1}: 저장 버튼을 찾을 수 없음`);
-            // 저장 버튼이 없어도 비디오가 있으면 플로팅 버튼으로 추가
-            this.addFloatingAnalysisButton(post, video, index);
-            return;
+            // 저장 버튼이 없어도 액션 섹션 끝에 추가
+            const lastButton = buttons[buttons.length - 1];
+            if (lastButton) {
+                saveButton = lastButton;
+            } else {
+                this.addFloatingAnalysisButton(post, video, index);
+                return;
+            }
         }
-
-        // 버튼 컨테이너 찾기
-        buttonContainer =
-            saveButton.closest('[role="button"]') || saveButton.parentElement;
 
         // 분석 버튼 생성
         const analysisButton = this.createAnalysisButton();
@@ -1804,19 +1837,20 @@ export class InstagramHandler extends BasePlatformHandler {
         };
 
         try {
-            // 저장 버튼과 같은 레벨에 분석 버튼 추가
-            const parentContainer = buttonContainer.parentElement;
-            if (parentContainer) {
+            // 저장 버튼의 부모 컨테이너에 분석 버튼 추가
+            const buttonContainer = saveButton.parentElement;
+            if (buttonContainer && buttonContainer.parentElement === actionSection) {
                 // 저장 버튼 바로 다음에 삽입
-                if (buttonContainer.nextSibling) {
-                    parentContainer.insertBefore(
-                        analysisButton,
-                        buttonContainer.nextSibling,
-                    );
+                if (saveButton.nextSibling) {
+                    buttonContainer.insertBefore(analysisButton, saveButton.nextSibling);
                 } else {
-                    parentContainer.appendChild(analysisButton);
+                    buttonContainer.appendChild(analysisButton);
                 }
-                this.log('success', `게시물 ${index + 1}: 분석 버튼 추가 완료`);
+                this.log('success', `게시물 ${index + 1}: 분석 버튼 추가 완료 (액션 섹션)`);
+            } else if (actionSection) {
+                // 액션 섹션 끝에 추가
+                actionSection.appendChild(analysisButton);
+                this.log('success', `게시물 ${index + 1}: 분석 버튼 추가 완료 (액션 섹션 끝)`);
             } else {
                 // 플로팅 버튼으로 폴백
                 this.addFloatingAnalysisButton(post, video, index);
@@ -1849,10 +1883,16 @@ export class InstagramHandler extends BasePlatformHandler {
         };
 
         try {
-            // 비디오 위에 플로팅 버튼 추가
-            const videoContainer = video.parentElement;
-            videoContainer.style.position = 'relative';
-            videoContainer.appendChild(analysisButton);
+            // 인스타그램 레이아웃을 깨뜨리지 않도록 개선
+            // const videoContainer = video.parentElement;
+            // videoContainer.style.position = 'relative'; // 이 줄이 레이아웃을 깨뜨림
+
+            // fixed position으로 변경하여 레이아웃 보존
+            analysisButton.style.position = 'fixed !important';
+            analysisButton.style.top = '100px !important';
+            analysisButton.style.right = '20px !important';
+
+            document.body.appendChild(analysisButton);
             this.log(
                 'success',
                 `게시물 ${index + 1}: 플로팅 분석 버튼 추가 완료`,

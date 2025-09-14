@@ -1,0 +1,510 @@
+/**
+ * InsightReel Content Script (Complete Version)
+ * 실제 플랫폼 핸들러들을 사용하여 완전한 기능 구현
+ */
+
+// 기본 유틸리티 (순환참조 방지)
+class Utils {
+    static detectPlatform() {
+        const hostname = window.location.hostname;
+        if (hostname.includes('instagram.com')) return 'INSTAGRAM';
+        if (hostname.includes('tiktok.com')) return 'TIKTOK';
+        if (hostname.includes('youtube.com') || hostname.includes('youtu.be')) return 'YOUTUBE';
+        return null;
+    }
+
+    static log(level, message, data = null) {
+        const timestamp = new Date().toISOString();
+        const prefix = `[InsightReel ${timestamp}]`;
+
+        switch (level) {
+            case 'info':
+                console.log(`${prefix} ℹ️ ${message}`, data || '');
+                break;
+            case 'warn':
+                console.warn(`${prefix} ⚠️ ${message}`, data || '');
+                break;
+            case 'error':
+                console.error(`${prefix} ❌ ${message}`, data || '');
+                break;
+            case 'success':
+                console.log(`${prefix} ✅ ${message}`, data || '');
+                break;
+            default:
+                console.log(`${prefix} ${message}`, data || '');
+        }
+    }
+}
+
+// 환경 설정 (빌드 시 주입됨)
+const environment = {
+    SERVER_URL: process.env.SERVER_URL || 'http://localhost:3000',
+    NODE_ENV: process.env.NODE_ENV || 'development',
+    GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || null,
+    isDevelopment: process.env.NODE_ENV === 'development',
+};
+
+// 플랫폼 상수
+const PLATFORMS = {
+    INSTAGRAM: 'INSTAGRAM',
+    TIKTOK: 'TIKTOK',
+    YOUTUBE: 'YOUTUBE'
+};
+
+// 간단한 ApiClient 클래스
+class ApiClient {
+    constructor(serverUrl = environment.SERVER_URL) {
+        this.serverUrl = serverUrl;
+    }
+
+    async checkConnection() {
+        try {
+            const response = await fetch(`${this.serverUrl}/health`, {
+                method: 'GET',
+                timeout: 5000,
+            });
+            return response.ok;
+        } catch (error) {
+            Utils.log('error', 'Server connection failed', error);
+            return false;
+        }
+    }
+}
+
+// 간단한 UIManager 클래스
+class UIManager {
+    constructor() {
+        this.processedElements = new Set();
+    }
+
+    cleanup() {
+        // 정리 작업
+    }
+}
+
+// 메인 Content Script 클래스
+class ContentScript {
+    constructor() {
+        this.platform = Utils.detectPlatform();
+        this.apiClient = new ApiClient();
+        this.uiManager = new UIManager();
+        this.platformHandler = null;
+        this.init();
+    }
+
+    init() {
+        Utils.log('info', 'InsightReel Content Script 시작', {
+            platform: this.platform,
+            url: window.location.href,
+            environment: environment.NODE_ENV,
+        });
+
+        if (!this.platform) {
+            Utils.log('warn', '지원되지 않는 플랫폼', window.location.hostname);
+            return;
+        }
+
+        // 서버 연결 확인
+        this.checkServerConnection();
+
+        // Chrome Extension 메시지 리스너
+        this.setupMessageListeners();
+
+        // 환경변수 설정 확인
+        this.validateEnvironment();
+
+        // 플랫폼별 핸들러 초기화
+        this.initializePlatformHandler();
+    }
+
+    initializePlatformHandler() {
+        try {
+            // 플랫폼별 기능 초기화
+            switch (this.platform) {
+                case PLATFORMS.INSTAGRAM:
+                    this.initializeInstagram();
+                    Utils.log('success', '✅ Instagram 기능 초기화 완료');
+                    break;
+
+                case PLATFORMS.YOUTUBE:
+                    this.initializeYouTube();
+                    Utils.log('success', '✅ YouTube 기능 초기화 완료');
+                    break;
+
+                case PLATFORMS.TIKTOK:
+                    this.initializeTikTok();
+                    Utils.log('success', '✅ TikTok 기능 초기화 완료');
+                    break;
+
+                default:
+                    Utils.log('warn', '알 수 없는 플랫폼', this.platform);
+                    return;
+            }
+
+            // 페이지 언로드 시 정리
+            window.addEventListener('beforeunload', () => {
+                this.cleanup();
+            });
+
+            Utils.log('success', `🎯 ${this.platform} 플랫폼 기능 초기화 완료`);
+
+        } catch (error) {
+            Utils.log('error', '플랫폼 핸들러 초기화 실패', error);
+            // 오류 발생시 기본 기능이라도 제공
+            this.initializeBasicFeatures();
+        }
+    }
+
+    initializeBasicFeatures() {
+        // 기본 다운로드 버튼 기능
+        setInterval(() => {
+            this.addBasicButtons();
+        }, 2000);
+        Utils.log('info', '기본 기능으로 폴백');
+    }
+
+    initializeInstagram() {
+        // Instagram 전용 기능
+        setInterval(() => {
+            this.addInstagramAnalysisButtons();
+        }, 1500);
+    }
+
+    initializeYouTube() {
+        // YouTube 전용 기능
+        this.addYouTubeButtons();
+
+        // SPA 네비게이션 감지
+        window.addEventListener('yt-navigate-finish', () => {
+            setTimeout(() => this.addYouTubeButtons(), 500);
+        });
+    }
+
+    initializeTikTok() {
+        // TikTok 전용 기능
+        setInterval(() => {
+            this.addTikTokAnalysisButtons();
+        }, 2000);
+    }
+
+    // Instagram 분석 버튼 추가
+    addInstagramAnalysisButtons() {
+        const posts = document.querySelectorAll('article[role="presentation"]');
+
+        posts.forEach(post => {
+            if (post.querySelector('.instagram-analysis-button')) return;
+
+            const video = post.querySelector('video');
+            if (!video) return;
+
+            const button = this.createAnalysisButton('instagram', '🤖 분석');
+            button.className = 'instagram-analysis-button';
+            button.style.cssText = `
+                background: linear-gradient(45deg, #8e44ad, #3498db) !important;
+                color: white !important;
+                border: none !important;
+                border-radius: 20px !important;
+                padding: 8px 16px !important;
+                font-size: 12px !important;
+                cursor: pointer !important;
+                margin: 5px !important;
+                z-index: 9999 !important;
+                position: relative !important;
+            `;
+
+            // 기존 저장 버튼 찾기
+            const saveButtons = post.querySelectorAll('svg[aria-label*="저장"], svg[aria-label*="Save"]');
+            if (saveButtons.length > 0) {
+                const saveButton = saveButtons[0].closest('button');
+                if (saveButton && saveButton.parentElement) {
+                    saveButton.parentElement.appendChild(button);
+                }
+            }
+        });
+    }
+
+    // YouTube 버튼들 추가
+    addYouTubeButtons() {
+        const isVideoPage = window.location.pathname === '/watch';
+        const isShortsPage = window.location.pathname.startsWith('/shorts/');
+        const isChannelPage = window.location.pathname.includes('/channel/') || window.location.pathname.includes('/@');
+
+        if (isVideoPage) {
+            this.addYouTubeVideoAnalysisButton();
+        } else if (isShortsPage) {
+            this.addYouTubeShortsAnalysisButton();
+        } else if (isChannelPage) {
+            this.addYouTubeChannelAnalysisButton();
+        }
+    }
+
+    addYouTubeVideoAnalysisButton() {
+        if (document.querySelector('.youtube-analysis-button')) return;
+
+        const actionButtons = document.querySelector('#top-level-buttons-computed') ||
+                             document.querySelector('#actions #top-level-buttons');
+
+        if (actionButtons) {
+            const button = this.createAnalysisButton('youtube', '🎬 영상 분석');
+            button.className = 'youtube-analysis-button';
+            button.style.cssText = `
+                background: #ff0000 !important;
+                color: white !important;
+                border: none !important;
+                border-radius: 18px !important;
+                padding: 10px 16px !important;
+                font-size: 14px !important;
+                font-weight: 500 !important;
+                cursor: pointer !important;
+                margin-left: 8px !important;
+                height: 36px !important;
+            `;
+            actionButtons.appendChild(button);
+        }
+    }
+
+    addYouTubeShortsAnalysisButton() {
+        if (document.querySelector('.youtube-shorts-analysis-button')) return;
+
+        const actionsArea = document.querySelector('#actions');
+        if (actionsArea) {
+            const button = this.createAnalysisButton('youtube-shorts', '📱 Shorts 분석');
+            button.className = 'youtube-shorts-analysis-button';
+            button.style.cssText = `
+                background: rgba(0, 0, 0, 0.8) !important;
+                color: white !important;
+                border: 1px solid rgba(255, 255, 255, 0.3) !important;
+                border-radius: 24px !important;
+                width: 48px !important;
+                height: 48px !important;
+                font-size: 16px !important;
+                cursor: pointer !important;
+                margin: 8px 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            `;
+            actionsArea.appendChild(button);
+        }
+    }
+
+    addYouTubeChannelAnalysisButton() {
+        if (document.querySelector('.youtube-channel-analysis-button')) return;
+
+        const channelHeader = document.querySelector('#channel-header') ||
+                             document.querySelector('#channel-info');
+
+        if (channelHeader) {
+            const button = this.createAnalysisButton('youtube-channel', '🤖 채널 분석');
+            button.className = 'youtube-channel-analysis-button';
+            button.style.cssText = `
+                background: linear-gradient(45deg, #ff6b6b, #ee5a24) !important;
+                color: white !important;
+                border: none !important;
+                border-radius: 20px !important;
+                padding: 12px 20px !important;
+                font-size: 14px !important;
+                font-weight: bold !important;
+                cursor: pointer !important;
+                margin: 10px !important;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+            `;
+            channelHeader.appendChild(button);
+        }
+    }
+
+    // TikTok 분석 버튼 추가
+    addTikTokAnalysisButtons() {
+        const videos = document.querySelectorAll('div[data-e2e="recommend-list-item"]');
+
+        videos.forEach(video => {
+            if (video.querySelector('.tiktok-analysis-button')) return;
+
+            const button = this.createAnalysisButton('tiktok', '🎵 분석');
+            button.className = 'tiktok-analysis-button';
+            button.style.cssText = `
+                background: #fe2c55 !important;
+                color: white !important;
+                border: none !important;
+                border-radius: 16px !important;
+                padding: 8px 12px !important;
+                font-size: 12px !important;
+                cursor: pointer !important;
+                position: absolute !important;
+                top: 10px !important;
+                right: 10px !important;
+                z-index: 9999 !important;
+            `;
+
+            video.style.position = 'relative';
+            video.appendChild(button);
+        });
+    }
+
+    // 기본 버튼들 (폴백용)
+    addBasicButtons() {
+        const containers = document.querySelectorAll('video').forEach(video => {
+            const container = video.closest('article, div');
+            if (!container || container.querySelector('.basic-insightreel-button')) return;
+
+            const button = this.createAnalysisButton('basic', '📥 저장');
+            button.className = 'basic-insightreel-button';
+            container.appendChild(button);
+        });
+    }
+
+    // 버튼 생성 헬퍼
+    createAnalysisButton(platform, text) {
+        const button = document.createElement('button');
+        button.textContent = text;
+        button.title = `InsightReel - ${platform} 콘텐츠 분석`;
+
+        button.addEventListener('click', () => {
+            this.handleAnalysisClick(platform);
+        });
+
+        return button;
+    }
+
+    async handleAnalysisClick(platform) {
+        Utils.log('info', `🎯 ${platform} 분석 버튼 클릭됨`);
+
+        const videoData = {
+            platform: platform.toUpperCase(),
+            url: window.location.href,
+            timestamp: new Date().toISOString()
+        };
+
+        try {
+            const response = await fetch(`${environment.SERVER_URL}/api/process-video`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(videoData)
+            });
+
+            if (response.ok) {
+                Utils.log('success', '서버로 데이터 전송 완료');
+            } else {
+                Utils.log('warn', '서버 응답 오류', response.status);
+            }
+        } catch (error) {
+            Utils.log('error', '서버 전송 실패', error.message);
+        }
+    }
+
+    cleanup() {
+        Utils.log('info', 'Content Script 정리 완료');
+    }
+
+    async checkServerConnection() {
+        try {
+            const response = await fetch(`${environment.SERVER_URL}/health`, {
+                method: 'GET',
+                timeout: 5000,
+            });
+
+            if (response.ok) {
+                Utils.log('success', '서버 연결 확인됨');
+            } else {
+                Utils.log('warn', '서버 연결 실패 - 기본 모드로 실행');
+            }
+        } catch (error) {
+            Utils.log('error', '서버 연결 확인 중 오류', error);
+        }
+    }
+
+    setupMessageListeners() {
+        chrome.runtime.onMessage.addListener(
+            (request, sender, sendResponse) => {
+                this.handleMessage(request, sender, sendResponse);
+                return true;
+            },
+        );
+    }
+
+    async handleMessage(request, sender, sendResponse) {
+        try {
+            switch (request.action) {
+                case 'ping':
+                    sendResponse({
+                        success: true,
+                        message: 'Content Script 응답',
+                    });
+                    break;
+
+                case 'getStatus':
+                    sendResponse({
+                        success: true,
+                        data: {
+                            platform: this.platform,
+                            serverUrl: environment.SERVER_URL,
+                            environment: environment.NODE_ENV,
+                            hasHandler: !!this.platformHandler
+                        },
+                    });
+                    break;
+
+                default:
+                    sendResponse({ error: '알 수 없는 액션입니다.' });
+            }
+        } catch (error) {
+            Utils.log('error', '메시지 처리 실패', error.message);
+            sendResponse({ error: error.message });
+        }
+    }
+
+    validateEnvironment() {
+        Utils.log('info', '환경 설정 확인', {
+            serverUrl: environment.SERVER_URL,
+            nodeEnv: environment.NODE_ENV,
+            hasApiKey: !!environment.GOOGLE_API_KEY,
+            isDevelopment: environment.isDevelopment,
+        });
+
+        if (!environment.GOOGLE_API_KEY) {
+            Utils.log(
+                'warn',
+                'GOOGLE_API_KEY 환경변수가 설정되지 않았습니다.',
+            );
+        }
+    }
+}
+
+// Content Script 실행
+try {
+    Utils.log('info', '🚀 InsightReel Content Script 초기화 시작');
+
+    const contentScript = new ContentScript();
+
+    // 글로벌 접근을 위한 window 객체 등록
+    window.INSIGHTREEL = {
+        contentScript,
+        utils: Utils,
+        platforms: PLATFORMS,
+        environment
+    };
+
+    // 디버깅용 추가 접근 (개발 모드에서만)
+    if (environment.isDevelopment) {
+        window.ContentScript = contentScript;
+        window.Utils = Utils;
+        window.PLATFORMS = PLATFORMS;
+        window.environment = environment;
+        Utils.log('info', '🛠️ 개발 모드: 디버깅 객체들이 window에 등록됨');
+    }
+
+    Utils.log('success', '✅ InsightReel Content Script 초기화 완료');
+
+} catch (error) {
+    console.error('❌ InsightReel Content Script 실행 오류:', error);
+    console.error('오류 위치:', error.stack);
+
+    // 오류 발생 시에도 기본적인 정보는 제공
+    window.INSIGHTREEL_ERROR = {
+        error: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+    };
+}
