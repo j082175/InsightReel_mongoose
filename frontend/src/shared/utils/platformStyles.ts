@@ -40,9 +40,9 @@ export const getPlatformIconStyle = (platform: string): string => {
 };
 
 /**
- * 플랫폼 타입 정의
+ * 플랫폼 타입 정의 (video.ts에서 import)
  */
-export type Platform = 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK';
+// export type Platform = 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK'; // Removed to avoid duplicate export
 
 /**
  * 플랫폼 브랜드 컬러 정의

@@ -1,7 +1,6 @@
 [
   {
     "_id": "68c2cf486d39a304ab5738da",
-    "id": "UCyE2OYrMxxdy69cy5lUjY3Q",
     "__v": 0,
     "aiTags": [
       "더빙",
@@ -97,7 +96,7 @@
     "thumbnailUrl": "https://yt3.ggpht.com/OmhtuN6bVj4IdzkiQr2ETyi8QdbhinFn-NB7FYR9x3tCnys_HzonrduJQQxq1huVWVi1EgSztw=s800-c-k-c0x00ffffff-no-rj",
     "totalVideos": 92,
     "totalViews": 129180453,
-    "updatedAt": "Thu Sep 11 2025 22:31:52 GMT+0900 (대한민국 표준시)",
+    "updatedAt": "Sun Sep 14 2025 15:14:07 GMT+0900 (대한민국 표준시)",
     "uploadFrequency": {
       "pattern": "daily",
       "avgDaysBetweenUploads": 0.98,
@@ -110,11 +109,11 @@
       "last30Days": 35192318,
       "last90Days": 129180453,
       "lastYear": 129180453
-    }
+    },
+    "channelId": "UCyE2OYrMxxdy69cy5lUjY3Q"
   },
   {
     "_id": "68c56efd0f7b3323741008ea",
-    "id": "UCMEoY3vCwq_1Oe6QiyLTiZQ",
     "__v": 0,
     "aiTags": [
       "해외밈",
@@ -210,7 +209,7 @@
     "thumbnailUrl": "https://yt3.ggpht.com/kLxA7rciY21x7nXv0-vweCXSOHW2AqqiWu2_-4QBThMpqG6wYYsB90H77avk5V4xkviSwace=s800-c-k-c0x00ffffff-no-rj",
     "totalVideos": 126,
     "totalViews": 43178835,
-    "updatedAt": "Sat Sep 13 2025 22:17:48 GMT+0900 (대한민국 표준시)",
+    "updatedAt": "Sun Sep 14 2025 15:14:07 GMT+0900 (대한민국 표준시)",
     "uploadFrequency": {
       "pattern": "multiple_per_week",
       "avgDaysBetweenUploads": 1.08,
@@ -223,11 +222,11 @@
       "last30Days": 11774333,
       "last90Days": 19219657,
       "lastYear": 43178835
-    }
+    },
+    "channelId": "UCMEoY3vCwq_1Oe6QiyLTiZQ"
   },
   {
     "_id": "68c592d00f7b33237410095a",
-    "id": "UC8a0z8br6wMCZxoEufIHVjQ",
     "__v": 0,
     "aiTags": [
       "지식",
@@ -323,7 +322,7 @@
     "thumbnailUrl": "https://yt3.ggpht.com/LldY8OmtXJBA2tXOL1_1xUrKo4jjbS2b8CN1s-g9voi1l80NBOAXF2bMl6d1-92Al5PnhZAPhtU=s800-c-k-c0x00ffffff-no-rj",
     "totalVideos": 127,
     "totalViews": 282933885,
-    "updatedAt": "Sun Sep 14 2025 00:50:39 GMT+0900 (대한민국 표준시)",
+    "updatedAt": "Sun Sep 14 2025 15:14:08 GMT+0900 (대한민국 표준시)",
     "uploadFrequency": {
       "pattern": "multiple_per_week",
       "avgDaysBetweenUploads": 2.95,
@@ -336,6 +335,138 @@
       "last30Days": 2252557,
       "last90Days": 2252557,
       "lastYear": 279519674
+    },
+    "channelId": "UC8a0z8br6wMCZxoEufIHVjQ"
+  },
+  {
+    "_id": "68c6503b0f7b332374100ae5",
+    "channelId": "UCrueQugJZKCPQUpnAb1LxIg",
+    "__v": 0,
+    "aiTags": [],
+    "allTags": [
+      "애니"
+    ],
+    "analysisVersion": "1.0",
+    "averageViewsPerVideo": 6884839.23,
+    "avgDurationFormatted": "3분 10.444999999999993초",
+    "avgDurationSeconds": 190,
+    "clusterIds": [],
+    "collectedAt": "Sun Sep 14 2025 14:18:50 GMT+0900 (대한민국 표준시)",
+    "contentType": "longform",
+    "createdAt": "Sun Sep 14 2025 14:18:50 GMT+0900 (대한민국 표준시)",
+    "customUrl": "@casicreativo",
+    "dailyUploadRate": 0.1,
+    "deepInsightTags": [],
+    "description": "Vídeos animados para reírse un rato. Hechos por Fred Lammie con cariño desde cualquier rincón del mundo. Vídeo nuevo en cuanto esté listo. Big Up y Respect!\n\n",
+    "keywords": [
+      "애니"
+    ],
+    "last7DaysViews": 64541,
+    "lastAnalyzedAt": "Sun Sep 14 2025 14:18:50 GMT+0900 (대한민국 표준시)",
+    "mostViewedVideo": {
+      "videoId": "JvjklnFWM3Y",
+      "title": "¿Cuál te gusta más?",
+      "publishedAt": "2023-02-07T18:00:11.000Z",
+      "thumbnailUrl": "https://i.ytimg.com/vi/JvjklnFWM3Y/mqdefault.jpg",
+      "viewCount": 116007893,
+      "likeCount": 4423562,
+      "commentCount": 11866,
+      "duration": "PT20S",
+      "durationSeconds": 20,
+      "tags": [
+        "chocolate negro",
+        "chocolate con leche",
+        "con azucar",
+        "engorda",
+        "perder peso",
+        "cortos casi creativo",
+        "fred lammie",
+        "casi creativo"
+      ],
+      "categoryId": "24"
+    },
+    "name": "CasiCreativo",
+    "platform": "YOUTUBE",
+    "shortFormRatio": 24.5,
+    "subscribers": 8480000,
+    "suggestedClusters": [],
+    "thumbnailUrl": "https://yt3.ggpht.com/BKQ3-8AYb3e6BScwLIe-oULU7xZP63O5oZ_7B8pPkzZCI9Dv2jqYGYh65GTjGUr8cWbZtFv3=s800-c-k-c0x00ffffff-no-rj",
+    "totalVideos": 200,
+    "totalViews": 1376967846,
+    "updatedAt": "Sun Sep 14 2025 15:14:08 GMT+0900 (대한민국 표준시)",
+    "uploadFrequency": {
+      "pattern": "bi_weekly",
+      "avgDaysBetweenUploads": 12,
+      "consistency": 0
+    },
+    "url": "https://youtube.com/channel/UCrueQugJZKCPQUpnAb1LxIg",
+    "version": 1,
+    "viewsByPeriod": {
+      "last7Days": 64541,
+      "last30Days": 1365527,
+      "last90Days": 4043333,
+      "lastYear": 69210809
+    }
+  },
+  {
+    "_id": "68c65dd40f7b332374100b0c",
+    "channelId": "UCtTyACuFUcBG53J8dLYCPsw",
+    "__v": 0,
+    "aiTags": [],
+    "allTags": [
+      "템플릿"
+    ],
+    "analysisVersion": "1.0",
+    "averageViewsPerVideo": 570194.2857142857,
+    "avgDurationFormatted": "53.142857142857146초",
+    "avgDurationSeconds": 53,
+    "clusterIds": [],
+    "collectedAt": "Sun Sep 14 2025 15:16:50 GMT+0900 (대한민국 표준시)",
+    "contentType": "shortform",
+    "createdAt": "Sun Sep 14 2025 15:16:50 GMT+0900 (대한민국 표준시)",
+    "customUrl": "@1stjaelaw",
+    "dailyUploadRate": 0.13,
+    "deepInsightTags": [],
+    "description": "전교 1등의 뇌를 이식시켜드립니다.\n\n",
+    "keywords": [
+      "템플릿"
+    ],
+    "last7DaysViews": 1221041,
+    "lastAnalyzedAt": "Sun Sep 14 2025 15:16:50 GMT+0900 (대한민국 표준시)",
+    "mostViewedVideo": {
+      "videoId": "oz6GYp9Y3ZY",
+      "title": "전교 꼴등이 재수해서 서울대 경영 합격한 공부법",
+      "publishedAt": "2025-08-12T08:56:10.000Z",
+      "thumbnailUrl": "https://i.ytimg.com/vi/oz6GYp9Y3ZY/mqdefault.jpg",
+      "viewCount": 1242611,
+      "likeCount": 14452,
+      "commentCount": 214,
+      "duration": "PT49S",
+      "durationSeconds": 49,
+      "tags": [],
+      "categoryId": "22"
+    },
+    "name": "전교 1등 재헌이",
+    "platform": "YOUTUBE",
+    "shortFormRatio": 100,
+    "subscribers": 1330,
+    "suggestedClusters": [],
+    "thumbnailUrl": "https://yt3.ggpht.com/r5d7TdHvYW4QjFmUAgk9dQx-bMemAXrc9_Ptv0sVQfzxcVQ6WgxE3ttH4G43yUoBi4ZWbnkS=s800-c-k-c0x00ffffff-no-rj",
+    "totalVideos": 7,
+    "totalViews": 3991360,
+    "updatedAt": "Sun Sep 14 2025 15:16:50 GMT+0900 (대한민국 표준시)",
+    "uploadFrequency": {
+      "pattern": "weekly",
+      "avgDaysBetweenUploads": 6.17,
+      "consistency": 36
+    },
+    "url": "https://youtube.com/channel/UCtTyACuFUcBG53J8dLYCPsw",
+    "version": 1,
+    "viewsByPeriod": {
+      "last7Days": 1221041,
+      "last30Days": 2263965,
+      "last90Days": 3991360,
+      "lastYear": 3991360
     }
   }
 ]

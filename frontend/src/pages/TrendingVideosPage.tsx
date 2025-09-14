@@ -327,6 +327,14 @@ const TrendingVideosPage: React.FC = () => {
           <VideoCard
             key={video._id}
             video={video as any}
+onDelete={(deletedVideo) => {
+              // UI에서 삭제된 비디오 제거 (VideoCard가 이미 DB 삭제 처리함)
+              setVideos(prev => prev.filter(v => v._id !== deletedVideo._id));
+              setPagination(prev => ({
+                ...prev,
+                total: prev.total - 1
+              }));
+            }}
           />
         ))}
       </div>

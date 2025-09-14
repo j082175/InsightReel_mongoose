@@ -9,7 +9,7 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { ChannelEntity, ChannelGroupEntity } from '../../../entities';
+import { Channel } from '../../../shared/types';
 
 // ===== Channel Management State Types =====
 export interface ChannelFilters {
@@ -25,8 +25,8 @@ export interface ChannelFilters {
 
 export interface ChannelManagementState {
   // Data
-  channels: ChannelEntity[];
-  channelGroups: ChannelGroupEntity[];
+  channels: Channel[];
+  channelGroups: any[];  // TODO: Define proper ChannelGroup type
   selectedChannels: string[];
 
   // UI State
@@ -38,21 +38,21 @@ export interface ChannelManagementState {
   showCreateModal: boolean;
   showGroupModal: boolean;
   showAnalysisModal: boolean;
-  editingChannel: ChannelEntity | null;
+  editingChannel: Channel | null;
   analyzingChannel: string | null;
 }
 
 export interface ChannelManagementActions {
   // Data Actions
-  setChannels: (channels: ChannelEntity[]) => void;
-  addChannel: (channel: ChannelEntity) => void;
-  updateChannel: (channelId: string, updates: Partial<ChannelEntity>) => void;
+  setChannels: (channels: Channel[]) => void;
+  addChannel: (channel: Channel) => void;
+  updateChannel: (channelId: string, updates: Partial<Channel>) => void;
   removeChannel: (channelId: string) => void;
 
   // Channel Groups
-  setChannelGroups: (groups: ChannelGroupEntity[]) => void;
-  addChannelGroup: (group: ChannelGroupEntity) => void;
-  updateChannelGroup: (groupId: string, updates: Partial<ChannelGroupEntity>) => void;
+  setChannelGroups: (groups: any[]) => void;  // TODO: Define proper ChannelGroup type
+  addChannelGroup: (group: any) => void;
+  updateChannelGroup: (groupId: string, updates: any) => void;
   removeChannelGroup: (groupId: string) => void;
 
   // Selection
@@ -76,12 +76,12 @@ export interface ChannelManagementActions {
   closeGroupModal: () => void;
   openAnalysisModal: (channelId: string) => void;
   closeAnalysisModal: () => void;
-  openEditModal: (channel: ChannelEntity) => void;
+  openEditModal: (channel: Channel) => void;
   closeEditModal: () => void;
 
   // Computed
-  getFilteredChannels: () => ChannelEntity[];
-  getChannelsByGroup: (groupId: string) => ChannelEntity[];
+  getFilteredChannels: () => Channel[];
+  getChannelsByGroup: (groupId: string) => Channel[];
   getChannelStats: () => {
     totalChannels: number;
     totalSubscribers: number;

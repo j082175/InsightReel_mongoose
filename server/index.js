@@ -657,6 +657,7 @@ app.post('/api/process-video', async (req, res) => {
             analysisType = 'quick',
             useAI = true,
             mode = 'immediate',
+            skipVideoDownload = false, // 새로운 플래그 추가
         } = req.body;
 
         // 🔍 디버그: 받은 메타데이터 로깅
@@ -853,12 +854,17 @@ app.post('/api/process-video', async (req, res) => {
                     // 실제 비디오 다운로드 URL이 필요한 경우 여기서 처리
                     videoPath = null; // 임시로 null 설정
                 } else {
-                    // Instagram/TikTok: 기존 방식
-                    ServerLogger.info('1️⃣ 비디오 다운로드 중...');
-                    videoPath = await videoProcessor.downloadVideo(
-                        videoUrl,
-                        platform,
-                    );
+                    // Instagram/TikTok: skipVideoDownload 플래그 확인
+                    if (skipVideoDownload) {
+                        ServerLogger.info('⏩ 비디오 다운로드 건너뛰기 (skipVideoDownload=true)');
+                        videoPath = null;
+                    } else {
+                        ServerLogger.info('1️⃣ 비디오 다운로드 중...');
+                        videoPath = await videoProcessor.downloadVideo(
+                            videoUrl,
+                            platform,
+                        );
+                    }
                 }
 
                 let thumbnailPaths;
@@ -978,30 +984,35 @@ app.post('/api/process-video', async (req, res) => {
                         };
                     }
                 } else {
-                    // Instagram/TikTok: 기존 방식
-                    // 2단계: 썸네일/프레임 생성
-                    if (
-                        analysisType === 'multi-frame' ||
-                        analysisType === 'full'
-                    ) {
-                        ServerLogger.info('2️⃣ 다중 프레임 추출 중...');
-                        thumbnailPaths = await videoProcessor.generateThumbnail(
-                            videoPath,
-                            analysisType,
-                        );
-                        ServerLogger.info(
-                            `✅ ${thumbnailPaths.length}개 프레임 추출 완료`,
-                        );
+                    // Instagram/TikTok: skipVideoDownload 확인
+                    if (skipVideoDownload || !videoPath) {
+                        ServerLogger.info('⏩ 썸네일 생성 건너뛰기 (비디오 없음)');
+                        thumbnailPaths = []; // 빈 배열로 설정
                     } else {
-                        ServerLogger.info('2️⃣ 단일 썸네일 생성 중...');
-                        var singleThumbnail =
-                            await videoProcessor.generateThumbnail(
+                        // 기존 방식: 2단계: 썸네일/프레임 생성
+                        if (
+                            analysisType === 'multi-frame' ||
+                            analysisType === 'full'
+                        ) {
+                            ServerLogger.info('2️⃣ 다중 프레임 추출 중...');
+                            thumbnailPaths = await videoProcessor.generateThumbnail(
                                 videoPath,
                                 analysisType,
                             );
-                        thumbnailPaths = Array.isArray(singleThumbnail)
-                            ? singleThumbnail
-                            : [singleThumbnail];
+                            ServerLogger.info(
+                                `✅ ${thumbnailPaths.length}개 프레임 추출 완료`,
+                            );
+                        } else {
+                            ServerLogger.info('2️⃣ 단일 썸네일 생성 중...');
+                            var singleThumbnail =
+                                await videoProcessor.generateThumbnail(
+                                    videoPath,
+                                    analysisType,
+                                );
+                            thumbnailPaths = Array.isArray(singleThumbnail)
+                                ? singleThumbnail
+                                : [singleThumbnail];
+                        }
                     }
 
                     // 3단계: AI 분석 (조건부 실행)
@@ -1011,7 +1022,7 @@ app.post('/api/process-video', async (req, res) => {
                         url: videoUrl || postUrl,
                     };
 
-                    if (useAI && analysisType !== 'none') {
+                    if (useAI && analysisType !== 'none' && thumbnailPaths.length > 0) {
                         if (thumbnailPaths.length > 1) {
                             ServerLogger.info(
                                 `3️⃣ 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`,
@@ -1024,7 +1035,11 @@ app.post('/api/process-video', async (req, res) => {
                             enrichedMetadata,
                         );
                     } else {
-                        ServerLogger.info('3️⃣ AI 분석 건너뜀 (사용자 설정)');
+                        if (thumbnailPaths.length === 0) {
+                            ServerLogger.info('3️⃣ AI 분석 건너뜀 (썸네일 없음)');
+                        } else {
+                            ServerLogger.info('3️⃣ AI 분석 건너뜀 (사용자 설정)');
+                        }
                         analysis = {
                             category: '분석 안함',
                             mainCategory: '미분류',

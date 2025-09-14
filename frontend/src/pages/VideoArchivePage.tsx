@@ -469,9 +469,9 @@ const VideoArchivePage: React.FC = () => {
           ) : filteredVideos.length > 0 ? (
             viewMode === 'grid' ? (
               <div className={`grid ${gridLayouts[gridSize] || gridLayouts[2]} gap-6`}>
-                {filteredVideos.map(video => (
-                  <VideoCard 
-                    key={video._id} 
+                {filteredVideos.map((video, index) => (
+                  <VideoCard
+                    key={video._id || video.id || `video-${index}`}
                     video={video}
                     onClick={(video) => {
                       if (!isSelectMode) {

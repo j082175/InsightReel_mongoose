@@ -4,6 +4,9 @@
 // Video Management Feature
 export * as VideoManagement from './video-management';
 
+// Batch Management Feature
+export * as BatchManagement from './batch-management';
+
 // Video Analysis Feature
 export * as VideoAnalysis from './video-analysis';
 

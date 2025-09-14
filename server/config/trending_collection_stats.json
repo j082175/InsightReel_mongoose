@@ -1,160 +1,5 @@
 [
   {
-    "timestamp": "2025-09-12T11:20:41.439Z",
-    "date": "2025. 9. 12.",
-    "totalChannels": 1,
-    "processedChannels": 1,
-    "totalVideos": 9,
-    "trendingVideos": 9,
-    "quotaUsed": 101,
-    "errors": [],
-    "processingTimeMs": 855,
-    "processingTimeSeconds": "0.9",
-    "avgTimePerChannel": "855",
-    "trendingRate": "100.0",
-    "quotaEfficiency": "0.09"
-  },
-  {
-    "timestamp": "2025-09-12T11:20:54.153Z",
-    "date": "2025. 9. 12.",
-    "totalChannels": 1,
-    "processedChannels": 1,
-    "totalVideos": 5,
-    "trendingVideos": 3,
-    "quotaUsed": 101,
-    "errors": [],
-    "processingTimeMs": 735,
-    "processingTimeSeconds": "0.7",
-    "avgTimePerChannel": "735",
-    "trendingRate": "60.0",
-    "quotaEfficiency": "0.03"
-  },
-  {
-    "timestamp": "2025-09-12T11:21:03.436Z",
-    "date": "2025. 9. 12.",
-    "totalChannels": 1,
-    "processedChannels": 1,
-    "totalVideos": 5,
-    "trendingVideos": 5,
-    "quotaUsed": 101,
-    "errors": [],
-    "processingTimeMs": 775,
-    "processingTimeSeconds": "0.8",
-    "avgTimePerChannel": "775",
-    "trendingRate": "100.0",
-    "quotaEfficiency": "0.05"
-  },
-  {
-    "timestamp": "2025-09-12T11:21:12.944Z",
-    "date": "2025. 9. 12.",
-    "totalChannels": 1,
-    "processedChannels": 1,
-    "totalVideos": 5,
-    "trendingVideos": 5,
-    "quotaUsed": 101,
-    "errors": [],
-    "processingTimeMs": 775,
-    "processingTimeSeconds": "0.8",
-    "avgTimePerChannel": "775",
-    "trendingRate": "100.0",
-    "quotaEfficiency": "0.05"
-  },
-  {
-    "timestamp": "2025-09-12T11:21:31.824Z",
-    "date": "2025. 9. 12.",
-    "totalChannels": 1,
-    "processedChannels": 1,
-    "totalVideos": 5,
-    "trendingVideos": 5,
-    "quotaUsed": 101,
-    "errors": [],
-    "processingTimeMs": 786,
-    "processingTimeSeconds": "0.8",
-    "avgTimePerChannel": "786",
-    "trendingRate": "100.0",
-    "quotaEfficiency": "0.05"
-  },
-  {
-    "timestamp": "2025-09-12T11:31:29.275Z",
-    "date": "2025. 9. 12.",
-    "totalChannels": 1,
-    "processedChannels": 1,
-    "totalVideos": 9,
-    "trendingVideos": 9,
-    "quotaUsed": 101,
-    "errors": [],
-    "processingTimeMs": 775,
-    "processingTimeSeconds": "0.8",
-    "avgTimePerChannel": "775",
-    "trendingRate": "100.0",
-    "quotaEfficiency": "0.09"
-  },
-  {
-    "timestamp": "2025-09-12T11:32:17.343Z",
-    "date": "2025. 9. 12.",
-    "totalChannels": 1,
-    "processedChannels": 1,
-    "totalVideos": 2,
-    "trendingVideos": 2,
-    "quotaUsed": 101,
-    "errors": [],
-    "processingTimeMs": 724,
-    "processingTimeSeconds": "0.7",
-    "avgTimePerChannel": "724",
-    "trendingRate": "100.0",
-    "quotaEfficiency": "0.02"
-  },
-  {
-    "timestamp": "2025-09-12T11:32:25.499Z",
-    "date": "2025. 9. 12.",
-    "totalChannels": 1,
-    "processedChannels": 1,
-    "totalVideos": 9,
-    "trendingVideos": 5,
-    "quotaUsed": 101,
-    "errors": [],
-    "processingTimeMs": 802,
-    "processingTimeSeconds": "0.8",
-    "avgTimePerChannel": "802",
-    "trendingRate": "55.6",
-    "quotaEfficiency": "0.05"
-  },
-  {
-    "timestamp": "2025-09-12T11:33:22.926Z",
-    "date": "2025. 9. 12.",
-    "totalChannels": 1,
-    "processedChannels": 1,
-    "totalVideos": 2,
-    "trendingVideos": 2,
-    "quotaUsed": 101,
-    "errors": [],
-    "processingTimeMs": 713,
-    "processingTimeSeconds": "0.7",
-    "avgTimePerChannel": "713",
-    "trendingRate": "100.0",
-    "quotaEfficiency": "0.02"
-  },
-  {
-    "timestamp": "2025-09-13T10:47:35.941Z",
-    "date": "2025. 9. 13.",
-    "totalChannels": 1,
-    "processedChannels": 0,
-    "totalVideos": 0,
-    "trendingVideos": 0,
-    "quotaUsed": 0,
-    "errors": [
-      {
-        "channelId": "영화미슐랭",
-        "error": "잘못된 채널 ID 형식: 영화미슐랭"
-      }
-    ],
-    "processingTimeMs": 105,
-    "processingTimeSeconds": "0.1",
-    "avgTimePerChannel": 0,
-    "trendingRate": 0,
-    "quotaEfficiency": 0
-  },
-  {
     "timestamp": "2025-09-13T10:47:39.916Z",
     "date": "2025. 9. 13.",
     "totalChannels": 1,
@@ -463,6 +308,761 @@
     "processingTimeMs": 737,
     "processingTimeSeconds": "0.7",
     "avgTimePerChannel": "737",
+    "trendingRate": "100.0",
+    "quotaEfficiency": "0.01"
+  },
+  {
+    "timestamp": "2025-09-14T05:19:31.629Z",
+    "date": "2025. 9. 14.",
+    "totalChannels": 1,
+    "processedChannels": 1,
+    "totalVideos": 1,
+    "trendingVideos": 1,
+    "quotaUsed": 101,
+    "errors": [],
+    "processingTimeMs": 803,
+    "processingTimeSeconds": "0.8",
+    "avgTimePerChannel": "803",
+    "trendingRate": "100.0",
+    "quotaEfficiency": "0.01"
+  },
+  {
+    "timestamp": "2025-09-14T05:26:27.514Z",
+    "date": "2025. 9. 14.",
+    "totalChannels": 1,
+    "processedChannels": 1,
+    "totalVideos": 1,
+    "trendingVideos": 1,
+    "quotaUsed": 101,
+    "errors": [],
+    "videos": [
+      {
+        "channelId": "UCrueQugJZKCPQUpnAb1LxIg",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "kQ3pgaf6uiuD1sFEhJqRVioD-Xc",
+            "id": "qVXN4ebQUCo",
+            "snippet": {
+              "publishedAt": "2025-09-12T17:01:18Z",
+              "channelId": "UCrueQugJZKCPQUpnAb1LxIg",
+              "title": "Probióticos",
+              "description": "Tus intestinos y los probióticos",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "CasiCreativo",
+              "tags": [
+                "intestinos",
+                "probioticos",
+                "prebioticos",
+                "la diferencia",
+                "videos animados",
+                "cortos casi creativo"
+              ],
+              "categoryId": "24",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "es",
+              "localized": {
+                "title": "Probióticos",
+                "description": "Tus intestinos y los probióticos"
+              },
+              "defaultAudioLanguage": "es"
+            },
+            "contentDetails": {
+              "duration": "PT32S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "64637",
+              "likeCount": "3146",
+              "favoriteCount": "0",
+              "commentCount": "19"
+            }
+          }
+        ],
+        "totalVideos": 1,
+        "trendingVideos": 1
+      }
+    ],
+    "processingTimeMs": 711,
+    "processingTimeSeconds": "0.7",
+    "avgTimePerChannel": "711",
+    "trendingRate": "100.0",
+    "quotaEfficiency": "0.01"
+  },
+  {
+    "timestamp": "2025-09-14T05:26:41.265Z",
+    "date": "2025. 9. 14.",
+    "totalChannels": 1,
+    "processedChannels": 1,
+    "totalVideos": 1,
+    "trendingVideos": 1,
+    "quotaUsed": 101,
+    "errors": [],
+    "videos": [
+      {
+        "channelId": "UCrueQugJZKCPQUpnAb1LxIg",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "NQP6tZOBDbSXCPnGkNIkOz3SUKY",
+            "id": "qVXN4ebQUCo",
+            "snippet": {
+              "publishedAt": "2025-09-12T17:01:18Z",
+              "channelId": "UCrueQugJZKCPQUpnAb1LxIg",
+              "title": "Probióticos",
+              "description": "Tus intestinos y los probióticos",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "CasiCreativo",
+              "tags": [
+                "intestinos",
+                "probioticos",
+                "prebioticos",
+                "la diferencia",
+                "videos animados",
+                "cortos casi creativo"
+              ],
+              "categoryId": "24",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "es",
+              "localized": {
+                "title": "Probióticos",
+                "description": "Tus intestinos y los probióticos"
+              },
+              "defaultAudioLanguage": "es"
+            },
+            "contentDetails": {
+              "duration": "PT32S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "64637",
+              "likeCount": "3147",
+              "favoriteCount": "0",
+              "commentCount": "19"
+            }
+          }
+        ],
+        "totalVideos": 1,
+        "trendingVideos": 1
+      }
+    ],
+    "processingTimeMs": 713,
+    "processingTimeSeconds": "0.7",
+    "avgTimePerChannel": "713",
+    "trendingRate": "100.0",
+    "quotaEfficiency": "0.01"
+  },
+  {
+    "timestamp": "2025-09-14T05:29:02.820Z",
+    "date": "2025. 9. 14.",
+    "totalChannels": 1,
+    "processedChannels": 1,
+    "totalVideos": 1,
+    "trendingVideos": 1,
+    "quotaUsed": 101,
+    "errors": [],
+    "videos": [
+      {
+        "channelId": "UCrueQugJZKCPQUpnAb1LxIg",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "lThz9TKOjzfHZ5lf3_pf7UZ_mr8",
+            "id": "qVXN4ebQUCo",
+            "snippet": {
+              "publishedAt": "2025-09-12T17:01:18Z",
+              "channelId": "UCrueQugJZKCPQUpnAb1LxIg",
+              "title": "Probióticos",
+              "description": "Tus intestinos y los probióticos",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "CasiCreativo",
+              "tags": [
+                "intestinos",
+                "probioticos",
+                "prebioticos",
+                "la diferencia",
+                "videos animados",
+                "cortos casi creativo"
+              ],
+              "categoryId": "24",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "es",
+              "localized": {
+                "title": "Probióticos",
+                "description": "Tus intestinos y los probióticos"
+              },
+              "defaultAudioLanguage": "es"
+            },
+            "contentDetails": {
+              "duration": "PT32S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "64740",
+              "likeCount": "3148",
+              "favoriteCount": "0",
+              "commentCount": "19"
+            }
+          }
+        ],
+        "totalVideos": 1,
+        "trendingVideos": 1
+      }
+    ],
+    "processingTimeMs": 770,
+    "processingTimeSeconds": "0.8",
+    "avgTimePerChannel": "770",
+    "trendingRate": "100.0",
+    "quotaEfficiency": "0.01"
+  },
+  {
+    "timestamp": "2025-09-14T07:46:26.082Z",
+    "date": "2025. 9. 14.",
+    "totalChannels": 1,
+    "processedChannels": 1,
+    "totalVideos": 1,
+    "trendingVideos": 1,
+    "quotaUsed": 101,
+    "errors": [],
+    "videos": [
+      {
+        "channelId": "UCrueQugJZKCPQUpnAb1LxIg",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "AkD1_er9ruDsMEcHAtVfv2j5Pag",
+            "id": "qVXN4ebQUCo",
+            "snippet": {
+              "publishedAt": "2025-09-12T17:01:18Z",
+              "channelId": "UCrueQugJZKCPQUpnAb1LxIg",
+              "title": "Probióticos",
+              "description": "Tus intestinos y los probióticos",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/qVXN4ebQUCo/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "CasiCreativo",
+              "tags": [
+                "intestinos",
+                "probioticos",
+                "prebioticos",
+                "la diferencia",
+                "videos animados",
+                "cortos casi creativo"
+              ],
+              "categoryId": "24",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "es",
+              "localized": {
+                "title": "Probióticos",
+                "description": "Tus intestinos y los probióticos"
+              },
+              "defaultAudioLanguage": "es"
+            },
+            "contentDetails": {
+              "duration": "PT32S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "67495",
+              "likeCount": "3176",
+              "favoriteCount": "0",
+              "commentCount": "19"
+            }
+          }
+        ],
+        "totalVideos": 1,
+        "trendingVideos": 1
+      }
+    ],
+    "processingTimeMs": 674,
+    "processingTimeSeconds": "0.7",
+    "avgTimePerChannel": "674",
+    "trendingRate": "100.0",
+    "quotaEfficiency": "0.01"
+  },
+  {
+    "timestamp": "2025-09-14T07:46:33.738Z",
+    "date": "2025. 9. 14.",
+    "totalChannels": 1,
+    "processedChannels": 0,
+    "totalVideos": 0,
+    "trendingVideos": 0,
+    "quotaUsed": 0,
+    "errors": [
+      {
+        "error": "잘못된 채널 ID 형식: undefined"
+      }
+    ],
+    "videos": [],
+    "processingTimeMs": 110,
+    "processingTimeSeconds": "0.1",
+    "avgTimePerChannel": 0,
+    "trendingRate": 0,
+    "quotaEfficiency": 0
+  },
+  {
+    "timestamp": "2025-09-14T07:46:54.802Z",
+    "date": "2025. 9. 14.",
+    "totalChannels": 1,
+    "processedChannels": 1,
+    "totalVideos": 1,
+    "trendingVideos": 1,
+    "quotaUsed": 101,
+    "errors": [],
+    "videos": [
+      {
+        "channelId": "UCtTyACuFUcBG53J8dLYCPsw",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "vukbz4h1wFxeZkcVI-iv1X23iA8",
+            "id": "1HQeMfkw0pI",
+            "snippet": {
+              "publishedAt": "2025-09-11T09:35:31Z",
+              "channelId": "UCtTyACuFUcBG53J8dLYCPsw",
+              "title": "하루 10시간 게임중독에서 서울대 합격까지",
+              "description": "",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "전교 1등 재헌이",
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "하루 10시간 게임중독에서 서울대 합격까지",
+                "description": ""
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT57S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": false,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "1276759",
+              "likeCount": "25286",
+              "favoriteCount": "0",
+              "commentCount": "187"
+            }
+          }
+        ],
+        "totalVideos": 1,
+        "trendingVideos": 1
+      }
+    ],
+    "processingTimeMs": 733,
+    "processingTimeSeconds": "0.7",
+    "avgTimePerChannel": "733",
+    "trendingRate": "100.0",
+    "quotaEfficiency": "0.01"
+  },
+  {
+    "timestamp": "2025-09-14T07:47:16.368Z",
+    "date": "2025. 9. 14.",
+    "totalChannels": 1,
+    "processedChannels": 1,
+    "totalVideos": 1,
+    "trendingVideos": 1,
+    "quotaUsed": 101,
+    "errors": [],
+    "videos": [
+      {
+        "channelId": "UCtTyACuFUcBG53J8dLYCPsw",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "doffR5PCNSePiE0NPN8QZU6SRYc",
+            "id": "1HQeMfkw0pI",
+            "snippet": {
+              "publishedAt": "2025-09-11T09:35:31Z",
+              "channelId": "UCtTyACuFUcBG53J8dLYCPsw",
+              "title": "하루 10시간 게임중독에서 서울대 합격까지",
+              "description": "",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "전교 1등 재헌이",
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "하루 10시간 게임중독에서 서울대 합격까지",
+                "description": ""
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT57S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": false,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "1276759",
+              "likeCount": "25289",
+              "favoriteCount": "0",
+              "commentCount": "187"
+            }
+          }
+        ],
+        "totalVideos": 1,
+        "trendingVideos": 1
+      }
+    ],
+    "processingTimeMs": 661,
+    "processingTimeSeconds": "0.7",
+    "avgTimePerChannel": "661",
+    "trendingRate": "100.0",
+    "quotaEfficiency": "0.01"
+  },
+  {
+    "timestamp": "2025-09-14T07:53:32.003Z",
+    "date": "2025. 9. 14.",
+    "totalChannels": 1,
+    "processedChannels": 1,
+    "totalVideos": 1,
+    "trendingVideos": 1,
+    "quotaUsed": 101,
+    "errors": [],
+    "videos": [
+      {
+        "channelId": "UCtTyACuFUcBG53J8dLYCPsw",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "xy3tf5uw61FXRkYe88Q9phX7WdY",
+            "id": "1HQeMfkw0pI",
+            "snippet": {
+              "publishedAt": "2025-09-11T09:35:31Z",
+              "channelId": "UCtTyACuFUcBG53J8dLYCPsw",
+              "title": "하루 10시간 게임중독에서 서울대 합격까지",
+              "description": "",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "전교 1등 재헌이",
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "하루 10시간 게임중독에서 서울대 합격까지",
+                "description": ""
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT57S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": false,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "1282189",
+              "likeCount": "25315",
+              "favoriteCount": "0",
+              "commentCount": "187"
+            }
+          }
+        ],
+        "totalVideos": 1,
+        "trendingVideos": 1
+      }
+    ],
+    "processingTimeMs": 725,
+    "processingTimeSeconds": "0.7",
+    "avgTimePerChannel": "725",
+    "trendingRate": "100.0",
+    "quotaEfficiency": "0.01"
+  },
+  {
+    "timestamp": "2025-09-14T07:58:11.266Z",
+    "date": "2025. 9. 14.",
+    "totalChannels": 1,
+    "processedChannels": 1,
+    "totalVideos": 1,
+    "trendingVideos": 1,
+    "quotaUsed": 101,
+    "errors": [],
+    "videos": [
+      {
+        "channelId": "UCtTyACuFUcBG53J8dLYCPsw",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "uUBsgM6gNP-WKd0TEsD5fQxVUao",
+            "id": "1HQeMfkw0pI",
+            "snippet": {
+              "publishedAt": "2025-09-11T09:35:31Z",
+              "channelId": "UCtTyACuFUcBG53J8dLYCPsw",
+              "title": "하루 10시간 게임중독에서 서울대 합격까지",
+              "description": "",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/1HQeMfkw0pI/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "전교 1등 재헌이",
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "하루 10시간 게임중독에서 서울대 합격까지",
+                "description": ""
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT57S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": false,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "1285534",
+              "likeCount": "25332",
+              "favoriteCount": "0",
+              "commentCount": "187"
+            }
+          }
+        ],
+        "totalVideos": 1,
+        "trendingVideos": 1
+      }
+    ],
+    "processingTimeMs": 715,
+    "processingTimeSeconds": "0.7",
+    "avgTimePerChannel": "715",
     "trendingRate": "100.0",
     "quotaEfficiency": "0.01"
   }

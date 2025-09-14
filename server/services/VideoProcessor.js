@@ -114,14 +114,25 @@ class VideoProcessor {
             ServerLogger.info(`📁 저장 경로: ${filePath}`);
 
             // 플랫폼별 다운로드 로직
+            ServerLogger.info(`🔍 플랫폼 감지: platform=${platform}, PLATFORMS.INSTAGRAM=${PLATFORMS.INSTAGRAM}`);
+            ServerLogger.info(`🔍 URL 체크: isInstagramUrl=${this.isInstagramUrl(videoUrl)}`);
+
             if (platform === PLATFORMS.YOUTUBE || this.isYouTubeUrl(videoUrl)) {
                 return await this.downloadYouTubeVideo(
                     videoUrl,
                     filePath,
                     startTime,
                 );
+            } else if (platform === PLATFORMS.INSTAGRAM || this.isInstagramUrl(videoUrl)) {
+                ServerLogger.info(`📸 Instagram 플랫폼 감지됨 - 전용 다운로드 함수 호출`);
+                return await this.downloadInstagramVideo(
+                    videoUrl,
+                    filePath,
+                    startTime,
+                );
             } else {
                 // 다른 플랫폼은 기존 방식 사용
+                ServerLogger.info(`🌐 일반 플랫폼으로 처리: ${platform || 'unknown'}`);
                 return await this.downloadGenericVideo(
                     videoUrl,
                     filePath,
@@ -145,6 +156,14 @@ class VideoProcessor {
     // YouTube URL 체크 함수
     isYouTubeUrl(url) {
         return url.includes('youtube.com') || url.includes('youtu.be');
+    }
+
+    // Instagram URL 체크 함수
+    isInstagramUrl(url) {
+        if (!url || typeof url !== 'string') return false;
+        const isInstagram = url.includes('instagram.com');
+        ServerLogger.info(`🔍 Instagram URL 체크: "${url}" -> ${isInstagram}`);
+        return isInstagram;
     }
 
     // YouTube 전용 다운로드 함수
@@ -205,6 +224,148 @@ class VideoProcessor {
         } catch (error) {
             ServerLogger.error('YouTube 다운로드 에러:', error);
             throw new Error(`YouTube 비디오 다운로드 실패: ${error.message}`);
+        }
+    }
+
+    // Instagram 전용 다운로드 함수
+    async downloadInstagramVideo(videoUrl, filePath, startTime) {
+        ServerLogger.info(`📸 Instagram 전용 다운로드 시작`);
+        ServerLogger.info(`🔗 Instagram URL: ${videoUrl}`);
+
+        try {
+            // Instagram Reels URL에서 실제 비디오 URL 추출
+            const directVideoUrl = await this.extractInstagramVideoUrl(videoUrl);
+
+            if (!directVideoUrl) {
+                throw new Error('Instagram 비디오 URL 추출 실패');
+            }
+
+            ServerLogger.info(`✅ 추출된 비디오 URL: ${directVideoUrl.substring(0, 100)}...`);
+
+            // 추출된 URL로 비디오 다운로드
+            const response = await axios({
+                method: 'GET',
+                url: directVideoUrl,
+                responseType: 'stream',
+                timeout: 60000, // Instagram은 더 긴 타임아웃 (60초)
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
+                    'Accept': 'video/webm,video/ogg,video/*,*/*;q=0.9',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                    'Accept-Encoding': 'identity',
+                    'Range': 'bytes=0-',
+                    'Referer': 'https://www.instagram.com/'
+                }
+            });
+
+            ServerLogger.info(`📦 Instagram Response status: ${response.status}`);
+            ServerLogger.info(`📦 Content-Type: ${response.headers['content-type']}`);
+
+            // Content-Type 검증 (비디오가 아니면 에러)
+            const contentType = response.headers['content-type'] || '';
+            if (!contentType.startsWith('video/')) {
+                throw new Error(`잘못된 Content-Type: ${contentType}. 비디오가 아닌 것 같습니다.`);
+            }
+
+            // 파일 스트림 생성
+            const writer = fs.createWriteStream(filePath);
+            response.data.pipe(writer);
+
+            return new Promise((resolve, reject) => {
+                writer.on('finish', () => {
+                    try {
+                        const endTime = Date.now();
+                        const downloadTime = endTime - startTime;
+                        const stats = fs.statSync(filePath);
+
+                        // 파일 크기 검증 (너무 작으면 에러일 가능성)
+                        if (stats.size < 1024) {
+                            throw new Error(`다운로드된 파일이 너무 작습니다 (${stats.size} bytes)`);
+                        }
+
+                        ServerLogger.info(`✅ Instagram 비디오 다운로드 완료`);
+                        ServerLogger.info(`📊 파일 크기: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+                        ServerLogger.info(`⏱️ 다운로드 소요시간: ${downloadTime}ms (${(downloadTime / 1000).toFixed(2)}초)`);
+                        resolve(filePath);
+                    } catch (error) {
+                        ServerLogger.error('Instagram 파일 정보 확인 실패:', error);
+                        reject(error);
+                    }
+                });
+
+                writer.on('error', (error) => {
+                    ServerLogger.error('Instagram 비디오 다운로드 실패:', error);
+                    reject(error);
+                });
+            });
+        } catch (error) {
+            ServerLogger.error('Instagram 다운로드 에러:', error);
+            throw new Error(`Instagram 비디오 다운로드 실패: ${error.message}`);
+        }
+    }
+
+    // Instagram URL에서 실제 비디오 URL 추출
+    async extractInstagramVideoUrl(instagramUrl) {
+        try {
+            ServerLogger.info('📸 Instagram 페이지 분석 시작...');
+
+            // Instagram 페이지 HTML 가져오기
+            const response = await axios({
+                method: 'GET',
+                url: instagramUrl,
+                timeout: 30000,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                    'Accept-Encoding': 'gzip, deflate',
+                    'Connection': 'keep-alive'
+                }
+            });
+
+            const html = response.data;
+            ServerLogger.info(`📄 HTML 페이지 크기: ${html.length} 문자`);
+
+            // JSON 데이터에서 비디오 URL 찾기 (여러 패턴 시도)
+            const patterns = [
+                /"video_url":"([^"]+)"/g,
+                /"src":"([^"]+\.mp4[^"]*)"/g,
+                /video_url":{"url":"([^"]+)"/g,
+                /"video_versions":\[{"url":"([^"]+)"/g
+            ];
+
+            for (const pattern of patterns) {
+                const matches = html.match(pattern);
+                if (matches && matches.length > 0) {
+                    const match = matches[0];
+                    const urlMatch = match.match(/"([^"]+\.mp4[^"]*)"/);
+                    if (urlMatch && urlMatch[1]) {
+                        let videoUrl = urlMatch[1];
+                        // URL 디코딩
+                        videoUrl = videoUrl.replace(/\\u0026/g, '&');
+                        videoUrl = videoUrl.replace(/\\\//g, '/');
+
+                        ServerLogger.info(`✅ 비디오 URL 패턴 매칭 성공: ${pattern}`);
+                        return videoUrl;
+                    }
+                }
+            }
+
+            // 대체 방법: meta property og:video 태그 찾기
+            const metaPattern = /<meta property="og:video" content="([^"]+)"/;
+            const metaMatch = html.match(metaPattern);
+            if (metaMatch && metaMatch[1]) {
+                ServerLogger.info('✅ og:video 메타 태그에서 URL 추출 성공');
+                return metaMatch[1];
+            }
+
+            ServerLogger.error('❌ Instagram 비디오 URL을 찾을 수 없습니다');
+            ServerLogger.error(`📄 HTML 샘플: ${html.substring(0, 500)}...`);
+            throw new Error('Instagram 비디오 URL 추출 실패');
+
+        } catch (error) {
+            ServerLogger.error('Instagram URL 추출 에러:', error);
+            throw error;
         }
     }
 

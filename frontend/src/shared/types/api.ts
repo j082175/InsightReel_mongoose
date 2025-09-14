@@ -121,6 +121,19 @@ export interface VideoFilters {
 }
 
 export interface FilterState {
+  keyword: string;
+  platform: string;
+  duration: string;
+  minViews: string;
+  maxViews: string;
+  dateFrom: string;
+  dateTo: string;
+  sortBy: string;
+  sortOrder: string;
+}
+
+// Legacy FilterState for backward compatibility
+export interface LegacyFilterState {
   days: string;
   views: string;
   platform: string;

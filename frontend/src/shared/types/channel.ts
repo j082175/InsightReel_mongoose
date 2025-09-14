@@ -7,7 +7,8 @@ import { Platform } from './video';
 
 // ===== 기본 채널 정보 (ChannelCore) =====
 export interface ChannelCore {
-  id: string;
+  id: string;                   // MongoDB _id → id 변환된 값
+  channelId: string;           // YouTube/Instagram/TikTok 실제 채널 ID
   name: string;
   url?: string;
   platform: Platform;

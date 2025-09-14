@@ -18,6 +18,8 @@
     "test:verbose": "jest --verbose",
     "test:ci": "jest --ci --coverage --watchAll=false",
     "validate:pipeline": "node scripts/validate-data-pipeline.js",
+    "validate:schemas": "node scripts/validate-schema-sync.js",
+    "validate:schemas:verbose": "node scripts/validate-schema-sync.js --verbose",
     "lint:fieldmapper": "eslint --config .eslintrc-fieldmapper.js frontend/src/**/*.{ts,tsx}",
     "prestart": "npm run validate:pipeline",
     "pretest": "npm run validate:pipeline"

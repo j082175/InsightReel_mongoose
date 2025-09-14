@@ -35,7 +35,7 @@
         "https://www.youtube.com/*",
         "https://youtu.be/*"
       ],
-      "js": ["config/settings.js", "content/content-script-bundled.js"],
+      "js": ["config/settings.js", "content/content-script-simple-test.js"],
       "css": ["content/styles.css"],
       "run_at": "document_idle"
     },

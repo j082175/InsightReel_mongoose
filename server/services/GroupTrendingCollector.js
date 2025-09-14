@@ -159,8 +159,13 @@ class GroupTrendingCollector {
    */
   async saveTrendingVideo(videoData, group, batchId = null) {
     try {
-      // 기존 영상 중복 체크
-      const videoId = videoData.id?.videoId;
+      // 디버깅: 비디오 데이터 구조 확인
+      console.log(`🔍 DEBUG: videoData structure:`, JSON.stringify(videoData, null, 2));
+
+      // 기존 영상 중복 체크 - YouTube API 구조에 따라 다른 형태 처리
+      const videoId = videoData.id?.videoId || videoData.id;
+      console.log(`🔍 DEBUG: extracted videoId: ${videoId} (from videoData.id?.videoId || videoData.id)`);
+
       const existingVideo = await TrendingVideo.findOne({ videoId: videoId });
       if (existingVideo) {
         ServerLogger.warn(`⚠️ 중복 영상 스킵: ${videoData.snippet?.title} (${videoId})`);
@@ -172,9 +177,9 @@ class GroupTrendingCollector {
       const durationCategory = DurationClassifier.categorizeByDuration(durationSeconds);
 
       const trendingVideo = new TrendingVideo({
-        videoId: videoData.id?.videoId,
+        videoId: videoId,
         title: videoData.snippet?.title,
-        url: `https://www.youtube.com/watch?v=${videoData.id?.videoId}`,
+        url: `https://www.youtube.com/watch?v=${videoId}`,
         platform: PLATFORMS.YOUTUBE,
         
         // 채널 정보

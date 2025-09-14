@@ -2,7 +2,6 @@
 
 // UI Components
 export { default as BulkCollectionModal } from './ui/BulkCollectionModal';
-export { default as BatchCard } from './ui/BatchCard';
 
 // API Functions
 export * from './api/collectionApi';

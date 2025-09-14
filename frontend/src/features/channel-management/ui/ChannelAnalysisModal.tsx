@@ -196,7 +196,7 @@ const ChannelAnalysisModal: React.FC<ChannelAnalysisModalProps> = ({
                 <h4 className="text-lg font-semibold text-gray-900">🔥 인기 영상 TOP 3</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {channelData.topVideos.map((video, index) => (
-                    <div key={video._id} className="bg-gray-50 rounded-lg overflow-hidden">
+                    <div key={video.id} className="bg-gray-50 rounded-lg overflow-hidden">
                       <img
                         src={video.thumbnail}
                         alt={video.title}
@@ -207,7 +207,7 @@ const ChannelAnalysisModal: React.FC<ChannelAnalysisModalProps> = ({
                           {video.title}
                         </h5>
                         <p className="text-xs text-gray-500">
-                          {formatViews(getViewCount(video))} 조회수
+                          {formatViews(video.views)} 조회수
                         </p>
                       </div>
                     </div>

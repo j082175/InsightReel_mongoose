@@ -75,19 +75,8 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
   }, []);
 
   const handleConfirmDelete = useCallback(async () => {
-    if (onDelete) {
-      console.log('🎯 onDelete prop이 있어서 콜백만 호출하고 내장 삭제 로직은 건너뜀');
-      setIsDeleting(true);
-      try {
-        await onDelete(video);
-        setShowDeleteModal(false);
-      } catch (error) {
-        console.error('삭제 실패:', error);
-      } finally {
-        setIsDeleting(false);
-      }
-      return;
-    }
+    console.log('🎯 내장 삭제 로직 실행 시작');
+    setIsDeleting(true);
     
     console.log('⚠️ onDelete prop이 없어서 내장 삭제 로직 실행');
     
@@ -167,17 +156,12 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
           message: '영상이 성공적으로 삭제되었습니다.'
         });
         
-        // 부모 컴포넌트에 삭제 완료 알림 (UI 업데이트용)
-        console.log('✅ 삭제 성공, onDelete 콜백 호출:', {
-          hasOnDelete: !!onDelete,
-          videoId: video._id,  // MongoDB _id is always present
-          videoTitle: video.title
-        });
+        // 삭제 성공 후 부모 컴포넌트에 UI 업데이트 알림
         if (onDelete) {
+          console.log('✅ 삭제 성공, onDelete 콜백 호출하여 UI 업데이트');
           onDelete(video);
-          console.log('📞 onDelete 콜백 실행 완료');
         } else {
-          console.warn('⚠️ onDelete 콜백이 없습니다');
+          console.log('✅ 삭제 성공, onDelete 콜백 없음 (수동 새로고침 필요)');
         }
         
         // 삭제 성공했으므로 return으로 함수 종료
