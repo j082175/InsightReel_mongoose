@@ -30,7 +30,7 @@ const DashboardPage: React.FC = () => {
   const [deletedVideoIds, setDeletedVideoIds] = useState<Set<string>>(new Set());
   
   // 선택 관리
-  const videoSelection = useSelection<number>();
+  const videoSelection = useSelection<string>();
 
   // API 훅들
   const { data: apiVideos = [] } = useVideos();
@@ -196,7 +196,7 @@ const DashboardPage: React.FC = () => {
 
   const handleVideoClick = (video: Video) => {
     if (isSelectMode) {
-      handleSelectToggle(Number(video.id));
+      handleSelectToggle(video._id);
     } else {
       if (video.platform === PLATFORMS.YOUTUBE) {
         setSelectedVideoForPlay(video);
@@ -206,12 +206,12 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  const handleSelectToggle = (videoId: number) => {
+  const handleSelectToggle = (videoId: string) => {
     videoSelection.toggle(videoId);
   };
 
   const handleSelectAll = () => {
-    videoSelection.selectAll(filteredVideos.map(v => Number(v.id)));
+    videoSelection.selectAll(filteredVideos.map(v => v._id));
   };
 
   const handleVideoDelete = async (video: Video) => {
@@ -444,8 +444,8 @@ const DashboardPage: React.FC = () => {
                     onChannelClick={setChannelToAnalyze}
                     onDelete={handleVideoDelete}
                     isSelectMode={isSelectMode}
-                    isSelected={videoSelection.isSelected(Number(video.id))}
-                    onSelectToggle={(id) => handleSelectToggle(Number(id))}
+                    isSelected={videoSelection.isSelected(video._id)}
+                    onSelectToggle={(id) => handleSelectToggle(id)}
                   />
                 ))}
               </div>
