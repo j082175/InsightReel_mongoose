@@ -197,14 +197,14 @@ class ConfigValidator {
    * 필수 설정 조합 검증
    */
   validateRequiredSettings() {
-    // Gemini 사용 시 API 키 필수
+    // Gemini 사용 시 API 키 필수 (ApiKeyManager에서 관리됨으로 환경변수 체크 제거)
     if (this.config.USE_GEMINI && !this.config.GOOGLE_API_KEY) {
-      this.errors.push('USE_GEMINI=true일 때 GOOGLE_API_KEY가 필요합니다.');
+      this.warnings.push('USE_GEMINI=true일 때 API 키가 필요합니다. (ApiKeyManager에서 자동 관리)');
     }
 
     // Google Sheets 사용을 위한 인증 정보 필수
     if (!this.config.GOOGLE_SERVICE_ACCOUNT_KEY && !this.config.GOOGLE_API_KEY) {
-      this.warnings.push('Google Sheets 기능을 사용하려면 GOOGLE_SERVICE_ACCOUNT_KEY 또는 GOOGLE_API_KEY가 필요합니다.');
+      this.warnings.push('Google Sheets 기능을 사용하려면 GOOGLE_SERVICE_ACCOUNT_KEY 또는 API 키가 필요합니다.');
     }
 
     // 파일 크기 단위 검증

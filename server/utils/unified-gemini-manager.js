@@ -23,15 +23,8 @@ class UnifiedGeminiManager {
     this.retryAttempts = options.retryAttempts || 3;
     this.retryDelay = options.retryDelay || 2000;
     
-    if (this.fallbackMode === 'multi-key') {
-      this.initMultiKeyMode(options);
-    } else if (this.fallbackMode === 'model-priority') {
-      this.initModelPriorityMode(options);
-    } else if (this.fallbackMode === 'single-model') {
-      this.initSingleModelMode(options);
-    } else {
-      throw new Error(`지원하지 않는 폴백 모드입니다: ${this.fallbackMode}`);
-    }
+    // 비동기 초기화를 위해 init 메서드 호출 필요
+    this.initPromise = this.init(options);
     
     ServerLogger.success(`🤖 통합 Gemini 관리자 초기화 완료 (모드: ${this.fallbackMode})`, null, 'UNIFIED');
     
@@ -50,16 +43,36 @@ class UnifiedGeminiManager {
   }
 
   /**
+   * 비동기 초기화 메서드
+   */
+  async init(options) {
+    try {
+      if (this.fallbackMode === 'multi-key') {
+        await this.initMultiKeyMode(options);
+      } else if (this.fallbackMode === 'model-priority') {
+        await this.initModelPriorityMode(options);
+      } else if (this.fallbackMode === 'single-model') {
+        await this.initSingleModelMode(options);
+      } else {
+        throw new Error(`지원하지 않는 폴백 모드입니다: ${this.fallbackMode}`);
+      }
+    } catch (error) {
+      ServerLogger.error(`❌ 통합 Gemini 관리자 초기화 실패: ${error.message}`, null, 'UNIFIED');
+      throw error;
+    }
+  }
+
+  /**
    * Multi-Key 모드 초기화 (기존 방식)
    */
-  initMultiKeyMode(options) {
+  async initMultiKeyMode(options) {
     this.fallbackStrategy = options.strategy || process.env.GEMINI_FALLBACK_STRATEGY || 'flash';
-    
+
     // API 키들 로드
-    this.apiKeys = this.loadAllApiKeys();
-    
+    this.apiKeys = await this.loadAllApiKeys();
+
     if (this.apiKeys.length === 0) {
-      throw new Error('API 키가 설정되지 않았습니다. GOOGLE_API_KEY 환경변수를 확인해주세요.');
+      throw new Error('활성화된 API 키가 없습니다. ApiKeyManager에 키를 추가해주세요.');
     }
     
     // 각 API 키별 사용량 추적기 및 모델 인스턴스
@@ -87,13 +100,18 @@ class UnifiedGeminiManager {
   /**
    * Model-Priority 모드 초기화 (신규 방식)
    */
-  initModelPriorityMode(options) {
-    // 단일 API 키만 사용
-    this.singleApiKey = process.env.GOOGLE_API_KEY;
-    
-    if (!this.singleApiKey) {
-      throw new Error('GOOGLE_API_KEY가 설정되지 않았습니다.');
+  async initModelPriorityMode(options) {
+    // ApiKeyManager에서 API 키 로드
+    const apiKeyManager = require('../services/ApiKeyManager');
+    await apiKeyManager.initialize();
+    const activeKeys = await apiKeyManager.getActiveApiKeys();
+
+    if (activeKeys.length === 0) {
+      throw new Error('활성화된 API 키가 없습니다. ApiKeyManager에 키를 추가해주세요.');
     }
+
+    // 첫 번째 활성 키를 사용
+    this.singleApiKey = activeKeys[0];
     
     // 모델 우선순위 설정
     this.modelPriority = (process.env.GEMINI_MODEL_PRIORITY || 'pro,flash,flash-lite').split(',');
@@ -170,32 +188,19 @@ class UnifiedGeminiManager {
   /**
    * 환경 변수에서 모든 API 키 로드 (통합된 로직)
    */
-  loadAllApiKeys() {
-    const keys = [];
-    
-    // 기본 키
-    if (process.env.GOOGLE_API_KEY) {
-      keys.push({
-        key: process.env.GOOGLE_API_KEY,
-        name: 'primary',
-        index: 0
-      });
-    }
-    
-    // 보조 키들 (GOOGLE_API_KEY_2, GOOGLE_API_KEY_3, ...)
-    for (let i = 2; i <= 10; i++) {
-      const key = process.env[`GOOGLE_API_KEY_${i}`];
-      if (key) {
-        keys.push({
-          key: key,
-          name: `secondary_${i}`,
-          index: keys.length
-        });
-        ServerLogger.info(`📍 보조 API 키 ${i} 로드됨`, null, 'UNIFIED');
-      }
-    }
-    
-    ServerLogger.info(`📊 총 ${keys.length}개 API 키 로드됨`, null, 'UNIFIED');
+  async loadAllApiKeys() {
+    // ApiKeyManager에서 모든 API 키 로드
+    const apiKeyManager = require('../services/ApiKeyManager');
+    await apiKeyManager.initialize();
+    const activeKeys = await apiKeyManager.getActiveApiKeys();
+
+    const keys = activeKeys.map((key, index) => ({
+      key: key,
+      name: `managed_key_${index}`,
+      index: index
+    }));
+
+    ServerLogger.info(`📊 ApiKeyManager에서 ${keys.length}개 API 키 로드됨`, null, 'UNIFIED');
     return keys;
   }
 

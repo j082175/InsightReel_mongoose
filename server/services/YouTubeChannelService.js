@@ -7,15 +7,24 @@ const UsageTracker = require('../utils/usage-tracker');
  */
 class YouTubeChannelService {
     constructor() {
-        this.apiKey = process.env.YOUTUBE_KEY_1 || process.env.GOOGLE_API_KEY;
         this.baseURL = 'https://www.googleapis.com/youtube/v3';
         this.usageTracker = UsageTracker.getInstance();
-
-        if (!this.apiKey) {
-            throw new Error('YouTube API 키가 설정되지 않았습니다.');
-        }
+        this.apiKey = null; // ApiKeyManager에서 동적으로 로드
 
         ServerLogger.success('🔧 YouTube 채널 서비스 초기화 완료');
+    }
+
+    async getApiKey() {
+        if (!this.apiKey) {
+            const apiKeyManager = require('./ApiKeyManager');
+            await apiKeyManager.initialize();
+            const activeKeys = await apiKeyManager.getActiveApiKeys();
+            if (activeKeys.length === 0) {
+                throw new Error('활성화된 API 키가 없습니다. ApiKeyManager에 키를 추가해주세요.');
+            }
+            this.apiKey = activeKeys[0];
+        }
+        return this.apiKey;
     }
 
     /**
@@ -77,7 +86,7 @@ class YouTubeChannelService {
 
             const response = await axios.get(`${this.baseURL}/channels`, {
                 params: {
-                    key: this.apiKey,
+                    key: await this.getApiKey(),
                     part: 'snippet,statistics',
                     id: cleanId,
                     maxResults: 1,
@@ -109,7 +118,7 @@ class YouTubeChannelService {
             // 1. 먼저 검색 API로 채널 찾기
             const searchResponse = await axios.get(`${this.baseURL}/search`, {
                 params: {
-                    key: this.apiKey,
+                    key: await this.getApiKey(),
                     part: 'snippet',
                     q: channelName,
                     type: 'channel',
@@ -196,7 +205,7 @@ class YouTubeChannelService {
 
                 const response = await axios.get(`${this.baseURL}/channels`, {
                     params: {
-                        key: this.apiKey,
+                        key: await this.getApiKey(),
                         part: 'snippet,statistics',
                         id: cleanIds.join(','),
                         maxResults: batchSize,

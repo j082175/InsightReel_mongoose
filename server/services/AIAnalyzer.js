@@ -19,11 +19,7 @@ class AIAnalyzer {
     
     // AI 시스템 설정 (상호 배타적)
     this.useGemini = process.env.USE_GEMINI === 'true';
-    this.geminiApiKey = process.env.GOOGLE_API_KEY;
-    
-    if (this.useGemini && !this.geminiApiKey) {
-      throw new Error('GOOGLE_API_KEY가 설정되지 않았습니다. Gemini API 키가 필요합니다.');
-    }
+    // API 키는 ApiKeyManager에서 자동으로 관리됨 (환경변수 체크 제거)
     
     // 통합 Gemini 관리자 사용
     if (this.useGemini) {
