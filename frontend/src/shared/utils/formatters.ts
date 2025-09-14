@@ -6,10 +6,23 @@
 /**
  * 조회수를 한국어 형식으로 포맷팅
  * @param num - 조회수 숫자
- * @returns 포맷된 문자열 (예: 1000 → "1천", 10000 → "1만")
+ * @returns 포맷된 문자열 (예: 1000 → "1천", 10000 → "1만", 100000000 → "1억")
  */
 export const formatViews = (num: number): string => {
-  if (num >= 10000) return (num / 10000).toFixed(0) + '만';
+  if (num >= 100000000) {
+    // 1억 이상: 소수점 1자리까지 표시
+    const billions = num / 100000000;
+    return billions % 1 === 0
+      ? billions.toFixed(0) + '억'
+      : billions.toFixed(1) + '억';
+  }
+  if (num >= 10000) {
+    // 1만 이상: 소수점 1자리까지 표시 (단, 정수면 소수점 생략)
+    const tenThousands = num / 10000;
+    return tenThousands % 1 === 0
+      ? tenThousands.toFixed(0) + '만'
+      : tenThousands.toFixed(1) + '만';
+  }
   if (num >= 1000) return (num / 1000).toFixed(1) + '천';
   return num.toLocaleString();
 };

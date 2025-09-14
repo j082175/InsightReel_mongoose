@@ -80,7 +80,7 @@ router.post('/add-url', async (req, res) => {
             description: channelInfo.snippet?.description,
             thumbnailUrl: channelInfo.snippet?.thumbnails?.high?.url,
             country: channelInfo.snippet?.country,
-            createdAt: channelInfo.snippet?.publishedAt,
+            publishedAt: channelInfo.snippet?.publishedAt,
             ...metadata
           };
         }

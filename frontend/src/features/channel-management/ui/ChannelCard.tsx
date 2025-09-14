@@ -213,16 +213,26 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
               </span>
             </div>
             
-            {/* 두 번째 줄: 구독자, 영상수, 마지막 확인 한 줄로 */}
-            <div className="flex items-center gap-2 mb-1 text-xs">
-              <span className="px-1.5 py-0.5 bg-gradient-to-r from-blue-50 to-blue-100 rounded font-medium text-blue-700">
-                👥 {formatViews(channel.subscribers || 0)}
+            {/* 두 번째 줄: 초컴팩트 정보 표시 */}
+            <div className="flex items-center gap-3 mb-1 text-sm">
+              <span className="flex items-center text-blue-600" title="구독자 수">
+                👥<span className="ml-1 font-medium">{formatViews(channel.subscribers || 0)}</span>
               </span>
-              <span className="px-1.5 py-0.5 bg-gradient-to-r from-green-50 to-green-100 rounded font-medium text-green-700">
-                📹 {channel.totalVideos || 0}개
+              <span className="flex items-center text-green-600" title="총 영상 수">
+                📹<span className="ml-1 font-medium">{channel.totalVideos || 0}</span>
               </span>
-              <span className="px-1.5 py-0.5 bg-gradient-to-r from-gray-50 to-gray-100 rounded font-medium text-gray-600">
-                ⏰ {channel.updatedAt ? formatLastChecked(channel.updatedAt) : '미확인'}
+              <span className="flex items-center text-purple-600" title="총 조회수">
+                📊<span className="ml-1 font-medium">{formatViews(channel.totalViews || 0)}</span>
+              </span>
+              <span className="flex items-center text-orange-600" title="채널 생성일">
+                📅<span className="ml-1 font-medium text-xs">{channel.publishedAt ? new Date(channel.publishedAt).toLocaleDateString('ko-KR') : '미상'}</span>
+              </span>
+            </div>
+
+            {/* 세 번째 줄: 마지막 확인 시간 */}
+            <div className="flex items-center text-xs text-gray-500 mb-1">
+              <span className="flex items-center" title="마지막 확인">
+                ⏰<span className="ml-1">마지막 확인: {channel.updatedAt ? formatLastChecked(channel.updatedAt) : '미확인'}</span>
               </span>
             </div>
 

@@ -95,6 +95,7 @@ export interface ChannelMetadata {
   lastAnalyzedAt?: string;
   analysisVersion?: string;
   collectedAt?: string;
+  publishedAt?: string;      // 채널 실제 생성일
   createdAt?: string;
   updatedAt?: string;
   version?: number;

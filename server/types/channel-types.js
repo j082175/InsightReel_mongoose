@@ -176,6 +176,7 @@ const ChannelMetadata = {
   
   analysisVersion: commonFieldOptions,
   collectedAt: { type: String, required: false, default: () => new Date().toISOString() },
+  publishedAt: { type: Date, required: false },  // 채널 실제 생성일 (YouTube API에서)
   createdAt: { type: String, required: false, default: () => new Date().toISOString() },
   updatedAt: { type: String, required: false, default: () => new Date().toISOString() },
   version: numberFieldOptions
