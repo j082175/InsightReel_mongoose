@@ -95,8 +95,8 @@ router.post('/add-url', async (req, res) => {
       try {
         ServerLogger.info('🔧 ChannelAnalysisService를 통한 채널 분석 시작');
 
-        // ChannelAnalysisService 초기화
-        const channelAnalysisService = new ChannelAnalysisService();
+        // ChannelAnalysisService 초기화 (싱글톤 패턴)
+        const channelAnalysisService = ChannelAnalysisService.getInstance();
 
         // 분석 옵션 설정
         const includeAnalysis = req.body.channelData?.aiAnalysis === 'full';
