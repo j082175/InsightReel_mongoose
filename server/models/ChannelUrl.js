@@ -181,21 +181,32 @@ channelUrlSchema.statics.updateStatus = async function (
             updateData.lastAnalyzedAt = new Date();
         }
 
-        const result = await this.updateOne(
+        const result = await this.findOneAndUpdate(
             { normalizedChannelId },
-            updateData,
+            {
+                $set: updateData,
+                $setOnInsert: {
+                    normalizedChannelId,
+                    createdAt: new Date(),
+                }
+            },
+            {
+                upsert: true,
+                new: true,
+                setDefaultsOnInsert: true
+            }
         );
 
-        if (result.modifiedCount > 0) {
+        if (result) {
             console.log(
-                `✅ 채널 상태 업데이트: ${normalizedChannelId} -> ${status}`,
+                `✅ 채널 상태 업데이트/생성: ${normalizedChannelId} -> ${status}`,
             );
             return { success: true };
         } else {
             console.warn(
-                `⚠️ 채널 상태 업데이트 실패 (찾을 수 없음): ${normalizedChannelId}`,
+                `⚠️ 채널 상태 업데이트 실패: ${normalizedChannelId}`,
             );
-            return { success: false, error: 'CHANNEL_NOT_FOUND' };
+            return { success: false, error: 'UPDATE_FAILED' };
         }
     } catch (error) {
         console.error('채널 상태 업데이트 실패:', error.message);

@@ -574,18 +574,18 @@ class ChannelAnalysisService {
 
             // ✅ 채널 저장 성공 후 중복검사 DB에 등록
             try {
-                const normalizedChannelId = channel.customUrl?.startsWith('@') 
-                    ? channel.customUrl 
-                    : `@${channel.customUrl || channel.name}`;
+                const normalizedChannelId = savedChannel.customUrl?.startsWith('@')
+                    ? savedChannel.customUrl
+                    : `@${savedChannel.customUrl || savedChannel.name}`;
                 
                 await DuplicateCheckManager.updateChannelStatus(
                     normalizedChannelId,
                     'completed',
                     {
-                        name: channel.name,
-                        url: channel.url,
-                        subscribers: channel.subscribers,
-                        channelId: channel.channelId
+                        name: savedChannel.name,
+                        url: savedChannel.url,
+                        subscribers: savedChannel.subscribers,
+                        channelId: savedChannel.channelId
                     }
                 );
                 
