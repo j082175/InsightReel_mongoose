@@ -281,4 +281,24 @@ channelUrlSchema.statics.getStats = async function () {
     }
 };
 
+// 🗑️ 정적 메서드: 채널 삭제 (분석 실패 시)
+channelUrlSchema.statics.removeChannel = async function (normalizedChannelId) {
+    try {
+        const result = await this.deleteOne({
+            normalizedChannelId: normalizedChannelId,
+        });
+
+        if (result.deletedCount > 0) {
+            console.log(`🗑️ 중복검사 DB에서 채널 삭제: ${normalizedChannelId}`);
+            return { success: true, deletedCount: result.deletedCount };
+        } else {
+            console.warn(`⚠️ 삭제할 채널을 찾을 수 없음: ${normalizedChannelId}`);
+            return { success: false, error: 'NOT_FOUND' };
+        }
+    } catch (error) {
+        console.error('채널 삭제 실패:', error.message);
+        return { success: false, error: error.message };
+    }
+};
+
 module.exports = mongoose.model('ChannelUrl', channelUrlSchema);

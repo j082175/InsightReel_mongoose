@@ -10,6 +10,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CollectionBatchEntity } from '../../entities';
 import { VideoEntity } from '../../entities';
+import { Toaster } from 'react-hot-toast';
 
 // ===== App Context Types =====
 interface AppContextType {
@@ -93,6 +94,26 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   return (
     <AppContext.Provider value={contextValue}>
       {children}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            style: {
+              background: '#10b981',
+            },
+          },
+          error: {
+            style: {
+              background: '#ef4444',
+            },
+          },
+        }}
+      />
     </AppContext.Provider>
   );
 };

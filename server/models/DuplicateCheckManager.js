@@ -128,6 +128,20 @@ class DuplicateCheckManager {
       return { success: false, error: error.message };
     }
   }
+
+  /**
+   * 채널 삭제 (분석 실패 시 중복검사 DB에서 제거)
+   * @param {string} normalizedChannelId - 정규화된 채널 ID (@포함)
+   * @returns {Object} 삭제 결과
+   */
+  static async removeChannel(normalizedChannelId) {
+    try {
+      return await ChannelUrl.removeChannel(normalizedChannelId);
+    } catch (error) {
+      console.error('채널 삭제 실패:', error.message);
+      return { success: false, error: error.message };
+    }
+  }
   
   /**
    * 전체 통계 조회 (모든 플랫폼 종합)

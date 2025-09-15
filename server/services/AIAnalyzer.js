@@ -559,65 +559,9 @@ class AIAnalyzer {
 
   async analyzeMultipleFrames(thumbnailPaths, urlBasedCategory, metadata) {
     ServerLogger.info(`🎬 다중 프레임 분석 시작: ${thumbnailPaths.length}개 프레임`);
-    
+
     // Gemini를 사용한 한 번에 모든 프레임 분석
     return await this.analyzeMultipleFramesWithGemini(thumbnailPaths, urlBasedCategory, metadata);
-    const frameAnalyses = [];
-    const allKeywords = [];
-    const allContents = [];
-    
-    // 각 프레임을 순차적으로 분석
-    for (let i = 0; i < thumbnailPaths.length; i++) {
-      const framePath = thumbnailPaths[i];
-      const frameNumber = i + 1;
-      
-      try {
-        ServerLogger.info(`📸 프레임 ${frameNumber}/${thumbnailPaths.length} 분석 중: ${path.basename(framePath)}`);
-        
-        // 이미지 인코딩
-        const imageBase64 = await this.encodeImageToBase64(framePath);
-        
-        // 프레임별 분석 프롬프트 (더 상세한 분석)
-        const framePrompt = this.buildFrameAnalysisPrompt(metadata, frameNumber, thumbnailPaths.length);
-        
-        // Gemini AI 호출
-        const aiResponse = await this.queryGemini(framePrompt, imageBase64);
-        
-        // 응답 파싱
-        const frameAnalysis = this.parseFrameResponse(aiResponse, frameNumber);
-        frameAnalyses.push(frameAnalysis);
-        
-        // 키워드와 내용 수집
-        if (frameAnalysis.keywords) {
-          allKeywords.push(...frameAnalysis.keywords);
-        }
-        if (frameAnalysis.content) {
-          allContents.push(`[프레임 ${frameNumber}] ${frameAnalysis.content}`);
-        }
-        
-        ServerLogger.info(`✅ 프레임 ${frameNumber} 분석 완료:`, frameAnalysis);
-        
-        // 과도한 요청 방지를 위한 딜레이
-        if (i < thumbnailPaths.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-        }
-        
-      } catch (error) {
-        ServerLogger.error(`❌ 프레임 ${frameNumber} 분석 실패:`, error);
-        frameAnalyses.push({
-          frameNumber,
-          summary: `프레임 ${frameNumber} 분석 실패`,
-          keywords: [],
-          confidence: 0.1
-        });
-      }
-    }
-    
-    // 모든 프레임 분석 결과를 종합
-    const combinedAnalysis = this.combineMultiFrameAnalyses(frameAnalyses, allKeywords, allContents, urlBasedCategory, metadata);
-    
-    ServerLogger.info('🎯 다중 프레임 분석 최종 결과:', combinedAnalysis);
-    return combinedAnalysis;
   }
 
   async encodeImageToBase64(imagePath) {

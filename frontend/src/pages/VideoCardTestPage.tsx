@@ -114,9 +114,15 @@ const VideoCardTestPage: React.FC = () => {
   };
 
   // 카드 클릭
-  const handleCardClick = (videoId: string) => {
-    setClickedVideo(videoId);
+  const handleCardClick = (video: Video) => {
+    setClickedVideo(video._id);
     setTimeout(() => setClickedVideo(null), 1000); // 1초 후 초기화
+  };
+
+  // 비디오 삭제
+  const handleVideoDelete = (video: Video) => {
+    console.log('비디오 삭제:', video.title);
+    // 테스트용 삭제 로직
   };
 
   return (
@@ -180,9 +186,10 @@ const VideoCardTestPage: React.FC = () => {
                   <VideoCard
                     video={video}
                     isSelected={selectedVideos.has(video._id)}
-                    isSelectionMode={isSelectionMode}
-                    onToggleSelection={handleToggleSelection}
-                    onCardClick={handleCardClick}
+                    isSelectMode={isSelectionMode}
+                    onSelectToggle={handleToggleSelection}
+                    onClick={handleCardClick}
+                    onDelete={handleVideoDelete}
                   />
                   {clickedVideo === video._id && (
                     <div className="p-2 bg-green-100 text-green-800 rounded text-sm">
@@ -219,9 +226,10 @@ const VideoCardTestPage: React.FC = () => {
                         key={video._id}
                         video={video}
                         isSelected={selectedVideos.has(video._id)}
-                        isSelectionMode={isSelectionMode}
-                        onToggleSelection={handleToggleSelection}
-                        onCardClick={handleCardClick}
+                        isSelectMode={isSelectionMode}
+                        onSelectToggle={handleToggleSelection}
+                        onClick={handleCardClick}
+                        onDelete={handleVideoDelete}
                       />
                     ))}
                   </div>
@@ -253,9 +261,10 @@ const VideoCardTestPage: React.FC = () => {
                         key={video._id}
                         video={video}
                         isSelected={selectedVideos.has(video._id)}
-                        isSelectionMode={isSelectionMode}
-                        onToggleSelection={handleToggleSelection}
-                        onCardClick={handleCardClick}
+                        isSelectMode={isSelectionMode}
+                        onSelectToggle={handleToggleSelection}
+                        onClick={handleCardClick}
+                        onDelete={handleVideoDelete}
                       />
                     ))}
                   </div>
@@ -278,8 +287,8 @@ const VideoCardTestPage: React.FC = () => {
               <VideoCard
                 video={testVideos[0]}
                 isSelected={false}
-                isSelectionMode={false}
-                onCardClick={handleCardClick}
+                isSelectMode={false}
+                onClick={handleCardClick}
               />
               <p className="text-sm text-gray-600 mt-3">
                 클릭하면 비디오 상세 페이지로 이동하는 기본 모드
@@ -292,9 +301,9 @@ const VideoCardTestPage: React.FC = () => {
               <VideoCard
                 video={testVideos[1]}
                 isSelected={selectedVideos.has(testVideos[1]._id)}
-                isSelectionMode={true}
-                onToggleSelection={handleToggleSelection}
-                onCardClick={handleCardClick}
+                isSelectMode={true}
+                onSelectToggle={handleToggleSelection}
+                onClick={handleCardClick}
               />
               <p className="text-sm text-gray-600 mt-3">
                 체크박스가 표시되어 다중 선택이 가능한 모드
@@ -307,9 +316,9 @@ const VideoCardTestPage: React.FC = () => {
               <VideoCard
                 video={testVideos[2]}
                 isSelected={true}
-                isSelectionMode={true}
-                onToggleSelection={handleToggleSelection}
-                onCardClick={handleCardClick}
+                isSelectMode={true}
+                onSelectToggle={handleToggleSelection}
+                onClick={handleCardClick}
               />
               <p className="text-sm text-gray-600 mt-3">
                 선택된 상태의 카드 (파란색 테두리와 체크 표시)
@@ -323,8 +332,8 @@ const VideoCardTestPage: React.FC = () => {
                 <VideoCard
                   video={testVideos[3]}
                   isSelected={false}
-                  isSelectionMode={false}
-                  onCardClick={handleCardClick}
+                  isSelectMode={false}
+                  onClick={handleCardClick}
                 />
               </div>
               <p className="text-sm text-gray-600 mt-3">
@@ -348,9 +357,9 @@ const VideoCardTestPage: React.FC = () => {
                     key={video._id}
                     video={video}
                     isSelected={selectedVideos.has(video._id)}
-                    isSelectionMode={isSelectionMode}
-                    onToggleSelection={handleToggleSelection}
-                    onCardClick={handleCardClick}
+                    isSelectMode={isSelectionMode}
+                    onSelectToggle={handleToggleSelection}
+                    onClick={handleCardClick}
                   />
                 ))}
               </div>
@@ -365,9 +374,9 @@ const VideoCardTestPage: React.FC = () => {
                     key={video._id}
                     video={video}
                     isSelected={selectedVideos.has(video._id)}
-                    isSelectionMode={isSelectionMode}
-                    onToggleSelection={handleToggleSelection}
-                    onCardClick={handleCardClick}
+                    isSelectMode={isSelectionMode}
+                    onSelectToggle={handleToggleSelection}
+                    onClick={handleCardClick}
                   />
                 ))}
               </div>
@@ -382,9 +391,9 @@ const VideoCardTestPage: React.FC = () => {
                     key={video._id}
                     video={video}
                     isSelected={selectedVideos.has(video._id)}
-                    isSelectionMode={isSelectionMode}
-                    onToggleSelection={handleToggleSelection}
-                    onCardClick={handleCardClick}
+                    isSelectMode={isSelectionMode}
+                    onSelectToggle={handleToggleSelection}
+                    onClick={handleCardClick}
                   />
                 ))}
               </div>

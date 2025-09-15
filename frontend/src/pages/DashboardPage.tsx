@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTrendingStats, useQuotaStatus, useServerStatus } from '../shared/hooks';
+import toast from 'react-hot-toast';
 import { Video } from '../shared/types';
 import { useAppContext } from '../app/providers';
 import { VideoModal, VideoOnlyModal } from '../features/video-analysis';
@@ -25,6 +26,7 @@ const DashboardPage: React.FC = () => {
     count?: number;
   } | null>(null);
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
+
 
   // VideoStore 사용 - 상태와 액션 분리
   const videoStore = VideoManagement.useVideoStore(selectedBatchId);
@@ -65,10 +67,10 @@ const DashboardPage: React.FC = () => {
 
   const handleVideoClick = (video: Video) => {
     if (isSelectMode) {
-      if (selectedVideos.has(video.id)) {
-        deselectVideo(video.id);
+      if (selectedVideos.has(video._id)) {
+        deselectVideo(video._id);
       } else {
-        selectVideo(video.id);
+        selectVideo(video._id);
       }
     } else {
       if (video.platform === PLATFORMS.YOUTUBE) {
@@ -97,10 +99,10 @@ const DashboardPage: React.FC = () => {
 
   const handleVideoDelete = async (video: Video) => {
     try {
-      await deleteVideo(video.id);
-      console.log('✅ 비디오 삭제 성공:', video.title);
+      await deleteVideo(video._id);
+      toast.success(`비디오 "${video.title}" 삭제 완료`);
     } catch (error) {
-      console.error('❌ 비디오 삭제 실패:', error);
+      toast.error(`비디오 삭제 실패: ${error}`);
       throw error;
     }
   };
@@ -119,12 +121,12 @@ const DashboardPage: React.FC = () => {
         const selectedVideoIds = Array.from(selectedVideos);
         await deleteVideos(selectedVideoIds);
         clearSelection();
+        toast.success(`선택된 ${selectedVideoIds.length}개 비디오가 삭제되었습니다`);
       }
 
-      console.log('✅ 삭제 완료');
       setItemToDelete(null);
     } catch (error) {
-      console.error('❌ 삭제 실패:', error);
+      toast.error(`삭제 실패: ${error}`);
     }
   };
 
@@ -250,7 +252,7 @@ const DashboardPage: React.FC = () => {
                     onInfoClick={setSelectedVideo}
                     onChannelClick={setChannelToAnalyze}
                     isSelectMode={isSelectMode}
-                    isSelected={selectedVideos.has(video.id)}
+                    isSelected={selectedVideos.has(video._id)}
                     onSelectToggle={handleSelectToggle}
                   />
                 ))}

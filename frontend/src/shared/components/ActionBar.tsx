@@ -8,6 +8,8 @@ interface SelectionActionBarProps {
   onSelectAll: () => void;
   onClearSelection: () => void;
   onDelete: () => void;
+  onAnalyze?: () => void;  // 선택사항
+  onExport?: () => void;   // 선택사항
   additionalActions?: React.ReactNode;
 }
 
@@ -19,6 +21,8 @@ const SelectionActionBar: React.FC<SelectionActionBarProps> = memo(({
   onSelectAll,
   onClearSelection,
   onDelete,
+  onAnalyze,
+  onExport,
   additionalActions
 }) => {
   if (!isVisible || selectedCount === 0) return null;
@@ -48,14 +52,30 @@ const SelectionActionBar: React.FC<SelectionActionBarProps> = memo(({
           </button>
         </div>
         <div className="flex items-center space-x-2">
+          {onAnalyze && (
+            <button
+              onClick={onAnalyze}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+            >
+              분석
+            </button>
+          )}
+          {onExport && (
+            <button
+              onClick={onExport}
+              className="px-4 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+            >
+              내보내기
+            </button>
+          )}
           {additionalActions}
-          <button 
+          <button
             onClick={onDelete}
             className="px-4 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700"
           >
             삭제
           </button>
-          <button 
+          <button
             onClick={onClearSelection}
             className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300"
           >

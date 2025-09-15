@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Search, 
-  Filter, 
+import {
+  Search,
+  Filter,
   Calendar,
   Eye,
   Play,
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { VideoCard } from '../shared/components';
 import { formatViews, formatDate, getDurationLabel } from '../shared/utils';
+import toast from 'react-hot-toast';
 
 interface TrendingVideo {
   _id: string;
@@ -94,7 +95,7 @@ const TrendingVideosPage: React.FC = () => {
         setChannelGroups(result.data);
       }
     } catch (error) {
-      console.error('채널 그룹 조회 실패:', error);
+      toast.error('채널 그룹 로딩에 실패했습니다.');
     }
   };
 
@@ -127,8 +128,9 @@ const TrendingVideosPage: React.FC = () => {
         setError('영상 데이터 조회에 실패했습니다.');
       }
     } catch (error) {
-      setError('서버 연결에 실패했습니다.');
-      console.error('영상 조회 실패:', error);
+      const errorMessage = '서버 연결에 실패했습니다.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -329,7 +331,7 @@ const TrendingVideosPage: React.FC = () => {
             video={video as any}
 onDelete={(deletedVideo) => {
               // UI에서 삭제된 비디오 제거 (VideoCard가 이미 DB 삭제 처리함)
-              setVideos(prev => prev.filter(v => v.id !== deletedVideo.id));
+              setVideos(prev => prev.filter(v => v._id !== deletedVideo._id));
               setPagination(prev => ({
                 ...prev,
                 total: prev.total - 1

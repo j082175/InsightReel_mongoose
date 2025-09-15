@@ -11,7 +11,18 @@ const { AI } = require('../config/constants');
  */
 class UnifiedGeminiManager {
   static instance = null;
-  
+
+  // API 타임아웃 상수 - 제한시간 해제
+  static VIDEO_ANALYSIS_DELAY = 5000;  // 영상 분석 간 딜레이: 5초
+
+  /**
+   * 모델별 적절한 타임아웃 반환 (제한시간 없음)
+   */
+  static getTimeoutForModel(modelName) {
+    // 타임아웃 제한 해제 - 자연스러운 처리 시간 허용
+    return null;
+  }
+
   constructor(options = {}) {
     // 싱글톤 패턴: 이미 인스턴스가 있으면 반환
     if (UnifiedGeminiManager.instance) {
@@ -307,7 +318,10 @@ class UnifiedGeminiManager {
           generationConfig.thinkingBudget = thinkingBudget;
         }
         
-        const result = await model.generateContent(requestData, generationConfig);
+        const result = await model.generateContent(requestData, {
+          ...generationConfig,
+          timeout: UnifiedGeminiManager.getTimeoutForModel(modelName)
+        });
         const response = result.response;
         const text = response.text();
         
@@ -578,7 +592,10 @@ class UnifiedGeminiManager {
       generationConfig.thinkingBudget = thinkingBudget;
     }
     
-    const result = await model.generateContent(requestData, generationConfig);
+    const result = await model.generateContent(requestData, {
+      ...generationConfig,
+      timeout: UnifiedGeminiManager.getTimeoutForModel(modelId || modelType || 'flash')
+    });
     const response = await result.response;
     
     return {
@@ -625,7 +642,10 @@ class UnifiedGeminiManager {
       generationConfig.thinkingBudget = thinkingBudget;
     }
     
-    const result = await model.generateContent(requestData, generationConfig);
+    const result = await model.generateContent(requestData, {
+      ...generationConfig,
+      timeout: UnifiedGeminiManager.getTimeoutForModel(modelId || modelType || 'flash')
+    });
     const response = await result.response;
     
     return {
@@ -928,7 +948,10 @@ class UnifiedGeminiManager {
           generationConfig.thinkingBudget = thinkingBudget;
         }
         
-        const apiResult = await this.singleModelInstance.generateContent(requestData, generationConfig);
+        const apiResult = await this.singleModelInstance.generateContent(requestData, {
+          ...generationConfig,
+          timeout: UnifiedGeminiManager.getTimeoutForModel(this.singleModel)
+        });
         const response = await apiResult.response;
         
         const result = {
@@ -1064,7 +1087,10 @@ class UnifiedGeminiManager {
       generationConfig.thinkingBudget = thinkingBudget;
     }
     
-    const result = await model.generateContent(requestData, generationConfig);
+    const result = await model.generateContent(requestData, {
+      ...generationConfig,
+      timeout: UnifiedGeminiManager.getTimeoutForModel(modelId || modelType || 'flash')
+    });
     const response = await result.response;
     
     return {
@@ -1097,7 +1123,10 @@ class UnifiedGeminiManager {
       generationConfig.thinkingBudget = thinkingBudget;
     }
     
-    const result = await model.generateContent(requestData, generationConfig);
+    const result = await model.generateContent(requestData, {
+      ...generationConfig,
+      timeout: UnifiedGeminiManager.getTimeoutForModel(modelId || modelType || 'flash')
+    });
     const response = await result.response;
     
     return {

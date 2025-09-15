@@ -179,14 +179,16 @@ class ChannelAnalysisService {
         userKeywords = [],
         includeAnalysis = true,
         skipAIAnalysis = false,
+        queueNormalizedChannelId = null, // Queue에서 생성한 정규화 ID
     ) {
         try {
             // URL 디코딩 처리
             const decodedChannelIdentifier = decodeURIComponent(channelIdentifier);
-            
+
             ServerLogger.info(
                 `🔍 YouTube 채널 상세 분석: ${decodedChannelIdentifier}`,
             );
+            ServerLogger.info(`🔍 DEBUG: queueNormalizedChannelId = ${queueNormalizedChannelId}`);
 
             // 1. 기본 채널 정보 가져오기 (채널 ID 확인용)
             const youtubeData = await this.youtubeService.getChannelInfo(
@@ -232,6 +234,12 @@ class ChannelAnalysisService {
                 // const enableContentAnalysis = includeAnalysis && !skipAIAnalysis;
                 const enableContentAnalysis = !skipAIAnalysis;
 
+                ServerLogger.info(
+                    `🔍 빠른 수집 디버그: skipAIAnalysis=${skipAIAnalysis}, enableContentAnalysis=${enableContentAnalysis}`,
+                    null,
+                    'CHANNEL_ANALYSIS'
+                );
+
                 // 향상된 분석 수행 (빠른 모드는 비디오 수 제한)
                 const maxVideos = skipAIAnalysis ? 50 : 200;
                     const analysisResult =
@@ -239,6 +247,7 @@ class ChannelAnalysisService {
                             youtubeData.id,
                             maxVideos,
                             enableContentAnalysis, // AI 분석 여부
+                            youtubeData, // YouTube API 채널 통계 전달
                         );
                     analysisData = analysisResult.analysis;
 
@@ -588,13 +597,27 @@ class ChannelAnalysisService {
             });
             const savedChannel = await this.saveToMongoDB(channel);
 
-            // ✅ 채널 저장 성공 후에만 중복검사 DB에 등록 (원래 설계 의도)
+            // ✅ 채널 저장 성공 후에만 중복검사 DB 업데이트 (기존 processing → completed)
             try {
-                const normalizedChannelId = savedChannel.customUrl?.startsWith('@')
-                    ? savedChannel.customUrl
-                    : `@${savedChannel.customUrl || savedChannel.name}`;
+                // Queue에서 생성한 정규화 ID를 우선 사용 (중복 방지)
+                let normalizedChannelId;
+                try {
+                    normalizedChannelId = (typeof queueNormalizedChannelId !== 'undefined' && queueNormalizedChannelId && queueNormalizedChannelId !== 'null')
+                        ? queueNormalizedChannelId.toLowerCase() // Queue에서 온 값도 소문자 통일
+                        : (savedChannel.customUrl?.startsWith('@')
+                            ? savedChannel.customUrl
+                            : `@${savedChannel.customUrl || savedChannel.name}`).toLowerCase();
+                } catch (scopeError) {
+                    // queueNormalizedChannelId 변수 접근 실패 시 fallback (대소문자 통일)
+                    normalizedChannelId = (savedChannel.customUrl?.startsWith('@')
+                        ? savedChannel.customUrl
+                        : `@${savedChannel.customUrl || savedChannel.name}`).toLowerCase();
+                    ServerLogger.warn(`⚠️ queueNormalizedChannelId 접근 실패, fallback 사용: ${normalizedChannelId}`);
+                }
 
-                await DuplicateCheckManager.updateChannelStatus(
+                ServerLogger.info(`🔄 중복검사 DB 업데이트 시도: ${normalizedChannelId} (processing → completed)`);
+
+                const updateResult = await DuplicateCheckManager.updateChannelStatus(
                     normalizedChannelId,
                     'completed',
                     {
@@ -605,7 +628,11 @@ class ChannelAnalysisService {
                     }
                 );
 
-                ServerLogger.success(`📝 중복검사 DB 등록 완료: ${normalizedChannelId}`);
+                if (updateResult.success) {
+                    ServerLogger.success(`✅ 중복검사 DB 상태 업데이트 성공: ${normalizedChannelId}`);
+                } else {
+                    ServerLogger.error(`❌ 중복검사 DB 상태 업데이트 실패: ${normalizedChannelId}`, updateResult.error);
+                }
             } catch (duplicateError) {
                 ServerLogger.warn(`⚠️ 중복검사 DB 등록 실패 (무시): ${duplicateError.message}`);
             }

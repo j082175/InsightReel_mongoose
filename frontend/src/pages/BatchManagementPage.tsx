@@ -5,6 +5,7 @@ import { BatchCard, BatchForm, BatchVideoList } from '../features/batch-manageme
 import { DeleteConfirmationModal } from '../shared/ui';
 import { formatDate, formatViews } from '../shared/utils';
 import { useBatchStore, CollectionBatch } from '../features/batch-management/model/batchStore';
+import toast from 'react-hot-toast';
 
 const BatchManagementPage: React.FC = () => {
   // BatchStore 사용
@@ -56,14 +57,14 @@ const BatchManagementPage: React.FC = () => {
   // Event Handlers
   const handleBatchClick = useCallback((batch: CollectionBatch) => {
     if (isSelectMode) {
-      if (selectedBatches.has(batch.id)) {
-        deselectBatch(batch.id);
+      if (selectedBatches.has(batch._id)) {
+        deselectBatch(batch._id);
       } else {
-        selectBatch(batch.id);
+        selectBatch(batch._id);
       }
     } else {
       // 배치 상세 보기 또는 영상 목록 열기
-      openVideoList(batch.id);
+      openVideoList(batch._id);
     }
   }, [isSelectMode, selectedBatches, deselectBatch, selectBatch, openVideoList]);
 
@@ -85,10 +86,10 @@ const BatchManagementPage: React.FC = () => {
 
   const handleBatchDelete = useCallback(async (batch: CollectionBatch) => {
     try {
-      await deleteBatch(batch.id);
-      console.log('✅ 배치 삭제 성공:', batch.name);
+      await deleteBatch(batch._id);
+      toast.success(`배치 "${batch.name}" 삭제 완료`);
     } catch (error) {
-      console.error('❌ 배치 삭제 실패:', error);
+      toast.error(`배치 삭제 실패: ${error}`);
       throw error;
     }
   }, [deleteBatch]);
@@ -109,22 +110,35 @@ const BatchManagementPage: React.FC = () => {
         clearSelection();
       }
 
-      console.log('✅ 삭제 완료');
+      toast.success('선택된 배치들이 삭제되었습니다');
       setItemToDelete(null);
     } catch (error) {
-      console.error('❌ 삭제 실패:', error);
+      toast.error(`삭제 실패: ${error}`);
     }
   }, [itemToDelete, handleBatchDelete, selectedBatches, deleteBatches, clearSelection]);
 
   const handleCreateBatch = useCallback(async (batchData: any) => {
     try {
       await createBatch(batchData);
-      console.log('✅ 배치 생성 성공');
+      toast.success('새 배치가 생성되었습니다');
     } catch (error) {
-      console.error('❌ 배치 생성 실패:', error);
+      toast.error(`배치 생성 실패: ${error}`);
       throw error;
     }
   }, [createBatch]);
+
+  // 배치 편집 핸들러
+  const handleEditBatch = useCallback((batch: CollectionBatch) => {
+    toast('배치 편집 기능은 개발 중입니다');
+    // TODO: 편집 모달 열기 로직 구현
+  }, []);
+
+  // 배치 상태 토글 핸들러
+  const handleToggleStatus = useCallback((batchId: string, action: 'start' | 'pause') => {
+    const actionText = action === 'start' ? '시작' : '일시정지';
+    toast(`배치 ${actionText} 기능은 개발 중입니다`);
+    // TODO: 배치 시작/일시정지 로직 구현
+  }, []);
 
   // 통계 계산
   const stats = {
@@ -252,12 +266,10 @@ const BatchManagementPage: React.FC = () => {
                   <BatchCard
                     key={batch._id}
                     batch={batch}
-                    onClick={handleBatchClick}
-                    onDelete={(b) => handleDeleteClick({ type: 'single', data: b })}
-                    onViewVideos={() => openVideoList(batch.id)}
-                    isSelectMode={isSelectMode}
-                    isSelected={selectedBatches.has(batch.id)}
-                    onSelectToggle={handleSelectToggle}
+                    onEdit={handleEditBatch}
+                    onDelete={(batchId) => handleDeleteClick({ type: 'single', data: batch })}
+                    onViewVideos={() => openVideoList(batch._id)}
+                    onToggleStatus={handleToggleStatus}
                   />
                 ))}
               </div>
@@ -301,7 +313,10 @@ const BatchManagementPage: React.FC = () => {
         onClose={closeForm}
         onSubmit={handleCreateBatch}
         formData={formData}
-        onUpdateFormData={updateFormData}
+        setFormData={updateFormData}
+        channelGroups={[]}
+        channels={[]}
+        isSubmitting={loading}
       />
 
       <BatchVideoList
@@ -309,7 +324,12 @@ const BatchManagementPage: React.FC = () => {
         onClose={closeVideoList}
         videos={batchVideos}
         loading={videoLoading}
-        batchName={batches.find(b => b.id === batchStore.selectedBatchId)?.name || ''}
+        batchName={batches.find(b => b._id === batchStore.selectedBatchId)?.name || ''}
+        batchId={batchStore.selectedBatchId || ''}
+        onVideoDelete={(video) => {
+          toast(`비디오 삭제: ${video.title}`);
+          // 실제 삭제 로직은 여기에 구현
+        }}
       />
 
       <DeleteConfirmationModal

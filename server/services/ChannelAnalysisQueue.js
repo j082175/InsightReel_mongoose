@@ -31,6 +31,44 @@ class ChannelAnalysisQueue extends EventEmitter {
      * 새 채널 분석 작업 추가
      */
     async addJob(channelIdentifier, keywords = [], options = {}) {
+        // 🚨 중복검사 - 큐에 추가하기 전에 사전 검사
+        const decodedChannelIdentifier = decodeURIComponent(channelIdentifier);
+        ServerLogger.info(`🔍 채널 중복 검사 시작: ${decodedChannelIdentifier}`);
+
+        try {
+            // 1. YouTube 채널 정보 수집 (채널 ID 확정)
+            const YouTubeChannelService = require('./YouTubeChannelService');
+            const youtubeService = new YouTubeChannelService();
+            const youtubeData = await youtubeService.getChannelInfo(decodedChannelIdentifier);
+
+            if (!youtubeData) {
+                throw new Error(`YouTube에서 채널을 찾을 수 없음: ${decodedChannelIdentifier}`);
+            }
+
+            // 2. 메인 Channel 컬렉션에서 중복 검사
+            const Channel = require('../models/ChannelModel');
+            const existing = await Channel.findOne({
+                channelId: youtubeData.id,
+            });
+
+            if (existing) {
+                ServerLogger.warn(
+                    `⚠️ 중복 분석 차단: 채널 ${youtubeData.channelName}은 이미 분석되었습니다.`,
+                );
+                throw new Error(
+                    `채널 ${youtubeData.channelName}은 이미 분석되었습니다.`,
+                );
+            }
+
+            ServerLogger.info('🆕 새 채널 확인 - 큐에 추가 진행', {
+                channelId: youtubeData.id,
+                name: youtubeData.channelName,
+            });
+        } catch (error) {
+            ServerLogger.error('❌ 중복 검사 실패:', error);
+            throw error; // 중복이거나 오류가 있으면 큐에 추가하지 않음
+        }
+
         const jobId = `job_${Date.now()}_${Math.random()
             .toString(36)
             .substr(2, 9)}`;
@@ -136,20 +174,23 @@ class ChannelAnalysisQueue extends EventEmitter {
         ServerLogger.info(`⚙️ 채널 분석 시작: ${safeChannelName} (${job.id})`);
         this.emit('jobStarted', job);
 
-        // 중복검사 DB에 processing 상태로 등록
+        // 중복검사 DB에 processing 상태로 등록 (대소문자 통일)
+        const decodedChannelIdentifier = decodeURIComponent(job.channelIdentifier);
+        const normalizedChannelId = (decodedChannelIdentifier.startsWith('@')
+            ? decodedChannelIdentifier
+            : `@${decodedChannelIdentifier}`).toLowerCase(); // 소문자로 통일
+
+        // job에 normalizedChannelId 저장 (나중에 ChannelAnalysisService에서 사용)
+        job.normalizedChannelId = normalizedChannelId;
+
         try {
-            const decodedChannelIdentifier = decodeURIComponent(job.channelIdentifier);
-            const normalizedChannelId = decodedChannelIdentifier.startsWith('@') 
-                ? decodedChannelIdentifier 
-                : `@${decodedChannelIdentifier}`;
-                
             await DuplicateCheckManager.registerChannel(
                 normalizedChannelId,
                 decodedChannelIdentifier,
                 'YOUTUBE',
                 { name: decodedChannelIdentifier, temp: true }
             );
-            
+
             ServerLogger.info(`📝 중복검사 DB 등록 (processing): ${normalizedChannelId}`);
         } catch (duplicateError) {
             ServerLogger.warn(`⚠️ 중복검사 DB 등록 실패 (무시): ${duplicateError.message}`);
@@ -189,6 +230,7 @@ class ChannelAnalysisQueue extends EventEmitter {
                     job.keywords,
                     job.options.includeAnalysis,
                     job.options.skipAIAnalysis,
+                    job.normalizedChannelId, // 중복 방지를 위한 정규화된 채널 ID 전달
                 );
 
             // 완료 처리
@@ -220,6 +262,17 @@ class ChannelAnalysisQueue extends EventEmitter {
                 current: 0,
                 message: `오류: ${error.message}`,
             });
+
+            // 🗑️ 분석 실패 시 중복검사 DB에서 해당 채널 삭제 (job에 저장된 정규화 ID 사용)
+            try {
+                const normalizedChannelId = job.normalizedChannelId; // 이미 소문자로 통일됨
+                if (normalizedChannelId) {
+                    await DuplicateCheckManager.removeChannel(normalizedChannelId);
+                    ServerLogger.info(`🗑️ 분석 실패로 중복검사 DB에서 삭제: ${normalizedChannelId}`);
+                }
+            } catch (cleanupError) {
+                ServerLogger.warn(`⚠️ 중복검사 DB 정리 실패 (무시): ${cleanupError.message}`);
+            }
 
             throw error;
         }

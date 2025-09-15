@@ -65,12 +65,23 @@ const SharedTestPage: React.FC = memo(() => {
     }
   ];
 
-  const handleSelection = (videoId: string, selected: boolean) => {
-    if (selected) {
-      setSelectedItems(prev => [...prev, videoId]);
-    } else {
-      setSelectedItems(prev => prev.filter(id => id !== videoId));
-    }
+  const handleSelectToggle = (videoId: string) => {
+    setSelectedItems(prev => {
+      if (prev.includes(videoId)) {
+        return prev.filter(id => id !== videoId);
+      } else {
+        return [...prev, videoId];
+      }
+    });
+  };
+
+  const handleVideoClick = (video: Video) => {
+    console.log('Video clicked:', video.title);
+  };
+
+  const handleVideoDelete = async (video: Video) => {
+    console.log('Delete video:', video.title);
+    alert(`테스트: "${video.title}" 비디오 삭제 요청됨`);
   };
 
   return (
@@ -114,9 +125,11 @@ const SharedTestPage: React.FC = memo(() => {
               <div key={video._id} className="bg-white p-4 rounded-lg shadow">
                 <VideoCard
                   video={video}
-                  isSelected={selectedItems.includes(video.id)}
-                  onSelect={(selected) => handleSelection(video.id, selected)}
-                  onVideoClick={(id) => console.log('Video clicked:', id)}
+                  isSelected={selectedItems.includes(video._id)}
+                  isSelectMode={true}
+                  onSelectToggle={handleSelectToggle}
+                  onClick={handleVideoClick}
+                  onDelete={handleVideoDelete}
                 />
               </div>
             ))}

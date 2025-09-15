@@ -4,6 +4,7 @@ export { useSelection } from './useSelection'
 export { useSearch } from './useSearch'
 export { useFilter } from './useFilter'
 export { useAPIStatus } from './useAPIStatus'
+export { useDelete } from './useDelete'
 
 // API Hooks - Individual exports for direct import
 export {

@@ -52,6 +52,16 @@ router.post('/add', async (req, res) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 채널 분석 작업 추가 실패', error);
+
+        // 중복 채널 에러인 경우 409 Conflict 반환
+        if (error.message.includes('이미 분석되었습니다')) {
+            return res.status(409).json({
+                success: false,
+                error: 'DUPLICATE_CHANNEL',
+                message: error.message,
+            });
+        }
+
         res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
             success: false,
             error: ERROR_CODES.INTERNAL_SERVER_ERROR,

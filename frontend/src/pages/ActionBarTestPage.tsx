@@ -194,11 +194,15 @@ const ActionBarTestPage: React.FC = () => {
           {showActionBar && (
             <div className="mb-6">
               <ActionBar
+                isVisible={true}
                 selectedCount={selectedVideos.size}
-                onAnalyze={handleAnalyze}
-                onDelete={handleDelete}
-                onExport={handleExport}
+                totalCount={testVideos.length}
+                itemType="개 영상"
+                onSelectAll={() => setSelectedVideos(new Set(testVideos.map(v => v._id)))}
                 onClearSelection={handleClearSelection}
+                onDelete={handleDelete}
+                onAnalyze={handleAnalyze}
+                onExport={handleExport}
               />
             </div>
           )}
@@ -262,11 +266,15 @@ const ActionBarTestPage: React.FC = () => {
             <div className="bg-white p-6 rounded-lg border border-gray-200">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">선택 없음 (0개)</h3>
               <ActionBar
+                isVisible={true}
                 selectedCount={0}
-                onAnalyze={() => addActionLog('분석 버튼 클릭 (0개 선택)')}
-                onDelete={() => addActionLog('삭제 버튼 클릭 (0개 선택)')}
-                onExport={() => addActionLog('내보내기 버튼 클릭 (0개 선택)')}
+                totalCount={testVideos.length}
+                itemType="개 영상"
+                onSelectAll={() => addActionLog('전체 선택 클릭 (0개 선택)')}
                 onClearSelection={() => addActionLog('선택 해제 클릭 (0개 선택)')}
+                onDelete={() => addActionLog('삭제 버튼 클릭 (0개 선택)')}
+                onAnalyze={() => addActionLog('분석 버튼 클릭 (0개 선택)')}
+                onExport={() => addActionLog('내보내기 버튼 클릭 (0개 선택)')}
               />
               <p className="text-sm text-gray-600 mt-3">
                 모든 버튼이 비활성화된 상태
@@ -277,11 +285,15 @@ const ActionBarTestPage: React.FC = () => {
             <div className="bg-white p-6 rounded-lg border border-gray-200">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">일부 선택 (3개)</h3>
               <ActionBar
+                isVisible={true}
                 selectedCount={3}
-                onAnalyze={() => addActionLog('분석 버튼 클릭 (3개 선택)')}
-                onDelete={() => addActionLog('삭제 버튼 클릭 (3개 선택)')}
-                onExport={() => addActionLog('내보내기 버튼 클릭 (3개 선택)')}
+                totalCount={testVideos.length}
+                itemType="개 영상"
+                onSelectAll={() => addActionLog('전체 선택 클릭 (3개 선택)')}
                 onClearSelection={() => addActionLog('선택 해제 클릭 (3개 선택)')}
+                onDelete={() => addActionLog('삭제 버튼 클릭 (3개 선택)')}
+                onAnalyze={() => addActionLog('분석 버튼 클릭 (3개 선택)')}
+                onExport={() => addActionLog('내보내기 버튼 클릭 (3개 선택)')}
               />
               <p className="text-sm text-gray-600 mt-3">
                 모든 버튼이 활성화된 상태
@@ -292,11 +304,15 @@ const ActionBarTestPage: React.FC = () => {
             <div className="bg-white p-6 rounded-lg border border-gray-200">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">많은 선택 (50개)</h3>
               <ActionBar
+                isVisible={true}
                 selectedCount={50}
-                onAnalyze={() => addActionLog('분석 버튼 클릭 (50개 선택)')}
-                onDelete={() => addActionLog('삭제 버튼 클릭 (50개 선택)')}
-                onExport={() => addActionLog('내보내기 버튼 클릭 (50개 선택)')}
+                totalCount={100}
+                itemType="개 영상"
+                onSelectAll={() => addActionLog('전체 선택 클릭 (50개 선택)')}
                 onClearSelection={() => addActionLog('선택 해제 클릭 (50개 선택)')}
+                onDelete={() => addActionLog('삭제 버튼 클릭 (50개 선택)')}
+                onAnalyze={() => addActionLog('분석 버튼 클릭 (50개 선택)')}
+                onExport={() => addActionLog('내보내기 버튼 클릭 (50개 선택)')}
               />
               <p className="text-sm text-gray-600 mt-3">
                 대량 처리 시나리오 테스트

@@ -280,7 +280,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
         <div className="flex gap-2">
           {batch.status === 'completed' && batch.totalVideosSaved > 0 && (
             <button
-              onClick={() => onViewVideos(batch.id)}
+              onClick={() => onViewVideos(batch._id)}
               className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
             >
               <Eye className="w-4 h-4" />
@@ -292,7 +292,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
         <div className="flex gap-2">
           {(batch.status === 'pending' || batch.status === 'failed') && (
             <button
-              onClick={() => onToggleStatus(batch.id, 'start')}
+              onClick={() => onToggleStatus(batch._id, 'start')}
               className="flex items-center gap-1 px-3 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700"
             >
               <Play className="w-4 h-4" />
@@ -302,7 +302,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
 
           {batch.status === 'running' && (
             <button
-              onClick={() => onToggleStatus(batch.id, 'pause')}
+              onClick={() => onToggleStatus(batch._id, 'pause')}
               className="flex items-center gap-1 px-3 py-2 text-sm bg-yellow-600 text-white rounded hover:bg-yellow-700"
             >
               <Pause className="w-4 h-4" />
@@ -319,7 +319,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
           </button>
 
           <button
-            onClick={() => onDelete(batch.id)}
+            onClick={() => onDelete(batch._id)}
             className="flex items-center gap-1 px-3 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700"
           >
             <Trash2 className="w-4 h-4" />

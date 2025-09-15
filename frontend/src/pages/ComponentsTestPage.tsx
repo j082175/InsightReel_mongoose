@@ -97,15 +97,13 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({ icon, title, description,
 );
 
 /**
- * ComponentsTestPage - 모든 컴포넌트 테스트 통합 페이지
+ * ComponentsTestPage - 모든 UI 컴포넌트 테스트 통합 페이지
  *
- * 🎯 목적: 카테고리별로 구분된 모든 컴포넌트를 한 페이지에서 조망
+ * 🎯 목적: 카테고리별로 구분된 모든 UI 컴포넌트를 한 페이지에서 조망
  *
  * 구조:
  * - Shared Components: 재사용 가능한 기본 컴포넌트들
  * - Features: 비즈니스 로직을 포함한 기능 컴포넌트들
- * - UI Hooks: 사용자 인터페이스 상태 관리 훅들
- * - API Hooks: 서버 통신 관련 훅들
  */
 const ComponentsTestPage: React.FC = () => {
   // 📊 컴포넌트 데이터 정의
@@ -211,107 +209,7 @@ const ComponentsTestPage: React.FC = () => {
     }
   ];
 
-  const uiHooks: ComponentCardProps[] = [
-    {
-      name: 'useModal',
-      icon: '🎨',
-      description: '단일 모달 상태 관리',
-      route: 'test-usemodal',
-      features: ['열기/닫기', '데이터 전달', '콜백 처리', '상태 보존'],
-      status: 'stable'
-    },
-    {
-      name: 'useMultiModal',
-      icon: '🎪',
-      description: '다중 모달 동시 관리',
-      route: 'test-usemultimodal',
-      features: ['타입 관리', '중첩 지원', '우선순위', '일괄 제어'],
-      status: 'stable'
-    },
-    {
-      name: 'useSearch',
-      icon: '🔎',
-      description: '검색 기능과 상태 관리',
-      route: 'test-usesearch',
-      features: ['필드 검색', '대소문자', '실시간', '히스토리'],
-      status: 'stable'
-    },
-    {
-      name: 'useSelection',
-      icon: '☑️',
-      description: '다중 선택 상태 관리',
-      route: 'test-useselection',
-      features: ['전체 선택', '부분 선택', '토글', '개수 추적'],
-      status: 'stable'
-    },
-    {
-      name: 'useFilter',
-      icon: '🔽',
-      description: '필터링 조건과 상태 관리',
-      route: 'test-usefilter',
-      features: ['조건 추가', '다중 필터', '초기화', '저장'],
-      status: 'stable'
-    }
-  ];
 
-  const apiHooks: ComponentCardProps[] = [
-    {
-      name: 'useVideos',
-      icon: '🎬',
-      description: '비디오 목록 조회 및 관리',
-      route: 'test-usevideos',
-      features: ['페이징', '필터링', '정렬', '캐싱'],
-      status: 'stable'
-    },
-    {
-      name: 'useChannels',
-      icon: '📺',
-      description: '채널 목록 조회 및 관리',
-      route: 'test-usechannels',
-      features: ['검색', '분류', '통계', '업데이트'],
-      status: 'stable'
-    },
-    {
-      name: 'useAPIStatus',
-      icon: '🔌',
-      description: 'API 상태 및 할당량 모니터링',
-      route: 'test-useapistatus',
-      features: ['할당량', '상태 확인', '에러 처리', '자동 갱신'],
-      status: 'stable'
-    },
-    {
-      name: 'useServerStatus',
-      icon: '🖥️',
-      description: '서버 헬스 체크 및 상태',
-      route: 'test-useserverstatus',
-      features: ['응답 시간', '서버 로드', '에러 모니터링', '알림'],
-      status: 'stable'
-    },
-    {
-      name: 'useCollectTrending',
-      icon: '🚀',
-      description: '트렌딩 수집 실행 및 모니터링',
-      route: 'test-usecollecttrending',
-      features: ['실시간 진행', '에러 처리', '재시도', '결과 저장'],
-      status: 'stable'
-    },
-    {
-      name: 'useTrendingStats',
-      icon: '📊',
-      description: '트렌딩 통계 조회',
-      route: 'test-usetrendingstats',
-      features: ['기간별', '채널별', '차트', '내보내기'],
-      status: 'beta'
-    },
-    {
-      name: 'useQuotaStatus',
-      icon: '📈',
-      description: 'API 할당량 상세 추적',
-      route: 'test-usequotastatus',
-      features: ['실시간', '예측', '알림', '최적화'],
-      status: 'beta'
-    }
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-6">
@@ -319,31 +217,25 @@ const ComponentsTestPage: React.FC = () => {
         {/* 페이지 헤더 */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            🧪 Components & Hooks Laboratory
+            🧪 Components Laboratory
           </h1>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            모든 컴포넌트와 Hook을 카테고리별로 정리한 통합 테스트 환경입니다.
+            모든 UI 컴포넌트를 카테고리별로 정리한 통합 테스트 환경입니다.
             각 항목을 클릭하면 전용 테스트 페이지로 이동합니다.
           </p>
         </div>
 
         {/* 전체 통계 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-          <div className="bg-white p-4 rounded-lg shadow-sm text-center">
-            <div className="text-2xl font-bold text-blue-600">{sharedComponents.length}</div>
-            <div className="text-gray-600 text-sm">Shared Components</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12 max-w-2xl mx-auto">
+          <div className="bg-white p-6 rounded-lg shadow-sm text-center">
+            <div className="text-3xl font-bold text-blue-600">{sharedComponents.length}</div>
+            <div className="text-gray-600">Shared Components</div>
+            <div className="text-sm text-gray-500 mt-1">재사용 가능한 기본 컴포넌트</div>
           </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm text-center">
-            <div className="text-2xl font-bold text-purple-600">{featureComponents.length}</div>
-            <div className="text-gray-600 text-sm">Feature Components</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm text-center">
-            <div className="text-2xl font-bold text-orange-600">{uiHooks.length}</div>
-            <div className="text-gray-600 text-sm">UI Hooks</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-sm text-center">
-            <div className="text-2xl font-bold text-green-600">{apiHooks.length}</div>
-            <div className="text-gray-600 text-sm">API Hooks</div>
+          <div className="bg-white p-6 rounded-lg shadow-sm text-center">
+            <div className="text-3xl font-bold text-purple-600">{featureComponents.length}</div>
+            <div className="text-gray-600">Feature Components</div>
+            <div className="text-sm text-gray-500 mt-1">기능별 전문 컴포넌트</div>
           </div>
         </div>
 
@@ -378,35 +270,6 @@ const ComponentsTestPage: React.FC = () => {
             </div>
           </section>
 
-          {/* 🎨 UI Hooks 섹션 */}
-          <section>
-            <SectionHeader
-              icon="🎨"
-              title="UI Hooks"
-              description="사용자 인터페이스 상태 관리를 담당하는 커스텀 훅들입니다. 모달, 검색, 선택 등의 UI 상태를 관리합니다."
-              count={uiHooks.length}
-            />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {uiHooks.map((hook) => (
-                <ComponentCard key={hook.name} {...hook} />
-              ))}
-            </div>
-          </section>
-
-          {/* 🌐 API Hooks 섹션 */}
-          <section>
-            <SectionHeader
-              icon="🌐"
-              title="API Hooks"
-              description="서버와의 통신과 데이터 관리를 담당하는 커스텀 훅들입니다. 실시간 상태 동기화와 에러 처리를 포함합니다."
-              count={apiHooks.length}
-            />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {apiHooks.map((hook) => (
-                <ComponentCard key={hook.name} {...hook} />
-              ))}
-            </div>
-          </section>
         </div>
 
         {/* 푸터 정보 */}
@@ -418,8 +281,6 @@ const ComponentsTestPage: React.FC = () => {
               <ul className="space-y-1">
                 <li>• <strong>Shared</strong>: 범용적이고 재사용 가능한 컴포넌트</li>
                 <li>• <strong>Features</strong>: 특정 기능에 특화된 컴포넌트</li>
-                <li>• <strong>UI Hooks</strong>: 브라우저 내에서만 동작하는 상태 관리</li>
-                <li>• <strong>API Hooks</strong>: 서버 통신이 필요한 데이터 관리</li>
               </ul>
             </div>
             <div>

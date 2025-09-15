@@ -5,11 +5,13 @@ import { BulkCollectionModal } from '../features/trending-collection';
 import { VideoModal, VideoOnlyModal } from '../features/video-analysis';
 import { DeleteConfirmationModal } from '../shared/ui';
 import { formatDate, formatViews } from '../shared/utils';
+import toast from 'react-hot-toast';
 import { useTrendingStore } from '../features/trending-collection/model/trendingStore';
 import { Video } from '../shared/types';
 import { PLATFORMS } from '../shared/types/api';
 
 const TrendingCollectionPage: React.FC = () => {
+
   // TrendingStore 사용
   const trendingStore = useTrendingStore();
   const {
@@ -67,10 +69,10 @@ const TrendingCollectionPage: React.FC = () => {
   // Event Handlers
   const handleVideoClick = useCallback((video: Video) => {
     if (isSelectMode) {
-      if (selectedVideos.has(video.id)) {
-        deselectVideo(video.id);
+      if (selectedVideos.has(video._id)) {
+        deselectVideo(video._id);
       } else {
-        selectVideo(video.id);
+        selectVideo(video._id);
       }
     } else {
       if (video.platform === PLATFORMS.YOUTUBE) {
@@ -99,7 +101,7 @@ const TrendingCollectionPage: React.FC = () => {
 
   const handleVideoDelete = useCallback(async (video: Video) => {
     try {
-      const response = await fetch(`/api/trending/videos/${video.id}`, {
+      const response = await fetch(`/api/trending/videos/${video._id}`, {
         method: 'DELETE'
       });
 
@@ -109,9 +111,9 @@ const TrendingCollectionPage: React.FC = () => {
 
       // 목록에서 제거 (실제로는 다시 불러오기)
       await fetchTrendingVideos();
-      console.log('✅ 트렌딩 비디오 삭제 성공:', video.title);
+      toast.success(`트렌딩 비디오 "${video.title}" 삭제 완료`);
     } catch (error) {
-      console.error('❌ 트렌딩 비디오 삭제 실패:', error);
+      toast.error(`트렌딩 비디오 삭제 실패: ${error}`);
       throw error;
     }
   }, [fetchTrendingVideos]);
@@ -128,19 +130,27 @@ const TrendingCollectionPage: React.FC = () => {
         await handleVideoDelete(itemToDelete.data);
       } else if (itemToDelete.type === 'bulk') {
         // 선택된 비디오들 삭제
+        let successCount = 0;
         for (const videoId of selectedVideos) {
           const video = trendingVideos.find(v => v.id === videoId);
           if (video) {
-            await handleVideoDelete(video);
+            try {
+              await handleVideoDelete(video);
+              successCount++;
+            } catch (error) {
+              // 개별 비디오 삭제 실패는 handleVideoDelete에서 이미 알림 처리됨
+            }
           }
         }
         clearSelection();
+        if (successCount > 0) {
+          toast.success(`선택된 ${successCount}개 트렌딩 비디오가 삭제되었습니다`);
+        }
       }
 
-      console.log('✅ 삭제 완료');
       setItemToDelete(null);
     } catch (error) {
-      console.error('❌ 삭제 실패:', error);
+      toast.error(`삭제 실패: ${error}`);
     }
   }, [itemToDelete, handleVideoDelete, selectedVideos, trendingVideos, clearSelection]);
 
@@ -470,7 +480,7 @@ const TrendingCollectionPage: React.FC = () => {
                     onDelete={handleVideoDelete}
                     onInfoClick={setSelectedVideo}
                     isSelectMode={isSelectMode}
-                    isSelected={selectedVideos.has(video.id)}
+                    isSelected={selectedVideos.has(video._id)}
                     onSelectToggle={handleSelectToggle}
                   />
                 ))}

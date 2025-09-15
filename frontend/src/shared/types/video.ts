@@ -28,7 +28,7 @@ export interface VideoCore {
   commentsCount?: number;
   
   // URL 정보
-  url: string;
+  url?: string;
   thumbnailUrl?: string;
   
   // 제목 (필수)

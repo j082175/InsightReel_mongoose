@@ -176,7 +176,25 @@ class SimpleYouTubeChannelAnalyzer {
                 metadata.subscribers = '정보 없음';
             }
 
-            // 기존 모달 시스템 사용 (youtube-channel-analyzer.js와 동일한 방식)
+            // 중복 검사 먼저 수행
+            const isDuplicate = await this.checkChannelDuplicate(metadata.channelName || metadata.author);
+
+            if (isDuplicate) {
+                // 중복 채널인 경우 모달 띄우지 않고 바로 알림
+                button.textContent = '⚠️ 이미 등록됨';
+                button.style.background = '#ffc107';
+
+                // 사용자에게 알림 메시지 표시
+                this.showDuplicateNotification(metadata.channelName || metadata.author);
+
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = 'linear-gradient(45deg, #4caf50, #45a049)';
+                }, 3000);
+                return;
+            }
+
+            // 새로운 채널인 경우에만 모달 표시
             await this.showChannelCollectionModal(metadata);
 
         } catch (error) {
@@ -779,7 +797,12 @@ class SimpleYouTubeChannelAnalyzer {
                             <label>📹 콘텐츠 유형:</label>
                             <div class="content-type-selector">
                                 <label class="radio-option">
-                                    <input type="radio" name="contentType" value="longform" checked>
+                                    <input type="radio" name="contentType" value="auto" checked>
+                                    <span>🤖 자동 감지</span>
+                                    <small>(채널 데이터 기반 최적 분석)</small>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="contentType" value="longform">
                                     <span>🎬 롱폼 주력</span>
                                     <small>(10분+ 심화 콘텐츠)</small>
                                 </label>
@@ -800,12 +823,12 @@ class SimpleYouTubeChannelAnalyzer {
                             <label>🤖 AI 분석 옵션:</label>
                             <div class="ai-analysis-selector">
                                 <label class="radio-option">
-                                    <input type="radio" name="aiAnalysis" value="full" checked>
+                                    <input type="radio" name="aiAnalysis" value="full">
                                     <span>🧠 완전 분석</span>
                                     <small>(AI 태그 + 카테고리 분석, 약 30초)</small>
                                 </label>
                                 <label class="radio-option">
-                                    <input type="radio" name="aiAnalysis" value="skip">
+                                    <input type="radio" name="aiAnalysis" value="skip" checked>
                                     <span>⚡ 빠른 수집</span>
                                     <small>(AI 분석 건너뛰기, 약 5초)</small>
                                 </label>
@@ -1310,7 +1333,7 @@ class SimpleYouTubeChannelAnalyzer {
         console.log('🚀 채널 수집 시작:', { channelInfo, keywords });
 
         // 라디오 버튼 값들 수집
-        const contentType = document.querySelector('input[name="contentType"]:checked')?.value || 'longform';
+        const contentType = document.querySelector('input[name="contentType"]:checked')?.value || 'auto';
         const aiAnalysis = document.querySelector('input[name="aiAnalysis"]:checked')?.value || 'full';
 
         console.log('📊 수집 옵션:', { contentType, aiAnalysis });
@@ -1321,24 +1344,19 @@ class SimpleYouTubeChannelAnalyzer {
         submitBtn.disabled = true;
 
         try {
-            const response = await fetch('http://localhost:3000/api/channels/add-url', {
+            const response = await fetch('http://localhost:3000/api/channel-queue/add', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    url: channelInfo.url,
-                    platform: 'YOUTUBE',
-                    channelData: {
-                        channelId: channelInfo.channelId,
-                        name: channelInfo.channelName,
-                        subscribers: channelInfo.subscribers,
-                        url: channelInfo.url,
-                        keywords: keywords,
+                    channelIdentifier: channelInfo.channelName,
+                    keywords: keywords,
+                    options: {
+                        includeAnalysis: aiAnalysis === 'full',
                         contentType: contentType,
-                        aiAnalysis: aiAnalysis
-                    },
-                    timestamp: new Date().toISOString()
+                        skipAIAnalysis: aiAnalysis === 'skip'
+                    }
                 })
             });
 
@@ -1393,21 +1411,19 @@ class SimpleYouTubeChannelAnalyzer {
         saveBtn.disabled = true;
 
         try {
-            const response = await fetch('http://localhost:3000/api/channels/add-url', {
+            const response = await fetch('http://localhost:3000/api/channel-queue/add', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    url: metadata.url,
-                    platform: 'YOUTUBE',
-                    channelData: {
-                        channelId: metadata.channelId,
-                        name: metadata.channelName || metadata.author,
-                        subscribers: metadata.subscribers,
-                        url: metadata.url
-                    },
-                    timestamp: new Date().toISOString()
+                    channelIdentifier: metadata.channelName || metadata.author,
+                    keywords: [],
+                    options: {
+                        includeAnalysis: true,
+                        contentType: 'auto',
+                        skipAIAnalysis: false
+                    }
                 })
             });
 
@@ -1436,6 +1452,118 @@ class SimpleYouTubeChannelAnalyzer {
                 saveBtn.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)';
                 saveBtn.disabled = false;
             }, 2000);
+        }
+    }
+
+    // 중복 채널 알림 표시
+    showDuplicateNotification(channelName) {
+        // 기존 알림이 있다면 제거
+        const existingNotification = document.getElementById('duplicate-channel-notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+
+        // 알림 요소 생성
+        const notification = document.createElement('div');
+        notification.id = 'duplicate-channel-notification';
+        notification.innerHTML = `
+            <div style="
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+                color: white;
+                padding: 16px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 20px rgba(255, 152, 0, 0.3);
+                z-index: 10000;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                font-size: 14px;
+                font-weight: 500;
+                max-width: 350px;
+                animation: slideInRight 0.3s ease-out;
+            ">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 18px;">⚠️</span>
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">이미 수집된 채널입니다</div>
+                        <div style="font-size: 12px; opacity: 0.9;">"${channelName}" 채널은 이미 분석이 완료되었습니다.</div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // CSS 애니메이션 추가
+        if (!document.getElementById('notification-animation-styles')) {
+            const style = document.createElement('style');
+            style.id = 'notification-animation-styles';
+            style.textContent = `
+                @keyframes slideInRight {
+                    from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+                @keyframes slideOutRight {
+                    from {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                    to {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        document.body.appendChild(notification);
+
+        // 4초 후 자동으로 제거
+        setTimeout(() => {
+            const notificationElement = document.getElementById('duplicate-channel-notification');
+            if (notificationElement) {
+                notificationElement.style.animation = 'slideOutRight 0.3s ease-in';
+                setTimeout(() => {
+                    notificationElement.remove();
+                }, 300);
+            }
+        }, 4000);
+    }
+
+    // 채널 중복 검사 함수
+    async checkChannelDuplicate(channelName) {
+        try {
+            console.log(`🔍 중복 검사 시작: ${channelName}`);
+
+            const response = await fetch('http://localhost:3000/api/channel-queue/check-duplicate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    channelIdentifier: channelName
+                })
+            });
+
+            if (!response.ok) {
+                console.warn('중복 검사 API 호출 실패, 새 채널로 처리');
+                return false;
+            }
+
+            const result = await response.json();
+            console.log('🔍 중복 검사 결과:', result);
+
+            return result.duplicate && result.duplicate.isDuplicate;
+
+        } catch (error) {
+            console.warn('중복 검사 중 오류 발생, 새 채널로 처리:', error);
+            return false;
         }
     }
 }

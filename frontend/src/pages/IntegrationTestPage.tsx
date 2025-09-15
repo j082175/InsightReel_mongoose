@@ -30,11 +30,16 @@ const IntegrationTestPage: React.FC = memo(() => {
   };
 
   const handleSelectAll = () => {
-    setSelectedItems(filteredVideos.map(v => v.id));
+    setSelectedItems(filteredVideos.map(v => v._id));
   };
 
   const handleDeselectAll = () => {
     setSelectedItems([]);
+  };
+
+  const handleVideoDelete = async (video: Video) => {
+    console.log('개별 비디오 삭제:', video.title);
+    alert(`테스트: "${video.title}" 비디오 삭제 요청됨`);
   };
 
   const handleDelete = async () => {
@@ -156,6 +161,7 @@ const IntegrationTestPage: React.FC = memo(() => {
                       console.log('실제 비디오 클릭:', video._id);
                       // 실제 비디오 모달 열기 등
                     }}
+                    onDelete={handleVideoDelete}
                   />
                 </div>
               ))}

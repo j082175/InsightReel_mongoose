@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  TrendingUp, 
-  BarChart3, 
-  PieChart, 
+import {
+  TrendingUp,
+  BarChart3,
+  PieChart,
   Calendar,
   Eye,
   Heart,
@@ -15,6 +15,7 @@ import {
   Download
 } from 'lucide-react';
 import { formatViews, formatDate, getDurationLabel } from '../shared/utils';
+import toast from 'react-hot-toast';
 
 interface TrendingStats {
   overview: {
@@ -97,8 +98,9 @@ const TrendingDashboardPage: React.FC = () => {
         fetchChannelGroups()
       ]);
     } catch (error) {
-      setError('데이터 로딩에 실패했습니다.');
-      console.error('대시보드 데이터 로딩 실패:', error);
+      const errorMessage = '대시보드 데이터 로딩에 실패했습니다.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -118,7 +120,7 @@ const TrendingDashboardPage: React.FC = () => {
         setTrendingStats(result.data);
       }
     } catch (error) {
-      console.error('트렌딩 통계 조회 실패:', error);
+      toast.error('트렌딩 통계 로딩에 실패했습니다.');
     }
   };
 
@@ -131,7 +133,7 @@ const TrendingDashboardPage: React.FC = () => {
         setBatchStats(result.data);
       }
     } catch (error) {
-      console.error('배치 통계 조회 실패:', error);
+      toast.error('배치 통계 로딩에 실패했습니다.');
     }
   };
 
@@ -144,7 +146,7 @@ const TrendingDashboardPage: React.FC = () => {
         setChannelGroups(result.data);
       }
     } catch (error) {
-      console.error('채널 그룹 조회 실패:', error);
+      toast.error('채널 그룹 로딩에 실패했습니다.');
     }
   };
 

@@ -175,7 +175,7 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
     const collectedVideos = results.flatMap((result, batchIndex) => {
       return Array.from({ length: result.collectedVideos }, (_, videoIndex) => {
         const videoData: Video = {
-          id: String(Date.now() + batchIndex * 1000 + videoIndex),
+          _id: String(Date.now() + batchIndex * 1000 + videoIndex),
           title: `${result.channelName}의 수집된 영상 ${videoIndex + 1}`,
           url: `https://example.com/video/${Date.now() + batchIndex * 1000 + videoIndex}`,
           uploadDate: new Date(Date.now() - Math.random() * filters.daysBack * 24 * 60 * 60 * 1000).toISOString(),

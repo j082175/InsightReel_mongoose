@@ -95,67 +95,6 @@ const TestMenuPage: React.FC = memo(() => {
             </div>
           </button>
 
-          {/* UI Hooks 테스트 */}
-          <button
-            onClick={() => navigateTo('test-ui-hooks')}
-            className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-orange-200 group text-left w-full"
-          >
-            <div className="text-center">
-              <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">🎨</div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">UI Hooks</h2>
-              <p className="text-gray-600 leading-relaxed">
-                UI 상태 관리 훅 테스트
-              </p>
-              <div className="mt-6 text-sm text-orange-600">
-                • useModal, useMultiModal<br />
-                • useSearch, useSelection<br />
-                • useFilter, useAPIStatus<br />
-                • 실시간 상태 시각화
-              </div>
-            </div>
-          </button>
-        </div>
-
-        {/* API Hooks 테스트 - 새로운 행 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
-          <button
-            onClick={() => navigateTo('test-api-hooks')}
-            className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-emerald-200 group text-left w-full"
-          >
-            <div className="text-center">
-              <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">🌐</div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">API Hooks</h2>
-              <p className="text-gray-600 leading-relaxed">
-                서버 통신 훅 테스트
-              </p>
-              <div className="mt-6 text-sm text-emerald-600">
-                • useVideos, useChannels<br />
-                • useServerStatus, useQuotaStatus<br />
-                • useCollectTrending<br />
-                • 실시간 API 모니터링
-              </div>
-            </div>
-          </button>
-
-          {/* 통합 Hooks 테스트 (기존) */}
-          <button
-            onClick={() => navigateTo('test-hooks')}
-            className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-indigo-200 group text-left w-full"
-          >
-            <div className="text-center">
-              <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">🔧</div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">통합 Hooks</h2>
-              <p className="text-gray-600 leading-relaxed">
-                모든 훅 통합 테스트
-              </p>
-              <div className="mt-6 text-sm text-indigo-600">
-                • UI + API 훅 모두<br />
-                • 상호작용 패턴<br />
-                • 복합 비즈니스 로직<br />
-                • 실전 시나리오
-              </div>
-            </div>
-          </button>
         </div>
 
         {/* 개발 정보 */}
@@ -166,9 +105,6 @@ const TestMenuPage: React.FC = memo(() => {
             <li>• <strong>Features</strong>: 조립된 기능 컴포넌트들의 동작 확인</li>
             <li>• <strong>Components Lab</strong>: 개별 컴포넌트의 상세하고 전문적인 테스트</li>
             <li>• <strong>Integration</strong>: 실제 환경에서의 전체 동작 흐름 테스트</li>
-            <li>• <strong>UI Hooks</strong>: 모달, 검색, 선택 등 UI 상태 관리 훅 테스트</li>
-            <li>• <strong>API Hooks</strong>: 서버 통신, 데이터 로딩 등 API 관련 훅 테스트</li>
-            <li>• <strong>통합 Hooks</strong>: 모든 훅의 조합과 실전 비즈니스 로직 패턴</li>
           </ul>
 
           <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">

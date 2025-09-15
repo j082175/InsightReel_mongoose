@@ -307,14 +307,20 @@ class YouTubeChannelAnalyzer {
         };
 
         // 추가 통계
+        // 계산된 통계 (분석된 비디오 기준)
+        const calculatedTotalViews = videos.reduce((sum, v) => sum + v.viewCount, 0);
+        const calculatedTotalVideos = videos.length;
+
         const additionalStats = {
-            totalVideos: videos.length,
-            totalViews: videos.reduce((sum, v) => sum + v.viewCount, 0),
-            averageViewsPerVideo:
-                videos.length > 0
-                    ? videos.reduce((sum, v) => sum + v.viewCount, 0) /
-                      videos.length
-                    : 0,
+            // YouTube API 통계가 있으면 우선 사용, 없으면 계산된 값 사용
+            totalVideos: this.channelStats?.channelVideos || calculatedTotalVideos,
+            totalViews: this.channelStats?.channelViews || calculatedTotalViews,
+
+            // 평균은 API 통계 기준으로 계산 (더 정확함)
+            averageViewsPerVideo: this.channelStats?.channelViews && this.channelStats?.channelVideos
+                ? Math.round(this.channelStats.channelViews / this.channelStats.channelVideos)
+                : (calculatedTotalVideos > 0 ? Math.round(calculatedTotalViews / calculatedTotalVideos) : 0),
+
             mostViewedVideo: videos.reduce(
                 (max, v) => (v.viewCount > max.viewCount ? v : max),
                 videos[0] || {},
@@ -725,7 +731,10 @@ ${videoAnalyses
         channelId,
         maxVideos = 200,
         includeContentAnalysis = false,
+        channelStats = null, // YouTube API 채널 통계
     ) {
+        // YouTube API 통계 저장 (performAnalysis에서 사용)
+        this.channelStats = channelStats;
         try {
             ServerLogger.info(`🔍 향상된 채널 분석 시작: ${channelId}`);
             ServerLogger.info(
@@ -816,8 +825,9 @@ ${videoAnalyses
 
                 videoAnalyses.push(contentAnalysis);
 
-                // API 호출 간격
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                // API 호출 간격 (상수 사용)
+                const UnifiedGeminiManager = require('../utils/unified-gemini-manager');
+                await new Promise((resolve) => setTimeout(resolve, UnifiedGeminiManager.VIDEO_ANALYSIS_DELAY));
             }
 
             // 채널 종합 분석

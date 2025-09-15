@@ -4,6 +4,7 @@ import { SearchBar, ActionBar } from '../shared/components';
 import { ChannelCard, ChannelAnalysisModal, ChannelGroupModal, ChannelGroupCard } from '../features/channel-management';
 import { DeleteConfirmationModal } from '../shared/ui';
 import { formatViews } from '../shared/utils';
+import toast from 'react-hot-toast';
 import {
   useChannelManagementStore,
   useFilteredChannels,
@@ -12,6 +13,7 @@ import {
 } from '../features/channel-management/model/channelStore';
 
 const ChannelManagementPage: React.FC = () => {
+
   // Zustand Store 사용
   const channels = useChannelManagementStore(state => state.channels);
   const isLoading = useChannelManagementStore(state => state.isLoading);
@@ -48,32 +50,24 @@ const ChannelManagementPage: React.FC = () => {
   // API 데이터 로드
   useEffect(() => {
     const fetchChannels = async () => {
-      console.log('🔍 [DEBUG] 채널 데이터 로드 시작');
       setLoading(true);
       try {
         const response = await fetch('/api/channels');
-        console.log('🔍 [DEBUG] API 응답 상태:', response.status);
         if (!response.ok) throw new Error('채널 데이터 조회 실패');
 
         const result = await response.json();
-        console.log('🔍 [DEBUG] 원본 API 응답:', result);
-        console.log('🔍 [DEBUG] result 타입:', typeof result, 'Array인가?', Array.isArray(result));
-
         const channelsData = Array.isArray(result) ? result : result.data?.channels || result.channels || [];
-        console.log('🔍 [DEBUG] 처리된 채널 데이터:', channelsData);
-        console.log('🔍 [DEBUG] 채널 개수:', channelsData.length);
 
         setChannels(channelsData);
         setError(null);
 
-        console.log('🔍 [DEBUG] setChannels 호출 완료');
       } catch (err) {
-        console.error('❌ [DEBUG] 채널 로드 에러:', err);
-        setError(err instanceof Error ? err.message : '채널 데이터를 불러오는데 실패했습니다');
+        const errorMessage = err instanceof Error ? err.message : '채널 데이터를 불러오는데 실패했습니다';
+        setError(errorMessage);
         setChannels([]);
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
-        console.log('🔍 [DEBUG] 로딩 완료');
       }
     };
 
@@ -82,27 +76,22 @@ const ChannelManagementPage: React.FC = () => {
 
   // 채널 그룹 데이터 로드
   const fetchChannelGroups = useCallback(async () => {
-    console.log('🔍 [DEBUG] 채널 그룹 데이터 로드 시작');
     setIsLoadingGroups(true);
     try {
       const response = await fetch('/api/channel-groups');
-      console.log('🔍 [DEBUG] 그룹 API 응답 상태:', response.status);
 
       if (!response.ok) throw new Error('채널 그룹 데이터 조회 실패');
 
       const result = await response.json();
-      console.log('🔍 [DEBUG] 그룹 API 응답:', result);
-
       const groupsData = result.success ? result.data : [];
-      console.log('🔍 [DEBUG] 처리된 그룹 데이터:', groupsData);
 
       setChannelGroups(groupsData);
     } catch (err) {
-      console.error('❌ [DEBUG] 그룹 로드 에러:', err);
+      const errorMessage = err instanceof Error ? err.message : '채널 그룹 데이터를 불러오는데 실패했습니다';
+      toast.error(errorMessage);
       setChannelGroups([]);
     } finally {
       setIsLoadingGroups(false);
-      console.log('🔍 [DEBUG] 그룹 로딩 완료');
     }
   }, []);
 
@@ -144,9 +133,9 @@ const ChannelManagementPage: React.FC = () => {
       if (!response.ok) throw new Error('채널 삭제 실패');
 
       removeChannel(channel.channelId);
-      console.log('✅ 채널 삭제 성공:', channel.name);
+      toast.success(`채널 "${channel.name}" 삭제 완료`);
     } catch (error) {
-      console.error('❌ 채널 삭제 실패:', error);
+      toast.error(`채널 삭제 실패: ${error}`);
       throw error;
     }
   }, [removeChannel]);
@@ -162,18 +151,27 @@ const ChannelManagementPage: React.FC = () => {
       if (itemToDelete.type === 'single' && itemToDelete.data) {
         await handleChannelDelete(itemToDelete.data);
       } else if (itemToDelete.type === 'bulk') {
+        let successCount = 0;
         for (const channelId of selectedChannels) {
           const channel = channels.find(ch => ch.channelId === channelId);
           if (channel) {
-            await handleChannelDelete(channel);
+            try {
+              await handleChannelDelete(channel);
+              successCount++;
+            } catch (error) {
+              // 개별 채널 삭제 실패는 handleChannelDelete에서 이미 알림 처리됨
+            }
           }
         }
         clearSelection();
+        if (successCount > 0) {
+          toast.success(`선택된 ${successCount}개 채널이 삭제되었습니다`);
+        }
       }
 
       setItemToDelete(null);
     } catch (error) {
-      console.error('❌ 삭제 실패:', error);
+      toast.error(`삭제 실패: ${error}`);
     }
   }, [itemToDelete, handleChannelDelete, selectedChannels, channels, clearSelection]);
 
@@ -205,13 +203,13 @@ const ChannelManagementPage: React.FC = () => {
 
       if (!response.ok) throw new Error(`그룹 ${editingGroup ? '수정' : '생성'} 실패`);
 
-      console.log(`✅ 채널 그룹 ${editingGroup ? '수정' : '생성'} 성공`);
+      toast.success(`채널 그룹 "${groupData.name}" ${editingGroup ? '수정' : '생성'} 완료`);
       setShowGroupModal(false);
       setEditingGroup(null);
       // 그룹 목록 새로고침
       fetchChannelGroups();
     } catch (error) {
-      console.error(`❌ 그룹 ${editingGroup ? '수정' : '생성'} 실패:`, error);
+      toast.error(`그룹 ${editingGroup ? '수정' : '생성'} 실패: ${error}`);
     }
   }, [editingGroup, fetchChannelGroups]);
 
@@ -229,11 +227,11 @@ const ChannelManagementPage: React.FC = () => {
 
       if (!response.ok) throw new Error('그룹 삭제 실패');
 
-      console.log('✅ 채널 그룹 삭제 성공:', group.name);
+      toast.success(`채널 그룹 "${group.name}" 삭제 완료`);
       // 그룹 목록 새로고침
       fetchChannelGroups();
     } catch (error) {
-      console.error('❌ 그룹 삭제 실패:', error);
+      toast.error(`그룹 삭제 실패: ${error}`);
       throw error;
     }
   }, [fetchChannelGroups]);

@@ -98,14 +98,36 @@ class YouTubeChannelService {
 
             if (response.data.items && response.data.items.length > 0) {
                 const channel = response.data.items[0];
-                ServerLogger.info(`🐛 DEBUG: YouTube API 전체 응답`, {
-                    id: channel.id,
-                    snippet: {
-                        title: channel.snippet?.title,
-                        publishedAt: channel.snippet?.publishedAt,
-                        description: channel.snippet?.description?.substring(0, 100)
+
+                // 상세한 API 응답 로깅
+                ServerLogger.info(`🔍 YouTube API 요청 파라미터:`, {
+                    url: `${this.baseURL}/channels`,
+                    params: {
+                        key: 'API_KEY_HIDDEN',
+                        part: 'snippet,statistics',
+                        id: cleanId,
+                        maxResults: 1,
                     }
                 });
+
+                ServerLogger.info(`🐛 YouTube API 완전한 응답:`, {
+                    id: channel.id,
+                    hasSnippet: !!channel.snippet,
+                    hasStatistics: !!channel.statistics,
+                    snippet: channel.snippet ? {
+                        title: channel.snippet.title,
+                        publishedAt: channel.snippet.publishedAt,
+                        defaultLanguage: channel.snippet.defaultLanguage,
+                        country: channel.snippet.country
+                    } : null,
+                    statistics: channel.statistics ? {
+                        subscriberCount: channel.statistics.subscriberCount,
+                        videoCount: channel.statistics.videoCount,
+                        viewCount: channel.statistics.viewCount
+                    } : null,
+                    fullResponseKeys: Object.keys(channel)
+                });
+
                 return this.formatChannelData(channel);
             }
 

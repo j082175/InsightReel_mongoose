@@ -12,7 +12,7 @@ interface ChannelCardProps {
   onCollect?: (channel: Channel) => void;
   onAnalyze?: (channel: Channel) => void;
   onEdit?: (channel: Channel) => void;
-  onDelete?: (channel: Channel) => void;
+  onDelete: (channel: Channel) => void;  // 필수 Props
   onKeywordClick?: (keyword: string) => void;
   showSelection?: boolean;
 }
@@ -104,54 +104,25 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
   }, []);
 
   const handleConfirmDelete = useCallback(async () => {
-    if (onDelete) {
-      setIsDeleting(true);
-      try {
-        await onDelete(channel);
-        setShowDeleteModal(false);
-      } catch (error) {
-        console.error('삭제 실패:', error);
-      } finally {
-        setIsDeleting(false);
-      }
-      return;
-    }
-    
-    // 기본 삭제 로직
     setIsDeleting(true);
     try {
-      const response = await fetch(`http://localhost:3000/api/channels/${channel.channelId}`, {
-        method: 'DELETE'
+      await onDelete(channel);
+      setShowDeleteModal(false);
+      setNotification({
+        show: true,
+        type: 'success',
+        title: '삭제 완료',
+        message: '채널이 성공적으로 삭제되었습니다.'
       });
-      
-      if (response.ok) {
-        setShowDeleteModal(false);
-        setNotification({
-          show: true,
-          type: 'success',
-          title: '삭제 완료',
-          message: '채널이 성공적으로 삭제되었습니다.'
-        });
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
-      } else {
-        setNotification({
-          show: true,
-          type: 'error',
-          title: '삭제 실패',
-          message: '채널 삭제에 실패했습니다. 다시 시도해주세요.'
-        });
-        setIsDeleting(false);
-      }
-    } catch (error) {
+    } catch (error: any) {
       console.error('삭제 실패:', error);
       setNotification({
         show: true,
         type: 'error',
-        title: '오류 발생',
-        message: '삭제 중 오류가 발생했습니다. 다시 시도해주세요.'
+        title: '삭제 실패',
+        message: error.message || '삭제 중 오류가 발생했습니다. 다시 시도해주세요.'
       });
+    } finally {
       setIsDeleting(false);
     }
   }, [onDelete, channel]);

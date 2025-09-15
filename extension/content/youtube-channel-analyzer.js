@@ -1352,7 +1352,12 @@ class YouTubeChannelAnalyzer {
                             <label>📹 콘텐츠 유형:</label>
                             <div class="content-type-selector">
                                 <label class="radio-option">
-                                    <input type="radio" name="contentType" value="longform" checked>
+                                    <input type="radio" name="contentType" value="auto" checked>
+                                    <span>🤖 자동 감지</span>
+                                    <small>(채널 데이터 기반 최적 분석)</small>
+                                </label>
+                                <label class="radio-option">
+                                    <input type="radio" name="contentType" value="longform">
                                     <span>🎬 롱폼 주력</span>
                                     <small>(10분+ 심화 콘텐츠)</small>
                                 </label>
@@ -1373,12 +1378,12 @@ class YouTubeChannelAnalyzer {
                             <label>🤖 AI 분석 옵션:</label>
                             <div class="ai-analysis-selector">
                                 <label class="radio-option">
-                                    <input type="radio" name="aiAnalysis" value="full" checked>
+                                    <input type="radio" name="aiAnalysis" value="full">
                                     <span>🧠 완전 분석</span>
                                     <small>(AI 태그 + 카테고리 분석, 약 30초)</small>
                                 </label>
                                 <label class="radio-option">
-                                    <input type="radio" name="aiAnalysis" value="skip">
+                                    <input type="radio" name="aiAnalysis" value="skip" checked>
                                     <span>⚡ 빠른 수집</span>
                                     <small>(AI 분석 건너뛰기, 약 5초)</small>
                                 </label>
@@ -2404,7 +2409,7 @@ class YouTubeChannelAnalyzer {
         submitBtn.addEventListener('click', () => {
             // 선택된 콘텐츠 유형 가져오기
             const contentTypeEl = modal.querySelector('input[name="contentType"]:checked');
-            const contentType = contentTypeEl ? contentTypeEl.value : 'longform';
+            const contentType = contentTypeEl ? contentTypeEl.value : 'auto';
             
             // 선택된 AI 분석 옵션 가져오기
             const aiAnalysisEl = modal.querySelector('input[name="aiAnalysis"]:checked');
@@ -2415,7 +2420,7 @@ class YouTubeChannelAnalyzer {
     }
 
     // 채널 수집 실행
-    async collectChannel(channelInfo, keywords, contentType = 'longform', skipAIAnalysis = false) {
+    async collectChannel(channelInfo, keywords, contentType = 'auto', skipAIAnalysis = false) {
         if (keywords.length === 0) {
             alert('키워드를 최소 하나는 선택해주세요.');
             return;
