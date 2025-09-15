@@ -4,7 +4,7 @@ const Channel = require('../models/Channel');
 const ChannelGroup = require('../models/ChannelGroup');
 const { HTTP_STATUS_CODES, ERROR_CODES, API_MESSAGES, PLATFORMS } = require('../config/api-messages');
 const { ServerLogger } = require('../utils/logger');
-const YouTubeChannelDataCollector = require('../services/YouTubeChannelDataCollector');
+const ChannelAnalysisService = require('../features/cluster/ChannelAnalysisService');
 
 /**
  * 🎯 개별 채널 관리 API
@@ -42,30 +42,31 @@ router.post('/add-url', async (req, res) => {
     }
     
     ServerLogger.info(`📥 URL로 채널 추가 시작: ${url} (${detectedPlatform})`);
+    console.log('🔍 채널 추가 요청 상세:', {
+      url,
+      detectedPlatform,
+      requestBody: req.body
+    });
     
     // 채널 ID 추출
     let channelId = null;
     let channelName = null;
     let channelData = {};
-    
-    if (detectedPlatform === PLATFORMS.YOUTUBE) {
-      // YouTube 채널 처리
-      const channelCollector = new YouTubeChannelDataCollector();
 
-      // URL에서 채널 ID 추출
+    // URL에서 채널 식별자 추출
+    if (detectedPlatform === PLATFORMS.YOUTUBE) {
       if (url.includes('/channel/')) {
-        channelId = url.split('/channel/')[1].split('/')[0].split('?')[0];
+        channelId = decodeURIComponent(url.split('/channel/')[1].split('/')[0].split('?')[0]);
       } else if (url.includes('/@')) {
-        const handle = url.split('/@')[1].split('/')[0].split('?')[0];
-        channelId = handle; // 핸들을 임시 ID로 사용
+        const handle = decodeURIComponent(url.split('/@')[1].split('/')[0].split('?')[0]);
+        channelId = handle;
         channelName = handle;
       } else if (url.includes('/c/')) {
-        const customUrl = url.split('/c/')[1].split('/')[0].split('?')[0];
+        const customUrl = decodeURIComponent(url.split('/c/')[1].split('/')[0].split('?')[0]);
         channelId = customUrl;
         channelName = customUrl;
       }
 
-      // 기본값 설정 (필수 필드 보장)
       if (!channelId) {
         return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
           success: false,
@@ -73,68 +74,13 @@ router.post('/add-url', async (req, res) => {
           message: 'YouTube URL에서 채널 ID를 추출할 수 없습니다.'
         });
       }
-
-      if (!channelName) {
-        channelName = channelId; // channelId를 name으로 사용
-      }
-
-      // YouTube API로 채널 정보 수집 시도
-      try {
-        const channelInfo = await channelCollector.getChannelData(channelId);
-        if (channelInfo) {
-          channelData = {
-            channelId: channelInfo.id,
-            name: channelInfo.snippet?.title || channelName,
-            url: `https://www.youtube.com/channel/${channelInfo.id}`,
-            platform: PLATFORMS.YOUTUBE,
-            subscribers: parseInt(channelInfo.statistics?.subscriberCount) || 0,
-            totalViews: parseInt(channelInfo.statistics?.viewCount) || 0,
-            totalVideos: parseInt(channelInfo.statistics?.videoCount) || 0,
-            description: channelInfo.snippet?.description || '',
-            thumbnailUrl: channelInfo.snippet?.thumbnails?.high?.url || '',
-            country: channelInfo.snippet?.country || '',
-            publishedAt: channelInfo.snippet?.publishedAt || '',
-            ...metadata
-          };
-        } else {
-          // API 호출은 성공했지만 채널 정보가 없는 경우
-          channelData = {
-            channelId: channelId,
-            name: channelName,
-            url: url,
-            platform: PLATFORMS.YOUTUBE,
-            subscribers: 0,
-            totalViews: 0,
-            totalVideos: 0,
-            description: '',
-            thumbnailUrl: '',
-            ...metadata
-          };
-        }
-      } catch (apiError) {
-        ServerLogger.warn(`YouTube API 호출 실패, 기본 정보만 저장: ${apiError.message}`);
-        channelData = {
-          channelId: channelId,
-          name: channelName,
-          url: url,
-          platform: PLATFORMS.YOUTUBE,
-          subscribers: 0,
-          totalViews: 0,
-          totalVideos: 0,
-          description: '',
-          thumbnailUrl: '',
-          ...metadata
-        };
-      }
       
     } else {
       // 다른 플랫폼 (Instagram, TikTok)
-      // URL에서 사용자명 추출
       const urlParts = url.split('/').filter(p => p);
       channelId = urlParts[urlParts.length - 1].split('?')[0];
       channelName = channelId;
 
-      // 기본값 설정 (필수 필드 보장)
       if (!channelId) {
         return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
           success: false,
@@ -142,21 +88,87 @@ router.post('/add-url', async (req, res) => {
           message: `${detectedPlatform} URL에서 채널 ID를 추출할 수 없습니다.`
         });
       }
-
-      channelData = {
-        channelId: channelId,
-        name: channelName || channelId,
-        url: url,
-        platform: detectedPlatform,
-        subscribers: 0,
-        totalViews: 0,
-        totalVideos: 0,
-        description: '',
-        thumbnailUrl: '',
-        ...metadata
-      };
     }
-    
+
+    // 🏗️ ChannelAnalysisService를 통한 통합 처리
+    if (detectedPlatform === PLATFORMS.YOUTUBE) {
+      try {
+        ServerLogger.info('🔧 ChannelAnalysisService를 통한 채널 분석 시작');
+
+        // ChannelAnalysisService 초기화
+        const channelAnalysisService = new ChannelAnalysisService();
+
+        // 분석 옵션 설정
+        const includeAnalysis = req.body.channelData?.aiAnalysis === 'full';
+        const skipAIAnalysis = !includeAnalysis;
+        const userKeywords = req.body.channelData?.keywords || [];
+
+        // 통합 분석 실행 (YouTube API + AI 분석 + DB 저장)
+        const savedChannel = await channelAnalysisService.createOrUpdateWithAnalysis(
+          channelId,
+          userKeywords,
+          includeAnalysis,
+          skipAIAnalysis
+        );
+
+        ServerLogger.info(`✅ ChannelAnalysisService 완료: ${savedChannel.name}`);
+
+        // 그룹에 추가 (옵션)
+        if (addToGroup) {
+          try {
+            const group = await ChannelGroup.findById(addToGroup);
+            if (group) {
+              await group.addChannel(savedChannel.channelId);
+              ServerLogger.info(`✅ 채널을 그룹에 추가: ${group.name}`);
+            }
+          } catch (groupError) {
+            ServerLogger.warn(`그룹 추가 실패: ${groupError.message}`);
+          }
+        }
+
+        return res.status(HTTP_STATUS_CODES.CREATED).json({
+          success: true,
+          data: savedChannel,
+          message: '채널이 성공적으로 추가되었습니다.'
+        });
+
+      } catch (analysisError) {
+        ServerLogger.error('ChannelAnalysisService 실패:', analysisError);
+
+        // 중복 에러 처리
+        if (analysisError.message.includes('이미 분석되었습니다')) {
+          return res.status(HTTP_STATUS_CODES.CONFLICT).json({
+            success: false,
+            error: ERROR_CODES.CONFLICT,
+            message: '이미 등록된 채널입니다.',
+            details: analysisError.message
+          });
+        }
+
+        // 기타 에러
+        return res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+          success: false,
+          error: ERROR_CODES.SERVER_ERROR,
+          message: '채널 분석에 실패했습니다.',
+          details: analysisError.message
+        });
+      }
+    }
+
+    // 🔧 비-YouTube 플랫폼 처리 (기존 방식 유지)
+    channelData = {
+      channelId: channelId,
+      name: channelName || channelId,
+      url: url,
+      platform: detectedPlatform,
+      subscribers: 0,
+      totalViews: 0,
+      totalVideos: 0,
+      description: '',
+      thumbnailUrl: '',
+      ...metadata
+    };
+
     // 중복 체크
     const existingChannel = await Channel.findOne({
       $or: [
@@ -164,7 +176,7 @@ router.post('/add-url', async (req, res) => {
         { url: url }
       ]
     });
-    
+
     if (existingChannel) {
       return res.status(HTTP_STATUS_CODES.CONFLICT).json({
         success: false,
@@ -173,13 +185,11 @@ router.post('/add-url', async (req, res) => {
         data: existingChannel
       });
     }
-    
-    // 채널 저장
+
+    // 비-YouTube 채널 저장
     const newChannel = new Channel(channelData);
     const savedChannel = await newChannel.save();
-    
-    ServerLogger.info(`✅ 채널 저장 완료: ${savedChannel.name} (${savedChannel.channelId})`);
-    
+
     // 그룹에 추가 (옵션)
     if (addToGroup) {
       try {
@@ -192,7 +202,7 @@ router.post('/add-url', async (req, res) => {
         ServerLogger.warn(`그룹 추가 실패: ${groupError.message}`);
       }
     }
-    
+
     res.status(HTTP_STATUS_CODES.CREATED).json({
       success: true,
       data: savedChannel,
