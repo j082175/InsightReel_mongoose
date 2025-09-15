@@ -29,7 +29,7 @@ class TagExtractor {
     /**
      * 📊 채널에서 태그 추출
      */
-    async extractFromChannel(channel, contentType = 'longform') {
+    async extractFromChannel(channel, contentType = 'mixed') {
         try {
             // 캐시 체크
             const cacheKey = `${channel.channelId}_${channel.name}`;
@@ -83,7 +83,7 @@ class TagExtractor {
     /**
      * 🤖 Gemini API로 태그 추출
      */
-    async extractWithGemini(channel, contentType = 'longform') {
+    async extractWithGemini(channel, contentType = 'mixed') {
         try {
             // 콘텐츠 유형별 컨텍스트 추가
             const contentTypeContext = {
@@ -116,10 +116,15 @@ class TagExtractor {
                     focus: '다양한 형태의 콘텐츠, 유연한 접근',
                     keywords: ['다양한', '유연한', '멀티', '종합'],
                 },
+                auto: {
+                    description: '자동 감지 (채널 데이터 기반 최적 분석)',
+                    focus: '실제 콘텐츠 패턴에 맞춘 적응형 분석',
+                    keywords: ['데이터기반', '적응형', '최적화', '지능형'],
+                },
             };
 
             const context =
-                contentTypeContext[contentType] || contentTypeContext.longform;
+                contentTypeContext[contentType] || contentTypeContext.mixed;
 
             const prompt = `
 다음 YouTube 채널의 특성을 분석해서 핵심 태그 5-8개를 추출해주세요.

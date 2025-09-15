@@ -45,7 +45,8 @@ const ChannelCore = {
   
   contentType: {
     type: String,
-    enum: ['shortform', 'longform', 'mixed'],
+    enum: ['auto', 'shortform', 'longform', 'mixed'],
+    default: 'auto',
     required: false
   }
 };

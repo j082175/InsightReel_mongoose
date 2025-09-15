@@ -41,7 +41,7 @@ class ClusterManager {
     async collectChannel(
         channelData,
         userKeywords = [],
-        contentType = 'longform',
+        contentType = 'mixed',
     ) {
         try {
             ServerLogger.info('📊 채널 수집 시작', { name: channelData.name });

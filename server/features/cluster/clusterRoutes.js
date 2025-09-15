@@ -30,8 +30,11 @@ router.post('/collect-channel', async (req, res) => {
         const {
             channelData,
             keywords = [],
-            contentType = 'longform',
+            contentType = 'auto',
         } = req.body;
+
+        // auto 값을 mixed와 동일하게 처리
+        const normalizedContentType = contentType === 'auto' ? 'mixed' : contentType;
 
         if (!channelData || !channelData.name) {
             return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
@@ -45,7 +48,7 @@ router.post('/collect-channel', async (req, res) => {
         const result = await manager.collectChannel(
             channelData,
             keywords,
-            contentType,
+            normalizedContentType,
         );
 
         res.json(result);
