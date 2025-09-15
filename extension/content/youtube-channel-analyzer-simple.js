@@ -6,7 +6,58 @@ class SimpleYouTubeChannelAnalyzer {
 
     init() {
         console.log('🚀 단순 YouTube 채널 수집기 시작');
-        this.createChannelButton();
+
+        // 분석 가능한 페이지에서만 버튼 표시
+        if (!this.isYouTubeHomePage()) {
+            console.log('✅ 분석 가능한 페이지 - 버튼 생성');
+            this.createChannelButton();
+        } else {
+            console.log('🚫 홈 화면 - 버튼 생성하지 않음');
+        }
+
+        // URL 변경 감지하여 버튼 상태 업데이트
+        this.setupUrlChangeListener();
+    }
+
+    // URL 변경 감지 (SPA 특성상 필요)
+    setupUrlChangeListener() {
+        // YouTube는 SPA라서 페이지 이동 시 URL만 바뀜
+        let currentUrl = window.location.href;
+
+        const checkUrlChange = () => {
+            const newUrl = window.location.href;
+            if (currentUrl !== newUrl) {
+                console.log('🔄 URL 변경 감지:', currentUrl, '→', newUrl);
+                currentUrl = newUrl;
+                this.updateButtonVisibility();
+            }
+        };
+
+        // MutationObserver로 URL 변경 감지
+        const observer = new MutationObserver(checkUrlChange);
+        observer.observe(document, { subtree: true, childList: true });
+
+        // 추가로 interval로도 체크 (안전장치)
+        setInterval(checkUrlChange, 1000);
+    }
+
+    // 버튼 표시 여부 업데이트
+    updateButtonVisibility() {
+        const existingButton = document.querySelector('#simple-channel-collect-btn');
+
+        if (!this.isYouTubeHomePage()) {
+            // 분석 가능한 페이지 - 버튼이 없으면 생성
+            if (!existingButton) {
+                console.log('✅ 분석 가능한 페이지로 이동 - 버튼 생성');
+                this.createChannelButton();
+            }
+        } else {
+            // 홈 화면 - 버튼이 있으면 제거
+            if (existingButton) {
+                console.log('🚫 홈 화면으로 이동 - 버튼 제거');
+                existingButton.remove();
+            }
+        }
     }
 
     // YouTube 홈 화면 감지
@@ -85,13 +136,6 @@ class SimpleYouTubeChannelAnalyzer {
     // 채널 수집 실행 - 쇼츠 분석 버튼과 동일한 패턴
     async collectChannel() {
         console.log('📊 채널 수집 시작 - 단순 버전');
-
-        // 홈 화면에서는 분석하지 않음
-        if (this.isYouTubeHomePage()) {
-            console.log('🚫 YouTube 홈 화면에서는 채널 분석을 지원하지 않습니다');
-            alert('YouTube 홈 화면에서는 채널 분석을 지원하지 않습니다.\n채널 페이지나 영상 페이지에서 시도해주세요.');
-            return;
-        }
 
         const button = document.querySelector('#simple-channel-collect-btn span');
         const originalText = button.textContent;

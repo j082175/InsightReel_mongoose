@@ -836,11 +836,150 @@ const YouTubeVideoHandler = {
         }
     },
 
+    // 스마트 셀렉터: 영상 분석 버튼 컨테이너 찾기
+    findVideoButtonContainer() {
+        console.log('🔍 영상 분석 버튼 컨테이너 검색 시작');
+
+        // 1단계: 기본 셀렉터들 (우선순위 높음)
+        const primarySelectors = [
+            '#top-level-buttons-computed',              // 최신 YouTube (가장 일반적)
+            '#actions #top-level-buttons',              // 기존 YouTube
+            '.ytd-menu-renderer #top-level-buttons',    // 메뉴 렌더러 내부
+            '#menu-container #top-level-buttons'        // 메뉴 컨테이너 내부
+        ];
+
+        for (const selector of primarySelectors) {
+            const element = document.querySelector(selector);
+            if (element && this.isValidButtonContainer(element)) {
+                console.log(`✅ 기본 셀렉터로 컨테이너 발견: ${selector}`);
+                return element;
+            }
+        }
+
+        // 2단계: 대체 셀렉터들 (구조 변경에 대응)
+        const fallbackSelectors = [
+            '#actions .ytd-menu-renderer',              // 액션 영역의 메뉴 렌더러
+            '.ytd-video-primary-info-renderer #menu',   // 비디오 정보 영역의 메뉴
+            '#primary-inner #menu',                     // 프라이머리 내부 메뉴
+            '.ytd-watch-flexy #menu',                   // 워치 플렉시 메뉴
+            '#actions .yt-spec-touch-feedback-shape',   // 터치 피드백 모양 (모바일)
+            '.ytd-video-primary-info-renderer [role="toolbar"]' // 툴바 역할을 하는 요소
+        ];
+
+        for (const selector of fallbackSelectors) {
+            const element = document.querySelector(selector);
+            if (element && this.isValidButtonContainer(element)) {
+                console.log(`✅ 대체 셀렉터로 컨테이너 발견: ${selector}`);
+                return element;
+            }
+        }
+
+        // 3단계: 넓은 범위 검색 (최후 수단)
+        const wideSelectors = [
+            '#actions',                                 // 전체 액션 영역
+            '#primary-inner',                          // 프라이머리 내부 전체
+            '.ytd-video-primary-info-renderer'         // 비디오 정보 렌더러
+        ];
+
+        for (const selector of wideSelectors) {
+            const element = document.querySelector(selector);
+            if (element && this.isValidButtonContainer(element)) {
+                console.log(`⚠️ 넓은 범위 셀렉터로 컨테이너 발견: ${selector}`);
+                return element;
+            }
+        }
+
+        console.log('❌ 영상 분석 버튼 컨테이너를 찾지 못함');
+        return null;
+    },
+
+    // 스마트 셀렉터: 쇼츠 분석 버튼 컨테이너 찾기
+    findShortsButtonContainer() {
+        console.log('🔍 쇼츠 분석 버튼 컨테이너 검색 시작');
+
+        // 1단계: 기본 쇼츠 셀렉터들
+        const primarySelectors = [
+            '#actions',                                 // 표준 액션 영역
+            'ytd-reel-video-renderer #actions',         // 릴 비디오 렌더러의 액션
+            '.ytd-reel-player-header-renderer #actions', // 릴 플레이어 헤더 액션
+            '#shorts-container #actions'                // 쇼츠 컨테이너 액션
+        ];
+
+        for (const selector of primarySelectors) {
+            const element = document.querySelector(selector);
+            if (element && this.isValidButtonContainer(element)) {
+                console.log(`✅ 기본 쇼츠 셀렉터로 컨테이너 발견: ${selector}`);
+                return element;
+            }
+        }
+
+        // 2단계: 대체 쇼츠 셀렉터들
+        const fallbackSelectors = [
+            'ytd-reel-video-renderer .ytd-menu-renderer',  // 릴 비디오의 메뉴 렌더러
+            '.reel-video-in-sequence #actions',           // 시퀀스 내 릴 비디오 액션
+            '.ytd-shorts #actions',                       // 쇼츠 영역 액션
+            '#shorts-player #actions',                    // 쇼츠 플레이어 액션
+            '[role="toolbar"]'                            // 툴바 역할 요소 (쇼츠에서)
+        ];
+
+        for (const selector of fallbackSelectors) {
+            const element = document.querySelector(selector);
+            if (element && this.isValidButtonContainer(element)) {
+                console.log(`✅ 대체 쇼츠 셀렉터로 컨테이너 발견: ${selector}`);
+                return element;
+            }
+        }
+
+        // 3단계: 넓은 범위 검색
+        const wideSelectors = [
+            'ytd-reel-video-renderer',                  // 릴 비디오 렌더러 전체
+            '#shorts-container',                        // 쇼츠 컨테이너 전체
+            '.ytd-reel-player-header-renderer'          // 릴 플레이어 헤더 전체
+        ];
+
+        for (const selector of wideSelectors) {
+            const element = document.querySelector(selector);
+            if (element && this.isValidButtonContainer(element)) {
+                console.log(`⚠️ 넓은 범위 쇼츠 셀렉터로 컨테이너 발견: ${selector}`);
+                return element;
+            }
+        }
+
+        console.log('❌ 쇼츠 분석 버튼 컨테이너를 찾지 못함');
+        return null;
+    },
+
+    // 버튼 컨테이너 유효성 검증
+    isValidButtonContainer(element) {
+        if (!element) return false;
+
+        // 기본 조건: 요소가 존재하고 보임
+        if (!element.offsetParent) {
+            console.log('❌ 컨테이너가 보이지 않음');
+            return false;
+        }
+
+        // 크기 조건: 너무 작지 않은지 확인
+        const rect = element.getBoundingClientRect();
+        if (rect.width < 10 || rect.height < 10) {
+            console.log('❌ 컨테이너가 너무 작음:', rect);
+            return false;
+        }
+
+        // 위치 조건: 화면 내에 있는지 확인
+        if (rect.top < 0 || rect.left < 0 || rect.top > window.innerHeight) {
+            console.log('❌ 컨테이너가 화면 밖에 있음:', rect);
+            return false;
+        }
+
+        console.log('✅ 유효한 컨테이너 확인됨:', rect);
+        return true;
+    },
+
     addYouTubeVideoAnalysisButton() {
         if (document.querySelector('.youtube-analysis-button')) return;
 
-        const actionButtons = document.querySelector('#top-level-buttons-computed') ||
-                             document.querySelector('#actions #top-level-buttons');
+        const actionButtons = this.findVideoButtonContainer();
 
         if (actionButtons) {
             const button = document.createElement('button');
@@ -871,7 +1010,7 @@ const YouTubeVideoHandler = {
     addYouTubeShortsAnalysisButton() {
         if (document.querySelector('.youtube-shorts-analysis-button')) return;
 
-        const actionsArea = document.querySelector('#actions');
+        const actionsArea = this.findShortsButtonContainer();
         if (actionsArea) {
             const button = document.createElement('button');
             button.textContent = '📱';
