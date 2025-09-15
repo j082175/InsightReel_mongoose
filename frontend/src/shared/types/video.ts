@@ -99,11 +99,10 @@ export interface SystemMetadata {
 
 // ===== 전체 Video 인터페이스 조합 =====
 export interface Video extends VideoCore, ChannelInfo, AIAnalysis, YouTubeSpecific, SystemMetadata {
-  // MongoDB 필드 (통일된 ID)
-  _id?: string;                // MongoDB ObjectId → 모든 API에서 사용
+  // MongoDB 필드 (통일된 ID) - 모든 계층에서 _id 사용
+  _id: string;                 // MongoDB ObjectId → 필수 필드로 변경
 
   // UI 전용 필드 (레거시 호환용)
-  id?: string | number;        // _id의 별칭
   videoId?: string;            // 비디오 고유 ID
   thumbnail?: string;          // thumbnailUrl과 동일
   channelAvatar?: string;

@@ -149,7 +149,7 @@ export const useBatchStore = (): BatchStoreState & BatchStoreActions => {
   // 필터링된 배치 목록
   const filteredBatches = useMemo(() => {
     const batchesArray = Array.isArray(state.batches) ? state.batches : [];
-    let filtered = batchesArray.filter(batch => !state.deletedBatchIds.has(batch.id));
+    let filtered = batchesArray.filter(batch => !state.deletedBatchIds.has(batch._id));
 
     if (state.searchTerm) {
       const keyword = state.searchTerm.toLowerCase();
@@ -319,7 +319,7 @@ export const useBatchStore = (): BatchStoreState & BatchStoreActions => {
   }, []);
 
   const selectAllBatches = useCallback(() => {
-    const allBatchIds = filteredBatches.map(batch => batch.id);
+    const allBatchIds = filteredBatches.map(batch => batch._id);
     setState(prev => ({
       ...prev,
       selectedBatches: new Set(allBatchIds)

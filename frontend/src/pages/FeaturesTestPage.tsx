@@ -273,51 +273,61 @@ const FeaturesTestPage: React.FC = memo(() => {
           </div>
         </section>
 
-        {/* 모달들 */}
-        <ChannelGroupModal
-          isOpen={isChannelGroupModalOpen}
-          onClose={() => setChannelGroupModalOpen(false)}
-          mode="create"
-          availableChannels={testChannels}
-          onSave={(groupData) => {
-            console.log('Channel group saved:', groupData);
-            setChannelGroupModalOpen(false);
-          }}
-        />
+        {/* 모달들 - 조건부 렌더링으로 한 번에 하나만 활성화 */}
+        {isChannelGroupModalOpen && (
+          <ChannelGroupModal
+            isOpen={isChannelGroupModalOpen}
+            onClose={() => setChannelGroupModalOpen(false)}
+            mode="create"
+            availableChannels={testChannels}
+            onSave={(groupData) => {
+              console.log('Channel group saved:', groupData);
+              setChannelGroupModalOpen(false);
+            }}
+          />
+        )}
 
-        <BulkCollectionModal
-          isOpen={isBulkCollectionModalOpen}
-          onClose={() => setBulkCollectionModalOpen(false)}
-          channelGroups={[
-            { _id: 'group1', name: '테크 그룹', channels: testChannels.slice(0, 2) },
-            { _id: 'group2', name: '엔터 그룹', channels: testChannels.slice(1, 3) }
-          ]}
-          onStartCollection={(settings) => {
-            console.log('Collection started:', settings);
-            setBulkCollectionModalOpen(false);
-          }}
-        />
+        {isBulkCollectionModalOpen && (
+          <BulkCollectionModal
+            isOpen={isBulkCollectionModalOpen}
+            onClose={() => setBulkCollectionModalOpen(false)}
+            channelGroups={[
+              { _id: 'group1', name: '테크 그룹', channels: testChannels.slice(0, 2) },
+              { _id: 'group2', name: '엔터 그룹', channels: testChannels.slice(1, 3) }
+            ]}
+            onStartCollection={(settings) => {
+              console.log('Collection started:', settings);
+              setBulkCollectionModalOpen(false);
+            }}
+          />
+        )}
 
-        <VideoAnalysisModal
-          isOpen={isVideoAnalysisModalOpen}
-          onClose={() => setVideoAnalysisModalOpen(false)}
-          video={testVideo}
-          onAnalyze={(video) => console.log('Analyze video:', video)}
-        />
+        {isVideoAnalysisModalOpen && (
+          <VideoAnalysisModal
+            isOpen={isVideoAnalysisModalOpen}
+            onClose={() => setVideoAnalysisModalOpen(false)}
+            video={testVideo}
+            onAnalyze={(video) => console.log('Analyze video:', video)}
+          />
+        )}
 
-        <VideoModal
-          isOpen={isVideoModalOpen}
-          onClose={() => setVideoModalOpen(false)}
-          video={testVideo}
-          onEdit={(video) => console.log('Edit video:', video)}
-          onDelete={(id) => console.log('Delete video:', id)}
-        />
+        {isVideoModalOpen && (
+          <VideoModal
+            isOpen={isVideoModalOpen}
+            onClose={() => setVideoModalOpen(false)}
+            video={testVideo}
+            onEdit={(video) => console.log('Edit video:', video)}
+            onDelete={(id) => console.log('Delete video:', id)}
+          />
+        )}
 
-        <VideoOnlyModal
-          isOpen={isVideoOnlyModalOpen}
-          onClose={() => setVideoOnlyModalOpen(false)}
-          video={testVideo}
-        />
+        {isVideoOnlyModalOpen && (
+          <VideoOnlyModal
+            isOpen={isVideoOnlyModalOpen}
+            onClose={() => setVideoOnlyModalOpen(false)}
+            video={testVideo}
+          />
+        )}
       </div>
     </div>
   );

@@ -85,7 +85,7 @@ const ChannelGroupCard: React.FC<ChannelGroupCardProps> = memo(({
     // 기본 삭제 로직
     setIsDeleting(true);
     try {
-      const response = await fetch(`http://localhost:3000/api/channel-groups/${group.id}`, {
+      const response = await fetch(`http://localhost:3000/api/channel-groups/${group._id}`, {
         method: 'DELETE'
       });
       
@@ -140,7 +140,7 @@ const ChannelGroupCard: React.FC<ChannelGroupCardProps> = memo(({
     try {
       console.log(`🎯 채널 그룹 "${group.name}" 트렌딩 수집 시작`);
       
-      const response = await fetch(`http://localhost:3000/api/channel-groups/${group.id}/collect`, {
+      const response = await fetch(`http://localhost:3000/api/channel-groups/${group._id}/collect`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

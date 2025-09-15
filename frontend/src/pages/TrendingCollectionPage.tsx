@@ -305,11 +305,11 @@ const TrendingCollectionPage: React.FC = () => {
                 <h3 className="font-medium text-gray-900 mb-2">채널 그룹 ({channelGroups.length})</h3>
                 <div className="max-h-40 overflow-y-auto border rounded-md p-2">
                   {channelGroups.map((group) => (
-                    <label key={group.id} className="flex items-center p-2 hover:bg-gray-50 rounded">
+                    <label key={group._id} className="flex items-center p-2 hover:bg-gray-50 rounded">
                       <input
                         type="checkbox"
-                        checked={collectionTarget.selectedGroups.includes(group.id)}
-                        onChange={() => handleGroupSelection(group.id)}
+                        checked={collectionTarget.selectedGroups.includes(group._id)}
+                        onChange={() => handleGroupSelection(group._id)}
                         className="mr-3"
                       />
                       <div className="flex-1">
@@ -464,7 +464,7 @@ const TrendingCollectionPage: React.FC = () => {
               <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-6">
                 {trendingVideos.map((video) => (
                   <VideoCard
-                    key={video.id}
+                    key={video._id}
                     video={video}
                     onClick={handleVideoClick}
                     onDelete={handleVideoDelete}

@@ -113,7 +113,7 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
     setCollectionResults([]);
 
     // 선택된 채널이 있으면 선택된 채널, 없으면 모든 보이는 채널 사용
-    const channelsToProcess = selectedChannels.length > 0 ? selectedChannels : (allVisibleChannels || []);
+    const channelsToProcess = (selectedChannels && selectedChannels.length > 0) ? selectedChannels : (allVisibleChannels || []);
     const results: CollectionResult[] = [];
 
     for (let i = 0; i < channelsToProcess.length; i++) {
@@ -215,8 +215,8 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
   if (!isOpen) return null;
 
   // 선택된 채널이 있으면 선택된 채널, 없으면 모든 보이는 채널 사용
-  const channelsToProcess = selectedChannels.length > 0 ? selectedChannels : (allVisibleChannels || []);
-  const isSelectedChannels = selectedChannels.length > 0;
+  const channelsToProcess = (selectedChannels && selectedChannels.length > 0) ? selectedChannels : (allVisibleChannels || []);
+  const isSelectedChannels = selectedChannels && selectedChannels.length > 0;
   
   const totalFound = collectionResults.reduce((sum, result) => sum + result.foundVideos, 0);
   const totalCollected = collectionResults.reduce((sum, result) => sum + result.collectedVideos, 0);

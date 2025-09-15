@@ -3,12 +3,12 @@
  */
 
 export interface ChannelGroupChannel {
-  id: string;
+  channelId: string;   // id → channelId (서버 스키마와 통일)
   name: string;
 }
 
 export interface ChannelGroup {
-  _id?: string;
+  _id: string;         // 필수 필드로 변경
   name: string;
   description: string;
   color: string;

@@ -190,7 +190,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
       <div className="flex flex-wrap gap-2 mb-4">
         {batch.targetGroups?.map(group => (
           <span
-            key={group.id}
+            key={group._id}
             className="px-2 py-1 text-xs rounded-full text-white"
             style={{ backgroundColor: group.color }}
           >

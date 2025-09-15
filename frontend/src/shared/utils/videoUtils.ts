@@ -6,11 +6,11 @@ import { Video } from '../types';
 
 /**
  * 비디오 ID를 추출합니다.
- * ⚡ id 통일: 서버에서 변환된 id 필드 사용 (response-normalizer.js)
+ * ⚡ _id 통일: MongoDB _id를 모든 계층에서 직접 사용
  */
 export const getVideoId = (video: Video): string => {
-  // 서버에서 _id → id 변환됨 - fallback 불필요
-  return video.id;
+  // MongoDB _id 필드 직접 사용 - 변환 불필요
+  return video._id;
 };
 
 /**

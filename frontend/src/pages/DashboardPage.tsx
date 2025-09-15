@@ -243,7 +243,7 @@ const DashboardPage: React.FC = () => {
               <div className={`grid ${gridLayouts[gridSize] || gridLayouts[2]} gap-6`}>
                 {videos.map((video) => (
                   <VideoCard
-                    key={video.id}
+                    key={video._id}
                     video={video}
                     onClick={handleVideoClick}
                     onDelete={handleVideoDelete}

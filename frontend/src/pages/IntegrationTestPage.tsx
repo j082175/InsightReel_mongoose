@@ -11,6 +11,9 @@ const IntegrationTestPage: React.FC = memo(() => {
   // 실제 API 데이터 사용
   const { data: videos, isLoading: videosLoading, error: videosError } = useVideos();
 
+  // 🔍 실제 데이터 구조 확인
+  console.log('🎬 IntegrationTestPage videos 데이터:', videos?.slice(0, 1));
+
   const { data: channels, isLoading: channelsLoading, error: channelsError } = useChannels();
 
   // 검색 필터링
@@ -144,14 +147,14 @@ const IntegrationTestPage: React.FC = memo(() => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {filteredVideos.slice((currentPage - 1) * 12, currentPage * 12).map((video, index) => (
-                <div key={`video-${video.id}-${index}`} className="bg-white p-4 rounded-lg shadow">
+                <div key={`video-${video._id}-${index}`} className="bg-white p-4 rounded-lg shadow">
                   <VideoCard
                     video={video}
                     isSelectMode={true}
-                    isSelected={selectedItems.includes(video.id)}
+                    isSelected={selectedItems.includes(video._id)}
                     onSelectToggle={(id) => handleSelection(id, !selectedItems.includes(id))}
                     onClick={(video) => {
-                      console.log('실제 비디오 클릭:', video.id);
+                      console.log('실제 비디오 클릭:', video._id);
                       // 실제 비디오 모달 열기 등
                     }}
                   />

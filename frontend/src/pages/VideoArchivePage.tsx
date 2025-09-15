@@ -503,7 +503,7 @@ const VideoArchivePage: React.FC = () => {
               <div className="space-y-4">
                 {filteredVideos.map(video => (
                   <VideoListItem 
-                    key={video.id} 
+                    key={video._id}
                     video={video}
                     onCardClick={setSelectedVideo}
                     onDeleteClick={handleDeleteClick}

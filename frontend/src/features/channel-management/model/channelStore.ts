@@ -168,7 +168,7 @@ export const useChannelManagementStore = create<
         set(
           (state) => ({
             channelGroups: state.channelGroups.map((group) =>
-              group.id === groupId ? { ...group, ...updates } : group
+              group._id === groupId ? { ...group, ...updates } : group
             ),
           }),
           false,
@@ -178,7 +178,7 @@ export const useChannelManagementStore = create<
       removeChannelGroup: (groupId) =>
         set(
           (state) => ({
-            channelGroups: state.channelGroups.filter((group) => group.id !== groupId),
+            channelGroups: state.channelGroups.filter((group) => group._id !== groupId),
           }),
           false,
           'removeChannelGroup'
@@ -301,7 +301,7 @@ export const useChannelManagementStore = create<
 
       getChannelsByGroup: (groupId) => {
         const { channels, channelGroups } = get();
-        const group = channelGroups.find((g) => g.id === groupId);
+        const group = channelGroups.find((g) => g._id === groupId);
         if (!group) return [];
 
         return channels.filter((channel) => group.channels.some(gc => gc.channelId === channel.channelId));

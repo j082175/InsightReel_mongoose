@@ -105,7 +105,7 @@ const SharedTestPage: React.FC = memo(() => {
           <h2 className="text-2xl font-bold text-gray-900 mb-6">🎬 VideoCard</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {testVideos.map((video) => (
-              <div key={video.id} className="bg-white p-4 rounded-lg shadow">
+              <div key={video._id} className="bg-white p-4 rounded-lg shadow">
                 <VideoCard
                   video={video}
                   isSelected={selectedItems.includes(video.id)}

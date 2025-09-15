@@ -18,7 +18,7 @@ const DatabaseManager = require('./config/database');
 // 간단한 채널 분석에서는 직접 사용하지 않지만 다른 API에서 필요
 const Video = require('./models/VideoModel');
 const VideoUrl = require('./models/VideoUrl');
-const { normalizeVideosResponse } = require('./utils/response-normalizer');
+// const { normalizeVideosResponse } = require('./utils/response-normalizer'); // 제거됨 - _id 통일
 const CollectionBatch = require('./models/CollectionBatch');
 
 const VideoProcessor = require('./services/VideoProcessor');
@@ -1517,8 +1517,8 @@ app.get('/api/videos', async (req, res) => {
                 }
             }
 
-            // _id 필드 제거 (toJSON 역할)
-            const { _id, __v, ...cleanVideo } = video;
+            // __v만 제거, _id는 유지 (통일된 _id 사용)
+            const { __v, ...cleanVideo } = video;
 
             return {
                 ...cleanVideo,
@@ -1526,8 +1526,6 @@ app.get('/api/videos', async (req, res) => {
                 timestamp: video.uploadDate || video.timestamp,
                 uploadDate: video.uploadDate,
                 thumbnailUrl: thumbnailUrl,
-                // 표준 ID: MongoDB _id만 사용
-                id: video._id ? video._id.toString() : undefined,
                 // 표준 조회수: views만 사용
                 views: cleanVideo.views || 0,
                 // url이 없고 channelName이 URL인 경우 복구

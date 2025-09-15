@@ -264,7 +264,7 @@ const TrendingDashboardPage: React.FC = () => {
             >
               <option value="">전체 그룹</option>
               {channelGroups.map(group => (
-                <option key={group.id} value={group.id}>{group.name}</option>
+                <option key={group._id} value={group._id}>{group.name}</option>
               ))}
             </select>
           </div>
@@ -477,7 +477,7 @@ const TrendingDashboardPage: React.FC = () => {
             
             <div className="space-y-3">
               {batchStats.recentActivity.map((batch) => (
-                <div key={batch.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div key={batch._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-gray-900 truncate">
                       {batch.name}
@@ -521,7 +521,7 @@ const TrendingDashboardPage: React.FC = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {channelGroups.slice(0, 6).map((group) => (
-            <div key={group.id} className="border border-gray-200 rounded-lg p-4">
+            <div key={group._id} className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
                 <div 
                   className="w-3 h-3 rounded-full"

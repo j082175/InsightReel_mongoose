@@ -116,8 +116,8 @@ export const useChannelGroups = () => {
 
       const data = await response.json();
       if (data.success) {
-        setGroups(prev => prev.map(group => 
-          group.id === groupId ? data.data : group
+        setGroups(prev => prev.map(group =>
+          group._id === groupId ? data.data : group
         ));
         return data.data;
       } else {
@@ -150,7 +150,7 @@ export const useChannelGroups = () => {
 
       const data = await response.json();
       if (data.success) {
-        setGroups(prev => prev.filter(group => group.id !== groupId));
+        setGroups(prev => prev.filter(group => group._id !== groupId));
         return true;
       } else {
         throw new Error(data.message || '그룹 삭제에 실패했습니다.');
@@ -192,8 +192,8 @@ export const useChannelGroups = () => {
       const data = await response.json();
       if (data.success) {
         // 그룹의 lastCollectedAt 업데이트
-        setGroups(prev => prev.map(group => 
-          group.id === groupId 
+        setGroups(prev => prev.map(group =>
+          group._id === groupId
             ? { ...group, lastCollectedAt: new Date().toISOString() }
             : group
         ));
@@ -317,6 +317,6 @@ export const useChannelGroups = () => {
     // 편의 메서드
     refreshGroups: () => fetchGroups(),
     getActiveGroups: () => groups.filter(group => group.isActive),
-    getGroupById: (id: string) => groups.find(group => group.id === id),
+    getGroupById: (id: string) => groups.find(group => group._id === id),
   };
 };

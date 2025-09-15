@@ -6,7 +6,7 @@ const CollectionBatch = require('../models/CollectionBatch');
 const GroupTrendingCollector = require('../services/GroupTrendingCollector');
 const { HTTP_STATUS_CODES, ERROR_CODES, API_MESSAGES } = require('../config/api-messages');
 const { ServerLogger } = require('../utils/logger');
-const { normalizeChannelResponse } = require('../utils/response-normalizer');
+// response-normalizer 제거 - _id 통일
 
 /**
  * 🎯 채널 그룹 CRUD API
@@ -31,15 +31,12 @@ router.get('/', async (req, res) => {
       .sort({ updatedAt: -1 })
       .lean();
 
-    // _id → id 변환 적용
-    const normalizedGroups = groups.map(group => normalizeChannelResponse(group));
-
-    ServerLogger.info(`📋 채널 그룹 조회: ${normalizedGroups.length}개`);
+    ServerLogger.info(`📋 채널 그룹 조회: ${groups.length}개`);
 
     res.status(HTTP_STATUS_CODES.OK).json({
       success: true,
-      data: normalizedGroups,
-      count: normalizedGroups.length
+      data: groups,
+      count: groups.length
     });
     
   } catch (error) {
@@ -67,7 +64,7 @@ router.get('/:id', async (req, res) => {
     
     res.status(HTTP_STATUS_CODES.OK).json({
       success: true,
-      data: normalizeChannelResponse(group)
+      data: group
     });
     
   } catch (error) {
@@ -382,7 +379,7 @@ router.post('/:id/channels', async (req, res) => {
 
     res.status(HTTP_STATUS_CODES.OK).json({
       success: true,
-      data: normalizeChannelResponse(group),
+      data: group,
       message: `채널 ${action === 'add' ? '추가' : '제거'}가 완료되었습니다.`
     });
 
