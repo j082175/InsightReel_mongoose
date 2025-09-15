@@ -156,7 +156,7 @@ class ChannelAnalysisService {
             const updatedAt = result.updatedAt instanceof Date ? result.updatedAt : new Date(result.updatedAt);
             
             ServerLogger.debug('🍃 MongoDB 채널 저장 완료', {
-                channelId: channelData.id,
+                channelId: channelData.channelId,
                 name: channelData.name,
                 isNew:
                     !result.updatedAt ||
