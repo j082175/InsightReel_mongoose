@@ -276,6 +276,7 @@ class ChannelAnalysisService {
             }
 
             // 3. 채널 데이터 구성
+            ServerLogger.info(`🐛 DEBUG: youtubeData.publishedAt = ${youtubeData.publishedAt}`);
             const channelData = {
                 channelId: youtubeData.id,
                 name: youtubeData.channelName,
@@ -513,6 +514,7 @@ class ChannelAnalysisService {
                 description: channelData.description || '',
                 thumbnailUrl: channelData.thumbnailUrl || '',
                 customUrl: channelData.customUrl || '',
+                publishedAt: channelData.publishedAt, // 채널 생성일
 
                 // 콘텐츠 타입 정보
                 contentType: channelData.contentType || 'mixed', // longform, shortform, mixed
@@ -571,6 +573,10 @@ class ChannelAnalysisService {
             // 중복검사는 이미 위에서 완료됨
 
             // 🚀 MongoDB 저장 (메인) + 백업 파일 업데이트
+            ServerLogger.info(`🐛 DEBUG: channelData 전체 구조`, {
+                publishedAt: channel.publishedAt,
+                keys: Object.keys(channel)
+            });
             const savedChannel = await this.saveToMongoDB(channel);
 
             // ✅ 채널 저장 성공 후에만 중복검사 DB에 등록 (원래 설계 의도)

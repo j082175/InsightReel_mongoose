@@ -98,6 +98,14 @@ class YouTubeChannelService {
 
             if (response.data.items && response.data.items.length > 0) {
                 const channel = response.data.items[0];
+                ServerLogger.info(`🐛 DEBUG: YouTube API 전체 응답`, {
+                    id: channel.id,
+                    snippet: {
+                        title: channel.snippet?.title,
+                        publishedAt: channel.snippet?.publishedAt,
+                        description: channel.snippet?.description?.substring(0, 100)
+                    }
+                });
                 return this.formatChannelData(channel);
             }
 
@@ -156,8 +164,10 @@ class YouTubeChannelService {
         const snippet = channelData.snippet || {};
         const statistics = channelData.statistics || {};
 
+        ServerLogger.info(`🐛 DEBUG: YouTube API snippet.publishedAt = ${snippet.publishedAt}`);
+
         // 🚀 새 인터페이스 표준을 따르는 채널 데이터 구조
-        return {
+        const result = {
             id: channelData.id,
             channelName: snippet.title || '',
             channelId: channelData.id, // 호환성을 위한 추가
@@ -180,6 +190,13 @@ class YouTubeChannelService {
                 ? `https://youtube.com/@${snippet.customUrl.replace('@', '')}`
                 : null,
         };
+
+        ServerLogger.info(`🐛 DEBUG: formatChannelData 결과`, {
+            publishedAt: result.publishedAt,
+            keys: Object.keys(result)
+        });
+
+        return result;
     }
 
     /**
