@@ -9,6 +9,42 @@ class SimpleYouTubeChannelAnalyzer {
         this.createChannelButton();
     }
 
+    // YouTube 홈 화면 감지
+    isYouTubeHomePage() {
+        const currentUrl = window.location.href;
+        console.log('🔍 홈 화면 체크 - 현재 URL:', currentUrl);
+
+        // 먼저 영상/채널 페이지가 아닌지 확인 (더 정확함)
+        if (currentUrl.includes('/watch') ||
+            currentUrl.includes('/shorts/') ||
+            currentUrl.includes('/channel/') ||
+            currentUrl.includes('/@')) {
+            console.log('❌ 영상/채널 페이지 감지 - 분석 가능');
+            return false;
+        }
+
+        // 홈 화면 URL 패턴들 (정확한 매칭)
+        const homePatterns = [
+            'https://www.youtube.com/',
+            'https://www.youtube.com',
+            'https://www.youtube.com/feed/subscriptions',
+            'https://www.youtube.com/feed/trending',
+            'https://www.youtube.com/feed/explore'
+        ];
+
+        // 정확한 홈 화면 매칭 또는 쿼리 파라미터만 있는 경우
+        for (const pattern of homePatterns) {
+            if (currentUrl === pattern ||
+                currentUrl.startsWith(pattern + '?')) {
+                console.log('✅ 홈 화면 매칭됨:', pattern);
+                return true;
+            }
+        }
+
+        console.log('❌ 홈 화면 아님 - 분석 가능');
+        return false;
+    }
+
     // 플로팅 채널 수집 버튼 생성
     createChannelButton() {
         // 기존 버튼이 있으면 제거
@@ -50,38 +86,49 @@ class SimpleYouTubeChannelAnalyzer {
     async collectChannel() {
         console.log('📊 채널 수집 시작 - 단순 버전');
 
+        // 홈 화면에서는 분석하지 않음
+        if (this.isYouTubeHomePage()) {
+            console.log('🚫 YouTube 홈 화면에서는 채널 분석을 지원하지 않습니다');
+            alert('YouTube 홈 화면에서는 채널 분석을 지원하지 않습니다.\n채널 페이지나 영상 페이지에서 시도해주세요.');
+            return;
+        }
+
         const button = document.querySelector('#simple-channel-collect-btn span');
         const originalText = button.textContent;
         button.textContent = '수집 중...';
 
         try {
-            // 쇼츠 분석 버튼과 완전히 동일한 메타데이터 추출
-            const metadata = this.extractYouTubeMetadata();
-            console.log('📋 추출된 메타데이터:', metadata);
-
-            // 페이지 타입 감지 (검증용)
+            // 페이지 타입 감지
             const currentUrl = window.location.href;
             let pageType = 'unknown';
             if (currentUrl.includes('/channel/') || currentUrl.includes('/@')) {
                 pageType = 'channel';
-            } else if (currentUrl.includes('/watch') || currentUrl.includes('/shorts/')) {
-                pageType = 'video';
+            } else if (currentUrl.includes('/shorts/')) {
+                pageType = 'shorts';
+            } else if (currentUrl.includes('/watch')) {
+                pageType = 'longform';
             }
 
-            // 검증 로직 개선
+            // 쇼츠 분석 버튼과 완전히 동일한 메타데이터 추출
+            const metadata = this.extractYouTubeMetadata();
+            console.log('📋 추출된 메타데이터:', metadata);
+
+            // 개선된 검증 로직
             if (!metadata.author && !metadata.channelName) {
                 if (pageType === 'channel') {
                     throw new Error('채널 페이지이지만 채널 정보를 찾을 수 없습니다. 페이지가 완전히 로드되었는지 확인해주세요.');
-                } else if (pageType === 'video') {
-                    throw new Error('영상 페이지에서 채널 정보를 찾을 수 없습니다. 영상이 완전히 로드되었는지 확인해주세요.');
+                } else if (pageType === 'longform') {
+                    throw new Error('롱폼 영상에서 채널 정보를 찾을 수 없습니다. 영상이 완전히 로드되었는지 확인해주세요.');
+                } else if (pageType === 'shorts') {
+                    throw new Error('쇼츠에서 채널 정보를 찾을 수 없습니다. 쇼츠가 완전히 로드되었는지 확인해주세요.');
                 } else {
-                    throw new Error('지원되지 않는 YouTube 페이지입니다. 채널, 영상, 또는 쇼츠 페이지에서 시도해주세요.');
+                    throw new Error('지원되지 않는 YouTube 페이지입니다. 채널, 롱폼 영상, 또는 쇼츠 페이지에서 시도해주세요.');
                 }
             }
 
             // 경고: 구독자 정보가 없는 경우 (채널 페이지가 아닐 때)
             if (pageType !== 'channel' && !metadata.subscribers) {
-                console.log('⚠️ 구독자 정보 없음 - 영상 페이지에서는 구독자 정보를 가져올 수 없습니다');
+                console.log(`⚠️ 구독자 정보 없음 - ${pageType === 'longform' ? '롱폼 영상' : '쇼츠'} 페이지에서는 구독자 정보를 가져올 수 없습니다`);
                 metadata.subscribers = '정보 없음';
             }
 
@@ -104,11 +151,13 @@ class SimpleYouTubeChannelAnalyzer {
         const currentUrl = window.location.href;
         let pageType = 'unknown';
 
-        // 페이지 타입 감지
+        // 더 정확한 페이지 타입 감지
         if (currentUrl.includes('/channel/') || currentUrl.includes('/@')) {
             pageType = 'channel';
-        } else if (currentUrl.includes('/watch') || currentUrl.includes('/shorts/')) {
-            pageType = 'video';
+        } else if (currentUrl.includes('/shorts/')) {
+            pageType = 'shorts';     // 🎵 쇼츠 전용
+        } else if (currentUrl.includes('/watch')) {
+            pageType = 'longform';   // 🎬 롱폼 전용
         }
 
         console.log(`📍 감지된 페이지 타입: ${pageType}`);
@@ -140,22 +189,12 @@ class SimpleYouTubeChannelAnalyzer {
                 }
             }
 
-            // 2단계: 영상/쇼츠 페이지에서 채널 정보 추출
-            if (!channelFound && pageType === 'video') {
-                console.log('🎬 영상/쇼츠 페이지에서 채널 정보 추출 중...');
+            // 2단계: 롱폼 영상 페이지에서 채널 정보 추출
+            if (!channelFound && pageType === 'longform') {
+                console.log('🎬 롱폼 영상 페이지에서 채널 정보 추출 중...');
 
-                // 디버깅: 현재 페이지의 모든 채널 관련 요소 찾기
-                console.log('🔍 디버깅: 현재 페이지의 모든 채널 관련 요소들');
-                const allChannelElements = document.querySelectorAll('*[id*="channel"], *[class*="channel"], *[href*="@"], *[href*="/channel/"]');
-                console.log('발견된 채널 관련 요소 수:', allChannelElements.length);
-                allChannelElements.forEach((el, i) => {
-                    if (i < 10) { // 처음 10개만 로깅
-                        console.log(`요소 ${i}:`, el.tagName, el.id, el.className, el.textContent?.trim().slice(0, 50));
-                    }
-                });
-
-                const videoChannelSelectors = [
-                    // 최신 YouTube UI 셀렉터들
+                const longformChannelSelectors = [
+                    // 최신 YouTube UI 셀렉터들 (롱폼 전용)
                     'ytd-channel-name#channel-name a',           // 최신 채널명 링크
                     '#above-the-fold #channel-name a',          // 영상 상단 채널명
                     '#owner #channel-name a',                   // 소유자 정보의 채널명
@@ -173,8 +212,6 @@ class SimpleYouTubeChannelAnalyzer {
                     'a[href*="@"]',                            // @채널명 링크
                     'a[href*="/channel/"]',                    // /channel/ 링크
                     'a[href*="/user/"]',                       // /user/ 링크
-                    '.yt-simple-endpoint[href*="@"]',          // 심플 엔드포인트 @
-                    '.yt-simple-endpoint[href*="/channel/"]',   // 심플 엔드포인트 채널
 
                     // 텍스트만 있는 요소들
                     'ytd-channel-name#channel-name',           // 채널명만 (링크 없이)
@@ -182,27 +219,21 @@ class SimpleYouTubeChannelAnalyzer {
                     '.ytd-channel-name',                       // 채널명 클래스
                 ];
 
-                for (let i = 0; i < videoChannelSelectors.length; i++) {
-                    const selector = videoChannelSelectors[i];
-                    console.log(`🔍 시도 중 (${i + 1}/${videoChannelSelectors.length}): ${selector}`);
+                for (let i = 0; i < longformChannelSelectors.length; i++) {
+                    const selector = longformChannelSelectors[i];
+                    console.log(`🔍 롱폼 시도 중 (${i + 1}/${longformChannelSelectors.length}): ${selector}`);
 
                     const channelEl = document.querySelector(selector);
-                    console.log(`   결과:`, channelEl ? `발견됨 (${channelEl.tagName})` : '없음');
-
                     if (channelEl) {
-                        // 채널명 텍스트 추출
                         const channelName = channelEl.textContent?.trim();
-                        console.log(`   텍스트: "${channelName}"`);
-
                         if (channelName && channelName.length > 0 && channelName !== 'undefined') {
                             metadata.channelName = channelName;
                             metadata.author = channelName;
-                            console.log(`✅ 영상 페이지에서 채널명 발견 (${selector}):`, channelName);
+                            console.log(`✅ 롱폼에서 채널명 발견 (${selector}):`, channelName);
 
-                            // 채널 URL도 추출
                             if (channelEl.href) {
                                 metadata.channelUrl = channelEl.href;
-                                console.log(`✅ 채널 URL 발견:`, channelEl.href);
+                                console.log(`✅ 롱폼에서 채널 URL 발견:`, channelEl.href);
                             }
 
                             channelFound = true;
@@ -210,23 +241,60 @@ class SimpleYouTubeChannelAnalyzer {
                         }
                     }
                 }
+            }
 
-                // 추가 시도: 쇼츠 전용 셀렉터
-                if (!channelFound) {
-                    console.log('🎵 쇼츠 전용 셀렉터로 시도 중...');
-                    const shortsChannelSelectors = [
-                        'ytd-reel-video-renderer #channel-name',
-                        '.ytd-reel-player-header-renderer #channel-name',
-                        '#shorts-container #channel-name',
-                        '.reel-video-in-sequence #channel-name'
-                    ];
+            // 3단계: 쇼츠 페이지에서 채널 정보 추출
+            if (!channelFound && pageType === 'shorts') {
+                console.log('🎵 쇼츠 페이지에서 채널 정보 추출 중...');
 
-                    for (const selector of shortsChannelSelectors) {
-                        const channelEl = document.querySelector(selector);
-                        if (channelEl && channelEl.textContent?.trim()) {
-                            metadata.channelName = channelEl.textContent.trim();
-                            metadata.author = metadata.channelName;
-                            console.log(`✅ 쇼츠 페이지에서 채널명 발견 (${selector}):`, metadata.channelName);
+                // 디버깅: 페이지에 있는 모든 채널 링크 확인
+                console.log('🔍 디버깅: 쇼츠 페이지의 모든 채널 링크들');
+                const allChannelLinks = document.querySelectorAll('a[href*="@"], a[href*="/channel/"]');
+                allChannelLinks.forEach((link, i) => {
+                    if (i < 5) { // 처음 5개만 로깅
+                        console.log(`채널 링크 ${i + 1}:`, link.textContent?.trim(), '→', link.href);
+                    }
+                });
+
+                const shortsChannelSelectors = [
+                    // 현재 재생 중인 쇼츠의 채널 정보 (우선순위 높음)
+                    'ytd-reel-video-renderer[is-active] #channel-name a',           // 활성 릴 비디오의 채널 링크
+                    'ytd-reel-video-renderer[is-active] #channel-name',             // 활성 릴 비디오의 채널명
+                    '.reel-video-in-sequence[is-active] #channel-name a',           // 활성 시퀀스의 채널 링크
+                    '.reel-video-in-sequence[is-active] #channel-name',             // 활성 시퀀스의 채널명
+
+                    // 현재 포커스된 쇼츠 (YouTube의 새로운 구조)
+                    'ytd-reel-video-renderer:has(video[data-loaded="true"]) #channel-name a',
+                    'ytd-reel-video-renderer:has(video[data-loaded="true"]) #channel-name',
+
+                    // 일반적인 쇼츠 셀렉터들 (fallback)
+                    'ytd-reel-video-renderer #channel-name a',
+                    '.ytd-reel-player-header-renderer #channel-name a',
+                    'ytd-reel-video-renderer #channel-name',
+                    '.ytd-reel-player-header-renderer #channel-name',
+
+                    // 마지막 수단: 현재 표시되는 첫 번째 채널 링크 (신중하게 사용)
+                    'ytd-reel-video-renderer:first-of-type a[href*="@"]',           // 첫 번째 릴의 @ 링크
+                    'ytd-reel-video-renderer:first-of-type a[href*="/channel/"]',   // 첫 번째 릴의 채널 링크
+                ];
+
+                for (let i = 0; i < shortsChannelSelectors.length; i++) {
+                    const selector = shortsChannelSelectors[i];
+                    console.log(`🔍 쇼츠 시도 중 (${i + 1}/${shortsChannelSelectors.length}): ${selector}`);
+
+                    const channelEl = document.querySelector(selector);
+                    if (channelEl) {
+                        const channelName = channelEl.textContent?.trim();
+                        if (channelName && channelName.length > 0 && channelName !== 'undefined') {
+                            metadata.channelName = channelName;
+                            metadata.author = channelName;
+                            console.log(`✅ 쇼츠에서 채널명 발견 (${selector}):`, channelName);
+
+                            if (channelEl.href) {
+                                metadata.channelUrl = channelEl.href;
+                                console.log(`✅ 쇼츠에서 채널 URL 발견:`, channelEl.href);
+                            }
+
                             channelFound = true;
                             break;
                         }
