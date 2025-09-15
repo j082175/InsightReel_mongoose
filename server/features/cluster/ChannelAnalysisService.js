@@ -287,6 +287,7 @@ class ChannelAnalysisService {
                 description: youtubeData.description,
                 thumbnailUrl: youtubeData.thumbnailUrl,
                 customUrl: youtubeData.customUrl,
+                publishedAt: youtubeData.publishedAt, // 채널 생성일
 
                 // 상세 분석 정보 (요청한 6가지 + α)
                 ...(analysisData && {
@@ -572,12 +573,12 @@ class ChannelAnalysisService {
             // 🚀 MongoDB 저장 (메인) + 백업 파일 업데이트
             const savedChannel = await this.saveToMongoDB(channel);
 
-            // ✅ 채널 저장 성공 후 중복검사 DB에 등록
+            // ✅ 채널 저장 성공 후에만 중복검사 DB에 등록 (원래 설계 의도)
             try {
                 const normalizedChannelId = savedChannel.customUrl?.startsWith('@')
                     ? savedChannel.customUrl
                     : `@${savedChannel.customUrl || savedChannel.name}`;
-                
+
                 await DuplicateCheckManager.updateChannelStatus(
                     normalizedChannelId,
                     'completed',
@@ -588,7 +589,7 @@ class ChannelAnalysisService {
                         channelId: savedChannel.channelId
                     }
                 );
-                
+
                 ServerLogger.success(`📝 중복검사 DB 등록 완료: ${normalizedChannelId}`);
             } catch (duplicateError) {
                 ServerLogger.warn(`⚠️ 중복검사 DB 등록 실패 (무시): ${duplicateError.message}`);
@@ -599,7 +600,7 @@ class ChannelAnalysisService {
                 ServerLogger.warn('⚠️ 백업 파일 업데이트 실패 (무시)', error);
             });
 
-            return channel;
+            return savedChannel;
         } catch (error) {
             ServerLogger.error('❌ 채널 저장 실패', error);
             throw error;
