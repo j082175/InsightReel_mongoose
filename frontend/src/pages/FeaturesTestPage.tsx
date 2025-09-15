@@ -1,9 +1,9 @@
 import React, { memo, useState } from 'react';
-import { ChannelGroupModal } from '../features/channel-management';
+import { ChannelGroupModal, ChannelCard, ChannelGroupCard, ChannelAnalysisModal } from '../features/channel-management';
 import { BulkCollectionModal } from '../features/trending-collection';
 import { VideoAnalysisModal, VideoModal, VideoOnlyModal, VideoListItem } from '../features/video-analysis';
 import { BatchCard, BatchForm, BatchVideoList } from '../features/batch-management';
-import { Video, Channel, CollectionBatch } from '../shared/types';
+import { Video, Channel, CollectionBatch, ChannelGroup } from '../shared/types';
 
 const FeaturesTestPage: React.FC = memo(() => {
   const [isChannelGroupModalOpen, setChannelGroupModalOpen] = useState(false);
@@ -11,6 +11,8 @@ const FeaturesTestPage: React.FC = memo(() => {
   const [isVideoAnalysisModalOpen, setVideoAnalysisModalOpen] = useState(false);
   const [isVideoModalOpen, setVideoModalOpen] = useState(false);
   const [isVideoOnlyModalOpen, setVideoOnlyModalOpen] = useState(false);
+  const [isChannelAnalysisModalOpen, setChannelAnalysisModalOpen] = useState(false);
+  const [selectedChannelForAnalysis, setSelectedChannelForAnalysis] = useState<string | null>(null);
 
   // 테스트용 데이터들
   const testVideo: Video = {
@@ -115,6 +117,37 @@ const FeaturesTestPage: React.FC = memo(() => {
     }
   ];
 
+  const testChannelGroups: ChannelGroup[] = [
+    {
+      _id: 'group1',
+      name: '테크 유튜버 그룹',
+      description: '기술 관련 YouTube 채널들을 모은 그룹입니다',
+      color: 'blue',
+      channels: [
+        { channelId: 'UC123abc', name: '테크 채널 1' },
+        { channelId: 'UC456def', name: '테크 채널 2' }
+      ],
+      keywords: ['기술', '프로그래밍', '리뷰'],
+      isActive: true,
+      createdAt: '2024-01-15T10:00:00Z',
+      updatedAt: '2024-01-15T10:30:00Z'
+    },
+    {
+      _id: 'group2',
+      name: '라이프스타일 인플루언서',
+      description: '인스타그램 라이프스타일 채널 그룹',
+      color: 'pink',
+      channels: [
+        { channelId: 'IG789ghi', name: '라이프 채널 1' },
+        { channelId: 'IG012jkl', name: '라이프 채널 2' }
+      ],
+      keywords: ['라이프스타일', '패션', '뷰티'],
+      isActive: true,
+      createdAt: '2024-01-15T11:00:00Z',
+      updatedAt: '2024-01-15T11:30:00Z'
+    }
+  ];
+
   return (
     <div className="container mx-auto p-8">
       <div className="max-w-6xl mx-auto">
@@ -127,14 +160,71 @@ const FeaturesTestPage: React.FC = memo(() => {
         {/* Channel Management Features */}
         <section className="mb-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">📺 Channel Management</h2>
-          <div className="space-y-4">
+
+          {/* ChannelGroupModal */}
+          <div className="bg-gray-50 p-6 rounded-lg mb-6">
+            <h3 className="text-lg font-semibold mb-4">ChannelGroupModal</h3>
             <button
               onClick={() => setChannelGroupModalOpen(true)}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             >
               ChannelGroupModal 열기 (생성 모드)
             </button>
-            <p className="text-sm text-gray-600">채널 그룹을 생성하거나 편집할 수 있는 모달입니다.</p>
+            <p className="text-sm text-gray-600 mt-2">채널 그룹을 생성하거나 편집할 수 있는 모달입니다.</p>
+          </div>
+
+          {/* ChannelCard */}
+          <div className="bg-gray-50 p-6 rounded-lg mb-6">
+            <h3 className="text-lg font-semibold mb-4">ChannelCard</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {testChannels.map((channel) => (
+                <ChannelCard
+                  key={channel._id}
+                  channel={channel}
+                  onClick={(ch) => console.log('채널 클릭:', ch)}
+                  onAnalyze={(channelId) => {
+                    setSelectedChannelForAnalysis(channelId);
+                    setChannelAnalysisModalOpen(true);
+                  }}
+                  onEdit={(ch) => console.log('채널 편집:', ch)}
+                  onDelete={(ch) => console.log('채널 삭제:', ch)}
+                />
+              ))}
+            </div>
+            <p className="text-sm text-gray-600 mt-2">개별 채널 정보를 표시하는 카드 컴포넌트입니다.</p>
+          </div>
+
+          {/* ChannelGroupCard */}
+          <div className="bg-gray-50 p-6 rounded-lg mb-6">
+            <h3 className="text-lg font-semibold mb-4">ChannelGroupCard</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {testChannelGroups.map((group) => (
+                <ChannelGroupCard
+                  key={group._id}
+                  group={group}
+                  onClick={(g) => console.log('그룹 클릭:', g)}
+                  onEdit={(g) => console.log('그룹 편집:', g)}
+                  onDelete={(g) => console.log('그룹 삭제:', g)}
+                  onCollect={(g) => console.log('그룹 수집:', g)}
+                />
+              ))}
+            </div>
+            <p className="text-sm text-gray-600 mt-2">채널 그룹 정보를 표시하는 카드 컴포넌트입니다.</p>
+          </div>
+
+          {/* ChannelAnalysisModal */}
+          <div className="bg-gray-50 p-6 rounded-lg mb-6">
+            <h3 className="text-lg font-semibold mb-4">ChannelAnalysisModal</h3>
+            <button
+              onClick={() => {
+                setSelectedChannelForAnalysis('UC123abc');
+                setChannelAnalysisModalOpen(true);
+              }}
+              className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+            >
+              ChannelAnalysisModal 열기
+            </button>
+            <p className="text-sm text-gray-600 mt-2">채널 분석 결과를 표시하는 모달입니다.</p>
           </div>
         </section>
 
@@ -326,6 +416,14 @@ const FeaturesTestPage: React.FC = memo(() => {
             isOpen={isVideoOnlyModalOpen}
             onClose={() => setVideoOnlyModalOpen(false)}
             video={testVideo}
+          />
+        )}
+
+        {isChannelAnalysisModalOpen && (
+          <ChannelAnalysisModal
+            isOpen={isChannelAnalysisModalOpen}
+            onClose={() => setChannelAnalysisModalOpen(false)}
+            channelId={selectedChannelForAnalysis || ''}
           />
         )}
       </div>

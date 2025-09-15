@@ -27,6 +27,9 @@ import TestMenuPage from '../../pages/TestMenuPage';
 import SharedTestPage from '../../pages/SharedTestPage';
 import FeaturesTestPage from '../../pages/FeaturesTestPage';
 import IntegrationTestPage from '../../pages/IntegrationTestPage';
+import HooksTestPage from '../../pages/HooksTestPage';
+import UIHooksTestPage from '../../pages/UIHooksTestPage';
+import APIHooksTestPage from '../../pages/APIHooksTestPage';
 
 // ===== Page Component Mapping =====
 const PAGE_COMPONENTS: Record<string, React.ComponentType> = {
@@ -45,6 +48,9 @@ const PAGE_COMPONENTS: Record<string, React.ComponentType> = {
     'test-shared': SharedTestPage,
     'test-features': FeaturesTestPage,
     'test-integration': IntegrationTestPage,
+    'test-hooks': HooksTestPage,
+    'test-ui-hooks': UIHooksTestPage,
+    'test-api-hooks': APIHooksTestPage,
   }),
 };
 

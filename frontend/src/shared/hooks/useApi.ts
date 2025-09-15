@@ -108,23 +108,8 @@ export const useVideos = () => {
     queryFn: async () => {
       try {
         const response = await apiClient.getVideos();
-        console.log('🎬 Videos API 응답:', response);
-        
         const videos = parseVideosResponse(response);
-        console.log('📊 파싱된 영상 수:', videos.length);
-        
-        if (videos.length > 0) {
-          console.log('🔍 첫 번째 영상 샘플:', videos[0]);
-        }
-        
-        // 플랫폼 정보 디버깅 (처음 3개만)
-        videos.slice(0, 3).forEach((video, index) => {
-          console.log(`🔍 영상 ${index + 1} 플랫폼 정보:`, {
-            title: video.title?.substring(0, 30) + '...',
-            platform: video.platform,
-          });
-        });
-        
+
         return videos;
       } catch (error) {
         console.warn('영상 API 호출 실패, 빈 배열 반환:', error);
@@ -181,10 +166,7 @@ export const useChannels = () => {
     queryFn: async () => {
       try {
         const response = await apiClient.getChannels();
-        console.log('🔍 Channels API 응답:', response);
-        
         const channels = parseChannelsResponse(response);
-        console.log('📊 파싱된 채널 수:', channels.length);
         return channels;
       } catch (error) {
         console.warn('채널 API 호출 실패, mock 데이터 사용:', error);

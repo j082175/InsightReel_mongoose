@@ -7,7 +7,7 @@
  * - 설정 컨텍스트 통합
  */
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CollectionBatchEntity } from '../../entities';
 import { VideoEntity } from '../../entities';
 
@@ -42,9 +42,44 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [collectionBatches, setCollectionBatches] = useState<CollectionBatchEntity[]>([]);
   const [collectedVideos, setCollectedVideos] = useState<VideoEntity[]>([]);
 
+  // 브라우저 히스토리 초기화
+  useEffect(() => {
+    // 현재 페이지를 브라우저 히스토리에 추가
+    window.history.replaceState({ page: currentPage }, '', `#${currentPage}`);
+
+    // 브라우저 뒤로가기/앞으로가기 이벤트 처리
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state && event.state.page) {
+        setCurrentPage(event.state.page);
+      } else {
+        // state가 없으면 URL 해시에서 페이지 추출
+        const hash = window.location.hash.slice(1);
+        if (hash) {
+          setCurrentPage(hash);
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
   const addCollectionBatch = (batch: CollectionBatchEntity, videos: VideoEntity[]) => {
     setCollectionBatches(prev => [batch, ...prev]); // 최신순으로 추가
     setCollectedVideos(prev => [...videos, ...prev]); // 최신순으로 추가
+  };
+
+  // 페이지 변경 함수 (브라우저 히스토리에 추가)
+  const handleSetCurrentPage = (page: string) => {
+    if (page !== currentPage) {
+      setCurrentPage(page);
+
+      // 브라우저 히스토리에 새 페이지 추가
+      window.history.pushState({ page }, '', `#${page}`);
+    }
   };
 
   const contextValue: AppContextType = {
@@ -52,7 +87,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     collectedVideos,
     addCollectionBatch,
     currentPage,
-    setCurrentPage,
+    setCurrentPage: handleSetCurrentPage,
   };
 
   return (

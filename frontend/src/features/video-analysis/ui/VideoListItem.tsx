@@ -28,9 +28,9 @@ const VideoListItem: React.FC<VideoListItemProps> = memo(({
   const views = getViewCount(video);
 
   const handleClick = useCallback((_e: React.MouseEvent) => {
-    if (isSelectMode) {
+    if (isSelectMode && typeof onSelectToggle === 'function') {
       onSelectToggle(videoId);
-    } else {
+    } else if (typeof onCardClick === 'function') {
       onCardClick(video);
     }
   }, [isSelectMode, onSelectToggle, videoId, onCardClick, video]);
@@ -42,12 +42,16 @@ const VideoListItem: React.FC<VideoListItemProps> = memo(({
 
   const handleDelete = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    onDeleteClick({ type: 'single', data: video });
+    if (typeof onDeleteClick === 'function') {
+      onDeleteClick({ type: 'single', data: video });
+    }
     setMenuOpen(false);
   }, [onDeleteClick, video]);
 
   const handleCheckboxChange = useCallback(() => {
-    onSelectToggle(videoId);
+    if (typeof onSelectToggle === 'function') {
+      onSelectToggle(videoId);
+    }
   }, [onSelectToggle, videoId]);
 
   const handleCheckboxClick = useCallback((e: React.MouseEvent) => {

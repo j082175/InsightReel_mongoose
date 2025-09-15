@@ -1,6 +1,7 @@
 import React, { memo, useState } from 'react';
 import { VideoCard, SearchBar, ActionBar, Modal } from '../shared/components';
-import { DeleteConfirmModal } from '../shared/ui';
+import { Header, Sidebar } from '../shared/components/layout';
+import { DeleteConfirmModal, ApiKeyManager, NotificationModal, SettingsModal } from '../shared/ui';
 import { formatViews, formatDate, getDurationLabel } from '../shared/utils/formatters';
 import { getPlatformStyle, getPlatformIconStyle } from '../shared/utils/platformStyles';
 import { Video } from '../shared/types';
@@ -10,6 +11,11 @@ const SharedTestPage: React.FC = memo(() => {
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [isModalOpen, setModalOpen] = useState(false);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isApiKeyManagerOpen, setApiKeyManagerOpen] = useState(false);
+  const [isNotificationModalOpen, setNotificationModalOpen] = useState(false);
+  const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationType, setNotificationType] = useState<'success' | 'error' | 'warning' | 'info'>('info');
 
   // 테스트용 비디오 데이터들
   const testVideos: Video[] = [
@@ -252,6 +258,123 @@ const SharedTestPage: React.FC = memo(() => {
           }}
           title="선택된 항목 삭제"
           message={`${selectedItems.length}개의 항목을 삭제하시겠습니까?`}
+        />
+
+        {/* Header 테스트 */}
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">🔝 Header</h2>
+          <div className="space-y-6">
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <h3 className="text-lg font-semibold mb-4">기본 헤더</h3>
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <Header onMenuClick={() => setSidebarOpen(true)} />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Sidebar 테스트 */}
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">📱 Sidebar</h2>
+          <div className="space-y-6">
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <h3 className="text-lg font-semibold mb-4">사이드바 상태들</h3>
+              <div className="space-y-4">
+                <button
+                  onClick={() => setSidebarOpen(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  사이드바 열기
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ApiKeyManager 테스트 */}
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">🔑 API Key Manager</h2>
+          <div className="space-y-6">
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <h3 className="text-lg font-semibold mb-4">API 키 관리</h3>
+              <button
+                onClick={() => setApiKeyManagerOpen(true)}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              >
+                API 키 관리자 열기
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* NotificationModal 테스트 */}
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">🔔 Notification Modal</h2>
+          <div className="space-y-6">
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <h3 className="text-lg font-semibold mb-4">다양한 알림 타입</h3>
+              <div className="flex flex-wrap gap-3">
+                {(['success', 'error', 'warning', 'info'] as const).map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => {
+                      setNotificationType(type);
+                      setNotificationModalOpen(true);
+                    }}
+                    className={`px-4 py-2 text-white rounded hover:opacity-90 ${
+                      type === 'success' ? 'bg-green-600' :
+                      type === 'error' ? 'bg-red-600' :
+                      type === 'warning' ? 'bg-yellow-600' :
+                      'bg-blue-600'
+                    }`}
+                  >
+                    {type.toUpperCase()} 알림
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* SettingsModal 테스트 */}
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">⚙️ Settings Modal</h2>
+          <div className="space-y-6">
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <h3 className="text-lg font-semibold mb-4">설정 모달</h3>
+              <button
+                onClick={() => setSettingsModalOpen(true)}
+                className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+              >
+                설정 모달 열기
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* 모달들 */}
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          isTestMode={true}
+        />
+
+        <ApiKeyManager
+          isOpen={isApiKeyManagerOpen}
+          onClose={() => setApiKeyManagerOpen(false)}
+        />
+
+        <NotificationModal
+          isOpen={isNotificationModalOpen}
+          onClose={() => setNotificationModalOpen(false)}
+          type={notificationType}
+          title={`${notificationType.toUpperCase()} 알림 테스트`}
+          message={`이것은 ${notificationType} 타입의 알림 메시지입니다. 테스트 목적으로 표시되고 있습니다.`}
+        />
+
+        <SettingsModal
+          isOpen={isSettingsModalOpen}
+          onClose={() => setSettingsModalOpen(false)}
         />
       </div>
     </div>

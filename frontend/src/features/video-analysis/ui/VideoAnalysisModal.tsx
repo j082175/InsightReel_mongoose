@@ -39,7 +39,7 @@ const VideoAnalysisModal: React.FC<VideoAnalysisModalProps> = ({
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    if (isOpen && selectedChannels.length > 0) {
+    if (isOpen && selectedChannels?.length > 0) {
       runAnalysis();
     }
   }, [isOpen, selectedChannels]);
@@ -99,7 +99,7 @@ const VideoAnalysisModal: React.FC<VideoAnalysisModalProps> = ({
     <div>
       <h2 className="text-xl font-bold text-gray-900">📊 영상 분석 결과</h2>
       <p className="text-sm text-gray-600 mt-1">
-        {selectedChannels.length}개 채널 분석 결과
+        {selectedChannels?.length || 0}개 채널 분석 결과
       </p>
     </div>
   );

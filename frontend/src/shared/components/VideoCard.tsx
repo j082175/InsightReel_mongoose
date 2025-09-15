@@ -29,11 +29,6 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
   onSelectToggle,
   showArchiveInfo 
 }) => {
-  console.log('🎬 VideoCard 렌더링:', {
-    videoId: video._id,  // MongoDB _id 필드 직접 사용
-    title: video.title?.substring(0, 30) + '...',
-    hasOnDelete: !!onDelete
-  });
   const views = getViewCount(video);
   const thumbnailSrc = getThumbnailUrl(video);
   const videoId = getVideoId(video);

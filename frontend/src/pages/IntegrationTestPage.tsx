@@ -12,7 +12,6 @@ const IntegrationTestPage: React.FC = memo(() => {
   const { data: videos, isLoading: videosLoading, error: videosError } = useVideos();
 
   // 🔍 실제 데이터 구조 확인
-  console.log('🎬 IntegrationTestPage videos 데이터:', videos?.slice(0, 1));
 
   const { data: channels, isLoading: channelsLoading, error: channelsError } = useChannels();
 

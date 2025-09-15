@@ -28,16 +28,6 @@ const ChannelManagementPage: React.FC = () => {
   const { selectedChannels, toggleChannelSelection, selectAllChannels, clearSelection } = useChannelSelection();
   const { filters, updateFilters, resetFilters } = useChannelFilters();
 
-  // 디버깅용 로그
-  console.log('🔍 [DEBUG] Store 상태:', {
-    'Store channels 길이': channels.length,
-    'Store channels 데이터': channels,
-    'Filtered channels 길이': filteredChannels.length,
-    'Filtered channels 데이터': filteredChannels,
-    '현재 필터': filters,
-    'Loading 상태': isLoading,
-    'Error 상태': error
-  });
 
   // Local State
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
