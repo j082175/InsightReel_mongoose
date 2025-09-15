@@ -102,6 +102,11 @@ class YouTubeChannelAnalyzer {
                     totalViews: parseInt(channel.statistics.viewCount) || 0,
                     subscribers:
                         parseInt(channel.statistics.subscriberCount) || 0,
+                    // 추가된 필드들
+                    defaultLanguage: channel.snippet.defaultLanguage || '',
+                    country: channel.snippet.country || '',
+                    customUrl: channel.snippet.customUrl || '',
+                    publishedAt: channel.snippet.publishedAt || '',
                 };
             }
 
@@ -248,7 +253,10 @@ class YouTubeChannelAnalyzer {
      * 영상 데이터 분석 수행
      */
     performAnalysis(videos) {
+        ServerLogger.info(`🔍 performAnalysis 호출: ${videos?.length || 0}개 비디오`);
+
         if (!videos || videos.length === 0) {
+            ServerLogger.warn('⚠️ 비디오 데이터 없음 - 빈 분석 반환');
             return this.getEmptyAnalysis();
         }
 
@@ -730,7 +738,7 @@ ${videoAnalyses
                 maxVideos,
             );
             ServerLogger.info(
-                `🔍 DEBUG: shortFormRatio = ${basicAnalysis.analysis.shortFormRatio}`,
+                `🔍 DEBUG: basicAnalysis 결과 - videos: ${basicAnalysis.videos?.length || 0}개, shortFormRatio: ${basicAnalysis.analysis.shortFormRatio}`,
             );
 
             // 콘텐츠 분석이 활성화된 경우 분석 수행

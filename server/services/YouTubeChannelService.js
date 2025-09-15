@@ -189,6 +189,10 @@ class YouTubeChannelService {
             youtubeHandleUrl: snippet.customUrl
                 ? `https://youtube.com/@${snippet.customUrl.replace('@', '')}`
                 : null,
+
+            // 언어 및 지역 정보
+            defaultLanguage: snippet.defaultLanguage || '',
+            country: snippet.country || '',
         };
 
         ServerLogger.info(`🐛 DEBUG: formatChannelData 결과`, {

@@ -226,16 +226,18 @@ class ChannelAnalysisService {
                     `🔍 ChannelAnalysisService DEBUG: includeAnalysis = ${includeAnalysis}, skipAIAnalysis = ${skipAIAnalysis}, channelId = ${youtubeData.id}`,
                 );
             }
-            if (includeAnalysis) {
-                try {
-                    // skipAIAnalysis가 true면 AI 콘텐츠 분석만 건너뛰고 기본 통계는 수집
-                    const enableContentAnalysis = !skipAIAnalysis;
+            // 항상 기본 통계는 수집하되, AI 분석만 선택적으로 수행
+            try {
+                // skipAIAnalysis가 true면 AI 콘텐츠 분석만 건너뛰고 기본 통계는 수집
+                // const enableContentAnalysis = includeAnalysis && !skipAIAnalysis;
+                const enableContentAnalysis = !skipAIAnalysis;
 
-                    // 향상된 분석 수행
+                // 향상된 분석 수행 (빠른 모드는 비디오 수 제한)
+                const maxVideos = skipAIAnalysis ? 50 : 200;
                     const analysisResult =
                         await this.youtubeAnalyzer.analyzeChannelEnhanced(
                             youtubeData.id,
-                            200,
+                            maxVideos,
                             enableContentAnalysis, // AI 분석 여부
                         );
                     analysisData = analysisResult.analysis;
@@ -269,11 +271,6 @@ class ChannelAnalysisService {
                         `⚠️ 채널 분석 실패, 기본 정보만 저장: ${analysisError.message}`,
                     );
                 }
-            } else {
-                ServerLogger.warn(
-                    `⚠️ 상세 분석 건너뜀: includeAnalysis = ${includeAnalysis}`,
-                );
-            }
 
             // 3. 채널 데이터 구성
             ServerLogger.info(`🐛 DEBUG: youtubeData.publishedAt = ${youtubeData.publishedAt}`);
@@ -289,6 +286,10 @@ class ChannelAnalysisService {
                 thumbnailUrl: youtubeData.thumbnailUrl,
                 customUrl: youtubeData.customUrl,
                 publishedAt: youtubeData.publishedAt, // 채널 생성일
+
+                // 언어 및 지역 정보
+                defaultLanguage: youtubeData.defaultLanguage || '',
+                country: youtubeData.country || '',
 
                 // 상세 분석 정보 (요청한 6가지 + α)
                 ...(analysisData && {
@@ -475,6 +476,10 @@ class ChannelAnalysisService {
                 thumbnailUrl: youtubeData.thumbnailUrl,
                 customUrl: youtubeData.customUrl,
 
+                // 언어 및 지역 정보
+                defaultLanguage: youtubeData.defaultLanguage || '',
+                country: youtubeData.country || '',
+
                 // 사용자 입력 키워드
                 keywords: Array.isArray(userKeywords) ? userKeywords : [],
 
@@ -515,6 +520,10 @@ class ChannelAnalysisService {
                 thumbnailUrl: channelData.thumbnailUrl || '',
                 customUrl: channelData.customUrl || '',
                 publishedAt: channelData.publishedAt, // 채널 생성일
+
+                // 언어 및 지역 정보
+                defaultLanguage: channelData.defaultLanguage || '',
+                country: channelData.country || '',
 
                 // 콘텐츠 타입 정보
                 contentType: channelData.contentType || 'mixed', // longform, shortform, mixed

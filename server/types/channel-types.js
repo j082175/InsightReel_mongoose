@@ -48,6 +48,24 @@ const ChannelCore = {
     enum: ['auto', 'shortform', 'longform', 'mixed'],
     default: 'auto',
     required: false
+  },
+
+  // 언어 및 지역 정보
+  defaultLanguage: {
+    type: String,
+    default: '',
+    index: true
+  },
+
+  country: {
+    type: String,
+    default: '',
+    index: true
+  },
+
+  publishedAt: {
+    type: String,
+    default: ''
   }
 };
 
