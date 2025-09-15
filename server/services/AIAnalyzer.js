@@ -172,6 +172,12 @@ class AIAnalyzer {
     ServerLogger.info('🎯 URL 기반 카테고리 추론:', urlBasedCategory);
     
     try {
+      // 썸네일이 없는 경우 바로 URL 기반 분석으로 폴백
+      if (!thumbnailPaths || (Array.isArray(thumbnailPaths) && thumbnailPaths.length === 0)) {
+        ServerLogger.info('📸 썸네일 없음 - URL 기반 분석으로 폴백');
+        return this.createAnalysisFromUrl(urlBasedCategory, metadata);
+      }
+
       // 다중 프레임 분석인지 단일 프레임 분석인지 확인
       if (Array.isArray(thumbnailPaths) && thumbnailPaths.length > 1) {
         ServerLogger.info(`🎬 다중 프레임 분석 시작: ${thumbnailPaths.length}개 프레임`);

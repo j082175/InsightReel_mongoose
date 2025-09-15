@@ -10,7 +10,7 @@ const TestMenuPage: React.FC = memo(() => {
         <h1 className="text-4xl font-bold text-gray-900 mb-4">🛠️ 컴포넌트 테스트</h1>
         <p className="text-lg text-gray-600 mb-8">개발 환경에서 컴포넌트들의 동작을 확인할 수 있는 테스트 페이지들입니다.</p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {/* Shared 컴포넌트 테스트 */}
           <button
             onClick={() => navigateTo('test-shared')}
@@ -51,6 +51,26 @@ const TestMenuPage: React.FC = memo(() => {
                 • VideoAnalysisModal, VideoModal<br />
                 • BulkCollectionModal<br />
                 • BatchCard, BatchForm, BatchVideoList
+              </div>
+            </div>
+          </button>
+
+          {/* Components Lab 테스트 */}
+          <button
+            onClick={() => navigateTo('test-components')}
+            className="bg-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-100 hover:border-indigo-200 group text-left w-full"
+          >
+            <div className="text-center">
+              <div className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-300">🧪</div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">Components Lab</h2>
+              <p className="text-gray-600 leading-relaxed">
+                개별 컴포넌트 상세 테스트
+              </p>
+              <div className="mt-6 text-sm text-indigo-600">
+                • 컴포넌트별 전용 페이지<br />
+                • 모든 props와 상태<br />
+                • 실전 사용 시나리오<br />
+                • 카테고리별 분류
               </div>
             </div>
           </button>
@@ -144,6 +164,7 @@ const TestMenuPage: React.FC = memo(() => {
           <ul className="text-sm text-gray-600 space-y-2">
             <li>• <strong>Shared</strong>: 기본 레고 블록들의 다양한 상태 확인</li>
             <li>• <strong>Features</strong>: 조립된 기능 컴포넌트들의 동작 확인</li>
+            <li>• <strong>Components Lab</strong>: 개별 컴포넌트의 상세하고 전문적인 테스트</li>
             <li>• <strong>Integration</strong>: 실제 환경에서의 전체 동작 흐름 테스트</li>
             <li>• <strong>UI Hooks</strong>: 모달, 검색, 선택 등 UI 상태 관리 훅 테스트</li>
             <li>• <strong>API Hooks</strong>: 서버 통신, 데이터 로딩 등 API 관련 훅 테스트</li>

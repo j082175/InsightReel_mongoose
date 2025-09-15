@@ -131,6 +131,13 @@ const SERVER_CONSTANTS = {
         INCLUDE_MIDFORM: true,
         INCLUDE_LONGFORM: true,
     },
+
+    // 📄 콘텐츠 제한값
+    CONTENT_LIMITS: {
+        DESCRIPTION_MAX_LENGTH: 1000,      // 비디오 설명 최대 길이
+        SHARES_DEFAULT_VALUE: 0,           // YouTube API에서 shares 데이터 미제공 시 기본값
+        DELAY_BETWEEN_GROUPS: 500,         // 그룹 간 수집 딜레이 (ms)
+    },
 };
 
 module.exports = SERVER_CONSTANTS;

@@ -155,6 +155,7 @@ class VideoDataConverter {
             commentsCount: this.parseNumber(metadata.commentsCount),
             views: this.parseNumber(metadata.views),
             duration: metadata.duration || '',
+            contentType: metadata.contentType || 'longform',
             subscribers: this.parseNumber(metadata.subscribers),
             channelVideos: this.parseNumber(metadata.channelVideos),
             monetized: metadata.monetized || 'N',

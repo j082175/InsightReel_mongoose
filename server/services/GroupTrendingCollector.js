@@ -4,6 +4,8 @@ const TrendingVideo = require('../models/TrendingVideo');
 const DurationClassifier = require('../utils/duration-classifier');
 const { ServerLogger } = require('../utils/logger');
 const { PLATFORMS } = require('../config/api-messages');
+const { CONTENT_LIMITS } = require('../config/constants');
+const { YouTubeApiTypeUtils } = require('../types/youtube-api-types');
 
 /**
  * 🎯 그룹별 트렌딩 영상 수집기
@@ -150,7 +152,7 @@ class GroupTrendingCollector {
         }
 
         // 그룹 간 딜레이 (API 제한 방지)
-        await this.delay(500);
+        await this.delay(CONTENT_LIMITS.DELAY_BETWEEN_GROUPS);
       }
 
       ServerLogger.success(`🏁 전체 그룹 수집 완료: ${totalVideos}개 영상`);
@@ -169,8 +171,72 @@ class GroupTrendingCollector {
   }
 
   /**
+   * 공통 TrendingVideo 데이터 생성 팩토리 메서드
+   * @param {import('../types/youtube-api-types').YouTubeVideo} videoData - YouTube API 영상 데이터
+   * @param {Object} options - 옵션 { groupId, groupName, collectedFrom, keywords, batchId }
+   */
+  createTrendingVideoData(videoData, options = {}) {
+    const {
+      groupId = null,
+      groupName = '개별 채널 수집',
+      collectedFrom = 'individual',
+      keywords = [],
+      batchId = null
+    } = options;
+
+    // 타입 안전한 데이터 추출
+    const videoId = YouTubeApiTypeUtils.extractVideoId(videoData);
+    const views = YouTubeApiTypeUtils.parseViewCount(videoData);
+    const likes = YouTubeApiTypeUtils.parseLikeCount(videoData);
+    const commentsCount = YouTubeApiTypeUtils.parseCommentCount(videoData);
+    const description = YouTubeApiTypeUtils.extractDescription(videoData, CONTENT_LIMITS.DESCRIPTION_MAX_LENGTH);
+    const thumbnailUrl = YouTubeApiTypeUtils.extractThumbnailUrl(videoData);
+    const uploadDate = YouTubeApiTypeUtils.parseUploadDate(videoData);
+
+    // Duration 분류
+    const durationSeconds = DurationClassifier.parseDuration(videoData.contentDetails?.duration);
+    const durationCategory = DurationClassifier.categorizeByDuration(durationSeconds);
+
+    return {
+      videoId: videoId,
+      title: videoData.snippet?.title || '',
+      url: `https://www.youtube.com/watch?v=${videoId}`,
+      platform: PLATFORMS.YOUTUBE,
+
+      // 채널 정보
+      channelName: videoData.snippet?.channelTitle || '',
+      channelId: videoData.snippet?.channelId || '',
+      channelUrl: `https://www.youtube.com/channel/${videoData.snippet?.channelId || ''}`,
+
+      // 그룹 정보
+      groupId: groupId,
+      groupName: groupName,
+      batchId: batchId,
+      collectionDate: new Date(),
+      collectedFrom: collectedFrom,
+
+      // 통계 (타입 안전한 파싱)
+      views: views,
+      likes: likes,
+      commentsCount: commentsCount,
+      shares: CONTENT_LIMITS.SHARES_DEFAULT_VALUE,
+
+      // 메타데이터
+      uploadDate: uploadDate,
+      duration: durationCategory,
+      durationSeconds: durationSeconds,
+      thumbnailUrl: thumbnailUrl,
+      description: description,
+
+      // 키워드 및 태그
+      keywords: keywords || [],
+      hashtags: [] // 향후 비디오 설명에서 해시태그 추출 로직 추가 예정
+    };
+  }
+
+  /**
    * YouTube API 영상 데이터를 TrendingVideo로 변환 및 저장
-   * @param {Object} videoData - YouTube API 영상 데이터
+   * @param {import('../types/youtube-api-types').YouTubeVideo} videoData - YouTube API 영상 데이터
    * @param {Object} group - 채널 그룹 정보
    * @param {String} batchId - 배치 ID (선택사항)
    */
@@ -179,9 +245,14 @@ class GroupTrendingCollector {
       // 디버깅: 비디오 데이터 구조 확인
       console.log(`🔍 DEBUG: videoData structure:`, JSON.stringify(videoData, null, 2));
 
-      // 기존 영상 중복 체크 - YouTube API 구조에 따라 다른 형태 처리
-      const videoId = videoData.id?.videoId || videoData.id;
-      console.log(`🔍 DEBUG: extracted videoId: ${videoId} (from videoData.id?.videoId || videoData.id)`);
+      // 타입 안전한 비디오 ID 추출
+      const videoId = YouTubeApiTypeUtils.extractVideoId(videoData);
+      if (!videoId) {
+        ServerLogger.error('❌ 비디오 ID 추출 실패:', videoData);
+        return null;
+      }
+
+      console.log(`🔍 DEBUG: extracted videoId: ${videoId}`);
 
       const existingVideo = await TrendingVideo.findOne({ videoId: videoId });
       if (existingVideo) {
@@ -189,44 +260,16 @@ class GroupTrendingCollector {
         return null; // 이미 존재하는 영상
       }
 
-      // Duration 분류
-      const durationSeconds = DurationClassifier.parseDuration(videoData.contentDetails?.duration);
-      const durationCategory = DurationClassifier.categorizeByDuration(durationSeconds);
-
-      const trendingVideo = new TrendingVideo({
-        videoId: videoId,
-        title: videoData.snippet?.title,
-        url: `https://www.youtube.com/watch?v=${videoId}`,
-        platform: PLATFORMS.YOUTUBE,
-        
-        // 채널 정보
-        channelName: videoData.snippet?.channelTitle,
-        channelId: videoData.snippet?.channelId,
-        channelUrl: `https://www.youtube.com/channel/${videoData.snippet?.channelId}`,
-        
-        // 그룹 정보
+      // 팩토리 메서드를 사용하여 TrendingVideo 데이터 생성
+      const trendingVideoData = this.createTrendingVideoData(videoData, {
         groupId: group._id,
         groupName: group.name,
-        batchId: batchId, // 배치 ID 추가
-        collectionDate: new Date(),
         collectedFrom: 'trending',
-        
-        // 통계
-        views: parseInt(videoData.statistics?.viewCount) || 0,
-        likes: parseInt(videoData.statistics?.likeCount) || 0,
-        commentsCount: parseInt(videoData.statistics?.commentCount) || 0,
-        
-        // 메타데이터
-        uploadDate: new Date(videoData.snippet?.publishedAt),
-        duration: durationCategory,
-        durationSeconds: durationSeconds,
-        thumbnailUrl: videoData.snippet?.thumbnails?.high?.url,
-        description: videoData.snippet?.description?.substring(0, 1000), // 1000자 제한
-        
-        // 키워드 (그룹 키워드 상속)
-        keywords: group.keywords || []
+        keywords: group.keywords || [],
+        batchId: batchId
       });
 
+      const trendingVideo = new TrendingVideo(trendingVideoData);
       const saved = await trendingVideo.save();
       return saved;
 
@@ -308,8 +351,13 @@ class GroupTrendingCollector {
             ServerLogger.info(`🎬 채널 ${channelId}에서 ${channelResult.videos.length}개 영상 처리 시작`);
             for (const video of channelResult.videos) {
               try {
-                // 영상 중복 검사 (같은 배치 내에서만 중복 체크)
-                const videoId = video.id; // Videos API는 id가 직접 문자열
+                // 타입 안전한 비디오 ID 추출
+                const videoId = YouTubeApiTypeUtils.extractVideoId(video);
+                if (!videoId) {
+                  ServerLogger.error('❌ 비디오 ID 추출 실패:', video);
+                  continue;
+                }
+
                 ServerLogger.info(`🔍 영상 ID 체크: ${videoId} (${video.snippet?.title})`);
                 
                 // 같은 배치 내에서만 중복 검사 (배치별 중복 방지)
@@ -325,45 +373,16 @@ class GroupTrendingCollector {
                 
                 ServerLogger.info(`💾 새로운 영상 저장 시작: ${videoId}`);  
 
-                // Duration 분류
-                const durationSeconds = DurationClassifier.parseDuration(video.contentDetails?.duration);
-                const durationCategory = DurationClassifier.categorizeByDuration(durationSeconds);
-                
-                ServerLogger.info(`🕒 영상 길이 분류: ${video.contentDetails?.duration} → ${durationSeconds}초 → ${durationCategory}`);
+                // 팩토리 메서드를 사용하여 TrendingVideo 데이터 생성
+                ServerLogger.info(`🕒 영상 길이 분류: ${video.contentDetails?.duration}`);
 
-                const trendingVideoData = {
-                  videoId: videoId,
-                  title: video.snippet?.title,
-                  url: `https://www.youtube.com/watch?v=${videoId}`,
-                  platform: PLATFORMS.YOUTUBE,
-                  
-                  // 채널 정보
-                  channelName: video.snippet?.channelTitle,
-                  channelId: video.snippet?.channelId,
-                  channelUrl: `https://www.youtube.com/channel/${video.snippet?.channelId}`,
-                  
-                  // 그룹 정보 (개별 채널 수집이므로 기본값 설정)
+                const trendingVideoData = this.createTrendingVideoData(video, {
                   groupId: null,
                   groupName: '개별 채널 수집',
-                  batchId: batchId, // 배치 ID 추가
-                  collectionDate: new Date(),
                   collectedFrom: 'individual',
-                  
-                  // 통계
-                  views: parseInt(video.statistics?.viewCount) || 0,
-                  likes: parseInt(video.statistics?.likeCount) || 0,
-                  commentsCount: parseInt(video.statistics?.commentCount) || 0,
-                  
-                  // 메타데이터
-                  uploadDate: new Date(video.snippet?.publishedAt),
-                  duration: durationCategory,
-                  durationSeconds: durationSeconds,
-                  thumbnailUrl: video.snippet?.thumbnails?.high?.url,
-                  description: video.snippet?.description?.substring(0, 1000),
-                  
-                  // 키워드
-                  keywords: keywords || []
-                };
+                  keywords: keywords || [],
+                  batchId: batchId
+                });
 
                 const trendingVideo = new TrendingVideo(trendingVideoData);
                 const savedVideo = await trendingVideo.save();

@@ -1107,6 +1107,7 @@ app.post('/api/process-video', async (req, res) => {
                 );
                 const result = await unifiedVideoSaver.saveVideoData(platform, {
                     platform,
+                    url: videoUrl || postUrl,  // 🔧 URL 필드 추가!
                     postUrl,
                     videoPath,
                     thumbnailPath: Array.isArray(thumbnailPaths)

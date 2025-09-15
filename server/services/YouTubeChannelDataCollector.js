@@ -417,7 +417,13 @@ class YouTubeChannelDataCollector {
             return null;
         } catch (error) {
             ServerLogger.error(`YouTube 채널 정보 조회 실패: ${error.message}`);
-            throw error;
+            console.error('🚨 YouTube API 에러 상세:', {
+                message: error.message,
+                status: error.status,
+                code: error.code,
+                response: error.response?.data
+            });
+            return null; // 에러 시 null 반환하도록 수정
         }
     }
 }

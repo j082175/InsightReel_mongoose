@@ -30,6 +30,31 @@ import IntegrationTestPage from '../../pages/IntegrationTestPage';
 import HooksTestPage from '../../pages/HooksTestPage';
 import UIHooksTestPage from '../../pages/UIHooksTestPage';
 import APIHooksTestPage from '../../pages/APIHooksTestPage';
+import ComponentsTestPage from '../../pages/ComponentsTestPage';
+import SearchBarTestPage from '../../pages/SearchBarTestPage';
+import VideoCardTestPage from '../../pages/VideoCardTestPage';
+import ModalTestPage from '../../pages/ModalTestPage';
+import ActionBarTestPage from '../../pages/ActionBarTestPage';
+import HeaderTestPage from '../../pages/HeaderTestPage';
+import SidebarTestPage from '../../pages/SidebarTestPage';
+import ChannelCardTestPage from '../../pages/ChannelCardTestPage';
+import ChannelGroupCardTestPage from '../../pages/ChannelGroupCardTestPage';
+import BatchFormTestPage from '../../pages/BatchFormTestPage';
+import BatchCardTestPage from '../../pages/BatchCardTestPage';
+import VideoAnalysisModalTestPage from '../../pages/VideoAnalysisModalTestPage';
+import BulkCollectionModalTestPage from '../../pages/BulkCollectionModalTestPage';
+import UseModalTestPage from '../../pages/UseModalTestPage';
+import UseMultiModalTestPage from '../../pages/UseMultiModalTestPage';
+import UseSearchTestPage from '../../pages/UseSearchTestPage';
+import UseSelectionTestPage from '../../pages/UseSelectionTestPage';
+import UseFilterTestPage from '../../pages/UseFilterTestPage';
+import UseVideosTestPage from '../../pages/UseVideosTestPage';
+import UseChannelsTestPage from '../../pages/UseChannelsTestPage';
+import UseAPIStatusTestPage from '../../pages/UseAPIStatusTestPage';
+import UseServerStatusTestPage from '../../pages/UseServerStatusTestPage';
+import UseCollectTrendingTestPage from '../../pages/UseCollectTrendingTestPage';
+import UseTrendingStatsTestPage from '../../pages/UseTrendingStatsTestPage';
+import UseQuotaStatusTestPage from '../../pages/UseQuotaStatusTestPage';
 
 // ===== Page Component Mapping =====
 const PAGE_COMPONENTS: Record<string, React.ComponentType> = {
@@ -51,6 +76,31 @@ const PAGE_COMPONENTS: Record<string, React.ComponentType> = {
     'test-hooks': HooksTestPage,
     'test-ui-hooks': UIHooksTestPage,
     'test-api-hooks': APIHooksTestPage,
+    'test-components': ComponentsTestPage,
+    'test-searchbar': SearchBarTestPage,
+    'test-videocard': VideoCardTestPage,
+    'test-modal': ModalTestPage,
+    'test-actionbar': ActionBarTestPage,
+    'test-header': HeaderTestPage,
+    'test-sidebar': SidebarTestPage,
+    'test-channelcard': ChannelCardTestPage,
+    'test-channelgroupcard': ChannelGroupCardTestPage,
+    'test-batchform': BatchFormTestPage,
+    'test-batchcard': BatchCardTestPage,
+    'test-videoanalysismodal': VideoAnalysisModalTestPage,
+    'test-bulkcollectionmodal': BulkCollectionModalTestPage,
+    'test-usemodal': UseModalTestPage,
+    'test-usemultimodal': UseMultiModalTestPage,
+    'test-usesearch': UseSearchTestPage,
+    'test-useselection': UseSelectionTestPage,
+    'test-usefilter': UseFilterTestPage,
+    'test-usevideos': UseVideosTestPage,
+    'test-usechannels': UseChannelsTestPage,
+    'test-useapistatus': UseAPIStatusTestPage,
+    'test-useserverstatus': UseServerStatusTestPage,
+    'test-usecollecttrending': UseCollectTrendingTestPage,
+    'test-usetrendingstats': UseTrendingStatsTestPage,
+    'test-usequotastatus': UseQuotaStatusTestPage,
   }),
 };
 
