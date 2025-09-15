@@ -719,20 +719,120 @@ const YouTubeVideoHandler = {
     init() {
         this.addYouTubeButtons();
 
-        // SPA 네비게이션 감지
+        // 개선된 SPA 변경 감지 (채널 분석 버튼 방식 적용)
+        this.setupUrlChangeListener();
+    },
+
+    // URL 변경 감지 시스템 (채널 분석 버튼과 동일한 방식)
+    setupUrlChangeListener() {
+        let currentUrl = window.location.href;
+        console.log('🔄 YouTube 분석 버튼 URL 변경 감지 시작');
+
+        const checkUrlChange = () => {
+            const newUrl = window.location.href;
+            if (currentUrl !== newUrl) {
+                console.log('🔄 YouTube 분석 버튼 URL 변경 감지:', currentUrl, '→', newUrl);
+                currentUrl = newUrl;
+                this.updateButtonsVisibility();
+            }
+        };
+
+        // YouTube 네비게이션 이벤트
         window.addEventListener('yt-navigate-finish', () => {
-            setTimeout(() => this.addYouTubeButtons(), 500);
+            setTimeout(() => this.updateButtonsVisibility(), 500);
         });
+
+        // MutationObserver로 추가 감지
+        const observer = new MutationObserver(checkUrlChange);
+        observer.observe(document, { subtree: true, childList: true });
+
+        // 안전장치로 interval 체크
+        setInterval(checkUrlChange, 1000);
+    },
+
+    // 버튼 표시 여부 업데이트 (채널 분석 버튼과 동일한 방식)
+    updateButtonsVisibility() {
+        if (!this.isValidAnalysisPage()) {
+            console.log('🚫 분석 불가능한 페이지로 이동 - 모든 분석 버튼 제거');
+            this.removeAllAnalysisButtons();
+        } else {
+            console.log('✅ 분석 가능한 페이지로 이동 - 적절한 분석 버튼 생성');
+            this.addYouTubeButtons();
+        }
     },
 
     addYouTubeButtons() {
+        // 채널 분석 버튼 방식 적용: 조건부 버튼 표시
+        if (!this.isValidAnalysisPage()) {
+            console.log('🚫 분석 불가능한 페이지 - 버튼 생성하지 않음');
+            this.removeAllAnalysisButtons();
+            return;
+        }
+
         const isVideoPage = window.location.pathname === '/watch';
         const isShortsPage = window.location.pathname.startsWith('/shorts/');
 
+        console.log('✅ 분석 가능한 페이지 - 버튼 생성 진행');
+
         if (isVideoPage) {
             this.addYouTubeVideoAnalysisButton();
+            // 쇼츠 버튼이 있으면 제거
+            this.removeShortsButton();
         } else if (isShortsPage) {
             this.addYouTubeShortsAnalysisButton();
+            // 영상 버튼이 있으면 제거
+            this.removeVideoButton();
+        }
+    },
+
+    // 분석 가능한 페이지인지 확인 (채널 분석 버튼과 동일한 로직)
+    isValidAnalysisPage() {
+        const currentUrl = window.location.href;
+
+        // 먼저 영상/쇼츠 페이지인지 확인
+        if (currentUrl.includes('/watch') || currentUrl.includes('/shorts/')) {
+            return true;
+        }
+
+        // 홈 화면 등은 분석 불가
+        const homePatterns = [
+            'https://www.youtube.com/',
+            'https://www.youtube.com',
+            'https://www.youtube.com/feed/subscriptions',
+            'https://www.youtube.com/feed/trending',
+            'https://www.youtube.com/feed/explore'
+        ];
+
+        for (const pattern of homePatterns) {
+            if (currentUrl === pattern || currentUrl.startsWith(pattern + '?')) {
+                return false;
+            }
+        }
+
+        return false; // 기본적으로 분석 불가
+    },
+
+    // 모든 분석 버튼 제거
+    removeAllAnalysisButtons() {
+        this.removeVideoButton();
+        this.removeShortsButton();
+    },
+
+    // 영상 분석 버튼 제거
+    removeVideoButton() {
+        const existingButton = document.querySelector('.youtube-analysis-button');
+        if (existingButton) {
+            existingButton.remove();
+            console.log('🗑️ 영상 분석 버튼 제거됨');
+        }
+    },
+
+    // 쇼츠 분석 버튼 제거
+    removeShortsButton() {
+        const existingButton = document.querySelector('.youtube-shorts-analysis-button');
+        if (existingButton) {
+            existingButton.remove();
+            console.log('🗑️ 쇼츠 분석 버튼 제거됨');
         }
     },
 
