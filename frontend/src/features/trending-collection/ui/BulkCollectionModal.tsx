@@ -201,7 +201,7 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
     const collectedVideos = results.flatMap((result, batchIndex) => {
       return Array.from({ length: result.collectedVideos }, (_, videoIndex) => {
         const videoData: Video = {
-          _id: String(Date.now() + batchIndex * 1000 + videoIndex),
+          id: String(Date.now() + batchIndex * 1000 + videoIndex),
           title: `${result.channelName}의 수집된 영상 ${videoIndex + 1}`,
           url: `https://example.com/video/${Date.now() + batchIndex * 1000 + videoIndex}`,
           uploadDate: new Date(
@@ -421,9 +421,9 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
                         '#F59E0B',
                         '#8B5CF6',
                         '#F97316',
-                      ].map((color) => (
+                      ].map((color, index) => (
                         <button
-                          key={color}
+                          key={`color-${color}-${index}`}
                           onClick={() => setBatchInfo({ ...batchInfo, color })}
                           className={`w-8 h-8 rounded-full border-2 ${
                             batchInfo.color === color
@@ -595,9 +595,9 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
                         </button>
                       </div>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {filters.keywords.map((keyword) => (
+                        {filters.keywords.map((keyword, index) => (
                           <span
-                            key={keyword}
+                            key={`modal-include-${keyword}-${index}`}
                             className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
                           >
                             {keyword}
@@ -637,9 +637,9 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
                         </button>
                       </div>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {filters.excludeKeywords.map((keyword) => (
+                        {filters.excludeKeywords.map((keyword, index) => (
                           <span
-                            key={keyword}
+                            key={`modal-exclude-${keyword}-${index}`}
                             className="inline-flex items-center px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full"
                           >
                             {keyword}
@@ -682,9 +682,9 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
                     </div>
                   ) : (
                     <div className="flex flex-wrap gap-2">
-                      {channelsToProcess.map((channel) => (
+                      {channelsToProcess.map((channel, index) => (
                         <span
-                          key={channel}
+                          key={`channel-${channel}-${index}`}
                           className={`inline-flex items-center px-3 py-1 text-sm rounded-full ${
                             isSelectedChannels
                               ? 'bg-blue-100 text-blue-700'
@@ -759,9 +759,9 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
                     📈 실시간 수집 현황
                   </h3>
                   <div className="space-y-2">
-                    {collectionResults.map((result) => (
+                    {collectionResults.map((result, index) => (
                       <div
-                        key={result.channelName}
+                        key={`result-${result.channelName}-${result.platform}-${index}`}
                         className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                       >
                         <div className="flex items-center space-x-3">
@@ -846,9 +846,9 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
                   📊 채널별 수집 결과
                 </h3>
                 <div className="space-y-3">
-                  {collectionResults.map((result) => (
+                  {collectionResults.map((result, index) => (
                     <div
-                      key={result.channelName}
+                      key={`final-result-${result.channelName}-${result.platform}-${index}`}
                       className={`p-4 rounded-lg border-2 ${
                         result.status === 'completed'
                           ? 'border-green-200 bg-green-50'

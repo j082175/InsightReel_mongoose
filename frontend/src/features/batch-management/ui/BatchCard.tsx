@@ -14,11 +14,11 @@ import {
 import { formatDate } from '../../../shared/utils';
 
 interface CollectionBatch {
-  _id: string;
+  id: string;
   name: string;
   description?: string;
   collectionType: 'group' | 'channels';
-  targetGroups?: Array<{ _id: string; name: string; color: string }>;
+  targetGroups?: Array<{ id: string; name: string; color: string }>;
   targetChannels?: string[];
   criteria: {
     daysBack: number;
@@ -185,7 +185,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
               <div className="flex flex-wrap gap-1 mt-1">
                 {batch.criteria.keywords.slice(0, 3).map((keyword, index) => (
                   <span
-                    key={index}
+                    key={`batch-include-${keyword}-${index}`}
                     className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded"
                   >
                     {keyword}
@@ -209,7 +209,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
                   .slice(0, 3)
                   .map((keyword, index) => (
                     <span
-                      key={index}
+                      key={`batch-exclude-${keyword}-${index}`}
                       className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded"
                     >
                       {keyword}
@@ -230,7 +230,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
       <div className="flex flex-wrap gap-2 mb-4">
         {batch.targetGroups?.map((group) => (
           <span
-            key={group._id}
+            key={group.id}
             className="px-2 py-1 text-xs rounded-full text-white"
             style={{ backgroundColor: group.color }}
           >
@@ -239,7 +239,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
         ))}
         {batch.targetChannels?.slice(0, 3).map((channel, index) => (
           <span
-            key={index}
+            key={`target-channel-${channel}-${index}`}
             className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full"
           >
             {channel}
@@ -310,7 +310,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
             <strong>실패한 채널 ({batch.failedChannels.length}개):</strong>
             <div className="mt-1">
               {batch.failedChannels.slice(0, 2).map((failed, index) => (
-                <div key={index} className="text-xs">
+                <div key={`failed-${failed.channelName}-${index}`} className="text-xs">
                   • {failed.channelName}: {failed.error}
                 </div>
               ))}
@@ -329,7 +329,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
         <div className="flex gap-2">
           {batch.status === 'completed' && batch.totalVideosSaved > 0 && (
             <button
-              onClick={() => onViewVideos(batch._id)}
+              onClick={() => onViewVideos(batch.id)}
               className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
             >
               <Eye className="w-4 h-4" />
@@ -341,7 +341,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
         <div className="flex gap-2">
           {(batch.status === 'pending' || batch.status === 'failed') && (
             <button
-              onClick={() => onToggleStatus(batch._id, 'start')}
+              onClick={() => onToggleStatus(batch.id, 'start')}
               className="flex items-center gap-1 px-3 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700"
             >
               <Play className="w-4 h-4" />
@@ -351,7 +351,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
 
           {batch.status === 'running' && (
             <button
-              onClick={() => onToggleStatus(batch._id, 'pause')}
+              onClick={() => onToggleStatus(batch.id, 'pause')}
               className="flex items-center gap-1 px-3 py-2 text-sm bg-yellow-600 text-white rounded hover:bg-yellow-700"
             >
               <Pause className="w-4 h-4" />
@@ -368,7 +368,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
           </button>
 
           <button
-            onClick={() => onDelete(batch._id)}
+            onClick={() => onDelete(batch.id)}
             className="flex items-center gap-1 px-3 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700"
           >
             <Trash2 className="w-4 h-4" />

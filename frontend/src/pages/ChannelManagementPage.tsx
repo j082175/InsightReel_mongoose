@@ -118,7 +118,7 @@ const ChannelManagementPage: React.FC = () => {
   const handleChannelDelete = useCallback(
     async (channel: Channel) => {
       try {
-        await deleteChannelMutation.mutateAsync(channel.id || channel._id);
+        await deleteChannelMutation.mutateAsync(channel.id || channel.id);
       } catch (error) {
         throw error;
       }
@@ -143,7 +143,7 @@ const ChannelManagementPage: React.FC = () => {
         const selectedChannelIds = selectedChannels
           .map((channelId) => {
             const channel = channels.find((ch) => ch.channelId === channelId);
-            return channel?.id || channel?._id;
+            return channel?.id || channel?.id;
           })
           .filter(Boolean) as string[];
 
@@ -182,7 +182,7 @@ const ChannelManagementPage: React.FC = () => {
       try {
         if (editingGroup) {
           await updateChannelGroupMutation.mutateAsync({
-            id: editingGroup._id,
+            id: editingGroup.id,
             data: groupData,
           });
         } else {
@@ -207,7 +207,7 @@ const ChannelManagementPage: React.FC = () => {
   const handleGroupDelete = useCallback(
     async (group: any) => {
       try {
-        await deleteChannelGroupMutation.mutateAsync(group._id);
+        await deleteChannelGroupMutation.mutateAsync(group.id);
       } catch (error) {
         throw error;
       }
@@ -383,7 +383,7 @@ const ChannelManagementPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {channelGroups.map((group) => (
                     <ChannelGroupCard
-                      key={group._id}
+                      key={group.id}
                       group={group}
                       onEdit={handleGroupEdit}
                       onDelete={handleGroupDelete}
@@ -407,9 +407,9 @@ const ChannelManagementPage: React.FC = () => {
 
             {filteredChannels.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredChannels.map((channel) => (
+                {filteredChannels.map((channel, index) => (
                   <ChannelCard
-                    key={channel.channelId}
+                    key={`${channel.channelId}-${channel.name}-${index}`}
                     channel={channel}
                     onChannelClick={handleChannelClick}
                     onDelete={(ch) =>

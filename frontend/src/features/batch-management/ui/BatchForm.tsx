@@ -14,8 +14,8 @@ interface BatchFormProps {
   onClose: () => void;
   onSubmit: (data: BatchFormData) => Promise<void>;
   formData?: Partial<BatchFormData>;
-  channelGroups: Array<{ _id: string; name: string; color: string }>;
-  channels: Array<{ _id: string; name: string }>;
+  channelGroups: Array<{ id: string; name: string; color: string }>;
+  channels: Array<{ id: string; name: string }>;
   isSubmitting?: boolean;
 }
 
@@ -250,16 +250,16 @@ const BatchForm: React.FC<BatchFormProps> = ({
                       </div>
                     ) : (
                       channelGroups.map((group) => (
-                        <label key={group._id} className="flex items-center">
+                        <label key={group.id} className="flex items-center">
                           <input
                             type="checkbox"
-                            checked={field.value.includes(group._id)}
+                            checked={field.value.includes(group.id)}
                             onChange={(e) => {
                               if (e.target.checked) {
-                                field.onChange([...field.value, group._id]);
+                                field.onChange([...field.value, group.id]);
                               } else {
                                 field.onChange(
-                                  field.value.filter((id) => id !== group._id)
+                                  field.value.filter((id) => id !== group.id)
                                 );
                               }
                             }}
@@ -297,16 +297,16 @@ const BatchForm: React.FC<BatchFormProps> = ({
                       </div>
                     ) : (
                       channels.map((channel) => (
-                        <label key={channel._id} className="flex items-center">
+                        <label key={channel.id} className="flex items-center">
                           <input
                             type="checkbox"
-                            checked={field.value.includes(channel._id)}
+                            checked={field.value.includes(channel.id)}
                             onChange={(e) => {
                               if (e.target.checked) {
-                                field.onChange([...field.value, channel._id]);
+                                field.onChange([...field.value, channel.id]);
                               } else {
                                 field.onChange(
-                                  field.value.filter((id) => id !== channel._id)
+                                  field.value.filter((id) => id !== channel.id)
                                 );
                               }
                             }}
@@ -492,7 +492,7 @@ const BatchForm: React.FC<BatchFormProps> = ({
               <div className="flex flex-wrap gap-2">
                 {keywords.map((keyword, index) => (
                   <span
-                    key={index}
+                    key={`include-${keyword}-${index}`}
                     className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded"
                   >
                     {keyword}
@@ -537,7 +537,7 @@ const BatchForm: React.FC<BatchFormProps> = ({
               <div className="flex flex-wrap gap-2">
                 {excludeKeywords.map((keyword, index) => (
                   <span
-                    key={index}
+                    key={`exclude-${keyword}-${index}`}
                     className="inline-flex items-center px-2 py-1 bg-red-100 text-red-800 text-sm rounded"
                   >
                     {keyword}
