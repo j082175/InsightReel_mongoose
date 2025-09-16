@@ -814,5 +814,65 @@
       "last90Days": 0,
       "lastYear": 0
     }
+  },
+  {
+    "_id": "68c8b5930f7b33237410503d",
+    "channelId": "UCX6OQ3DkcsbYNE6H8uQQuVA",
+    "__v": 0,
+    "aiTags": [],
+    "allTags": [],
+    "analysisVersion": "1.0",
+    "averageViewsPerVideo": 105703917,
+    "avgDurationFormatted": "6분 28.079999999999984초",
+    "avgDurationSeconds": 388,
+    "clusterIds": [],
+    "collectedAt": "Tue Sep 16 2025 09:55:45 GMT+0900 (대한민국 표준시)",
+    "contentType": "mixed",
+    "country": "US",
+    "createdAt": "Tue Sep 16 2025 09:55:45 GMT+0900 (대한민국 표준시)",
+    "customUrl": "@mrbeast",
+    "dailyUploadRate": 0.23,
+    "deepInsightTags": [],
+    "defaultLanguage": "en",
+    "description": "SUBSCRIBE FOR A COOKIE!\nNew MrBeast or MrBeast Gaming video every single Saturday at noon eastern time!\nAccomplishments:\n- Raised $20,000,000 To Plant 20,000,000 Trees\n- Removed 30,000,000 pounds of trash from the ocean\n- Helped 2,000 people walk again\n- Helped 1,000 blind people see\n- Helped 1,000 deaf people hear\n- Built wells in Africa\n- Built and gave away 100 houses\n- Adopted every dog in a shelter (twice)\n- Given millions to charity\n- Started my own snack company Feastables\n- Started my own software company Viewstats\n- Started Lunchly, a tasty, better-for-you lunch option\n- Gave away a private island (twice)\n- Gave away 1 million meals\n- I counted to 100k\n- Ran a marathon in the world's largest shoes\n- Survived 50 hours in Antarctica\n- Recreated Squid Game in real life\n- Created the largest competition show with 1000 people (Beast Games)\n- Gave $5,000,000 to one person\n- Passed T-Series to become most subscribed YouTube channel 🥹\nyou get it, I appreciate all of you so much :)\n",
+    "keywords": [],
+    "last7DaysViews": 105430992,
+    "lastAnalyzedAt": "Tue Sep 16 2025 09:55:45 GMT+0900 (대한민국 표준시)",
+    "mostViewedVideo": {
+      "videoId": "N0pwLtonPdg",
+      "title": "Slippery vs Sticky Stairs",
+      "publishedAt": "2025-05-16T16:00:01.000Z",
+      "thumbnailUrl": "https://i.ytimg.com/vi/N0pwLtonPdg/mqdefault.jpg",
+      "viewCount": 683962360,
+      "likeCount": 7584505,
+      "commentCount": 22682,
+      "duration": "PT36S",
+      "durationSeconds": 36,
+      "tags": [],
+      "categoryId": "24"
+    },
+    "name": "MrBeast",
+    "platform": "YOUTUBE",
+    "publishedAt": "2012-02-20T00:43:50.000Z",
+    "shortFormRatio": 70,
+    "subscribers": 435000000,
+    "suggestedClusters": [],
+    "thumbnailUrl": "https://yt3.ggpht.com/nxYrc_1_2f77DoBadyxMTmv7ZpRZapHR5jbuYe7PlPd5cIRJxtNNEYyOC0ZsxaDyJJzXrnJiuDE=s800-c-k-c0x00ffffff-no-rj",
+    "totalVideos": 899,
+    "totalViews": 95027821020,
+    "updatedAt": "Tue Sep 16 2025 09:55:45 GMT+0900 (대한민국 표준시)",
+    "uploadFrequency": {
+      "pattern": "weekly",
+      "avgDaysBetweenUploads": 3.73,
+      "consistency": 35
+    },
+    "url": "https://youtube.com/channel/UCX6OQ3DkcsbYNE6H8uQQuVA",
+    "version": 1,
+    "viewsByPeriod": {
+      "last7Days": 105430992,
+      "last30Days": 1003573474,
+      "last90Days": 3332429110,
+      "lastYear": 8594132192
+    }
   }
 ]

@@ -86,12 +86,12 @@ const BatchManagementPage: React.FC = () => {
   );
 
   const handleSelectAll = useCallback(() => {
-    if (selectedBatches.size === batches.length) {
+    if (selectedBatches.size === safeBatches.length) {
       clearSelection();
     } else {
       selectAllBatches();
     }
-  }, [selectedBatches.size, batches.length, clearSelection, selectAllBatches]);
+  }, [selectedBatches.size, safeBatches.length, clearSelection, selectAllBatches]);
 
   const handleBatchDelete = useCallback(
     async (batch: CollectionBatch) => {
@@ -171,16 +171,17 @@ const BatchManagementPage: React.FC = () => {
     []
   );
 
-  // 통계 계산
+  // 통계 계산 (방어적 프로그래밍)
+  const safeBatches = Array.isArray(batches) ? batches : [];
   const stats = {
-    total: batches.length,
-    completed: batches.filter((b) => b.status === 'completed').length,
-    running: batches.filter((b) => b.status === 'running').length,
-    failed: batches.filter((b) => b.status === 'failed').length,
-    totalVideos: batches.reduce((sum, b) => sum + (b.totalVideosSaved || 0), 0),
+    total: safeBatches.length,
+    completed: safeBatches.filter((b) => b?.status === 'completed').length,
+    running: safeBatches.filter((b) => b?.status === 'running').length,
+    failed: safeBatches.filter((b) => b?.status === 'failed').length,
+    totalVideos: safeBatches.reduce((sum, b) => sum + (b?.totalVideosSaved || 0), 0),
   };
 
-  if (loading && batches.length === 0) {
+  if (loading && safeBatches.length === 0) {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-4">
@@ -286,7 +287,7 @@ const BatchManagementPage: React.FC = () => {
         {/* 결과 정보 */}
         <div className="bg-white rounded-lg shadow mb-4 p-4">
           <div className="text-sm text-gray-500">
-            총 {batches.length}개 배치 (키워드: "{searchTerm || '없음'}", 상태:{' '}
+            총 {safeBatches.length}개 배치 (키워드: "{searchTerm || '없음'}", 상태:{' '}
             {statusFilter === 'all' ? '전체' : statusFilter})
           </div>
         </div>
@@ -301,9 +302,9 @@ const BatchManagementPage: React.FC = () => {
         {/* 배치 목록 */}
         <div className="bg-white rounded-lg shadow">
           <div className="p-6">
-            {batches.length > 0 ? (
+            {safeBatches.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {batches.map((batch) => (
+                {safeBatches.map((batch) => (
                   <BatchCard
                     key={batch._id}
                     batch={batch}
@@ -342,7 +343,7 @@ const BatchManagementPage: React.FC = () => {
         <ActionBar
           isVisible={isSelectMode}
           selectedCount={selectedBatches.size}
-          totalCount={batches.length}
+          totalCount={safeBatches.length}
           itemType="개"
           onSelectAll={handleSelectAll}
           onClearSelection={() => {

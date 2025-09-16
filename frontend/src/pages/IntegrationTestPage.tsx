@@ -23,13 +23,14 @@ const IntegrationTestPage: React.FC = memo(() => {
     error: channelsError,
   } = useChannels();
 
-  // 검색 필터링
-  const filteredVideos =
-    videos?.filter(
-      (video) =>
-        video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        video.channelName?.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || [];
+  // 검색 필터링 (방어적 프로그래밍)
+  const filteredVideos = Array.isArray(videos)
+    ? videos.filter(
+        (video) =>
+          video?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          video?.channelName?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : [];
 
   const handleSelection = (videoId: string, selected: boolean) => {
     if (selected) {
@@ -40,7 +41,11 @@ const IntegrationTestPage: React.FC = memo(() => {
   };
 
   const handleSelectAll = () => {
-    setSelectedItems(filteredVideos.map((v) => v._id));
+    setSelectedItems(
+      Array.isArray(filteredVideos)
+        ? filteredVideos.map((v) => v._id).filter(Boolean)
+        : []
+    );
   };
 
   const handleDeselectAll = () => {
@@ -202,7 +207,7 @@ const IntegrationTestPage: React.FC = memo(() => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredVideos
+              {(filteredVideos || [])
                 .slice((currentPage - 1) * 12, currentPage * 12)
                 .map((video, index) => (
                   <div
