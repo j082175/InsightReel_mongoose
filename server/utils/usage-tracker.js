@@ -21,17 +21,14 @@ class UsageTracker {
             __dirname,
             '../../config/gemini-usage.json',
         );
-        this.quotasFilePath = path.join(
-            __dirname,
-            '../../config/api-quotas.json',
-        );
+        // this.quotasFilePath - 환경변수 기반으로 변경되어 불필요
         this.apiKey = apiKey || this.getDefaultApiKey();
         this.currentApiKeyHash = this.apiKey
             ? this.hashApiKey(this.apiKey)
             : null;
 
         // 현재 API 키 자동 등록
-        this.autoRegisterCurrentApiKey();
+        // this.autoRegisterCurrentApiKey(); // 환경변수 기반으로 변경되어 불필요
 
         // API 키 기반 할당량 로드
         this.quotas = this.loadQuotasForCurrentApiKey();
@@ -145,70 +142,25 @@ class UsageTracker {
     }
 
     /**
-     * 현재 API 키에 맞는 할당량 로드
+     * 환경변수 기반 할당량 로드 (실무 표준)
      */
     loadQuotasForCurrentApiKey() {
         try {
-            // 기본 할당량
-            const defaultQuotas = {
+            // 환경변수 기반 통합 할당량
+            const quotas = {
                 'gemini-2.5-pro': GEMINI_API_LIMITS.PRO,
                 'gemini-2.5-flash': GEMINI_API_LIMITS.FLASH,
                 'gemini-2.5-flash-lite': GEMINI_API_LIMITS.FLASH_LITE,
-                'youtube-data-api': { rpd: YOUTUBE_API_LIMITS.SAFETY_MARGIN }, // 상수 파일 기반 안전 마진
+                'youtube-data-api': { rpd: YOUTUBE_API_LIMITS.SAFETY_MARGIN }, // 환경변수 기반
             };
 
-            // 할당량 파일이 없으면 기본값 반환
-            if (!fs.existsSync(this.quotasFilePath)) {
-                ServerLogger.info(
-                    '📊 할당량 설정 파일이 없어 기본값 사용',
-                    null,
-                    'USAGE',
-                );
-                return defaultQuotas;
-            }
-
-            const quotaConfig = JSON.parse(
-                fs.readFileSync(this.quotasFilePath, 'utf8'),
+            ServerLogger.info(
+                '📊 환경변수 기반 할당량 로드 완료',
+                { youtubeMargin: YOUTUBE_API_LIMITS.SAFETY_MARGIN },
+                'USAGE',
             );
 
-            // API 키 해시가 있고 해당 설정이 있으면 사용
-            if (
-                this.currentApiKeyHash &&
-                quotaConfig.api_keys &&
-                quotaConfig.api_keys[this.currentApiKeyHash]
-            ) {
-                const customQuotas =
-                    quotaConfig.api_keys[this.currentApiKeyHash];
-                // ServerLogger.info(`📊 API 키별 할당량 로드: ${customQuotas.name || 'Unknown'}`, null, 'USAGE');
-                return {
-                    'gemini-2.5-pro':
-                        customQuotas['gemini-2.5-pro'] ||
-                        defaultQuotas['gemini-2.5-pro'],
-                    'gemini-2.5-flash':
-                        customQuotas['gemini-2.5-flash'] ||
-                        defaultQuotas['gemini-2.5-flash'],
-                    'gemini-2.5-flash-lite':
-                        customQuotas['gemini-2.5-flash-lite'] ||
-                        defaultQuotas['gemini-2.5-flash-lite'],
-                    'youtube-data-api':
-                        customQuotas['youtube-data-api'] ||
-                        defaultQuotas['youtube-data-api'],
-                };
-            }
-
-            // 기본 설정이 있으면 사용 (누락된 YouTube API 추가)
-            if (quotaConfig.default) {
-                ServerLogger.info('📊 기본 할당량 설정 사용', null, 'USAGE');
-                const mergedDefault = {
-                    ...defaultQuotas,
-                    ...quotaConfig.default,
-                };
-                return mergedDefault;
-            }
-
-            // 모든 경우가 실패하면 하드코드된 기본값
-            ServerLogger.info('📊 하드코드된 기본 할당량 사용', null, 'USAGE');
-            return defaultQuotas;
+            return quotas;
         } catch (error) {
             ServerLogger.warn(
                 `할당량 설정 로드 실패: ${error.message}, 기본값 사용`,
@@ -219,7 +171,7 @@ class UsageTracker {
                 'gemini-2.5-pro': GEMINI_API_LIMITS.PRO,
                 'gemini-2.5-flash': GEMINI_API_LIMITS.FLASH,
                 'gemini-2.5-flash-lite': GEMINI_API_LIMITS.FLASH_LITE,
-                'youtube-data-api': { rpd: YOUTUBE_API_LIMITS.SAFETY_MARGIN }, // 상수 파일 기반 안전 마진
+                'youtube-data-api': { rpd: 8000 }, // 하드코딩 폴백
             };
         }
     }

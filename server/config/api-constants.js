@@ -8,8 +8,8 @@ const YOUTUBE_API_LIMITS = {
   // 기본 할당량 (Google 제공 기본값)
   DAILY_QUOTA: 10000,
   
-  // 안전 마진 (환경변수 우선, 기본값 8000)
-  SAFETY_MARGIN: parseInt(process.env.YOUTUBE_API_SAFETY_MARGIN) || 8000,
+  // 안전 마진 (환경변수 우선, 기본값 3 - 테스트용)
+  SAFETY_MARGIN: parseInt(process.env.YOUTUBE_API_SAFETY_MARGIN) || 3,
   
   // 보수적 마진 (더 안전한 운영을 위한 여유분)
   CONSERVATIVE_MARGIN: parseInt(process.env.YOUTUBE_API_CONSERVATIVE_MARGIN) || 7000,

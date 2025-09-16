@@ -120,27 +120,37 @@ class MultiKeyManager {
    * 사용 가능한 키 찾기 (안전 마진 적용)
    */
   getAvailableKey() {
-    for (const keyInfo of this.keys) {
+    ServerLogger.info(`🔍 [DEBUG] getAvailableKey 호출됨, 안전마진: ${this.safetyMargin}, 키 개수: ${this.keys.length}`, null, 'MULTI-KEY');
+
+    for (const [index, keyInfo] of this.keys.entries()) {
       const keyData = this.trackers.get(keyInfo.key);
       const usage = keyData.tracker.getYouTubeUsage();
-      
-      // 안전 마진 체크 (API 호출 전 사전 차단)
+
+      ServerLogger.info(`🔍 [DEBUG] 키 ${index} (${keyInfo.name}) 검사 중: usage.total=${usage.total}, usage.quota=${usage.quota}, safetyMargin=${this.safetyMargin}`, null, 'MULTI-KEY');
+
+      // 안전 마진 체크 (API 호출 전 사전 차단) - 수정된 로직
       if (usage.total >= this.safetyMargin) {
-        ServerLogger.warn(`⚠️ 키 ${keyInfo.name} 안전 마진 도달: ${usage.total}/${this.safetyMargin}`, null, 'MULTI-KEY');
+        ServerLogger.warn(`⚠️ 키 ${keyInfo.name} 안전 마진 초과: ${usage.total}/${this.safetyMargin} - 다음 키로 전환`, null, 'MULTI-KEY');
         continue; // 다음 키 확인
       }
-      
-      // 기존 quota exceeded 체크도 유지 (이중 안전장치)
-      if (!keyData.tracker.isYouTubeQuotaExceeded()) {
-        ServerLogger.info(`✅ 사용 가능한 키: ${keyInfo.name} (사용량: ${usage.total}/${this.safetyMargin})`, null, 'MULTI-KEY');
+
+      // 추가 안전장치: isYouTubeQuotaExceeded 체크 (선택적)
+      const isExceeded = keyData.tracker.isYouTubeQuotaExceeded();
+      ServerLogger.info(`🔍 [DEBUG] 키 ${keyInfo.name} isYouTubeQuotaExceeded: ${isExceeded}`, null, 'MULTI-KEY');
+
+      if (!isExceeded) {
+        ServerLogger.info(`✅ 사용 가능한 키 발견: ${keyInfo.name} (사용량: ${usage.total}/${this.safetyMargin}, 실제할당량: ${usage.quota})`, null, 'MULTI-KEY');
         return {
           key: keyInfo.key,
           tracker: keyData.tracker,
           name: keyInfo.name
         };
+      } else {
+        ServerLogger.warn(`⚠️ 키 ${keyInfo.name} isYouTubeQuotaExceeded=true - 다음 키로 전환`, null, 'MULTI-KEY');
       }
     }
-    
+
+    ServerLogger.error(`🚨 모든 YouTube API 키의 할당량이 소진됨 (안전마진: ${this.safetyMargin})`, null, 'MULTI-KEY');
     throw new Error(`🚨 모든 YouTube API 키의 할당량이 소진되었습니다 (${this.safetyMargin} 안전 마진 적용)`);
   }
   
