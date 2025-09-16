@@ -264,6 +264,35 @@ class UsageTracker {
                     return compatibleData;
                 }
 
+                // 오늘 데이터가 없으면 전날 데이터 이어받기
+                const yesterday = this.getYesterdayString();
+                if (
+                    data.keys &&
+                    data.keys[this.currentApiKeyHash] &&
+                    data.keys[this.currentApiKeyHash][yesterday]
+                ) {
+                    const yesterdayData = data.keys[this.currentApiKeyHash][yesterday];
+                    ServerLogger.info(
+                        `🔄 자정 전날 데이터 이어받기: ${yesterday} → ${today}`,
+                        null,
+                        'USAGE',
+                    );
+
+                    // 전날 데이터를 오늘로 복사 (lastUpdated는 현재 시간으로)
+                    const inheritedData = {
+                        ...yesterdayData,
+                        lastUpdated: new Date().toISOString()
+                    };
+
+                    const compatibleData = {};
+                    compatibleData[today] = inheritedData;
+
+                    // 파일에도 즉시 저장
+                    this.saveInheritedData(today, inheritedData);
+
+                    return compatibleData;
+                }
+
                 // 기존 구조 (하위 호환성)
                 if (data[today]) {
                     ServerLogger.info(
@@ -323,6 +352,9 @@ class UsageTracker {
      */
     increment(modelType, success = true) {
         const today = this.getTodayString();
+
+        // 오후 4시 리셋 체크 (Google API 할당량 리셋 시간)
+        this.checkAndResetQuota();
 
         // 오늘 데이터 없으면 초기화
         if (!this.dailyUsage[today]) {
@@ -544,26 +576,127 @@ class UsageTracker {
     }
 
     /**
-     * Google API 할당량 기준 오늘 날짜 문자열 (YYYY-MM-DD)
-     * Google API는 한국시간 오후 4시(16:00)에 할당량이 리셋됨
+     * 실제 날짜 기준 문자열 반환 (YYYY-MM-DD)
+     * 자정(00:00)에 전날 데이터 이어받기, 오후 4시(16:00)에 0으로 리셋
      */
     getTodayString() {
         const now = new Date();
-
         // 한국시간으로 변환 (UTC+9)
         const kstTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+        return kstTime.toISOString().split('T')[0];
+    }
 
-        // KST 시간에서 시간 추출 (getUTCHours를 사용해야 올바른 KST 시간 추출)
+    /**
+     * 전날 날짜 문자열 반환 (YYYY-MM-DD)
+     */
+    getYesterdayString() {
+        const now = new Date();
+        // 한국시간으로 변환 (UTC+9)
+        const kstTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+        // 하루 빼기
+        kstTime.setUTCDate(kstTime.getUTCDate() - 1);
+        return kstTime.toISOString().split('T')[0];
+    }
+
+    /**
+     * 현재 시간이 오후 4시인지 확인 (Google API 리셋 시간)
+     */
+    isQuotaResetTime() {
+        const now = new Date();
+        const kstTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+        const kstHour = kstTime.getUTCHours();
+        const kstMinute = kstTime.getUTCMinutes();
+
+        // 오후 4시 정각 (16:00)인지 확인
+        return kstHour === 16 && kstMinute === 0;
+    }
+
+    /**
+     * 전날 데이터를 오늘로 저장
+     */
+    saveInheritedData(today, inheritedData) {
+        try {
+            let existingData = { keys: {} };
+            if (fs.existsSync(this.usageFilePath)) {
+                existingData = JSON.parse(
+                    fs.readFileSync(this.usageFilePath, 'utf8'),
+                );
+            }
+
+            // 키별 섹션 구조 생성
+            if (!existingData.keys) {
+                existingData.keys = {};
+            }
+            if (!existingData.keys[this.currentApiKeyHash]) {
+                existingData.keys[this.currentApiKeyHash] = {};
+            }
+
+            // 오늘 데이터 저장
+            existingData.keys[this.currentApiKeyHash][today] = inheritedData;
+
+            fs.writeFileSync(
+                this.usageFilePath,
+                JSON.stringify(existingData, null, 2),
+                'utf8',
+            );
+
+            ServerLogger.info(
+                `💾 전날 데이터 이어받기 저장 완료: ${today}`,
+                null,
+                'USAGE',
+            );
+        } catch (error) {
+            ServerLogger.error('전날 데이터 저장 실패:', error, 'USAGE');
+        }
+    }
+
+    /**
+     * 오후 4시 할당량 리셋 체크 및 실행
+     */
+    checkAndResetQuota() {
+        const now = new Date();
+        const kstTime = new Date(now.getTime() + 9 * 60 * 60 * 1000);
         const kstHour = kstTime.getUTCHours();
 
-        // 오후 4시 이전이면 전날로 계산 (Google API 할당량 기준)
-        if (kstHour < 16) {
-            kstTime.setUTCDate(kstTime.getUTCDate() - 1);
-        }
+        // 오후 4시 이후인지 체크
+        if (kstHour >= 16) {
+            const today = this.getTodayString();
 
-        const resultDate = kstTime.toISOString().split('T')[0];
-        // ServerLogger.info(`🗓️ [DEBUG] getTodayString 반환값: ${resultDate} (현재 KST 시간: ${kstHour}시, API키: ${this.currentApiKeyHash})`, null, 'USAGE');
-        return resultDate;
+            // 오늘 데이터가 있고, 아직 리셋되지 않았는지 확인
+            if (this.dailyUsage[today] && !this.dailyUsage[today]._resetAt16) {
+                ServerLogger.info(
+                    `🔄 오후 4시 할당량 리셋 실행: ${today}`,
+                    null,
+                    'USAGE',
+                );
+
+                // 모든 사용량을 0으로 리셋 (에러 카운트는 유지)
+                const resetData = {
+                    pro: 0,
+                    flash: 0,
+                    flashLite: 0,
+                    proErrors: this.dailyUsage[today].proErrors || 0,
+                    flashErrors: this.dailyUsage[today].flashErrors || 0,
+                    flashLiteErrors: this.dailyUsage[today].flashLiteErrors || 0,
+                    youtubeVideos: 0,
+                    youtubeSearch: 0,
+                    youtubeChannels: 0,
+                    youtubeComments: 0,
+                    youtubeErrors: this.dailyUsage[today].youtubeErrors || 0,
+                    lastUpdated: new Date().toISOString(),
+                    _resetAt16: true  // 리셋 완료 표시
+                };
+
+                this.dailyUsage[today] = resetData;
+                this.saveTodayUsage();
+
+                ServerLogger.info(
+                    `✅ 할당량 리셋 완료 - 모든 사용량 0으로 초기화`,
+                    null,
+                    'USAGE',
+                );
+            }
+        }
     }
 
     /**

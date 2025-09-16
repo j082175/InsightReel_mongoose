@@ -1,7 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from '@storybook/test';
-import Modal from './Modal';
-import AnimatedButton from '../components/AnimatedButton';
+import Modal from '../components/Modal';
+import AnimatedButton from '../components/animations/AnimatedButton';
 
 const meta: Meta<typeof Modal> = {
   title: 'Shared/UI/Modal',
@@ -59,7 +58,7 @@ const meta: Meta<typeof Modal> = {
     },
   },
   args: {
-    onClose: fn(),
+    onClose: () => console.log('Modal closed'),
   },
   tags: ['autodocs'],
 };

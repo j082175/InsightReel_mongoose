@@ -13,7 +13,7 @@ interface ChannelData {
   engagement: number;
   growthRate: number;
   topVideos: Array<{
-    id: number;
+    _id: string;
     title: string;
     views: number;
     thumbnail: string;
@@ -47,19 +47,19 @@ const ChannelAnalysisModal: React.FC<ChannelAnalysisModalProps> = ({
     growthRate: Math.floor(Math.random() * 20) - 5,
     topVideos: [
       {
-        id: 1,
+        _id: `${name}-video-1`,
         title: `${name}의 최고 인기 영상`,
         views: Math.floor(Math.random() * 1000000) + 100000,
         thumbnail: 'https://placehold.co/200x120/3B82F6/FFFFFF?text=Video1',
       },
       {
-        id: 2,
+        _id: `${name}-video-2`,
         title: `${name}의 화제작`,
         views: Math.floor(Math.random() * 800000) + 80000,
         thumbnail: 'https://placehold.co/200x120/F43F5E/FFFFFF?text=Video2',
       },
       {
-        id: 3,
+        _id: `${name}-video-3`,
         title: `${name}의 추천 영상`,
         views: Math.floor(Math.random() * 600000) + 60000,
         thumbnail: 'https://placehold.co/200x120/8B5CF6/FFFFFF?text=Video3',

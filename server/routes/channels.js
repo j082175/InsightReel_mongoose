@@ -423,14 +423,37 @@ router.get('/', async (req, res) => {
     const channels = await Channel.find(query)
       .sort(sortOptions)
       .limit(parseInt(limit))
-      .skip(parseInt(offset))
-      .lean();
-    
+      .skip(parseInt(offset));
+
     const totalCount = await Channel.countDocuments(query);
-    
+
+    // Transform _id to id for frontend compatibility
+    const transformedChannels = channels.map(channel => {
+      const channelObj = channel.toJSON();
+      return channelObj;
+    });
+
+    // 디버깅: 응답 데이터 확인
+    console.log('🔍 [CHANNELS API] 응답 데이터 디버깅:', {
+      requestQuery: req.query,
+      totalChannelsInDB: totalCount,
+      channelsReturned: transformedChannels.length,
+      firstChannel: transformedChannels[0] ? {
+        id: transformedChannels[0].id,
+        _id: transformedChannels[0]._id,
+        name: transformedChannels[0].name,
+        channelId: transformedChannels[0].channelId
+      } : null,
+      responseStructure: {
+        success: true,
+        dataLength: transformedChannels.length,
+        hasPagination: true
+      }
+    });
+
     res.status(HTTP_STATUS_CODES.OK).json({
       success: true,
-      data: channels,
+      data: transformedChannels,
       pagination: {
         total: totalCount,
         limit: parseInt(limit),

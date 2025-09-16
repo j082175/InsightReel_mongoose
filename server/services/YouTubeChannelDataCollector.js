@@ -48,11 +48,11 @@ class YouTubeChannelDataCollector {
                 throw new Error('채널 ID를 확정할 수 없습니다');
             }
 
-            // 2단계: 채널 기본 정보 수집
+            // 2단계: 채널 기본 정보 수집 (uploads 플레이리스트 ID 포함)
             const channelDetails = await this.getChannelDetails(channelId);
 
-            // 3단계: 최근 영상 목록 수집
-            const recentVideos = await this.getRecentVideos(channelId);
+            // 3단계: 최근 영상 목록 수집 (최적화된 playlistItems 방식)
+            const recentVideos = await this.getRecentVideos(channelDetails.uploadsPlaylist);
 
             // 4단계: 영상 상세 정보 수집 (태그, 설명 포함)
             const videosWithDetails = await this.getVideoDetails(recentVideos);
@@ -79,7 +79,8 @@ class YouTubeChannelDataCollector {
     }
 
     /**
-     * 채널 ID 확정 (다양한 URL 형태 처리)
+     * 채널 ID 확정 (최적화된 channels.list 사용)
+     * forHandle, forUsername 활용으로 search.list 대체 (99% 할당량 절약!)
      */
     async resolveChannelId(channelInfo) {
         try {
@@ -88,44 +89,36 @@ class YouTubeChannelDataCollector {
                 return channelInfo.channelId;
             }
 
-            // @handle 형태 처리
+            // @handle 형태 처리 (channels.list forHandle 사용 - 1 할당량)
             if (channelInfo.channelHandle) {
-                const response = await this.youtube.search.list({
-                    part: 'snippet',
-                    q: `@${channelInfo.channelHandle}`,
-                    type: 'channel',
-                    maxResults: 1
+                ServerLogger.info(`🔍 @handle 조회 (최적화): @${channelInfo.channelHandle}`);
+                const response = await this.youtube.channels.list({
+                    part: 'id',
+                    forHandle: channelInfo.channelHandle.replace('@', '') // @ 제거
                 });
 
                 if (response.data.items && response.data.items.length > 0) {
-                    return response.data.items[0].snippet.channelId;
+                    ServerLogger.info(`✅ @handle 조회 성공 (1 할당량)`);
+                    return response.data.items[0].id;
                 }
             }
 
-            // custom URL 또는 username 처리
-            if (channelInfo.customUrl || channelInfo.username) {
-                const query = channelInfo.customUrl || channelInfo.username;
-                const response = await this.youtube.search.list({
-                    part: 'snippet',
-                    q: query,
-                    type: 'channel',
-                    maxResults: 5
+            // username 처리 (channels.list forUsername 사용 - 1 할당량)
+            if (channelInfo.username) {
+                ServerLogger.info(`🔍 username 조회 (최적화): ${channelInfo.username}`);
+                const response = await this.youtube.channels.list({
+                    part: 'id',
+                    forUsername: channelInfo.username
                 });
 
-                // 가장 일치하는 채널 찾기
-                for (const item of response.data.items) {
-                    const customUrl = item.snippet.customUrl?.toLowerCase();
-                    if (customUrl && customUrl.includes(query.toLowerCase())) {
-                        return item.snippet.channelId;
-                    }
-                }
-
-                // 정확한 매치를 못 찾은 경우 첫 번째 결과 반환
                 if (response.data.items && response.data.items.length > 0) {
-                    return response.data.items[0].snippet.channelId;
+                    ServerLogger.info(`✅ username 조회 성공 (1 할당량)`);
+                    return response.data.items[0].id;
                 }
             }
 
+            // customUrl은 직접 API 지원이 없어서 제거 (사용자 요청: "못바꾸는건 아얘 지워부려")
+            ServerLogger.warn(`⚠️ 채널 ID 확정 실패 - 지원되지 않는 형태:`, channelInfo);
             return null;
 
         } catch (error) {
@@ -140,7 +133,7 @@ class YouTubeChannelDataCollector {
     async getChannelDetails(channelId) {
         try {
             const response = await this.youtube.channels.list({
-                part: ['snippet', 'statistics', 'brandingSettings'],
+                part: ['snippet', 'statistics', 'brandingSettings', 'contentDetails'],
                 id: channelId
             });
 
@@ -183,27 +176,68 @@ class YouTubeChannelDataCollector {
     }
 
     /**
-     * 최근 영상 목록 수집
+     * 최근 영상 목록 수집 (최적화: playlistItems.list 사용 - 95% 할당량 절약!)
      */
-    async getRecentVideos(channelId) {
+    async getRecentVideos(uploadsPlaylistId) {
         try {
-            const response = await this.youtube.search.list({
-                part: 'snippet',
-                channelId: channelId,
-                order: 'date',
-                type: 'video',
-                maxResults: this.maxVideos,
-                publishedAfter: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString() // 최근 3개월
-            });
+            if (!uploadsPlaylistId) {
+                ServerLogger.warn('⚠️ uploads 플레이리스트 ID가 없습니다.');
+                return [];
+            }
 
-            // video-types.js 인터페이스 표준 영상 목록 구조
-            return response.data.items.map(item => ({
-                videoId: item.id.videoId,
-                title: item.snippet.title,
-                description: item.snippet.description,
-                uploadDate: item.snippet.publishedAt,
-                thumbnailUrl: item.snippet.thumbnails
-            }));
+            const videos = [];
+            let nextPageToken = null;
+            const maxResults = 50; // YouTube API 최대값
+            const threeMonthsAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+
+            while (videos.length < this.maxVideos) {
+                const params = {
+                    part: 'snippet',
+                    playlistId: uploadsPlaylistId,
+                    maxResults: Math.min(maxResults, this.maxVideos - videos.length)
+                };
+
+                if (nextPageToken) {
+                    params.pageToken = nextPageToken;
+                }
+
+                const response = await this.youtube.playlistItems.list(params);
+
+                if (!response.data.items || response.data.items.length === 0) {
+                    break;
+                }
+
+                // 최근 3개월 이내 영상만 필터링
+                const recentItems = response.data.items.filter(item => {
+                    const publishedDate = new Date(item.snippet.publishedAt);
+                    return publishedDate >= threeMonthsAgo;
+                });
+
+                // video-types.js 인터페이스 표준 영상 목록 구조
+                const formattedVideos = recentItems.map(item => ({
+                    videoId: item.snippet.resourceId.videoId,
+                    title: item.snippet.title,
+                    description: item.snippet.description,
+                    uploadDate: item.snippet.publishedAt,
+                    thumbnailUrl: item.snippet.thumbnails
+                }));
+
+                videos.push(...formattedVideos);
+
+                // 3개월 이전 영상이 나오면 중단
+                if (recentItems.length < response.data.items.length) {
+                    break;
+                }
+
+                nextPageToken = response.data.nextPageToken;
+                if (!nextPageToken) break;
+
+                // API 호출 간격
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            ServerLogger.info(`📺 영상 목록 수집 완료: ${videos.length}개 (playlistItems 방식 - 95% 할당량 절약!)`);
+            return videos.slice(0, this.maxVideos);
 
         } catch (error) {
             ServerLogger.error('❌ 최근 영상 목록 수집 실패:', error);

@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from '@storybook/test';
 import SearchBar from './SearchBar';
 
 const meta: Meta<typeof SearchBar> = {
@@ -56,8 +55,8 @@ const meta: Meta<typeof SearchBar> = {
     },
   },
   args: {
-    onChange: fn(),
-    onSearch: fn(),
+    onChange: () => console.log('Action triggered'),
+    onSearch: () => console.log('Action triggered'),
   },
   tags: ['autodocs'],
 };

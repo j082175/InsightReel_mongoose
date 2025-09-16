@@ -198,7 +198,8 @@ class HighViewCollector {
   }
 
   /**
-   * 채널의 최신 영상 검색
+   * 채널의 최신 영상 검색 (최적화: playlistItems 사용)
+   * search API(100 할당량) → channels + playlistItems(2 할당량) 98% 절약!
    */
   async searchChannelVideos(channelId, publishedAfter, publishedBefore, maxResults) {
     // 채널 ID 형식 검증
@@ -206,61 +207,106 @@ class HighViewCollector {
       ServerLogger.error(`❌ 잘못된 채널 ID 형식: "${channelId}" - YouTube 채널 ID는 'UC'로 시작하는 24자 문자열이어야 합니다`);
       throw new Error(`잘못된 채널 ID 형식: ${channelId}`);
     }
-    
+
     let attempts = 0;
     const maxAttempts = this.multiKeyManager.keys.length;
-    
+    let totalQuotaUsed = 0;
+
     while (attempts < maxAttempts) {
       try {
         const availableKey = this.multiKeyManager.getAvailableKey();
-        
-        const response = await axios.get('https://www.googleapis.com/youtube/v3/search', {
+
+        // 1단계: channels API로 uploads 플레이리스트 ID 가져오기 (1 할당량)
+        const channelsResponse = await axios.get('https://www.googleapis.com/youtube/v3/channels', {
           params: {
-            part: 'id,snippet',
-            channelId: channelId,
-            publishedAfter: publishedAfter,
-            publishedBefore: publishedBefore,
-            order: 'date',
-            type: 'video',
+            part: 'contentDetails',
+            id: channelId,
+            key: availableKey.key
+          }
+        });
+
+        this.multiKeyManager.trackAPI(availableKey.key, 'youtube-channels', true);
+        totalQuotaUsed += 1;
+
+        if (!channelsResponse.data.items || channelsResponse.data.items.length === 0) {
+          throw new Error(`채널을 찾을 수 없습니다: ${channelId}`);
+        }
+
+        const uploadsPlaylistId = channelsResponse.data.items[0].contentDetails?.relatedPlaylists?.uploads;
+        if (!uploadsPlaylistId) {
+          throw new Error(`uploads 플레이리스트를 찾을 수 없습니다: ${channelId}`);
+        }
+
+        // 2단계: playlistItems API로 최신 영상 목록 가져오기 (1 할당량)
+        const playlistResponse = await axios.get('https://www.googleapis.com/youtube/v3/playlistItems', {
+          params: {
+            part: 'snippet',
+            playlistId: uploadsPlaylistId,
             maxResults: maxResults,
             key: availableKey.key
           }
         });
 
-        // 성공시 사용량 추적
-        this.multiKeyManager.trackAPI(availableKey.key, 'youtube-search', true);
-        ServerLogger.info(`🔍 Search API 호출 성공: ${channelId} (키: ${availableKey.name})`);
+        this.multiKeyManager.trackAPI(availableKey.key, 'youtube-videos', true);
+        totalQuotaUsed += 1;
 
-        const items = response.data.items || [];
-        console.log(`🔍 DEBUG: YouTube Search API 응답 - ${items.length}개 항목 발견`);
+        ServerLogger.info(`🚀 최적화된 API 호출 성공: ${channelId} (키: ${availableKey.name}, 할당량: 2)`);
+
+        const items = playlistResponse.data.items || [];
+
+        // 날짜 필터링 (publishedAfter, publishedBefore 적용)
+        const startDate = new Date(publishedAfter);
+        const endDate = new Date(publishedBefore);
+
+        const filteredItems = items.filter(item => {
+          const publishedDate = new Date(item.snippet.publishedAt);
+          return publishedDate >= startDate && publishedDate <= endDate;
+        });
+
+        console.log(`🔍 DEBUG: playlistItems API 응답 - ${items.length}개 → 날짜 필터 후 ${filteredItems.length}개`);
         console.log(`🔍 DEBUG: 검색 조건 - 채널: ${channelId}, 기간: ${publishedAfter} ~ ${publishedBefore}`);
 
+        // playlistItems 응답을 search API 형태로 변환
+        const formattedItems = filteredItems.map(item => ({
+          id: {
+            videoId: item.snippet.resourceId.videoId
+          },
+          snippet: {
+            title: item.snippet.title,
+            description: item.snippet.description,
+            publishedAt: item.snippet.publishedAt,
+            thumbnails: item.snippet.thumbnails,
+            channelId: item.snippet.channelId,
+            channelTitle: item.snippet.channelTitle
+          }
+        }));
+
         // 첫 번째 몇 개 영상의 기본 정보 로깅
-        items.slice(0, 3).forEach((item, index) => {
+        formattedItems.slice(0, 3).forEach((item, index) => {
           console.log(`🔍 DEBUG: [${index + 1}] ${item.snippet?.title || '제목없음'} (${item.snippet?.publishedAt})`);
         });
 
         return {
-          results: items,
-          quotaUsed: 100
+          results: formattedItems,
+          quotaUsed: totalQuotaUsed // 2 할당량 (98% 절약!)
         };
 
       } catch (error) {
         attempts++;
-        
+
         if (error.response?.status === 403) {
           // Quota 초과 - 현재 키를 실패로 마킹하고 다음 키 시도
           const availableKey = this.multiKeyManager.getAvailableKey();
-          this.multiKeyManager.trackAPI(availableKey.key, 'youtube-search', false);
+          this.multiKeyManager.trackAPI(availableKey.key, 'youtube-channels', false);
           ServerLogger.warn(`⚠️ API Key ${availableKey.name} quota 초과 - 다음 키로 전환 시도 (${attempts}/${maxAttempts})`);
           continue;
         } else {
           // 다른 에러는 즉시 실패
-          throw new Error(`Search API 오류: ${error.message}`);
+          throw new Error(`최적화된 API 오류: ${error.message}`);
         }
       }
     }
-    
+
     // 모든 키 시도 후 실패
     throw new Error('🚨 모든 YouTube API 키의 할당량이 소진되었습니다');
   }

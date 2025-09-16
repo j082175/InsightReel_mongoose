@@ -92,7 +92,23 @@ export const channelsApi = {
     const response = await axiosInstance.get('/api/channels', {
       params: filters,
     });
-    return response.data.success ? response.data.data : [];
+
+    // 서버 응답 구조: { success: true, data: { channels: [...], meta: {...} } }
+    if (response.data.success && response.data.data) {
+      // channels 필드가 있는 경우 (새로운 서버 응답 구조)
+      if (response.data.data.channels && Array.isArray(response.data.data.channels)) {
+        console.log('✅ [channelsApi.getChannels] 채널 데이터 파싱 성공:', response.data.data.channels.length);
+        return response.data.data.channels;
+      }
+      // 직접 배열인 경우 (이전 서버 응답 구조)
+      else if (Array.isArray(response.data.data)) {
+        console.log('✅ [channelsApi.getChannels] 채널 데이터 파싱 성공 (직접 배열):', response.data.data.length);
+        return response.data.data;
+      }
+    }
+
+    console.warn('⚠️ [channelsApi.getChannels] 예상하지 못한 응답 구조:', response.data);
+    return [];
   },
 
   deleteChannel: async (channelId: string): Promise<void> => {

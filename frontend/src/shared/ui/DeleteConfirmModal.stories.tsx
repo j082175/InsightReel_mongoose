@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { fn } from '@storybook/test';
 import DeleteConfirmModal from './DeleteConfirmModal';
 
 const meta: Meta<typeof DeleteConfirmModal> = {
@@ -61,8 +60,8 @@ const meta: Meta<typeof DeleteConfirmModal> = {
     },
   },
   args: {
-    onClose: fn(),
-    onConfirm: fn(),
+    onClose: () => console.log('Action triggered'),
+    onConfirm: () => console.log('Action triggered'),
   },
   tags: ['autodocs'],
 };

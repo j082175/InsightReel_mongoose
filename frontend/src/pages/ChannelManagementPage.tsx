@@ -31,6 +31,15 @@ const ChannelManagementPage: React.FC = () => {
   const { data: channelGroups = [], isLoading: isLoadingGroups } =
     useChannelGroups();
 
+  // 디버깅: 데이터 상태 확인
+  console.log('🔍 [ChannelManagementPage] 디버그 정보:', {
+    channelsCount: channels.length,
+    channels: channels,
+    isLoading,
+    queryError,
+    firstChannel: channels[0]
+  });
+
   // React Query Mutations
   const deleteChannelMutation = useDeleteChannel();
   const deleteChannelsMutation = useDeleteChannels();
@@ -40,6 +49,13 @@ const ChannelManagementPage: React.FC = () => {
 
   // Custom Hooks (필터링 및 선택 로직)
   const filteredChannels = useFilteredChannels(channels);
+
+  // 디버깅: 필터링 결과 확인
+  console.log('🔍 [ChannelManagementPage] 필터링 결과:', {
+    originalCount: channels.length,
+    filteredCount: filteredChannels.length,
+    filteredChannels: filteredChannels
+  });
   const {
     selectedChannels,
     toggleChannelSelection,
@@ -68,7 +84,8 @@ const ChannelManagementPage: React.FC = () => {
       if (isSelectMode) {
         toggleChannelSelection(channel.channelId);
       } else {
-        setSelectedChannel(channel);
+        // 채널 상세 분석 모달 열기 (채널 이름 전달)
+        setChannelToAnalyze(channel.name);
       }
     },
     [isSelectMode, toggleChannelSelection]
@@ -101,7 +118,7 @@ const ChannelManagementPage: React.FC = () => {
   const handleChannelDelete = useCallback(
     async (channel: Channel) => {
       try {
-        await deleteChannelMutation.mutateAsync(channel._id);
+        await deleteChannelMutation.mutateAsync(channel.id || channel._id);
       } catch (error) {
         throw error;
       }
@@ -126,7 +143,7 @@ const ChannelManagementPage: React.FC = () => {
         const selectedChannelIds = selectedChannels
           .map((channelId) => {
             const channel = channels.find((ch) => ch.channelId === channelId);
-            return channel?._id;
+            return channel?.id || channel?._id;
           })
           .filter(Boolean) as string[];
 

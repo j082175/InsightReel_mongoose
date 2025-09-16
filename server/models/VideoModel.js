@@ -18,6 +18,8 @@ const videoSchema = new mongoose.Schema(createBasicVideoSchema(), {
     collection: 'videos',
     toJSON: {
         transform: function (doc, ret) {
+            // Transform _id to id as per project field naming conventions
+            ret.id = ret._id ? ret._id.toString() : undefined;
             delete ret._id;
             delete ret.__v;
             return ret;

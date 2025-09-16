@@ -96,7 +96,7 @@ const defaultFilters: ChannelFilters = {
   platform: 'ALL',
   contentType: 'ALL',
   analysisStatus: 'ALL',
-  subscriberRange: { min: 0, max: 10000000 },
+  subscriberRange: { min: 0, max: 1000000000 }, // 10억으로 증가 (MrBeast 같은 대형 채널 포함)
   searchTerm: '',
 };
 
@@ -248,14 +248,14 @@ export const useChannelManagementStore = create<
             }
           }
 
-          // Subscriber range filter
-          const subscribers = channel.subscribers || 0;
-          if (
-            subscribers < filters.subscriberRange.min ||
-            subscribers > filters.subscriberRange.max
-          ) {
-            return false;
-          }
+          // Subscriber range filter - 비활성화됨
+          // const subscribers = channel.subscribers || 0;
+          // if (
+          //   subscribers < filters.subscriberRange.min ||
+          //   subscribers > filters.subscriberRange.max
+          // ) {
+          //   return false;
+          // }
 
           // Analysis status filter
           if (filters.analysisStatus !== 'ALL') {
@@ -414,14 +414,14 @@ export const useFilteredChannels = (channels: Channel[] = []) => {
         }
       }
 
-      // Subscriber range filter
-      const subscribers = channel.subscribers || 0;
-      if (
-        subscribers < filters.subscriberRange.min ||
-        subscribers > filters.subscriberRange.max
-      ) {
-        return false;
-      }
+      // Subscriber range filter - 비활성화됨
+      // const subscribers = channel.subscribers || 0;
+      // if (
+      //   subscribers < filters.subscriberRange.min ||
+      //   subscribers > filters.subscriberRange.max
+      // ) {
+      //   return false;
+      // }
 
       // Analysis status filter
       if (filters.analysisStatus !== 'ALL') {

@@ -18,6 +18,8 @@ const channelSchema = new mongoose.Schema(createChannelSchema(), {
   collection: 'channels',
   toJSON: {
     transform: function(doc, ret) {
+      // Transform _id to id as per project field naming conventions
+      ret.id = ret._id ? ret._id.toString() : undefined;
       delete ret._id;
       delete ret.__v;
       return ret;

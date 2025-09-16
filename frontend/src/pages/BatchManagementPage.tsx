@@ -74,6 +74,9 @@ const BatchManagementPage: React.FC = () => {
     [isSelectMode, selectedBatches, deselectBatch, selectBatch, openVideoList]
   );
 
+  // 방어적 프로그래밍: batches가 배열인지 확인
+  const safeBatches = Array.isArray(batches) ? batches : [];
+
   const handleSelectToggle = useCallback(
     (batchId: string) => {
       if (selectedBatches.has(batchId)) {
@@ -172,7 +175,6 @@ const BatchManagementPage: React.FC = () => {
   );
 
   // 통계 계산 (방어적 프로그래밍)
-  const safeBatches = Array.isArray(batches) ? batches : [];
   const stats = {
     total: safeBatches.length,
     completed: safeBatches.filter((b) => b?.status === 'completed').length,

@@ -54,14 +54,6 @@ const preview: Preview = {
     // 문서 설정
     docs: {
       toc: true,
-      page: () => {
-        return (
-          <div>
-            <h1>InsightReel Component Library</h1>
-            <p>YouTube, Instagram, TikTok 비디오 분석 도구의 컴포넌트 라이브러리</p>
-          </div>
-        );
-      },
     },
 
     // 뷰포트 설정 (기본 옵션)

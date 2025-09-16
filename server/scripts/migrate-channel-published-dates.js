@@ -39,7 +39,8 @@ async function getYouTubeChannelPublishedAt(channelId) {
 }
 
 /**
- * 채널 핸들을 채널 ID로 변환
+ * 채널 핸들을 채널 ID로 변환 (최적화된 channels.list 사용)
+ * search.list(100 할당량) → channels.list(1 할당량) 99% 절약!
  */
 async function resolveChannelId(channelIdentifier) {
   try {
@@ -48,18 +49,36 @@ async function resolveChannelId(channelIdentifier) {
       return channelIdentifier;
     }
 
-    // 핸들(@handle) 또는 커스텀 URL인 경우 검색으로 채널 ID 찾기
-    const searchResponse = await youtube.search.list({
-      part: ['snippet'],
-      q: channelIdentifier,
-      type: 'channel',
-      maxResults: 1
-    });
+    // @handle 형태 처리 (channels.list forHandle 사용 - 1 할당량)
+    if (channelIdentifier.startsWith('@')) {
+      ServerLogger.info(`🔍 @handle 조회 (최적화): ${channelIdentifier}`);
+      const response = await youtube.channels.list({
+        part: 'id',
+        forHandle: channelIdentifier.replace('@', '') // @ 제거
+      });
 
-    if (searchResponse.data.items && searchResponse.data.items.length > 0) {
-      return searchResponse.data.items[0].snippet.channelId;
+      if (response.data.items && response.data.items.length > 0) {
+        ServerLogger.info(`✅ @handle 조회 성공 (1 할당량)`);
+        return response.data.items[0].id;
+      }
     }
 
+    // username 처리 (channels.list forUsername 사용 - 1 할당량)
+    if (!channelIdentifier.includes('/') && !channelIdentifier.includes('@')) {
+      ServerLogger.info(`🔍 username 조회 (최적화): ${channelIdentifier}`);
+      const response = await youtube.channels.list({
+        part: 'id',
+        forUsername: channelIdentifier
+      });
+
+      if (response.data.items && response.data.items.length > 0) {
+        ServerLogger.info(`✅ username 조회 성공 (1 할당량)`);
+        return response.data.items[0].id;
+      }
+    }
+
+    // 위 방법들로 해결되지 않으면 포기 (customUrl은 API 지원 없음)
+    ServerLogger.warn(`⚠️ 채널 ID 확정 실패 - 지원되지 않는 형태: ${channelIdentifier}`);
     throw new Error('채널을 찾을 수 없습니다');
   } catch (error) {
     ServerLogger.error(`채널 ID 해결 실패 (${channelIdentifier}):`, error.message);
