@@ -31,6 +31,7 @@ const YouTubeChannelDataCollector = require('./services/YouTubeChannelDataCollec
 const { ServerLogger } = require('./utils/logger');
 const ResponseHandler = require('./utils/response-handler');
 const ApiKeyManager = require('./services/ApiKeyManager');
+const UsageTracker = require('./utils/usage-tracker');
 const {
     API_MESSAGES,
     ERROR_CODES,
@@ -651,6 +652,148 @@ app.get('/api/config/health', (req, res) => {
             res,
             error,
             '설정 상태 확인 중 오류가 발생했습니다.',
+        );
+    }
+});
+
+// API 키 캐시 수동 리로드 엔드포인트 (디버깅/강제 갱신용)
+app.post('/api/admin/reload-api-keys', (req, res) => {
+    try {
+        ServerLogger.info('🔄 API 키 수동 리로드 요청 수신', null, 'API-ADMIN');
+
+        const success = UsageTracker.forceReload();
+
+        if (success) {
+            // 등록된 서비스 정보도 함께 반환
+            const serviceRegistry = require('./utils/service-registry');
+            const registeredServices = serviceRegistry.getRegisteredServices();
+
+            ResponseHandler.success(
+                res,
+                {
+                    reloadedAt: new Date().toISOString(),
+                    message: 'API 키 캐시가 성공적으로 리로드되었습니다',
+                    servicesCleared: registeredServices.length,
+                    serviceNames: registeredServices.map(s => s.name)
+                },
+                'API 키 캐시 리로드 완료'
+            );
+        } else {
+            ResponseHandler.serverError(
+                res,
+                new Error('캐시 리로드 실패'),
+                'API 키 캐시 리로드 중 오류가 발생했습니다'
+            );
+        }
+    } catch (error) {
+        ResponseHandler.serverError(
+            res,
+            error,
+            'API 키 캐시 리로드 중 예상치 못한 오류가 발생했습니다'
+        );
+    }
+});
+
+// 파일 감시 상태 확인 엔드포인트
+app.get('/api/admin/file-watcher-status', (req, res) => {
+    try {
+        const isActive = UsageTracker.fileWatcher !== null;
+
+        ResponseHandler.success(
+            res,
+            {
+                fileWatcherActive: isActive,
+                apiKeysPath: path.join(__dirname, 'data/api-keys.json'),
+                checkedAt: new Date().toISOString()
+            },
+            `파일 감시 시스템 ${isActive ? '활성화' : '비활성화'} 상태`
+        );
+    } catch (error) {
+        ResponseHandler.serverError(
+            res,
+            error,
+            '파일 감시 상태 확인 중 오류가 발생했습니다'
+        );
+    }
+});
+
+// API 키 관리 엔드포인트
+app.post('/api/api-keys', async (req, res) => {
+    try {
+        const { name, apiKey } = req.body;
+
+        if (!name || !apiKey) {
+            return ResponseHandler.clientError(
+                res,
+                {
+                    code: ERROR_CODES.MISSING_REQUIRED_FIELDS,
+                    message: '이름과 API 키는 필수입니다'
+                },
+                400
+            );
+        }
+
+        const result = await ApiKeyManager.addApiKey(name, apiKey);
+
+        ResponseHandler.success(
+            res,
+            result,
+            'API 키가 성공적으로 추가되었습니다'
+        );
+    } catch (error) {
+        ResponseHandler.serverError(
+            res,
+            error,
+            'API 키 추가 중 오류가 발생했습니다'
+        );
+    }
+});
+
+app.delete('/api/api-keys/:keyId', async (req, res) => {
+    try {
+        const { keyId } = req.params;
+
+        if (!keyId) {
+            return ResponseHandler.clientError(
+                res,
+                {
+                    code: ERROR_CODES.MISSING_REQUIRED_FIELDS,
+                    message: 'API 키 ID가 필요합니다'
+                },
+                400
+            );
+        }
+
+        const result = await ApiKeyManager.deleteApiKey(keyId);
+
+        ResponseHandler.success(
+            res,
+            { deleted: true },
+            'API 키가 성공적으로 삭제되었습니다'
+        );
+    } catch (error) {
+        ResponseHandler.serverError(
+            res,
+            error,
+            'API 키 삭제 중 오류가 발생했습니다'
+        );
+    }
+});
+
+app.get('/api/api-keys', async (req, res) => {
+    try {
+        const allKeys = await ApiKeyManager.getAllApiKeys();
+
+        ResponseHandler.success(
+            res,
+            { keys: allKeys },
+            'API 키 목록 조회 완료'
+        );
+    } catch (error) {
+        ResponseHandler.serverError(
+            res,
+            error,
+            'API 키 목록 조회 중 오류가 발생했습니다'
         );
     }
 });
@@ -2833,6 +2976,7 @@ app.get('/api/quota-status', async (req, res) => {
             res,
             {
                 quota: quotaStatus,
+                allKeys: quotaStatus.allKeys, // ✅ allKeys를 최상위 레벨로 노출
                 safetyMargin: safetyMargin,
                 timestamp: new Date().toISOString(),
                 recommendations: {
@@ -3745,6 +3889,9 @@ const startServer = async () => {
 
         // 📋 채널 분석 큐 라우트는 이미 위에서 등록됨 (404 핸들러 이전)
 
+        // API 키 파일 자동 감지 시스템 시작
+        UsageTracker.startFileWatcher();
+
         const server = app.listen(PORT, () => {
             ServerLogger.info(
                 `
@@ -3757,6 +3904,7 @@ const startServer = async () => {
                         ? 'MongoDB Atlas'
                         : 'Google Sheets'
                 }
+👀 API 키 자동 감지: 활성화
 
 📋 설정 체크리스트:
 [ ] Gemini API 키 설정 (.env 파일)
@@ -3775,7 +3923,10 @@ const startServer = async () => {
         // Graceful shutdown 처리
         const gracefulShutdown = (signal) => {
             ServerLogger.info(`🛑 ${signal} 신호 수신 - 서버를 안전하게 종료합니다...`, 'SHUTDOWN');
-            
+
+            // API 키 파일 감시 중지
+            UsageTracker.stopFileWatcher();
+
             server.close(() => {
                 ServerLogger.info('✅ HTTP 서버가 종료되었습니다', 'SHUTDOWN');
                 

@@ -25,6 +25,10 @@ class HighViewCollector {
       maxResultsPerSearch: 50,
       batchSize: 50
     };
+
+    // 서비스 레지스트리에 등록
+    const serviceRegistry = require('../utils/service-registry');
+    serviceRegistry.register(this);
   }
 
   /**
@@ -454,11 +458,17 @@ class HighViewCollector {
    * 현재 quota 사용 현황 (MultiKeyManager 기반)
    */
   async getQuotaStatus() {
-    const allStatus = this.multiKeyManager.getAllUsageStatus();
-    
-    // ApiKeyManager에서 실제 키 정보 가져오기
-    const ApiKeyManager = require('./ApiKeyManager');
-    const allApiKeys = await ApiKeyManager.getAllApiKeys();
+    try {
+      const allStatus = this.multiKeyManager.getAllUsageStatus();
+
+      // ApiKeyManager에서 실제 키 정보 가져오기 (안전한 호출)
+      const ApiKeyManager = require('./ApiKeyManager');
+      let allApiKeys = [];
+      try {
+        allApiKeys = await ApiKeyManager.getAllApiKeys();
+      } catch (error) {
+        ServerLogger.warn('ApiKeyManager 호출 실패, 기본 정보만 사용', error.message, 'HIGH-VIEW-COLLECTOR');
+      }
     
     // allStatus에 실제 키 ID와 상태 정보 추가
     const enrichedStatus = allStatus.map((status, index) => {
@@ -549,6 +559,27 @@ class HighViewCollector {
         }
       }
     };
+
+    } catch (error) {
+      ServerLogger.error('getQuotaStatus 실행 중 오류 발생', error, 'HIGH-VIEW-COLLECTOR');
+
+      // 안전한 fallback 응답 반환
+      return {
+        used: 0,
+        limit: 8000,
+        remaining: 8000,
+        usagePercent: 0,
+        keyCount: 0,
+        allKeys: [],
+        activeKeyCount: 0,
+        gemini: {
+          pro: { used: 0, limit: 50, remaining: 50, usagePercent: 0 },
+          flash: { used: 0, limit: 250, remaining: 250, usagePercent: 0 },
+          flashLite: { used: 0, limit: 1000, remaining: 1000, usagePercent: 0 },
+          total: { used: 0, quota: 1300, percentage: 0 }
+        }
+      };
+    }
   }
 
   /**
@@ -579,6 +610,13 @@ class HighViewCollector {
    */
   delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // API 키 캐시 클리어 (파일 변경 시 호출)
+  clearApiKeyCache() {
+    this.multiKeyManager = null;
+    this._initialized = false;
+    ServerLogger.info('🔄 HighViewCollector API 키 캐시 클리어 - MultiKeyManager 재초기화 필요', null, 'HIGH-VIEW-COLLECTOR');
   }
 }
 

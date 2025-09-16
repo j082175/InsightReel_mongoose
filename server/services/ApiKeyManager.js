@@ -151,17 +151,26 @@ class ApiKeyManager {
 
   async deleteApiKey(keyId) {
     await this.initialize();
-    
+
     const key = this.apiKeys.get(keyId);
     if (!key) {
       throw new Error('존재하지 않는 API 키입니다.');
     }
 
-    // 이제 모든 키가 삭제 가능
+    // 사용량 파일도 함께 삭제
+    const UsageTracker = require('../utils/usage-tracker');
+    const usageDeleted = UsageTracker.deleteUsageFile(key.apiKey);
+
+    if (usageDeleted) {
+      ServerLogger.info('🗑️ API 키 및 사용량 데이터 삭제:', { id: keyId, name: key.name });
+    } else {
+      ServerLogger.warn('⚠️ API 키는 삭제되었지만 사용량 파일 삭제에 실패:', { id: keyId, name: key.name });
+    }
+
+    // API 키 삭제
     this.apiKeys.delete(keyId);
     await this.saveToFile();
-    
-    ServerLogger.info('🗑️ API 키 삭제:', { id: keyId, name: key.name });
+
     return true;
   }
 
@@ -219,6 +228,23 @@ class ApiKeyManager {
   maskApiKey(apiKey) {
     if (!apiKey || apiKey.length < 8) return '****';
     return `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}`;
+  }
+
+  /**
+   * 캐시 클리어 및 재초기화 (파일 변경 시 호출)
+   */
+  clearCacheAndReinitialize() {
+    try {
+      // 메모리 캐시 클리어
+      this.apiKeys.clear();
+      this.initialized = false;
+
+      ServerLogger.info('🔄 ApiKeyManager 캐시 클리어 완료', null, 'API-KEY-MANAGER');
+      return true;
+    } catch (error) {
+      ServerLogger.error('❌ ApiKeyManager 캐시 클리어 실패:', error, 'API-KEY-MANAGER');
+      return false;
+    }
   }
 }
 

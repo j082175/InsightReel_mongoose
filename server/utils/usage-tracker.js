@@ -9,6 +9,7 @@ const { YOUTUBE_API_LIMITS, GEMINI_API_LIMITS } = require('../config/api-constan
  */
 class UsageTracker {
     static instances = new Map(); // 싱글톤 인스턴스 저장
+    static fileWatcher = null; // 파일 감시자 저장
 
     constructor(apiKey = null) {
         const key = apiKey || this.getDefaultApiKey();
@@ -1177,6 +1178,133 @@ class UsageTracker {
      */
     isYouTubeQuotaExceeded() {
         return this.isQuotaExceeded('YOUTUBE');
+    }
+
+    /**
+     * 모든 캐시 클리어 (API 키 변경 시 사용)
+     */
+    static clearAllCaches() {
+        try {
+            // 1. require 캐시 클리어
+            const apiKeysPath = require.resolve('../data/api-keys.json');
+            delete require.cache[apiKeysPath];
+
+            // 2. 싱글톤 인스턴스 클리어
+            UsageTracker.instances.clear();
+
+            // 3. ApiKeyManager 캐시 클리어
+            const apiKeyManager = require('../services/ApiKeyManager');
+            apiKeyManager.clearCacheAndReinitialize();
+
+            // 4. 모든 등록된 서비스의 API 키 캐시 클리어
+            const serviceRegistry = require('./service-registry');
+            const result = serviceRegistry.clearAllServiceCaches();
+
+            ServerLogger.info(`🔄 API 키 캐시 완전 클리어 완료 - UsageTracker + ApiKeyManager + ${result.cleared}개 서비스`, null, 'USAGE-TRACKER');
+            return true;
+        } catch (error) {
+            ServerLogger.error('❌ 캐시 클리어 실패:', error, 'USAGE-TRACKER');
+            return false;
+        }
+    }
+
+    /**
+     * API 키 파일 자동 감지 시스템 시작
+     */
+    static startFileWatcher() {
+        if (UsageTracker.fileWatcher) {
+            return; // 이미 실행 중
+        }
+
+        try {
+            const apiKeysPath = path.join(__dirname, '../data/api-keys.json');
+            let reloadTimeout;
+
+            // 파일 변경 감지 (디바운싱 적용)
+            UsageTracker.fileWatcher = fs.watchFile(apiKeysPath, (curr, prev) => {
+                // 파일이 실제로 변경되었는지 확인
+                if (curr.mtime !== prev.mtime) {
+                    clearTimeout(reloadTimeout);
+
+                    // 1000ms 디바운싱 (임시 저장 등 무시, 안정성 향상)
+                    reloadTimeout = setTimeout(() => {
+                        ServerLogger.info('📁 API 키 파일 변경 감지 - 자동 리로드 시작', null, 'API-WATCHER');
+
+                        const success = UsageTracker.clearAllCaches();
+                        if (success) {
+                            ServerLogger.info('✅ API 키 자동 리로드 완료', null, 'API-WATCHER');
+                        } else {
+                            ServerLogger.error('❌ API 키 자동 리로드 실패', null, 'API-WATCHER');
+                        }
+                    }, 1000);
+                }
+            });
+
+            ServerLogger.info('👀 API 키 파일 자동 감지 시스템 시작', { path: apiKeysPath }, 'API-WATCHER');
+        } catch (error) {
+            ServerLogger.error('❌ 파일 감시자 시작 실패:', error, 'API-WATCHER');
+        }
+    }
+
+    /**
+     * API 키 파일 감지 시스템 중지
+     */
+    static stopFileWatcher() {
+        if (UsageTracker.fileWatcher) {
+            const apiKeysPath = path.join(__dirname, '../data/api-keys.json');
+            fs.unwatchFile(apiKeysPath);
+            UsageTracker.fileWatcher = null;
+            ServerLogger.info('🛑 API 키 파일 자동 감지 시스템 중지', null, 'API-WATCHER');
+        }
+    }
+
+    /**
+     * 수동 캐시 리로드 (디버깅/강제 갱신용)
+     */
+    static forceReload() {
+        ServerLogger.info('🔄 수동 API 키 캐시 리로드 요청', null, 'USAGE-TRACKER');
+        return UsageTracker.clearAllCaches();
+    }
+
+    /**
+     * 특정 API 키의 사용량 파일 삭제
+     * @param {string} apiKey - 삭제할 API 키
+     * @returns {boolean} 삭제 성공 여부
+     */
+    static deleteUsageFile(apiKey) {
+        if (!apiKey) {
+            ServerLogger.warn('API 키가 제공되지 않아 사용량 파일을 삭제할 수 없습니다', null, 'USAGE-TRACKER');
+            return false;
+        }
+
+        try {
+            // API 키 해시 생성
+            const hash = crypto.createHash('sha256')
+                .update(apiKey)
+                .digest('hex')
+                .substring(0, 16);
+
+            // 사용량 파일 경로들
+            const dataDir = path.join(__dirname, '../data/usage');
+            const usageFilePath = path.join(dataDir, `usage-${hash}.json`);
+
+            // 파일 존재 확인 후 삭제
+            if (fs.existsSync(usageFilePath)) {
+                fs.unlinkSync(usageFilePath);
+                ServerLogger.info(`🗑️ 사용량 파일 삭제됨: usage-${hash}.json`, null, 'USAGE-TRACKER');
+
+                // 메모리 캐시에서도 제거
+                UsageTracker.instances.delete(apiKey);
+
+                return true;
+            } else {
+                ServerLogger.info(`📁 삭제할 사용량 파일이 없음: usage-${hash}.json`, null, 'USAGE-TRACKER');
+                return true; // 파일이 없어도 성공으로 간주
+            }
+        } catch (error) {
+            ServerLogger.error('사용량 파일 삭제 중 오류 발생', error, 'USAGE-TRACKER');
+            return false;
+        }
     }
 }
 

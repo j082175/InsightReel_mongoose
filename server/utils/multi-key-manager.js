@@ -27,8 +27,12 @@ class MultiKeyManager {
     // 비동기 초기화는 별도 메서드에서 처리
     this._initialized = false;
 
+    // 서비스 레지스트리에 등록
+    const serviceRegistry = require('./service-registry');
+    serviceRegistry.register(this);
+
     ServerLogger.info('🔑 MultiKeyManager 생성됨 (초기화 필요)', null, 'MULTI-KEY');
-    
+
     // 싱글톤 인스턴스 저장
     MultiKeyManager.instance = this;
   }
@@ -71,9 +75,10 @@ class MultiKeyManager {
         });
 
       keys.push(...managerKeys);
+      ServerLogger.info(`🔑 ApiKeyManager에서 ${managerKeys.length}개 키 로드 완료`, null, 'MULTI-KEY');
     } catch (error) {
-      ServerLogger.error('ApiKeyManager 로드 실패, API 키가 없습니다.', error, 'MULTI-KEY');
-      throw new Error('ApiKeyManager에서 API 키를 로드할 수 없습니다.');
+      ServerLogger.warn('ApiKeyManager 로드 실패, 파일 기반 키만 사용합니다.', error.message, 'MULTI-KEY');
+      // ❌ throw 제거: ApiKeyManager 실패해도 파일 기반 키는 로드 시도
     }
     
     // 2. API 키 파일에서 추가 로드 (active 상태만)
@@ -98,7 +103,22 @@ class MultiKeyManager {
     } catch (error) {
       ServerLogger.warn('API 키 파일 로드 실패', error.message, 'MULTI-KEY');
     }
-    
+
+    // 최소 1개 키는 보장 (환경변수 fallback)
+    if (keys.length === 0) {
+      const envKey = process.env.YOUTUBE_API_KEY;
+      if (envKey) {
+        keys.push({
+          name: 'Environment Key (Fallback)',
+          key: envKey,
+          quota: safetyMargin
+        });
+        ServerLogger.info('🔑 환경변수 키 fallback 사용', null, 'MULTI-KEY');
+      } else {
+        ServerLogger.error('⚠️ 사용 가능한 API 키가 없습니다!', null, 'MULTI-KEY');
+      }
+    }
+
     return keys;
   }
   
@@ -243,6 +263,14 @@ class MultiKeyManager {
       ServerLogger.error('MultiKeyManager 재초기화 실패:', error, 'MULTI-KEY');
       throw error;
     }
+  }
+
+  // API 키 캐시 클리어 (파일 변경 시 호출)
+  clearApiKeyCache() {
+    this.keys = [];
+    this._initialized = false;
+    this.trackers.clear();
+    ServerLogger.info('🔄 MultiKeyManager API 키 캐시 클리어', null, 'MULTI-KEY-MANAGER');
   }
 }
 
