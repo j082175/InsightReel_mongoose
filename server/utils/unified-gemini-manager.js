@@ -37,8 +37,12 @@ class UnifiedGeminiManager {
     // 비동기 초기화를 위해 init 메서드 호출 필요
     this.initPromise = this.init(options);
     
+    // 서비스 레지스트리에 등록
+    const serviceRegistry = require('./service-registry');
+    serviceRegistry.register(this);
+
     ServerLogger.success(`🤖 통합 Gemini 관리자 초기화 완료 (모드: ${this.fallbackMode})`, null, 'UNIFIED');
-    
+
     // 싱글톤 인스턴스 저장
     UnifiedGeminiManager.instance = this;
   }
@@ -1134,6 +1138,16 @@ class UnifiedGeminiManager {
       model: `${modelType} (single-key)`,
       timestamp: new Date().toISOString()
     };
+  }
+
+  // API 키 캐시 클리어 (파일 변경 시 호출)
+  clearApiKeyCache() {
+    this.apiKeys = [];
+    this.initialized = false;
+    if (this.usageTracker) {
+      // UsageTracker는 전역 싱글톤이므로 별도 클리어 불필요
+    }
+    ServerLogger.info('🔄 UnifiedGeminiManager API 키 캐시 클리어', null, 'UNIFIED-GEMINI');
   }
 
 }

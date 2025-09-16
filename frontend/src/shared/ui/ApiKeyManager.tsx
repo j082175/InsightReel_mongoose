@@ -35,6 +35,45 @@ const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ isModal = false }) => {
     fetchApiKeyInfo();
   }, []);
 
+  const fetchFromApiKeysEndpoint = async () => {
+    try {
+      console.log('🔄 api-keys 엔드포인트에서 키 정보 가져오기');
+      const response = await fetch('http://localhost:3000/api/api-keys');
+      const data = await response.json();
+
+      console.log('🔍 api-keys 응답:', data);
+
+      if (data.success && data.data?.keys) {
+        const apiKeysFromEndpoint: ApiKeyInfo[] = data.data.keys.map(
+          (key: any, index: number) => ({
+            id: key.id,
+            name: key.name,
+            maskedKey: `${key.apiKey.slice(0, 8)}...${key.apiKey.slice(-4)}`,
+            status: key.status === 'active' ? 'active' : 'disabled',
+            usage: {
+              videos: { used: 0, limit: 1000 },
+              channels: { used: 0, limit: 1000 },
+              search: { used: 0, limit: 1000 },
+              comments: { used: 0, limit: 1000 },
+              total: { used: 0, limit: 10000 },
+            },
+            errors: 0,
+            lastUsed: key.updatedAt || key.createdAt,
+            resetTime: '매일 오후 4시 (한국 시간)',
+          })
+        );
+
+        setApiKeys(apiKeysFromEndpoint);
+      } else {
+        console.error('api-keys 엔드포인트에서도 데이터 없음');
+        setApiKeys([]);
+      }
+    } catch (error) {
+      console.error('api-keys fallback 실패:', error);
+      setApiKeys([]);
+    }
+  };
+
   const fetchApiKeyInfo = async () => {
     try {
       setLoading(true);
@@ -42,7 +81,15 @@ const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ isModal = false }) => {
       const response = await fetch('http://localhost:3000/api/quota-status');
       const data = await response.json();
 
-      if (data.success && data.data.quota.allKeys) {
+      console.log('🔍 API 응답 전체:', data);
+      console.log('🔍 data.data:', data.data);
+      console.log('🔍 quota:', data.data?.quota);
+      console.log('🔍 quota.keyCount:', data.data?.quota?.keyCount);
+      console.log('🔍 allKeys:', data.data?.quota?.allKeys);
+      console.log('🔍 allKeys 존재 여부:', !!data.data?.quota?.allKeys);
+      console.log('🔍 allKeys 길이:', data.data?.quota?.allKeys?.length);
+
+      if (data.success && data.data?.quota?.allKeys && data.data.quota.allKeys.length > 0) {
         // 실제 키 정보를 ApiKeyInfo 형태로 변환
         const realApiKeys: ApiKeyInfo[] = data.data.quota.allKeys.map(
           (key: any, index: number) => {
@@ -94,12 +141,19 @@ const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ isModal = false }) => {
 
         setApiKeys(realApiKeys);
       } else {
-        console.error('API quota status 조회 실패');
-        setApiKeys([]);
+        console.warn('quota-status에서 allKeys 없음, api-keys로 fallback');
+        // fallback: 직접 api-keys 엔드포인트에서 가져오기
+        await fetchFromApiKeysEndpoint();
       }
     } catch (error) {
-      console.error('API 키 정보 조회 실패:', error);
-      setApiKeys([]);
+      console.error('quota-status API 키 정보 조회 실패:', error);
+      // quota-status 실패 시에도 api-keys로 fallback 시도
+      try {
+        await fetchFromApiKeysEndpoint();
+      } catch (fallbackError) {
+        console.error('fallback도 실패:', fallbackError);
+        setApiKeys([]);
+      }
     } finally {
       setLoading(false);
     }

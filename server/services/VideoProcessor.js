@@ -69,6 +69,10 @@ class VideoProcessor {
         this.hybridExtractor = null; // 비동기 초기화
         this._initialized = false;
 
+        // 서비스 레지스트리에 등록
+        const serviceRegistry = require('../utils/service-registry');
+        serviceRegistry.register(this);
+
         // 디렉토리 생성
         this.ensureDirectories();
     }
@@ -1593,6 +1597,12 @@ class VideoProcessor {
                 ? `https://www.youtube.com/channel/${channelId}`
                 : '';
         }
+    }
+
+    // API 키 캐시 클리어 (파일 변경 시 호출)
+    clearApiKeyCache() {
+        this.youtubeApiKey = null;
+        ServerLogger.info('🔄 VideoProcessor API 키 캐시 클리어', null, 'VIDEO-PROCESSOR');
     }
 }
 

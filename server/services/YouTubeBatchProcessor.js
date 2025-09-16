@@ -49,6 +49,10 @@ class YouTubeBatchProcessor {
         // 시작 시 파일에서 복원
         this.restoreFromFile();
 
+        // 서비스 레지스트리에 등록
+        const serviceRegistry = require('../utils/service-registry');
+        serviceRegistry.register(this);
+
         ServerLogger.info('📦 YouTube 배치 처리기 초기화됨', {
             maxBatchSize: this.maxBatchSize,
             batchTimeout: this.batchTimeout / 1000 + '초',
@@ -632,6 +636,12 @@ class YouTubeBatchProcessor {
                 ? `https://www.youtube.com/channel/${channelId}`
                 : '';
         }
+    }
+
+    // API 키 캐시 클리어 (파일 변경 시 호출)
+    clearApiKeyCache() {
+        this.youtubeApiKey = null;
+        ServerLogger.info('🔄 YouTubeBatchProcessor API 키 캐시 클리어', null, 'YT-BATCH-PROCESSOR');
     }
 }
 

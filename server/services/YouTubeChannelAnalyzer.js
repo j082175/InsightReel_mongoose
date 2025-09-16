@@ -18,6 +18,10 @@ class YouTubeChannelAnalyzer {
         });
         this.apiKey = null; // ApiKeyManager에서 동적으로 로드
 
+        // 서비스 레지스트리에 등록
+        const serviceRegistry = require('../utils/service-registry');
+        serviceRegistry.register(this);
+
         ServerLogger.success('🔧 YouTube 채널 분석 서비스 초기화 완료');
     }
 
@@ -1310,6 +1314,12 @@ ${commentsSample.slice(0, 5).join('\n')}
             ServerLogger.warn(`⚠️ AI 재해석 실패: ${error.message}`);
             return []; // 실패 시 빈 배열 반환
         }
+    }
+
+    // API 키 캐시 클리어 (파일 변경 시 호출)
+    clearApiKeyCache() {
+        this.apiKey = null;
+        ServerLogger.info('🔄 YouTubeChannelAnalyzer API 키 캐시 클리어', null, 'YT-ANALYZER');
     }
 }
 

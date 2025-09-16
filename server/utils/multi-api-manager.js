@@ -28,6 +28,10 @@ class MultiApiManager {
     
     // 현재 활성 API 키 상태
     this.currentApiKeyType = 'primary';
+
+    // 서비스 레지스트리에 등록
+    const serviceRegistry = require('./service-registry');
+    serviceRegistry.register(this);
     this.currentApiKeyIndex = 0;
     
     ServerLogger.info(`🔧 Multi API Manager 초기화: 전략=${this.fallbackStrategy}, 보조키=${this.secondaryApiKeys.length}개`, null, 'MULTIAPI');
@@ -271,6 +275,15 @@ class MultiApiManager {
       return true;
     }
     return false;
+  }
+
+  // API 키 캐시 클리어 (파일 변경 시 호출)
+  clearApiKeyCache() {
+    this.primaryApiKey = null;
+    this.secondaryApiKeys = [];
+    this._initialized = false;
+    this.usageTrackers.clear();
+    ServerLogger.info('🔄 MultiApiManager API 키 캐시 클리어', null, 'MULTI-API');
   }
 }
 

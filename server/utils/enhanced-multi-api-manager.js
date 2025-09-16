@@ -22,6 +22,10 @@ class EnhancedMultiApiManager {
       this.usageTrackers.set(`key_${index}`, UsageTracker.getInstance());
     });
     
+    // 서비스 레지스트리에 등록
+    const serviceRegistry = require('./service-registry');
+    serviceRegistry.register(this);
+
     ServerLogger.info(`🔧 Enhanced Multi API Manager 초기화`, null, 'MULTIAPI');
     ServerLogger.info(`📊 로드된 API 키: ${this.apiKeys.length}개`, null, 'MULTIAPI');
     ServerLogger.info(`🎯 폴백 전략: ${this.fallbackStrategy}`, null, 'MULTIAPI');
@@ -306,6 +310,14 @@ class EnhancedMultiApiManager {
       return true;
     }
     return false;
+  }
+
+  // API 키 캐시 클리어 (파일 변경 시 호출)
+  clearApiKeyCache() {
+    this.apiKeys = [];
+    this._initialized = false;
+    this.usageTrackers.clear();
+    ServerLogger.info('🔄 EnhancedMultiApiManager API 키 캐시 클리어', null, 'ENHANCED-MULTI-API');
   }
 }
 

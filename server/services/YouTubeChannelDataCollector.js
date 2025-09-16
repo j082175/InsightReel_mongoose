@@ -10,6 +10,10 @@ class YouTubeChannelDataCollector {
         this.maxVideos = 30; // 분석할 최대 영상 수 (2단계)
         this.apiKey = null; // ApiKeyManager에서 동적으로 로드
         this.youtube = null; // 나중에 초기화
+
+        // 서비스 레지스트리에 등록
+        const serviceRegistry = require('../utils/service-registry');
+        serviceRegistry.register(this);
     }
 
     async getApiKey() {
@@ -29,6 +33,13 @@ class YouTubeChannelDataCollector {
             });
         }
         return this.apiKey;
+    }
+
+    // API 키 캐시 클리어 (파일 변경 시 호출)
+    clearApiKeyCache() {
+        this.apiKey = null;
+        this.youtube = null;
+        ServerLogger.info('🔄 YouTubeChannelDataCollector API 키 캐시 클리어', null, 'YT-COLLECTOR');
     }
 
     /**
