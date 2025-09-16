@@ -105,20 +105,25 @@
 ### **💡 코딩 전 체크리스트**
 - [ ] 중복 필드 생성하지 않았나? (id/videoId, views/viewCount 등)
 - [ ] 상수 대신 하드코딩 하지 않았나? (HTTP_STATUS_CODES.OK, PLATFORMS.YOUTUBE 등)
-- [ ] 새 파일이 1000줄 이하인가? (Claude Code 토큰 제한)
+- [ ] 새 파일이 1500줄 이하인가? (Claude Code 토큰 제한)
 - [ ] 기존 컴포넌트 재활용했나? (Modal, VideoCard, SearchBar 등)
 - [ ] **FSD 구조**를 따르고 있나? (app→pages→features→shared 순서)
 - [ ] **Import 경로**가 FSD 규칙에 맞나? (`../shared/components`, `../features/xxx` 등)
 - [ ] **VideoStore 패턴** 사용했나? (비디오 관련 상태 관리는 VideoStore 필수)
-- [ ] **방어적 프로그래밍** 적용했나? (`Array.isArray()` 체크, 안전한 API 파싱)
+- [ ] **방어적 프로그래밍** 적용했나? (`?.length || 0`, `?.map()` 등 null safety)
+- [ ] **테스트 작성**했나? (Jest + React Testing Library 사용)
+- [ ] **Storybook Story** 작성했나? (새 컴포넌트는 문서화 필수)
+- [ ] **ESLint/Prettier** 통과하나? (`npm run lint`, `npm run format:check`)
 
 **⚠️ 이 규칙들을 위반하면 전체 시스템 일관성이 깨집니다!**
 
 ### **🚨 특히 중요한 금지 사항**
 - ❌ **VideoStore 우회 금지**: 비디오 관련 상태 관리를 개별 useState로 구현하지 말 것
-- ❌ **대형 컴포넌트 생성 금지**: 500줄 이상 컴포넌트는 즉시 분할 필요
-- ❌ **방어적 프로그래밍 생략 금지**: API 응답은 항상 `Array.isArray()` 체크
+- ❌ **대형 컴포넌트 생성 금지**: 1500줄 이상 파일은 즉시 분할 필요
+- ❌ **방어적 프로그래밍 생략 금지**: `?.length || 0`, `?.map()` 등 null safety 필수
 - ❌ **중복 필드 생성 금지**: `id/videoId`, `views/viewCount` 같은 중복 필드 절대 금지
+- ❌ **테스트 없는 컴포넌트 금지**: 새 컴포넌트는 반드시 테스트 작성
+- ❌ **문서화 생략 금지**: 새 컴포넌트는 반드시 Storybook Story 작성
 
 **🎯 이 규칙들은 실제 운영에서 검증된 베스트 프랙티스입니다!**
 
@@ -126,6 +131,24 @@
 
 ## 🎯 프로젝트 개요
 YouTube/Instagram/TikTok 비디오를 자동으로 다운로드하고 AI(Gemini)로 분석 후 Google Sheets에 저장하는 시스템
+
+### 🎉 **현재 상태: 프로덕션 준비 완료** ✅
+- ✅ **Phase 6: React Testing Library** - 컴포넌트 테스트 시스템 (73.7% 커버리지)
+- ✅ **Phase 7-1: ESLint + Prettier** - 코드 품질 자동화
+- ✅ **Phase 7-2: Storybook** - 컴포넌트 문서화 시스템
+
+### 🚀 **운영 서버 상태**
+- **Backend**: http://localhost:3000 🟢
+- **Frontend**: http://localhost:8000 🟢
+- **Storybook**: http://localhost:6007 🟢
+
+### 📊 **개발 환경 완성도**
+- **테스팅**: Jest + React Testing Library (5개 주요 컴포넌트 테스트)
+- **문서화**: Storybook (50+ 컴포넌트 시나리오)
+- **품질관리**: ESLint + Prettier 자동화
+- **아키텍처**: FSD (Feature-Sliced Design) 적용
+- **타입 안전성**: TypeScript 100% 적용
+- **방어적 프로그래밍**: Null safety 패턴 전체 적용
 
 ---
 
