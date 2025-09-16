@@ -1,5 +1,12 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Channel, Video } from '../../../shared/types';
+import {
+  useChannelGroups,
+  useChannels,
+  useTrendingVideos,
+  useCollectTrending,
+  useCollectMultipleGroups,
+} from '../../../shared/hooks/useApi';
 
 export interface CollectionFilters {
   daysBack: number;
@@ -94,85 +101,109 @@ const defaultFilters: CollectionFilters = {
   includeMidform: true,
   includeLongForm: true,
   keywords: [],
-  excludeKeywords: []
+  excludeKeywords: [],
 };
 
 const defaultCollectionTarget: CollectionTarget = {
   type: 'groups',
   selectedGroups: [],
-  selectedChannels: []
+  selectedChannels: [],
 };
 
-export const useTrendingStore = (): TrendingStoreState & TrendingStoreActions => {
+export const useTrendingStore = (): TrendingStoreState &
+  TrendingStoreActions => {
+  // React Query 훅 사용
+  const {
+    data: channelGroups = [],
+    isLoading: groupsLoading,
+    error: groupsQueryError,
+  } = useChannelGroups();
+  const { data: channels = [], isLoading: channelsLoading } = useChannels();
+  const { data: trendingVideos = [], isLoading: videosLoading } =
+    useTrendingVideos();
+  const collectTrendingMutation = useCollectTrending();
+  const collectMultipleGroupsMutation = useCollectMultipleGroups();
 
-  const [state, setState] = useState<TrendingStoreState>({
+  const [state, setState] = useState({
     collectionTarget: defaultCollectionTarget,
     filters: defaultFilters,
     isCollecting: false,
     collectionProgress: '',
-    channelGroups: [],
-    channels: [],
-    trendingVideos: [],
-    groupsLoading: false,
-    channelsLoading: false,
-    videosLoading: false,
-    error: null,
-    groupsError: null,
     searchTerm: '',
-    selectedVideos: new Set(),
-    isSelectMode: false
+    selectedVideos: new Set<string>(),
+    isSelectMode: false,
   });
+
+  // 에러 상태 처리
+  const error = null; // 일반 에러
+  const groupsError = groupsQueryError
+    ? (groupsQueryError as any)?.userMessage || '채널 그룹 조회에 실패했습니다'
+    : null;
 
   // 필터링된 영상 목록
   const filteredVideos = useMemo(() => {
-    const videosArray = Array.isArray(state.trendingVideos) ? state.trendingVideos : [];
+    const videosArray = Array.isArray(trendingVideos) ? trendingVideos : [];
     let filtered = videosArray;
 
     if (state.searchTerm) {
       const keyword = state.searchTerm.toLowerCase();
-      filtered = filtered.filter(video =>
-        video.title?.toLowerCase().includes(keyword) ||
-        video.channelName?.toLowerCase().includes(keyword)
+      filtered = filtered.filter(
+        (video) =>
+          video.title?.toLowerCase().includes(keyword) ||
+          video.channelName?.toLowerCase().includes(keyword)
       );
     }
 
     // 업로드 날짜 기준 내림차순 정렬
-    filtered.sort((a, b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime());
+    filtered.sort(
+      (a, b) =>
+        new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime()
+    );
 
     return filtered;
-  }, [state.trendingVideos, state.searchTerm]);
+  }, [trendingVideos, state.searchTerm]);
 
   // Collection Actions
-  const updateCollectionTarget = useCallback((target: Partial<CollectionTarget>) => {
-    setState(prev => ({
-      ...prev,
-      collectionTarget: { ...prev.collectionTarget, ...target }
-    }));
-  }, []);
+  const updateCollectionTarget = useCallback(
+    (target: Partial<CollectionTarget>) => {
+      setState((prev) => ({
+        ...prev,
+        collectionTarget: { ...prev.collectionTarget, ...target },
+      }));
+    },
+    []
+  );
 
   const updateFilters = useCallback((filters: Partial<CollectionFilters>) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      filters: { ...prev.filters, ...filters }
+      filters: { ...prev.filters, ...filters },
     }));
   }, []);
 
   const resetFilters = useCallback(() => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      filters: defaultFilters
+      filters: defaultFilters,
     }));
   }, []);
 
   const startCollection = useCallback(async () => {
     if (state.isCollecting) return;
 
-    setState(prev => ({ ...prev, isCollecting: true, collectionProgress: '수집 시작...' }));
+    setState((prev) => ({
+      ...prev,
+      isCollecting: true,
+      collectionProgress: '수집 시작...',
+    }));
 
     try {
       let endpoint = '';
-      let requestBody: CollectionFilters & { groupIds?: string[]; channels?: string[] } = {
-        ...state.filters
+      const requestBody: CollectionFilters & {
+        groupIds?: string[];
+        channels?: string[];
+      } = {
+        ...state.filters,
       };
 
       if (state.collectionTarget.type === 'groups') {
@@ -183,14 +214,14 @@ export const useTrendingStore = (): TrendingStoreState & TrendingStoreActions =>
         requestBody.channels = state.collectionTarget.selectedChannels;
       }
 
-      setState(prev => ({ ...prev, collectionProgress: 'API 호출 중...' }));
+      setState((prev) => ({ ...prev, collectionProgress: 'API 호출 중...' }));
 
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -199,10 +230,10 @@ export const useTrendingStore = (): TrendingStoreState & TrendingStoreActions =>
 
       const result = await response.json();
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         collectionProgress: '수집 완료!',
-        error: null
+        error: null,
       }));
 
       // 수집 완료 후 트렌딩 비디오 다시 불러오기
@@ -213,29 +244,33 @@ export const useTrendingStore = (): TrendingStoreState & TrendingStoreActions =>
       console.log('✅ 트렌딩 수집 성공:', result);
     } catch (error) {
       console.error('❌ 트렌딩 수집 실패:', error);
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         error: error instanceof Error ? error.message : '수집에 실패했습니다',
-        collectionProgress: '수집 실패'
+        collectionProgress: '수집 실패',
       }));
     } finally {
       setTimeout(() => {
-        setState(prev => ({ ...prev, isCollecting: false, collectionProgress: '' }));
+        setState((prev) => ({
+          ...prev,
+          isCollecting: false,
+          collectionProgress: '',
+        }));
       }, 2000);
     }
   }, [state.isCollecting, state.filters, state.collectionTarget]);
 
   const stopCollection = useCallback(() => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       isCollecting: false,
-      collectionProgress: '수집이 중단되었습니다'
+      collectionProgress: '수집이 중단되었습니다',
     }));
   }, []);
 
   // Data Actions
   const fetchChannelGroups = useCallback(async () => {
-    setState(prev => ({ ...prev, groupsLoading: true, groupsError: null }));
+    setState((prev) => ({ ...prev, groupsLoading: true, groupsError: null }));
 
     try {
       const response = await fetch('/api/channel-groups?active=true');
@@ -245,26 +280,31 @@ export const useTrendingStore = (): TrendingStoreState & TrendingStoreActions =>
       }
 
       const result = await response.json();
-      const groupsData = Array.isArray(result) ? result : result.data || result.groups || [];
+      const groupsData = Array.isArray(result)
+        ? result
+        : result.data || result.groups || [];
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         channelGroups: groupsData,
-        groupsLoading: false
+        groupsLoading: false,
       }));
     } catch (error) {
       console.error('❌ 채널 그룹 조회 실패:', error);
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         channelGroups: [],
-        groupsError: error instanceof Error ? error.message : '채널 그룹을 불러오는데 실패했습니다',
-        groupsLoading: false
+        groupsError:
+          error instanceof Error
+            ? error.message
+            : '채널 그룹을 불러오는데 실패했습니다',
+        groupsLoading: false,
       }));
     }
   }, []);
 
   const fetchChannels = useCallback(async () => {
-    setState(prev => ({ ...prev, channelsLoading: true, error: null }));
+    setState((prev) => ({ ...prev, channelsLoading: true, error: null }));
 
     try {
       const response = await fetch('/api/channels');
@@ -274,26 +314,31 @@ export const useTrendingStore = (): TrendingStoreState & TrendingStoreActions =>
       }
 
       const result = await response.json();
-      const channelsData = Array.isArray(result) ? result : result.data || result.channels || [];
+      const channelsData = Array.isArray(result)
+        ? result
+        : result.data || result.channels || [];
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         channels: channelsData,
-        channelsLoading: false
+        channelsLoading: false,
       }));
     } catch (error) {
       console.error('❌ 채널 조회 실패:', error);
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         channels: [],
-        error: error instanceof Error ? error.message : '채널을 불러오는데 실패했습니다',
-        channelsLoading: false
+        error:
+          error instanceof Error
+            ? error.message
+            : '채널을 불러오는데 실패했습니다',
+        channelsLoading: false,
       }));
     }
   }, []);
 
   const fetchTrendingVideos = useCallback(async () => {
-    setState(prev => ({ ...prev, videosLoading: true, error: null }));
+    setState((prev) => ({ ...prev, videosLoading: true, error: null }));
 
     try {
       const response = await fetch('/api/trending/videos');
@@ -303,100 +348,111 @@ export const useTrendingStore = (): TrendingStoreState & TrendingStoreActions =>
       }
 
       const result = await response.json();
-      const videosData = Array.isArray(result) ? result : result.data || result.videos || [];
+      const videosData = Array.isArray(result)
+        ? result
+        : result.data || result.videos || [];
 
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         trendingVideos: videosData,
-        videosLoading: false
+        videosLoading: false,
       }));
     } catch (error) {
       console.error('❌ 트렌딩 비디오 조회 실패:', error);
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         trendingVideos: [],
-        error: error instanceof Error ? error.message : '트렌딩 비디오를 불러오는데 실패했습니다',
-        videosLoading: false
+        error:
+          error instanceof Error
+            ? error.message
+            : '트렌딩 비디오를 불러오는데 실패했습니다',
+        videosLoading: false,
       }));
     }
   }, []);
 
   // Selection Actions
   const handleGroupSelection = useCallback((groupId: string) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       collectionTarget: {
         ...prev.collectionTarget,
         selectedGroups: prev.collectionTarget.selectedGroups.includes(groupId)
-          ? prev.collectionTarget.selectedGroups.filter(id => id !== groupId)
-          : [...prev.collectionTarget.selectedGroups, groupId]
-      }
+          ? prev.collectionTarget.selectedGroups.filter((id) => id !== groupId)
+          : [...prev.collectionTarget.selectedGroups, groupId],
+      },
     }));
   }, []);
 
   const handleChannelSelection = useCallback((channelId: string) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       collectionTarget: {
         ...prev.collectionTarget,
-        selectedChannels: prev.collectionTarget.selectedChannels.includes(channelId)
-          ? prev.collectionTarget.selectedChannels.filter(id => id !== channelId)
-          : [...prev.collectionTarget.selectedChannels, channelId]
-      }
+        selectedChannels: prev.collectionTarget.selectedChannels.includes(
+          channelId
+        )
+          ? prev.collectionTarget.selectedChannels.filter(
+              (id) => id !== channelId
+            )
+          : [...prev.collectionTarget.selectedChannels, channelId],
+      },
     }));
   }, []);
 
   const handleTargetTypeChange = useCallback((type: 'groups' | 'channels') => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       collectionTarget: {
         type,
         selectedGroups: [],
-        selectedChannels: []
-      }
+        selectedChannels: [],
+      },
     }));
   }, []);
 
   // Video Management
   const toggleSelectMode = useCallback(() => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       isSelectMode: !prev.isSelectMode,
-      selectedVideos: new Set()
+      selectedVideos: new Set(),
     }));
   }, []);
 
   const selectVideo = useCallback((videoId: string) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      selectedVideos: new Set([...prev.selectedVideos, videoId])
+      selectedVideos: new Set([...prev.selectedVideos, videoId]),
     }));
   }, []);
 
   const deselectVideo = useCallback((videoId: string) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      selectedVideos: new Set([...prev.selectedVideos].filter(id => id !== videoId))
+      selectedVideos: new Set(
+        [...prev.selectedVideos].filter((id) => id !== videoId)
+      ),
     }));
   }, []);
 
   const selectAllVideos = useCallback(() => {
-    const allVideoIds = filteredVideos.map(video => video._id);
-    setState(prev => ({
+    const allVideoIds = filteredVideos.map((video) => video._id);
+    setState((prev) => ({
       ...prev,
-      selectedVideos: new Set(allVideoIds)
+      selectedVideos: new Set(allVideoIds),
     }));
   }, [filteredVideos]);
 
   const clearSelection = useCallback(() => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      selectedVideos: new Set()
+      selectedVideos: new Set(),
     }));
   }, []);
 
   const updateSearchTerm = useCallback((searchTerm: string) => {
-    setState(prev => ({ ...prev, searchTerm }));
+    setState((prev) => ({ ...prev, searchTerm }));
   }, []);
 
   return {
@@ -434,6 +490,6 @@ export const useTrendingStore = (): TrendingStoreState & TrendingStoreActions =>
     deselectVideo,
     selectAllVideos,
     clearSelection,
-    updateSearchTerm
+    updateSearchTerm,
   };
 };

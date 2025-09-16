@@ -184,10 +184,12 @@ export const useAnalysisStore = create<AnalysisStore>()(
           avgViews: Math.round(
             channels.reduce((sum, c) => sum + c.avgViews, 0) / channels.length
           ),
-          avgEngagement: Math.round(
-            (channels.reduce((sum, c) => sum + c.trends.engagementRate, 0) /
-             channels.length) * 10
-          ) / 10,
+          avgEngagement:
+            Math.round(
+              (channels.reduce((sum, c) => sum + c.trends.engagementRate, 0) /
+                channels.length) *
+                10
+            ) / 10,
           totalChannels: channels.length,
         };
       },
@@ -229,7 +231,9 @@ export const useAnalysisSettings = () => {
  */
 export const useSelectedChannelsForAnalysis = () => {
   const selectedChannels = useAnalysisStore((state) => state.selectedChannels);
-  const setSelectedChannels = useAnalysisStore((state) => state.setSelectedChannels);
+  const setSelectedChannels = useAnalysisStore(
+    (state) => state.setSelectedChannels
+  );
 
   return { selectedChannels, setSelectedChannels };
 };

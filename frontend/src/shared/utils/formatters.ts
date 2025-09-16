@@ -35,15 +35,17 @@ export const formatViews = (num: number): string => {
  */
 export const formatDate = (dateString: string): string => {
   if (!dateString) return '날짜 없음';
-  
+
   // 한국어 날짜 형식 처리 ('2025. 9. 9. 오전 5:37:21' 등)
   if (dateString.includes('오전') || dateString.includes('오후')) {
-    const timeMatch = dateString.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(오전|오후)\s*(\d{1,2}):(\d{1,2})/);
+    const timeMatch = dateString.match(
+      /(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(오전|오후)\s*(\d{1,2}):(\d{1,2})/
+    );
     if (timeMatch) {
       const [, , month, day, ampm, hour, minute] = timeMatch;
       return `${month.padStart(2, '0')}.${day.padStart(2, '0')} ${ampm}${hour}:${minute.padStart(2, '0')}`;
     }
-    
+
     // 시간 정보가 없는 경우 날짜만
     const dateMatch = dateString.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
     if (dateMatch) {
@@ -51,7 +53,7 @@ export const formatDate = (dateString: string): string => {
       return `${month.padStart(2, '0')}. ${day.padStart(2, '0')}`;
     }
   }
-  
+
   try {
     const date = new Date(dateString);
     if (!isNaN(date.getTime())) {
@@ -59,20 +61,20 @@ export const formatDate = (dateString: string): string => {
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
       });
     }
   } catch (e) {
     console.warn('날짜 파싱 실패:', dateString);
   }
-  
+
   // 파싱 실패 시 원본 문자열에서 날짜 부분만 추출 시도
   const dateMatch = dateString.match(/(\d{1,2})[./](\d{1,2})/);
   if (dateMatch) {
     const [, month, day] = dateMatch;
     return `${month}. ${day}`;
   }
-  
+
   return '날짜 확인 필요';
 };
 
@@ -83,9 +85,13 @@ export const formatDate = (dateString: string): string => {
  */
 export const getDurationLabel = (duration: string): string => {
   switch (duration) {
-    case 'SHORT': return '숏폼';
-    case 'MID': return '미드폼';
-    case 'LONG': return '롱폼';
-    default: return duration;
+    case 'SHORT':
+      return '숏폼';
+    case 'MID':
+      return '미드폼';
+    case 'LONG':
+      return '롱폼';
+    default:
+      return duration;
   }
 };

@@ -9,7 +9,11 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { CollectionFilters, BatchCollectionResult, CollectionResult } from '../api/collectionApi';
+import {
+  CollectionFilters,
+  BatchCollectionResult,
+  CollectionResult,
+} from '../api/collectionApi';
 
 // ===== Collection State Types =====
 export interface CollectionProgress {
@@ -53,7 +57,10 @@ interface TrendingCollectionStore {
   setBatches: (batches: BatchCollectionResult[]) => void;
   addBatch: (batch: BatchCollectionResult) => void;
   removeBatch: (batchId: string) => void;
-  updateBatch: (batchId: string, updates: Partial<BatchCollectionResult>) => void;
+  updateBatch: (
+    batchId: string,
+    updates: Partial<BatchCollectionResult>
+  ) => void;
 
   updateSettings: (settings: Partial<CollectionSettings>) => void;
 
@@ -153,8 +160,11 @@ export const useTrendingCollectionStore = create<TrendingCollectionStore>()(
               (r) => r.status === 'completed' || r.status === 'error'
             ).length;
 
-            const totalChannels = state.progress.currentBatch?.totalChannels || 1;
-            const totalProgress = Math.round((completedChannels / totalChannels) * 100);
+            const totalChannels =
+              state.progress.currentBatch?.totalChannels || 1;
+            const totalProgress = Math.round(
+              (completedChannels / totalChannels) * 100
+            );
 
             return {
               progress: {
@@ -182,11 +192,7 @@ export const useTrendingCollectionStore = create<TrendingCollectionStore>()(
         ),
 
       cancelCollection: () =>
-        set(
-          { progress: initialProgress },
-          false,
-          'cancelCollection'
-        ),
+        set({ progress: initialProgress }, false, 'cancelCollection'),
 
       // Batch Management
       setBatches: (batches) => set({ batches }, false, 'setBatches'),
@@ -202,7 +208,9 @@ export const useTrendingCollectionStore = create<TrendingCollectionStore>()(
         set(
           (state) => ({
             batches: state.batches.filter((batch) => batch.batchId !== batchId),
-            selectedBatchIds: state.selectedBatchIds.filter((id) => id !== batchId),
+            selectedBatchIds: state.selectedBatchIds.filter(
+              (id) => id !== batchId
+            ),
           }),
           false,
           'removeBatch'
@@ -251,11 +259,15 @@ export const useTrendingCollectionStore = create<TrendingCollectionStore>()(
       setLoading: (loading) => set({ isLoading: loading }, false, 'setLoading'),
       setError: (error) => set({ error }, false, 'setError'),
 
-      openCollectionModal: () => set({ showCollectionModal: true }, false, 'openCollectionModal'),
-      closeCollectionModal: () => set({ showCollectionModal: false }, false, 'closeCollectionModal'),
+      openCollectionModal: () =>
+        set({ showCollectionModal: true }, false, 'openCollectionModal'),
+      closeCollectionModal: () =>
+        set({ showCollectionModal: false }, false, 'closeCollectionModal'),
 
-      openSettingsModal: () => set({ showSettingsModal: true }, false, 'openSettingsModal'),
-      closeSettingsModal: () => set({ showSettingsModal: false }, false, 'closeSettingsModal'),
+      openSettingsModal: () =>
+        set({ showSettingsModal: true }, false, 'openSettingsModal'),
+      closeSettingsModal: () =>
+        set({ showSettingsModal: false }, false, 'closeSettingsModal'),
 
       // Computed
       getActiveBatches: () => {
@@ -271,7 +283,10 @@ export const useTrendingCollectionStore = create<TrendingCollectionStore>()(
       },
 
       getTotalVideosCollected: () => {
-        return get().batches.reduce((sum, batch) => sum + batch.totalVideosCollected, 0);
+        return get().batches.reduce(
+          (sum, batch) => sum + batch.totalVideosCollected,
+          0
+        );
       },
 
       getCollectionStats: () => {
@@ -280,9 +295,13 @@ export const useTrendingCollectionStore = create<TrendingCollectionStore>()(
 
         return {
           totalBatches: batches.length,
-          totalVideos: batches.reduce((sum, b) => sum + b.totalVideosCollected, 0),
+          totalVideos: batches.reduce(
+            (sum, b) => sum + b.totalVideosCollected,
+            0
+          ),
           totalChannels: batches.reduce((sum, b) => sum + b.totalChannels, 0),
-          successRate: batches.length > 0 ? (completed.length / batches.length) * 100 : 0,
+          successRate:
+            batches.length > 0 ? (completed.length / batches.length) * 100 : 0,
         };
       },
     }),
@@ -306,7 +325,9 @@ export const useCollectionProgress = () => {
  */
 export const useCollectionSettings = () => {
   const settings = useTrendingCollectionStore((state) => state.settings);
-  const updateSettings = useTrendingCollectionStore((state) => state.updateSettings);
+  const updateSettings = useTrendingCollectionStore(
+    (state) => state.updateSettings
+  );
 
   return { settings, updateSettings };
 };
@@ -315,9 +336,15 @@ export const useCollectionSettings = () => {
  * 배치 선택 상태와 관련 함수들을 반환합니다
  */
 export const useBatchSelection = () => {
-  const selectedBatchIds = useTrendingCollectionStore((state) => state.selectedBatchIds);
-  const toggleBatchSelection = useTrendingCollectionStore((state) => state.toggleBatchSelection);
-  const clearBatchSelection = useTrendingCollectionStore((state) => state.clearBatchSelection);
+  const selectedBatchIds = useTrendingCollectionStore(
+    (state) => state.selectedBatchIds
+  );
+  const toggleBatchSelection = useTrendingCollectionStore(
+    (state) => state.toggleBatchSelection
+  );
+  const clearBatchSelection = useTrendingCollectionStore(
+    (state) => state.clearBatchSelection
+  );
 
   return {
     selectedBatchIds,

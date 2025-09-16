@@ -9,7 +9,12 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { TrendData, ContentIdea, CompetitorAnalysis, TrendAnalysisRequest } from '../api/discoveryApi';
+import {
+  TrendData,
+  ContentIdea,
+  CompetitorAnalysis,
+  TrendAnalysisRequest,
+} from '../api/discoveryApi';
 import { Platform } from '../../../entities';
 
 // ===== Discovery State Types =====
@@ -82,7 +87,10 @@ interface ContentDiscoveryStore {
   setError: (error: string | null) => void;
 
   // Settings
-  updateSettings: (settings: { refreshInterval?: number; autoRefresh?: boolean }) => void;
+  updateSettings: (settings: {
+    refreshInterval?: number;
+    autoRefresh?: boolean;
+  }) => void;
 
   // Computed
   getFilteredTrends: () => TrendData[];
@@ -125,11 +133,7 @@ export const useContentDiscoveryStore = create<ContentDiscoveryStore>()(
 
       // Trend Actions
       setTrends: (trends) =>
-        set(
-          { trends, lastRefresh: new Date() },
-          false,
-          'setTrends'
-        ),
+        set({ trends, lastRefresh: new Date() }, false, 'setTrends'),
 
       addTrend: (trend) =>
         set(
@@ -153,8 +157,12 @@ export const useContentDiscoveryStore = create<ContentDiscoveryStore>()(
         set(
           (state) => ({
             trends: state.trends.filter((trend) => trend.id !== trendId),
-            bookmarkedTrends: state.bookmarkedTrends.filter((id) => id !== trendId),
-            selectedTrendIds: state.selectedTrendIds.filter((id) => id !== trendId),
+            bookmarkedTrends: state.bookmarkedTrends.filter(
+              (id) => id !== trendId
+            ),
+            selectedTrendIds: state.selectedTrendIds.filter(
+              (id) => id !== trendId
+            ),
           }),
           false,
           'removeTrend'
@@ -174,7 +182,9 @@ export const useContentDiscoveryStore = create<ContentDiscoveryStore>()(
       removeContentIdea: (ideaId) =>
         set(
           (state) => ({
-            contentIdeas: state.contentIdeas.filter((idea) => idea.id !== ideaId),
+            contentIdeas: state.contentIdeas.filter(
+              (idea) => idea.id !== ideaId
+            ),
           }),
           false,
           'removeContentIdea'
@@ -194,7 +204,9 @@ export const useContentDiscoveryStore = create<ContentDiscoveryStore>()(
         ),
 
       getAnalysisResult: (keyword) => {
-        return get().analysisResults.find((result) => result.keyword === keyword);
+        return get().analysisResults.find(
+          (result) => result.keyword === keyword
+        );
       },
 
       // Bookmarks
@@ -243,7 +255,8 @@ export const useContentDiscoveryStore = create<ContentDiscoveryStore>()(
 
       // UI State
       setLoading: (loading) => set({ isLoading: loading }, false, 'setLoading'),
-      setAnalyzing: (analyzing) => set({ isAnalyzing: analyzing }, false, 'setAnalyzing'),
+      setAnalyzing: (analyzing) =>
+        set({ isAnalyzing: analyzing }, false, 'setAnalyzing'),
       setError: (error) => set({ error }, false, 'setError'),
 
       // Settings
@@ -263,17 +276,26 @@ export const useContentDiscoveryStore = create<ContentDiscoveryStore>()(
 
         return trends.filter((trend) => {
           // Platform filter
-          if (filters.platform !== 'All' && trend.platform !== filters.platform) {
+          if (
+            filters.platform !== 'All' &&
+            trend.platform !== filters.platform
+          ) {
             return false;
           }
 
           // Difficulty filter
-          if (filters.difficulty !== 'All' && trend.difficulty !== filters.difficulty) {
+          if (
+            filters.difficulty !== 'All' &&
+            trend.difficulty !== filters.difficulty
+          ) {
             return false;
           }
 
           // Category filter
-          if (filters.category !== 'All' && trend.category !== filters.category) {
+          if (
+            filters.category !== 'All' &&
+            trend.category !== filters.category
+          ) {
             return false;
           }
 
@@ -311,25 +333,38 @@ export const useContentDiscoveryStore = create<ContentDiscoveryStore>()(
       getTrendStats: () => {
         const trends = get().trends;
 
-        const platformBreakdown = trends.reduce((acc, trend) => {
-          const platform = trend.platform === 'All' ? 'Multi' : trend.platform;
-          acc[platform] = (acc[platform] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
+        const platformBreakdown = trends.reduce(
+          (acc, trend) => {
+            const platform =
+              trend.platform === 'All' ? 'Multi' : trend.platform;
+            acc[platform] = (acc[platform] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>
+        );
 
-        const categoryBreakdown = trends.reduce((acc, trend) => {
-          acc[trend.category] = (acc[trend.category] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
+        const categoryBreakdown = trends.reduce(
+          (acc, trend) => {
+            acc[trend.category] = (acc[trend.category] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>
+        );
 
         return {
           totalTrends: trends.length,
-          avgGrowth: trends.length > 0
-            ? Math.round(trends.reduce((sum, t) => sum + t.growth, 0) / trends.length)
-            : 0,
-          avgVolume: trends.length > 0
-            ? Math.round(trends.reduce((sum, t) => sum + t.volume, 0) / trends.length)
-            : 0,
+          avgGrowth:
+            trends.length > 0
+              ? Math.round(
+                  trends.reduce((sum, t) => sum + t.growth, 0) / trends.length
+                )
+              : 0,
+          avgVolume:
+            trends.length > 0
+              ? Math.round(
+                  trends.reduce((sum, t) => sum + t.volume, 0) / trends.length
+                )
+              : 0,
           platformBreakdown,
           categoryBreakdown,
         };
@@ -361,9 +396,15 @@ export const useBookmarkedTrends = () => {
  * 트렌드 선택 상태와 관련 함수들을 반환합니다
  */
 export const useTrendSelection = () => {
-  const selectedTrendIds = useContentDiscoveryStore((state) => state.selectedTrendIds);
-  const toggleTrendSelection = useContentDiscoveryStore((state) => state.toggleTrendSelection);
-  const clearSelection = useContentDiscoveryStore((state) => state.clearSelection);
+  const selectedTrendIds = useContentDiscoveryStore(
+    (state) => state.selectedTrendIds
+  );
+  const toggleTrendSelection = useContentDiscoveryStore(
+    (state) => state.toggleTrendSelection
+  );
+  const clearSelection = useContentDiscoveryStore(
+    (state) => state.clearSelection
+  );
 
   return {
     selectedTrendIds,
@@ -377,7 +418,9 @@ export const useTrendSelection = () => {
  */
 export const useDiscoveryFilters = () => {
   const filters = useContentDiscoveryStore((state) => state.filters);
-  const updateFilters = useContentDiscoveryStore((state) => state.updateFilters);
+  const updateFilters = useContentDiscoveryStore(
+    (state) => state.updateFilters
+  );
   const resetFilters = useContentDiscoveryStore((state) => state.resetFilters);
 
   return { filters, updateFilters, resetFilters };

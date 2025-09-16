@@ -11,7 +11,7 @@ import {
   Youtube,
   Instagram,
   Video,
-  BarChart3
+  BarChart3,
 } from 'lucide-react';
 import { VideoCard } from '../shared/components';
 import { formatViews, formatDate, getDurationLabel } from '../shared/utils';
@@ -60,7 +60,7 @@ const TrendingVideosPage: React.FC = () => {
     total: 0,
     limit: 50,
     offset: 0,
-    hasMore: false
+    hasMore: false,
   });
 
   // 필터 상태
@@ -74,10 +74,12 @@ const TrendingVideosPage: React.FC = () => {
     dateFrom: '',
     dateTo: '',
     sortBy: 'collectionDate',
-    sortOrder: 'desc'
+    sortOrder: 'desc',
   });
 
-  const [channelGroups, setChannelGroups] = useState<Array<{_id: string, name: string}>>([]);
+  const [channelGroups, setChannelGroups] = useState<
+    Array<{ _id: string; name: string }>
+  >([]);
 
   useEffect(() => {
     fetchChannelGroups();
@@ -107,7 +109,7 @@ const TrendingVideosPage: React.FC = () => {
       const params = new URLSearchParams();
       params.append('limit', pagination.limit.toString());
       params.append('offset', pagination.offset.toString());
-      
+
       Object.entries(filters).forEach(([key, value]) => {
         if (value && value.trim()) {
           params.append(key, value);
@@ -119,10 +121,10 @@ const TrendingVideosPage: React.FC = () => {
 
       if (result.success) {
         setVideos(result.data);
-        setPagination(prev => ({
+        setPagination((prev) => ({
           ...prev,
           total: result.pagination.total,
-          hasMore: result.pagination.hasMore
+          hasMore: result.pagination.hasMore,
         }));
       } else {
         setError('영상 데이터 조회에 실패했습니다.');
@@ -137,15 +139,13 @@ const TrendingVideosPage: React.FC = () => {
   };
 
   const handleFilterChange = (key: string, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-    setPagination(prev => ({ ...prev, offset: 0 })); // 필터 변경 시 첫 페이지로
+    setFilters((prev) => ({ ...prev, [key]: value }));
+    setPagination((prev) => ({ ...prev, offset: 0 })); // 필터 변경 시 첫 페이지로
   };
 
   const handlePageChange = (newOffset: number) => {
-    setPagination(prev => ({ ...prev, offset: newOffset }));
+    setPagination((prev) => ({ ...prev, offset: newOffset }));
   };
-
-
 
   if (loading && videos.length === 0) {
     return (
@@ -169,7 +169,9 @@ const TrendingVideosPage: React.FC = () => {
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
           <TrendingUp className="w-6 h-6 text-blue-500" />
-          <h1 className="text-2xl font-bold text-gray-800">수집된 트렌딩 영상</h1>
+          <h1 className="text-2xl font-bold text-gray-800">
+            수집된 트렌딩 영상
+          </h1>
         </div>
         <p className="text-gray-600">
           총 {pagination.total}개의 트렌딩 영상이 수집되었습니다
@@ -196,7 +198,9 @@ const TrendingVideosPage: React.FC = () => {
 
           {/* 플랫폼 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">플랫폼</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              플랫폼
+            </label>
             <select
               value={filters.platform}
               onChange={(e) => handleFilterChange('platform', e.target.value)}
@@ -211,7 +215,9 @@ const TrendingVideosPage: React.FC = () => {
 
           {/* 영상 길이 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">영상 길이</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              영상 길이
+            </label>
             <select
               value={filters.duration}
               onChange={(e) => handleFilterChange('duration', e.target.value)}
@@ -226,22 +232,28 @@ const TrendingVideosPage: React.FC = () => {
 
           {/* 채널 그룹 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">채널 그룹</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              채널 그룹
+            </label>
             <select
               value={filters.groupId}
               onChange={(e) => handleFilterChange('groupId', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">전체</option>
-              {channelGroups.map(group => (
-                <option key={group._id} value={group._id}>{group.name}</option>
+              {channelGroups.map((group) => (
+                <option key={group._id} value={group._id}>
+                  {group.name}
+                </option>
               ))}
             </select>
           </div>
 
           {/* 조회수 범위 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">최소 조회수</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              최소 조회수
+            </label>
             <input
               type="number"
               value={filters.minViews}
@@ -252,7 +264,9 @@ const TrendingVideosPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">최대 조회수</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              최대 조회수
+            </label>
             <input
               type="number"
               value={filters.maxViews}
@@ -277,7 +291,9 @@ const TrendingVideosPage: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">수집 종료일</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              수집 종료일
+            </label>
             <input
               type="date"
               value={filters.dateTo}
@@ -302,7 +318,7 @@ const TrendingVideosPage: React.FC = () => {
               <option value="likes">좋아요</option>
             </select>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <select
               value={filters.sortOrder}
@@ -329,12 +345,14 @@ const TrendingVideosPage: React.FC = () => {
           <VideoCard
             key={video._id}
             video={video as any}
-onDelete={(deletedVideo) => {
+            onDelete={(deletedVideo) => {
               // UI에서 삭제된 비디오 제거 (VideoCard가 이미 DB 삭제 처리함)
-              setVideos(prev => prev.filter(v => v._id !== deletedVideo._id));
-              setPagination(prev => ({
+              setVideos((prev) =>
+                prev.filter((v) => v._id !== deletedVideo._id)
+              );
+              setPagination((prev) => ({
                 ...prev,
-                total: prev.total - 1
+                total: prev.total - 1,
               }));
             }}
           />
@@ -353,8 +371,12 @@ onDelete={(deletedVideo) => {
       {!loading && videos.length === 0 && !error && (
         <div className="text-center py-12">
           <TrendingUp className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-xl text-gray-500 mb-2">수집된 트렌딩 영상이 없습니다</p>
-          <p className="text-gray-400">필터 조건을 변경하거나 새로운 영상을 수집해보세요.</p>
+          <p className="text-xl text-gray-500 mb-2">
+            수집된 트렌딩 영상이 없습니다
+          </p>
+          <p className="text-gray-400">
+            필터 조건을 변경하거나 새로운 영상을 수집해보세요.
+          </p>
         </div>
       )}
 
@@ -362,24 +384,33 @@ onDelete={(deletedVideo) => {
       {videos.length > 0 && (
         <div className="flex items-center justify-between mt-8 p-4 bg-white rounded-lg shadow">
           <div className="text-sm text-gray-600">
-            {pagination.offset + 1} - {Math.min(pagination.offset + pagination.limit, pagination.total)} / {pagination.total}개 표시
+            {pagination.offset + 1} -{' '}
+            {Math.min(pagination.offset + pagination.limit, pagination.total)} /{' '}
+            {pagination.total}개 표시
           </div>
-          
+
           <div className="flex items-center gap-2">
             <button
-              onClick={() => handlePageChange(Math.max(0, pagination.offset - pagination.limit))}
+              onClick={() =>
+                handlePageChange(
+                  Math.max(0, pagination.offset - pagination.limit)
+                )
+              }
               disabled={pagination.offset === 0}
               className="px-3 py-2 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
             >
               이전
             </button>
-            
+
             <span className="px-3 py-2 text-sm">
-              {Math.floor(pagination.offset / pagination.limit) + 1} / {Math.ceil(pagination.total / pagination.limit)}
+              {Math.floor(pagination.offset / pagination.limit) + 1} /{' '}
+              {Math.ceil(pagination.total / pagination.limit)}
             </span>
-            
+
             <button
-              onClick={() => handlePageChange(pagination.offset + pagination.limit)}
+              onClick={() =>
+                handlePageChange(pagination.offset + pagination.limit)
+              }
               disabled={!pagination.hasMore}
               className="px-3 py-2 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
             >

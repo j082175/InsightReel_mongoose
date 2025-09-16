@@ -56,7 +56,7 @@ export const logger = {
     if (isDevelopment) {
       console.warn(`⚠️ ${message}`, ...args);
     }
-  }
+  },
 };
 
 export default logger;

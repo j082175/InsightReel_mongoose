@@ -69,12 +69,17 @@ export interface CompetitorAnalysis {
 /**
  * 트렌드 키워드 목록을 조회합니다
  */
-export const fetchTrends = async (request?: TrendAnalysisRequest): Promise<TrendData[]> => {
+export const fetchTrends = async (
+  request?: TrendAnalysisRequest
+): Promise<TrendData[]> => {
   try {
     const queryParams = new URLSearchParams();
-    if (request?.keywords) queryParams.set('keywords', request.keywords.join(','));
-    if (request?.platforms) queryParams.set('platforms', request.platforms.join(','));
-    if (request?.categories) queryParams.set('categories', request.categories.join(','));
+    if (request?.keywords)
+      queryParams.set('keywords', request.keywords.join(','));
+    if (request?.platforms)
+      queryParams.set('platforms', request.platforms.join(','));
+    if (request?.categories)
+      queryParams.set('categories', request.categories.join(','));
     if (request?.timeRange) queryParams.set('timeRange', request.timeRange);
     if (request?.region) queryParams.set('region', request.region);
 
@@ -92,7 +97,9 @@ export const fetchTrends = async (request?: TrendAnalysisRequest): Promise<Trend
 /**
  * 특정 키워드에 대한 상세 분석을 수행합니다
  */
-export const analyzeTrend = async (keyword: string): Promise<{
+export const analyzeTrend = async (
+  keyword: string
+): Promise<{
   trend: TrendData;
   competitorAnalysis: CompetitorAnalysis;
   contentIdeas: ContentIdea[];
@@ -209,7 +216,7 @@ export const setTrendAlert = async (params: {
  */
 export const mockFetchTrends = async (): Promise<TrendData[]> => {
   // 모의 지연
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 
   return [
     {
@@ -221,8 +228,12 @@ export const mockFetchTrends = async (): Promise<TrendData[]> => {
       difficulty: 'Medium',
       category: '기술/IT',
       relatedKeywords: ['미드저니', 'Stable Diffusion', 'DALL-E', '인공지능'],
-      suggestedTopics: ['AI 그림 툴 비교', '무료 AI 그림 생성 방법', 'AI 아트 창작 과정'],
-      competitionLevel: 67
+      suggestedTopics: [
+        'AI 그림 툴 비교',
+        '무료 AI 그림 생성 방법',
+        'AI 아트 창작 과정',
+      ],
+      competitionLevel: 67,
     },
     {
       id: '2',
@@ -233,8 +244,12 @@ export const mockFetchTrends = async (): Promise<TrendData[]> => {
       difficulty: 'Easy',
       category: '라이프스타일',
       relatedKeywords: ['커피', '원두', '라떼아트', '홈브루잉'],
-      suggestedTopics: ['집에서 카페 음료 만들기', '원두 추천', '홈카페 인테리어'],
-      competitionLevel: 45
+      suggestedTopics: [
+        '집에서 카페 음료 만들기',
+        '원두 추천',
+        '홈카페 인테리어',
+      ],
+      competitionLevel: 45,
     },
     {
       id: '3',
@@ -245,8 +260,12 @@ export const mockFetchTrends = async (): Promise<TrendData[]> => {
       difficulty: 'Medium',
       category: '교육/학습',
       relatedKeywords: ['OpenAI', '프롬프트', '자동화', 'AI 도구'],
-      suggestedTopics: ['업무 자동화', '학습 도우미 활용', 'ChatGPT 프롬프트 팁'],
-      competitionLevel: 78
+      suggestedTopics: [
+        '업무 자동화',
+        '학습 도우미 활용',
+        'ChatGPT 프롬프트 팁',
+      ],
+      competitionLevel: 78,
     },
     {
       id: '4',
@@ -258,7 +277,7 @@ export const mockFetchTrends = async (): Promise<TrendData[]> => {
       category: '건강/피트니스',
       relatedKeywords: ['명상', '스트레칭', '필라테스', '홈트'],
       suggestedTopics: ['초보자 요가', '아침 요가 루틴', '스트레스 해소 요가'],
-      competitionLevel: 34
+      competitionLevel: 34,
     },
     {
       id: '5',
@@ -269,8 +288,12 @@ export const mockFetchTrends = async (): Promise<TrendData[]> => {
       difficulty: 'Hard',
       category: '재테크',
       relatedKeywords: ['주식', '부동산', '펀드', '경제'],
-      suggestedTopics: ['초보자 투자 가이드', '분산투자 전략', '경제 지표 읽는 법'],
-      competitionLevel: 89
-    }
+      suggestedTopics: [
+        '초보자 투자 가이드',
+        '분산투자 전략',
+        '경제 지표 읽는 법',
+      ],
+      competitionLevel: 89,
+    },
   ];
 };

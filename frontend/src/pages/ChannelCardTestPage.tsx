@@ -17,14 +17,16 @@ import { Channel } from '../shared/types';
  */
 const ChannelCardTestPage: React.FC = () => {
   // 🎛️ 테스트 상태
-  const [selectedChannels, setSelectedChannels] = useState<Set<string>>(new Set());
+  const [selectedChannels, setSelectedChannels] = useState<Set<string>>(
+    new Set()
+  );
   const [showSelection, setShowSelection] = useState(false);
   const [testActions, setTestActions] = useState<string[]>([]);
 
   // 테스트 액션 로그 추가
   const addTestLog = (action: string) => {
     const timestamp = new Date().toLocaleTimeString();
-    setTestActions(prev => [`[${timestamp}] ${action}`, ...prev.slice(0, 9)]);
+    setTestActions((prev) => [`[${timestamp}] ${action}`, ...prev.slice(0, 9)]);
   };
 
   // 테스트용 채널 데이터
@@ -45,8 +47,8 @@ const ChannelCardTestPage: React.FC = () => {
       categoryInfo: {
         majorCategory: '과학기술',
         middleCategory: '디지털기기',
-        subCategory: '스마트폰리뷰'
-      }
+        subCategory: '스마트폰리뷰',
+      },
     },
     {
       id: 'instagram-channel-1',
@@ -64,8 +66,8 @@ const ChannelCardTestPage: React.FC = () => {
       categoryInfo: {
         majorCategory: '라이프스타일',
         middleCategory: '음식',
-        subCategory: '레시피'
-      }
+        subCategory: '레시피',
+      },
     },
     {
       id: 'tiktok-channel-1',
@@ -83,8 +85,8 @@ const ChannelCardTestPage: React.FC = () => {
       categoryInfo: {
         majorCategory: '엔터테인먼트',
         middleCategory: '댄스',
-        subCategory: '트렌드댄스'
-      }
+        subCategory: '트렌드댄스',
+      },
     },
     {
       id: 'youtube-channel-2',
@@ -102,9 +104,9 @@ const ChannelCardTestPage: React.FC = () => {
       categoryInfo: {
         majorCategory: '게임',
         middleCategory: '게임실황',
-        subCategory: '인디게임'
-      }
-    }
+        subCategory: '인디게임',
+      },
+    },
   ];
 
   // 이벤트 핸들러
@@ -159,10 +161,11 @@ const ChannelCardTestPage: React.FC = () => {
 
       <div className="container mx-auto p-8">
         <div className="max-w-6xl mx-auto space-y-8">
-
           {/* 테스트 컨트롤 */}
           <section className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">🎛️ 테스트 컨트롤</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              🎛️ 테스트 컨트롤
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
@@ -180,7 +183,8 @@ const ChannelCardTestPage: React.FC = () => {
 
                   <div className="bg-gray-50 p-3 rounded">
                     <p className="text-sm text-gray-600">
-                      선택된 채널: <span className="font-medium text-gray-800">
+                      선택된 채널:{' '}
+                      <span className="font-medium text-gray-800">
                         {selectedChannels.size}개
                       </span>
                     </p>
@@ -199,7 +203,9 @@ const ChannelCardTestPage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="font-semibold text-gray-800 mb-3">빠른 테스트</h3>
+                <h3 className="font-semibold text-gray-800 mb-3">
+                  빠른 테스트
+                </h3>
                 <div className="space-y-2">
                   <button
                     onClick={() => addTestLog('플랫폼별 표시 테스트')}
@@ -223,7 +229,9 @@ const ChannelCardTestPage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="font-semibold text-gray-800 mb-3">액션 테스트</h3>
+                <h3 className="font-semibold text-gray-800 mb-3">
+                  액션 테스트
+                </h3>
                 <div className="space-y-2">
                   <button
                     onClick={() => addTestLog('호버 효과 테스트')}
@@ -250,7 +258,9 @@ const ChannelCardTestPage: React.FC = () => {
 
           {/* 채널 카드 표시 */}
           <section className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">📺 채널 카드 테스트</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              📺 채널 카드 테스트
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {testChannels.map((channel) => (
@@ -273,7 +283,9 @@ const ChannelCardTestPage: React.FC = () => {
 
           {/* 플랫폼별 비교 */}
           <section className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">🏷️ 플랫폼별 특징</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              🏷️ 플랫폼별 특징
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-red-50 p-4 rounded border border-red-200">
@@ -287,7 +299,9 @@ const ChannelCardTestPage: React.FC = () => {
               </div>
 
               <div className="bg-pink-50 p-4 rounded border border-pink-200">
-                <h3 className="font-semibold text-pink-800 mb-2">📸 Instagram</h3>
+                <h3 className="font-semibold text-pink-800 mb-2">
+                  📸 Instagram
+                </h3>
                 <ul className="text-sm text-pink-700 space-y-1">
                   <li>• 팔로워 수 표시</li>
                   <li>• 숏폼 위주</li>
@@ -310,7 +324,9 @@ const ChannelCardTestPage: React.FC = () => {
 
           {/* 테스트 로그 */}
           <section className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">📋 테스트 로그</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              📋 테스트 로그
+            </h2>
 
             <div className="bg-gray-50 p-4 rounded h-64 overflow-y-auto">
               {testActions.length === 0 ? (
@@ -320,7 +336,10 @@ const ChannelCardTestPage: React.FC = () => {
               ) : (
                 <div className="space-y-1">
                   {testActions.map((action, index) => (
-                    <div key={index} className="text-sm font-mono text-gray-700">
+                    <div
+                      key={index}
+                      className="text-sm font-mono text-gray-700"
+                    >
                       {action}
                     </div>
                   ))}
@@ -331,27 +350,33 @@ const ChannelCardTestPage: React.FC = () => {
 
           {/* 사용법 안내 */}
           <section className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-            <h2 className="text-xl font-bold text-blue-900 mb-4">💡 사용법 안내</h2>
+            <h2 className="text-xl font-bold text-blue-900 mb-4">
+              💡 사용법 안내
+            </h2>
 
             <div className="space-y-3 text-sm text-blue-800">
               <p>
-                <strong>1. 기본 상호작용:</strong> 채널 카드를 클릭하거나 액션 버튼을 테스트해보세요.
+                <strong>1. 기본 상호작용:</strong> 채널 카드를 클릭하거나 액션
+                버튼을 테스트해보세요.
               </p>
               <p>
-                <strong>2. 선택 모드:</strong> "선택 모드 활성화"를 체크하면 다중 선택이 가능합니다.
+                <strong>2. 선택 모드:</strong> "선택 모드 활성화"를 체크하면
+                다중 선택이 가능합니다.
               </p>
               <p>
-                <strong>3. 플랫폼별 차이:</strong> YouTube, Instagram, TikTok의 서로 다른 스타일을 확인하세요.
+                <strong>3. 플랫폼별 차이:</strong> YouTube, Instagram, TikTok의
+                서로 다른 스타일을 확인하세요.
               </p>
               <p>
-                <strong>4. 키워드 테스트:</strong> 채널 카드의 키워드 태그를 클릭해보세요.
+                <strong>4. 키워드 테스트:</strong> 채널 카드의 키워드 태그를
+                클릭해보세요.
               </p>
               <p>
-                <strong>5. 액션 버튼:</strong> 수집, 분석, 편집, 삭제 버튼의 동작을 테스트할 수 있습니다.
+                <strong>5. 액션 버튼:</strong> 수집, 분석, 편집, 삭제 버튼의
+                동작을 테스트할 수 있습니다.
               </p>
             </div>
           </section>
-
         </div>
       </div>
     </div>

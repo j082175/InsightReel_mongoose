@@ -45,7 +45,8 @@ const ActionBarTestPage: React.FC = () => {
       title: 'TypeScript 실무 활용법',
       views: 456000,
       platform: 'YOUTUBE',
-      thumbnailUrl: 'https://placehold.co/320x180/0066CC/FFFFFF?text=TypeScript',
+      thumbnailUrl:
+        'https://placehold.co/320x180/0066CC/FFFFFF?text=TypeScript',
       channelName: 'TS 마스터',
       uploadDate: '2024-01-05T08:20:00Z',
       duration: 'LONG',
@@ -84,7 +85,10 @@ const ActionBarTestPage: React.FC = () => {
   // 액션 로그 추가
   const addActionLog = (action: string) => {
     const timestamp = new Date().toLocaleTimeString();
-    setActionHistory(prev => [`[${timestamp}] ${action}`, ...prev.slice(0, 9)]);
+    setActionHistory((prev) => [
+      `[${timestamp}] ${action}`,
+      ...prev.slice(0, 9),
+    ]);
   };
 
   // 선택 토글
@@ -92,10 +96,14 @@ const ActionBarTestPage: React.FC = () => {
     const newSelected = new Set(selectedVideos);
     if (newSelected.has(videoId)) {
       newSelected.delete(videoId);
-      addActionLog(`비디오 선택 해제: ${testVideos.find(v => v._id === videoId)?.title}`);
+      addActionLog(
+        `비디오 선택 해제: ${testVideos.find((v) => v._id === videoId)?.title}`
+      );
     } else {
       newSelected.add(videoId);
-      addActionLog(`비디오 선택: ${testVideos.find(v => v._id === videoId)?.title}`);
+      addActionLog(
+        `비디오 선택: ${testVideos.find((v) => v._id === videoId)?.title}`
+      );
     }
     setSelectedVideos(newSelected);
   };
@@ -106,7 +114,7 @@ const ActionBarTestPage: React.FC = () => {
       setSelectedVideos(new Set());
       addActionLog('모든 비디오 선택 해제');
     } else {
-      setSelectedVideos(new Set(testVideos.map(v => v._id)));
+      setSelectedVideos(new Set(testVideos.map((v) => v._id)));
       addActionLog(`모든 비디오 선택 (${testVideos.length}개)`);
     }
   };
@@ -177,7 +185,9 @@ const ActionBarTestPage: React.FC = () => {
               onClick={handleSelectAll}
               className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
             >
-              {selectedVideos.size === testVideos.length ? '전체 해제' : '전체 선택'}
+              {selectedVideos.size === testVideos.length
+                ? '전체 해제'
+                : '전체 선택'}
             </button>
 
             <span className="text-sm text-gray-600">
@@ -188,7 +198,9 @@ const ActionBarTestPage: React.FC = () => {
 
         {/* ActionBar 테스트 영역 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">⚡ ActionBar 인터랙션</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            ⚡ ActionBar 인터랙션
+          </h2>
 
           {/* 실제 ActionBar */}
           {showActionBar && (
@@ -198,7 +210,9 @@ const ActionBarTestPage: React.FC = () => {
                 selectedCount={selectedVideos.size}
                 totalCount={testVideos.length}
                 itemType="개 영상"
-                onSelectAll={() => setSelectedVideos(new Set(testVideos.map(v => v._id)))}
+                onSelectAll={() =>
+                  setSelectedVideos(new Set(testVideos.map((v) => v._id)))
+                }
                 onClearSelection={handleClearSelection}
                 onDelete={handleDelete}
                 onAnalyze={handleAnalyze}
@@ -209,20 +223,25 @@ const ActionBarTestPage: React.FC = () => {
 
           {/* 비디오 목록 */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">테스트용 비디오 목록</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              테스트용 비디오 목록
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {testVideos.map(video => (
+              {testVideos.map((video) => (
                 <div
                   key={video._id}
                   className={`
                     p-4 border rounded-lg cursor-pointer transition-all
-                    ${selectedVideos.has(video._id)
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                    ${
+                      selectedVideos.has(video._id)
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
                     }
                     ${isSelectionMode ? 'cursor-pointer' : 'cursor-default'}
                   `}
-                  onClick={() => isSelectionMode && handleToggleSelection(video._id)}
+                  onClick={() =>
+                    isSelectionMode && handleToggleSelection(video._id)
+                  }
                 >
                   <div className="flex items-start gap-3">
                     {isSelectionMode && (
@@ -234,15 +253,25 @@ const ActionBarTestPage: React.FC = () => {
                       />
                     )}
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-gray-900 truncate">{video.title}</h4>
-                      <p className="text-sm text-gray-600">{video.channelName}</p>
+                      <h4 className="font-medium text-gray-900 truncate">
+                        {video.title}
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        {video.channelName}
+                      </p>
                       <div className="flex items-center gap-2 mt-2">
-                        <span className={`
+                        <span
+                          className={`
                           px-2 py-1 rounded-full text-xs font-medium
-                          ${video.platform === 'YOUTUBE' ? 'bg-red-100 text-red-800' :
-                            video.platform === 'INSTAGRAM' ? 'bg-pink-100 text-pink-800' :
-                            'bg-gray-100 text-gray-800'}
-                        `}>
+                          ${
+                            video.platform === 'YOUTUBE'
+                              ? 'bg-red-100 text-red-800'
+                              : video.platform === 'INSTAGRAM'
+                                ? 'bg-pink-100 text-pink-800'
+                                : 'bg-gray-100 text-gray-800'
+                          }
+                        `}
+                        >
                           {video.platform}
                         </span>
                         <span className="text-xs text-gray-500">
@@ -259,19 +288,25 @@ const ActionBarTestPage: React.FC = () => {
 
         {/* ActionBar 상태별 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">🎛️ ActionBar 상태별 테스트</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            🎛️ ActionBar 상태별 테스트
+          </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* 선택 없음 */}
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">선택 없음 (0개)</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                선택 없음 (0개)
+              </h3>
               <ActionBar
                 isVisible={true}
                 selectedCount={0}
                 totalCount={testVideos.length}
                 itemType="개 영상"
                 onSelectAll={() => addActionLog('전체 선택 클릭 (0개 선택)')}
-                onClearSelection={() => addActionLog('선택 해제 클릭 (0개 선택)')}
+                onClearSelection={() =>
+                  addActionLog('선택 해제 클릭 (0개 선택)')
+                }
                 onDelete={() => addActionLog('삭제 버튼 클릭 (0개 선택)')}
                 onAnalyze={() => addActionLog('분석 버튼 클릭 (0개 선택)')}
                 onExport={() => addActionLog('내보내기 버튼 클릭 (0개 선택)')}
@@ -283,14 +318,18 @@ const ActionBarTestPage: React.FC = () => {
 
             {/* 일부 선택 */}
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">일부 선택 (3개)</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                일부 선택 (3개)
+              </h3>
               <ActionBar
                 isVisible={true}
                 selectedCount={3}
                 totalCount={testVideos.length}
                 itemType="개 영상"
                 onSelectAll={() => addActionLog('전체 선택 클릭 (3개 선택)')}
-                onClearSelection={() => addActionLog('선택 해제 클릭 (3개 선택)')}
+                onClearSelection={() =>
+                  addActionLog('선택 해제 클릭 (3개 선택)')
+                }
                 onDelete={() => addActionLog('삭제 버튼 클릭 (3개 선택)')}
                 onAnalyze={() => addActionLog('분석 버튼 클릭 (3개 선택)')}
                 onExport={() => addActionLog('내보내기 버튼 클릭 (3개 선택)')}
@@ -302,14 +341,18 @@ const ActionBarTestPage: React.FC = () => {
 
             {/* 많은 선택 */}
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">많은 선택 (50개)</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                많은 선택 (50개)
+              </h3>
               <ActionBar
                 isVisible={true}
                 selectedCount={50}
                 totalCount={100}
                 itemType="개 영상"
                 onSelectAll={() => addActionLog('전체 선택 클릭 (50개 선택)')}
-                onClearSelection={() => addActionLog('선택 해제 클릭 (50개 선택)')}
+                onClearSelection={() =>
+                  addActionLog('선택 해제 클릭 (50개 선택)')
+                }
                 onDelete={() => addActionLog('삭제 버튼 클릭 (50개 선택)')}
                 onAnalyze={() => addActionLog('분석 버튼 클릭 (50개 선택)')}
                 onExport={() => addActionLog('내보내기 버튼 클릭 (50개 선택)')}
@@ -323,11 +366,15 @@ const ActionBarTestPage: React.FC = () => {
 
         {/* 액션 히스토리 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">📜 액션 히스토리</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            📜 액션 히스토리
+          </h2>
 
           <div className="bg-white rounded-lg border border-gray-200">
             <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold text-gray-800">실시간 액션 로그</h3>
+              <h3 className="text-lg font-semibold text-gray-800">
+                실시간 액션 로그
+              </h3>
               <button
                 onClick={() => setActionHistory([])}
                 className="text-sm text-gray-500 hover:text-gray-700"
@@ -353,7 +400,8 @@ const ActionBarTestPage: React.FC = () => {
                 </div>
               ) : (
                 <p className="text-gray-500 text-sm text-center py-8">
-                  아직 액션이 없습니다. 위의 비디오를 선택하거나 ActionBar를 사용해보세요.
+                  아직 액션이 없습니다. 위의 비디오를 선택하거나 ActionBar를
+                  사용해보세요.
                 </p>
               )}
             </div>
@@ -362,11 +410,15 @@ const ActionBarTestPage: React.FC = () => {
 
         {/* 기능별 상세 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">🔧 기능별 상세 테스트</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            🔧 기능별 상세 테스트
+          </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">🤖 AI 분석 기능</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                🤖 AI 분석 기능
+              </h3>
               <p className="text-gray-600 text-sm mb-4">
                 선택된 비디오들에 대해 AI 분석을 수행합니다.
               </p>
@@ -389,7 +441,9 @@ const ActionBarTestPage: React.FC = () => {
             </div>
 
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">🗑️ 삭제 기능</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                🗑️ 삭제 기능
+              </h3>
               <p className="text-gray-600 text-sm mb-4">
                 선택된 비디오들을 일괄 삭제합니다.
               </p>
@@ -413,7 +467,9 @@ const ActionBarTestPage: React.FC = () => {
             </div>
 
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">📊 내보내기 기능</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                📊 내보내기 기능
+              </h3>
               <p className="text-gray-600 text-sm mb-4">
                 선택된 비디오 데이터를 CSV/Excel로 내보냅니다.
               </p>
@@ -436,7 +492,9 @@ const ActionBarTestPage: React.FC = () => {
             </div>
 
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">✨ 선택 관리</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                ✨ 선택 관리
+              </h3>
               <p className="text-gray-600 text-sm mb-4">
                 선택된 항목들을 관리하고 상태를 초기화합니다.
               </p>
@@ -461,18 +519,26 @@ const ActionBarTestPage: React.FC = () => {
         {/* 테스트 통계 */}
         <section className="mb-12">
           <div className="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-lg">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">📊 ActionBar 테스트 통계</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              📊 ActionBar 테스트 통계
+            </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">{testVideos.length}</div>
+                <div className="text-2xl font-bold text-orange-600">
+                  {testVideos.length}
+                </div>
                 <div className="text-sm text-gray-600">총 테스트 항목</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">{selectedVideos.size}</div>
+                <div className="text-2xl font-bold text-red-600">
+                  {selectedVideos.size}
+                </div>
                 <div className="text-sm text-gray-600">선택된 항목</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">{actionHistory.length}</div>
+                <div className="text-2xl font-bold text-purple-600">
+                  {actionHistory.length}
+                </div>
                 <div className="text-sm text-gray-600">수행된 액션</div>
               </div>
               <div className="text-center">
@@ -484,7 +550,9 @@ const ActionBarTestPage: React.FC = () => {
             </div>
 
             <div className="mt-6 p-4 bg-white rounded-lg">
-              <h3 className="font-semibold text-gray-900 mb-2">💡 테스트 가이드</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">
+                💡 테스트 가이드
+              </h3>
               <ul className="text-sm text-gray-600 space-y-1">
                 <li>• 선택 모드를 활성화하고 비디오들을 클릭하여 선택</li>
                 <li>• ActionBar의 각 버튼을 클릭하여 기능 테스트</li>

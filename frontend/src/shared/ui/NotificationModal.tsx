@@ -17,7 +17,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
   type,
   title,
   message,
-  autoClose
+  autoClose,
 }) => {
   React.useEffect(() => {
     if (isOpen && autoClose) {
@@ -78,19 +78,17 @@ const NotificationModal: React.FC<NotificationModalProps> = ({
     >
       <div className="p-6 text-center">
         {/* 아이콘 */}
-        <div className={`flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full ${getColorClass()}`}>
+        <div
+          className={`flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full ${getColorClass()}`}
+        >
           {getIcon()}
         </div>
 
         {/* 제목 */}
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          {title}
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
 
         {/* 메시지 */}
-        <p className="text-sm text-gray-600 mb-6">
-          {message}
-        </p>
+        <p className="text-sm text-gray-600 mb-6">{message}</p>
 
         {/* 확인 버튼 */}
         <button

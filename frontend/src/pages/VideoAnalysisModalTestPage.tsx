@@ -23,7 +23,7 @@ const VideoAnalysisModalTestPage: React.FC = () => {
   // 테스트 액션 로그 추가
   const addTestLog = (action: string) => {
     const timestamp = new Date().toLocaleTimeString();
-    setTestActions(prev => [`[${timestamp}] ${action}`, ...prev.slice(0, 9)]);
+    setTestActions((prev) => [`[${timestamp}] ${action}`, ...prev.slice(0, 9)]);
   };
 
   // 테스트용 채널 시나리오
@@ -34,7 +34,7 @@ const VideoAnalysisModalTestPage: React.FC = () => {
       channels: ['UC-channel-tech-1'],
       channelNames: ['노마드 코더'],
       icon: '🎯',
-      color: 'bg-blue-500 hover:bg-blue-600'
+      color: 'bg-blue-500 hover:bg-blue-600',
     },
     {
       name: '다중 채널 분석 (소규모)',
@@ -42,15 +42,27 @@ const VideoAnalysisModalTestPage: React.FC = () => {
       channels: ['UC-channel-food-1', 'UC-channel-food-2', 'UC-channel-food-3'],
       channelNames: ['백종원의 요리비책', '쯔양', '햄지'],
       icon: '🔍',
-      color: 'bg-green-500 hover:bg-green-600'
+      color: 'bg-green-500 hover:bg-green-600',
     },
     {
       name: '혼합 플랫폼 분석',
       description: 'YouTube, Instagram, TikTok 혼합',
-      channels: ['UC-youtube-1', 'IG-instagram-1', 'TT-tiktok-1', 'UC-youtube-2', 'IG-instagram-2'],
-      channelNames: ['BTS YouTube', 'BTS Instagram', 'BTS TikTok', 'BLACKPINK YouTube', 'BLACKPINK Instagram'],
+      channels: [
+        'UC-youtube-1',
+        'IG-instagram-1',
+        'TT-tiktok-1',
+        'UC-youtube-2',
+        'IG-instagram-2',
+      ],
+      channelNames: [
+        'BTS YouTube',
+        'BTS Instagram',
+        'BTS TikTok',
+        'BLACKPINK YouTube',
+        'BLACKPINK Instagram',
+      ],
       icon: '🌐',
-      color: 'bg-purple-500 hover:bg-purple-600'
+      color: 'bg-purple-500 hover:bg-purple-600',
     },
     {
       name: '대량 채널 분석',
@@ -58,23 +70,39 @@ const VideoAnalysisModalTestPage: React.FC = () => {
       channels: Array.from({ length: 12 }, (_, i) => `UC-channel-${i + 1}`),
       channelNames: Array.from({ length: 12 }, (_, i) => `채널 ${i + 1}`),
       icon: '📊',
-      color: 'bg-orange-500 hover:bg-orange-600'
+      color: 'bg-orange-500 hover:bg-orange-600',
     },
     {
       name: '에러 시나리오',
       description: '접근 불가능한 채널 포함 (에러 처리 테스트)',
-      channels: ['UC-invalid-channel', 'UC-private-channel', 'UC-deleted-channel'],
+      channels: [
+        'UC-invalid-channel',
+        'UC-private-channel',
+        'UC-deleted-channel',
+      ],
       channelNames: ['Invalid Channel', 'Private Channel', 'Deleted Channel'],
       icon: '⚠️',
-      color: 'bg-red-500 hover:bg-red-600'
+      color: 'bg-red-500 hover:bg-red-600',
     },
     {
       name: 'K-POP 댄스 분석',
       description: 'K-POP 댄스 전문 채널들 트렌드 분석',
-      channels: ['UC-kpop-1', 'UC-kpop-2', 'UC-kpop-3', 'UC-kpop-4', 'UC-kpop-5'],
-      channelNames: ['1MILLION Dance Studio', 'STEEZY Studio', 'Matt Steffanina', 'WilldaBeast Adams', 'Lia Kim'],
+      channels: [
+        'UC-kpop-1',
+        'UC-kpop-2',
+        'UC-kpop-3',
+        'UC-kpop-4',
+        'UC-kpop-5',
+      ],
+      channelNames: [
+        '1MILLION Dance Studio',
+        'STEEZY Studio',
+        'Matt Steffanina',
+        'WilldaBeast Adams',
+        'Lia Kim',
+      ],
       icon: '💃',
-      color: 'bg-pink-500 hover:bg-pink-600'
+      color: 'bg-pink-500 hover:bg-pink-600',
     },
     {
       name: '교육 콘텐츠 분석',
@@ -82,7 +110,7 @@ const VideoAnalysisModalTestPage: React.FC = () => {
       channels: ['UC-edu-1', 'UC-edu-2', 'UC-edu-3'],
       channelNames: ['EBS', 'Khan Academy', 'Crash Course'],
       icon: '📚',
-      color: 'bg-indigo-500 hover:bg-indigo-600'
+      color: 'bg-indigo-500 hover:bg-indigo-600',
     },
     {
       name: '게임 실황 분석',
@@ -90,15 +118,17 @@ const VideoAnalysisModalTestPage: React.FC = () => {
       channels: ['UC-game-1', 'UC-game-2', 'UC-game-3', 'UC-game-4'],
       channelNames: ['우왁굳', '풍월량', '침착맨', '김뽕'],
       icon: '🎮',
-      color: 'bg-violet-500 hover:bg-violet-600'
-    }
+      color: 'bg-violet-500 hover:bg-violet-600',
+    },
   ];
 
   // 이벤트 핸들러
-  const handleOpenModal = (scenario: typeof testScenarios[0]) => {
+  const handleOpenModal = (scenario: (typeof testScenarios)[0]) => {
     setSelectedChannels(scenario.channels);
     setIsModalOpen(true);
-    addTestLog(`모달 열기: ${scenario.name} (${scenario.channels.length}개 채널)`);
+    addTestLog(
+      `모달 열기: ${scenario.name} (${scenario.channels.length}개 채널)`
+    );
   };
 
   const handleCloseModal = () => {
@@ -136,10 +166,11 @@ const VideoAnalysisModalTestPage: React.FC = () => {
 
       <div className="container mx-auto p-8">
         <div className="max-w-6xl mx-auto space-y-8">
-
           {/* 테스트 컨트롤 */}
           <section className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">🎛️ 테스트 컨트롤</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              🎛️ 테스트 컨트롤
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
@@ -147,13 +178,17 @@ const VideoAnalysisModalTestPage: React.FC = () => {
                 <div className="bg-gray-50 p-4 rounded space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">모달 열림:</span>
-                    <span className={`font-medium ${isModalOpen ? 'text-green-600' : 'text-gray-400'}`}>
+                    <span
+                      className={`font-medium ${isModalOpen ? 'text-green-600' : 'text-gray-400'}`}
+                    >
                       {isModalOpen ? 'YES' : 'NO'}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">선택 채널:</span>
-                    <span className="font-medium text-blue-600">{selectedChannels.length}개</span>
+                    <span className="font-medium text-blue-600">
+                      {selectedChannels.length}개
+                    </span>
                   </div>
                   <div className="text-xs text-gray-500 mt-2">
                     {selectedChannels.length > 0 && (
@@ -168,7 +203,9 @@ const VideoAnalysisModalTestPage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="font-semibold text-gray-800 mb-3">빠른 테스트</h3>
+                <h3 className="font-semibold text-gray-800 mb-3">
+                  빠른 테스트
+                </h3>
                 <div className="space-y-2">
                   <button
                     onClick={handleCustomChannels}
@@ -220,7 +257,9 @@ const VideoAnalysisModalTestPage: React.FC = () => {
 
           {/* 테스트 시나리오 */}
           <section className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">🎬 분석 시나리오</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              🎬 분석 시나리오
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {testScenarios.map((scenario, index) => (
@@ -242,13 +281,17 @@ const VideoAnalysisModalTestPage: React.FC = () => {
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between">
                       <span className="text-gray-500">채널 수:</span>
-                      <span className="text-gray-700 font-medium">{scenario.channels.length}개</span>
+                      <span className="text-gray-700 font-medium">
+                        {scenario.channels.length}개
+                      </span>
                     </div>
                     <div className="text-gray-500">
                       <div className="mb-1">채널 목록:</div>
                       <div className="max-h-16 overflow-y-auto text-xs">
                         {scenario.channelNames.map((name, idx) => (
-                          <div key={idx} className="truncate">{name}</div>
+                          <div key={idx} className="truncate">
+                            {name}
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -267,11 +310,15 @@ const VideoAnalysisModalTestPage: React.FC = () => {
 
           {/* 분석 기능 가이드 */}
           <section className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">📋 분석 기능 가이드</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              📋 분석 기능 가이드
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="bg-blue-50 p-4 rounded border border-blue-200">
-                <h3 className="font-semibold text-blue-800 mb-2">📊 통계 분석</h3>
+                <h3 className="font-semibold text-blue-800 mb-2">
+                  📊 통계 분석
+                </h3>
                 <ul className="text-sm text-blue-700 space-y-1">
                   <li>• 총 영상 수 및 조회수</li>
                   <li>• 평균 조회수 계산</li>
@@ -281,7 +328,9 @@ const VideoAnalysisModalTestPage: React.FC = () => {
               </div>
 
               <div className="bg-green-50 p-4 rounded border border-green-200">
-                <h3 className="font-semibold text-green-800 mb-2">🔍 트렌드 분석</h3>
+                <h3 className="font-semibold text-green-800 mb-2">
+                  🔍 트렌드 분석
+                </h3>
                 <ul className="text-sm text-green-700 space-y-1">
                   <li>• 조회수 성장률</li>
                   <li>• 참여도 분석</li>
@@ -291,7 +340,9 @@ const VideoAnalysisModalTestPage: React.FC = () => {
               </div>
 
               <div className="bg-purple-50 p-4 rounded border border-purple-200">
-                <h3 className="font-semibold text-purple-800 mb-2">🎯 AI 분석</h3>
+                <h3 className="font-semibold text-purple-800 mb-2">
+                  🎯 AI 분석
+                </h3>
                 <ul className="text-sm text-purple-700 space-y-1">
                   <li>• 키워드 추출</li>
                   <li>• 콘텐츠 카테고리 분류</li>
@@ -301,7 +352,9 @@ const VideoAnalysisModalTestPage: React.FC = () => {
               </div>
 
               <div className="bg-orange-50 p-4 rounded border border-orange-200">
-                <h3 className="font-semibold text-orange-800 mb-2">📈 진행 상태</h3>
+                <h3 className="font-semibold text-orange-800 mb-2">
+                  📈 진행 상태
+                </h3>
                 <ul className="text-sm text-orange-700 space-y-1">
                   <li>• 실시간 진행률</li>
                   <li>• 단계별 상태 표시</li>
@@ -311,7 +364,9 @@ const VideoAnalysisModalTestPage: React.FC = () => {
               </div>
 
               <div className="bg-red-50 p-4 rounded border border-red-200">
-                <h3 className="font-semibold text-red-800 mb-2">⚠️ 에러 처리</h3>
+                <h3 className="font-semibold text-red-800 mb-2">
+                  ⚠️ 에러 처리
+                </h3>
                 <ul className="text-sm text-red-700 space-y-1">
                   <li>• API 접근 제한</li>
                   <li>• 비공개 채널</li>
@@ -321,7 +376,9 @@ const VideoAnalysisModalTestPage: React.FC = () => {
               </div>
 
               <div className="bg-gray-50 p-4 rounded border border-gray-200">
-                <h3 className="font-semibold text-gray-800 mb-2">🔧 기타 기능</h3>
+                <h3 className="font-semibold text-gray-800 mb-2">
+                  🔧 기타 기능
+                </h3>
                 <ul className="text-sm text-gray-700 space-y-1">
                   <li>• 결과 내보내기</li>
                   <li>• Sheets 연동</li>
@@ -334,17 +391,23 @@ const VideoAnalysisModalTestPage: React.FC = () => {
 
           {/* 테스트 로그 */}
           <section className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">📋 테스트 로그</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              📋 테스트 로그
+            </h2>
 
             <div className="bg-gray-50 p-4 rounded h-64 overflow-y-auto">
               {testActions.length === 0 ? (
                 <p className="text-gray-500 text-sm italic">
-                  분석 시나리오를 선택하거나 모달과 상호작용하면 로그가 여기에 표시됩니다.
+                  분석 시나리오를 선택하거나 모달과 상호작용하면 로그가 여기에
+                  표시됩니다.
                 </p>
               ) : (
                 <div className="space-y-1">
                   {testActions.map((action, index) => (
-                    <div key={index} className="text-sm font-mono text-gray-700">
+                    <div
+                      key={index}
+                      className="text-sm font-mono text-gray-700"
+                    >
                       {action}
                     </div>
                   ))}
@@ -355,30 +418,37 @@ const VideoAnalysisModalTestPage: React.FC = () => {
 
           {/* 사용법 안내 */}
           <section className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-            <h2 className="text-xl font-bold text-blue-900 mb-4">💡 사용법 안내</h2>
+            <h2 className="text-xl font-bold text-blue-900 mb-4">
+              💡 사용법 안내
+            </h2>
 
             <div className="space-y-3 text-sm text-blue-800">
               <p>
-                <strong>1. 시나리오 선택:</strong> 다양한 분석 시나리오 중 하나를 선택해 모달을 열어보세요.
+                <strong>1. 시나리오 선택:</strong> 다양한 분석 시나리오 중
+                하나를 선택해 모달을 열어보세요.
               </p>
               <p>
-                <strong>2. 진행 상태 확인:</strong> 모달이 열리면 분석 진행 상태와 단계별 과정을 확인하세요.
+                <strong>2. 진행 상태 확인:</strong> 모달이 열리면 분석 진행
+                상태와 단계별 과정을 확인하세요.
               </p>
               <p>
-                <strong>3. 분석 결과:</strong> 완료 후 통계, 트렌드, 키워드, 추천사항 등을 확인하세요.
+                <strong>3. 분석 결과:</strong> 완료 후 통계, 트렌드, 키워드,
+                추천사항 등을 확인하세요.
               </p>
               <p>
-                <strong>4. 에러 시나리오:</strong> "에러 시나리오"를 통해 오류 상황 처리를 테스트하세요.
+                <strong>4. 에러 시나리오:</strong> "에러 시나리오"를 통해 오류
+                상황 처리를 테스트하세요.
               </p>
               <p>
-                <strong>5. 대량 처리:</strong> "대량 채널 분석"으로 성능과 UI 반응성을 확인하세요.
+                <strong>5. 대량 처리:</strong> "대량 채널 분석"으로 성능과 UI
+                반응성을 확인하세요.
               </p>
               <p>
-                <strong>6. 플랫폼 혼합:</strong> 여러 플랫폼 채널 동시 분석 결과를 비교해보세요.
+                <strong>6. 플랫폼 혼합:</strong> 여러 플랫폼 채널 동시 분석
+                결과를 비교해보세요.
               </p>
             </div>
           </section>
-
         </div>
       </div>
 

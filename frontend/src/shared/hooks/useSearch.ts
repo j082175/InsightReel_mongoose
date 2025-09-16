@@ -14,36 +14,38 @@ export interface SearchResult<T> {
 }
 
 export function useSearch<T = Video>(
-  data: T[] = [], 
+  data: T[] = [],
   options: UseSearchOptions<T> = {}
 ): SearchResult<T> {
-  const { 
-    searchFields = ['title', 'channelName', 'tags'] as (keyof T)[], 
-    defaultSearchTerm = '' 
+  const {
+    searchFields = ['title', 'channelName', 'tags'] as (keyof T)[],
+    defaultSearchTerm = '',
   } = options;
 
   const [searchTerm, setSearchTerm] = useState<string>(defaultSearchTerm);
 
   const filteredData = useMemo(() => {
     if (!searchTerm.trim()) return data;
-    
+
     const searchLower = searchTerm.toLowerCase();
-    
+
     return data.filter((item) => {
-      return searchFields.some(field => {
+      return searchFields.some((field) => {
         const value = item[field];
-        
+
         if (typeof value === 'string') {
           return value.toLowerCase().includes(searchLower);
         }
-        
+
         if (Array.isArray(value)) {
-          return value.some((arrayItem: any) => 
+          return value.some((arrayItem: any) =>
             String(arrayItem).toLowerCase().includes(searchLower)
           );
         }
-        
-        return String(value || '').toLowerCase().includes(searchLower);
+
+        return String(value || '')
+          .toLowerCase()
+          .includes(searchLower);
       });
     });
   }, [data, searchTerm, searchFields]);
@@ -52,6 +54,6 @@ export function useSearch<T = Video>(
     searchTerm,
     setSearchTerm,
     filteredData,
-    searchCount: filteredData.length
+    searchCount: filteredData.length,
   };
 }

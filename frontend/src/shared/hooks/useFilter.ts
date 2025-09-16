@@ -14,7 +14,9 @@ export interface UseFilterOptions<T> {
 
 export interface FilterResult<T> {
   filters: FilterState;
-  setFilters: (filters: FilterState | ((prev: FilterState) => FilterState)) => void;
+  setFilters: (
+    filters: FilterState | ((prev: FilterState) => FilterState)
+  ) => void;
   updateFilter: (key: string, value: any) => void;
   clearFilters: () => void;
   filteredData: T[];
@@ -23,20 +25,17 @@ export interface FilterResult<T> {
 }
 
 export function useFilter<T = Video>(
-  data: T[] = [], 
+  data: T[] = [],
   options: UseFilterOptions<T> = {}
 ): FilterResult<T> {
-  const { 
-    defaultFilters = {},
-    filterFunctions = {}
-  } = options;
+  const { defaultFilters = {}, filterFunctions = {} } = options;
 
   const [filters, setFilters] = useState<FilterState>(defaultFilters);
 
   const updateFilter = (key: string, value: any) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      [key]: value
+      [key]: value,
     }));
   };
 
@@ -49,7 +48,12 @@ export function useFilter<T = Video>(
 
     return data.filter((item) => {
       return Object.entries(filters).every(([key, value]) => {
-        if (value === '' || value === null || value === undefined || value === 'All') {
+        if (
+          value === '' ||
+          value === null ||
+          value === undefined ||
+          value === 'All'
+        ) {
           return true;
         }
 
@@ -60,7 +64,9 @@ export function useFilter<T = Video>(
         const itemValue = (item as any)[key];
 
         if (typeof value === 'string') {
-          return String(itemValue || '').toLowerCase().includes(value.toLowerCase());
+          return String(itemValue || '')
+            .toLowerCase()
+            .includes(value.toLowerCase());
         }
 
         if (typeof value === 'number') {
@@ -77,8 +83,9 @@ export function useFilter<T = Video>(
   }, [data, filters, filterFunctions]);
 
   const activeFilterCount = useMemo(() => {
-    return Object.entries(filters).filter(([_, value]) => 
-      value !== '' && value !== null && value !== undefined && value !== 'All'
+    return Object.entries(filters).filter(
+      ([_, value]) =>
+        value !== '' && value !== null && value !== undefined && value !== 'All'
     ).length;
   }, [filters]);
 
@@ -89,6 +96,6 @@ export function useFilter<T = Video>(
     clearFilters,
     filteredData,
     filterCount: filteredData.length,
-    activeFilterCount
+    activeFilterCount,
   };
 }

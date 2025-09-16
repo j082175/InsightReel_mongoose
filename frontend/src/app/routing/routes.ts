@@ -23,7 +23,7 @@ export const ROUTES: Record<string, RouteConfig> = {
     label: '대시보드',
     icon: '📊',
     category: 'main',
-    description: '전체 현황 및 주요 지표'
+    description: '전체 현황 및 주요 지표',
   },
   CHANNELS: {
     id: 'channels',
@@ -31,7 +31,7 @@ export const ROUTES: Record<string, RouteConfig> = {
     label: '채널 관리',
     icon: '📺',
     category: 'management',
-    description: '채널 추가, 편집, 분석'
+    description: '채널 추가, 편집, 분석',
   },
   ARCHIVE: {
     id: 'archive',
@@ -39,7 +39,7 @@ export const ROUTES: Record<string, RouteConfig> = {
     label: '비디오 아카이브',
     icon: '🗂️',
     category: 'main',
-    description: '수집된 비디오 관리'
+    description: '수집된 비디오 관리',
   },
   DISCOVERY: {
     id: 'discovery',
@@ -47,7 +47,7 @@ export const ROUTES: Record<string, RouteConfig> = {
     label: '소재 발굴',
     icon: '🔍',
     category: 'main',
-    description: '트렌드 키워드 및 콘텐츠 아이디어'
+    description: '트렌드 키워드 및 콘텐츠 아이디어',
   },
   IDEAS: {
     id: 'ideas',
@@ -55,7 +55,7 @@ export const ROUTES: Record<string, RouteConfig> = {
     label: '아이디어 관리',
     icon: '💡',
     category: 'main',
-    description: '생성된 콘텐츠 아이디어 관리'
+    description: '생성된 콘텐츠 아이디어 관리',
   },
 
   // Trending Routes
@@ -65,7 +65,7 @@ export const ROUTES: Record<string, RouteConfig> = {
     label: '트렌딩 수집',
     icon: '📈',
     category: 'trending',
-    description: '트렌딩 비디오 수집 및 설정'
+    description: '트렌딩 비디오 수집 및 설정',
   },
   TRENDING_VIDEOS: {
     id: 'trending-videos',
@@ -73,7 +73,7 @@ export const ROUTES: Record<string, RouteConfig> = {
     label: '트렌딩 영상',
     icon: '🔥',
     category: 'trending',
-    description: '수집된 트렌딩 영상 보기'
+    description: '수집된 트렌딩 영상 보기',
   },
   TRENDING_BATCHES: {
     id: 'trending-batches',
@@ -81,7 +81,7 @@ export const ROUTES: Record<string, RouteConfig> = {
     label: '배치 관리',
     icon: '📦',
     category: 'trending',
-    description: '수집 배치 현황 및 관리'
+    description: '수집 배치 현황 및 관리',
   },
   TRENDING_DASHBOARD: {
     id: 'trending-dashboard',
@@ -89,7 +89,7 @@ export const ROUTES: Record<string, RouteConfig> = {
     label: '트렌드 대시보드',
     icon: '📊',
     category: 'trending',
-    description: '트렌드 분석 대시보드'
+    description: '트렌드 분석 대시보드',
   },
 } as const;
 
@@ -97,23 +97,27 @@ export const ROUTES: Record<string, RouteConfig> = {
 export const ROUTE_CATEGORIES = {
   main: {
     label: '메인',
-    routes: Object.values(ROUTES).filter(route => route.category === 'main')
+    routes: Object.values(ROUTES).filter((route) => route.category === 'main'),
   },
   trending: {
     label: '트렌딩',
-    routes: Object.values(ROUTES).filter(route => route.category === 'trending')
+    routes: Object.values(ROUTES).filter(
+      (route) => route.category === 'trending'
+    ),
   },
   management: {
     label: '관리',
-    routes: Object.values(ROUTES).filter(route => route.category === 'management')
+    routes: Object.values(ROUTES).filter(
+      (route) => route.category === 'management'
+    ),
   },
 } as const;
 
 // Helper functions
 export const getRouteById = (id: string): RouteConfig | undefined => {
-  return Object.values(ROUTES).find(route => route.id === id);
+  return Object.values(ROUTES).find((route) => route.id === id);
 };
 
 export const getRouteByPath = (path: string): RouteConfig | undefined => {
-  return Object.values(ROUTES).find(route => route.path === path);
+  return Object.values(ROUTES).find((route) => route.path === path);
 };

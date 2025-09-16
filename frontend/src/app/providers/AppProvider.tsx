@@ -11,12 +11,16 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CollectionBatchEntity } from '../../entities';
 import { VideoEntity } from '../../entities';
 import { Toaster } from 'react-hot-toast';
+import { QueryProvider } from './QueryProvider';
 
 // ===== App Context Types =====
 interface AppContextType {
   collectionBatches: CollectionBatchEntity[];
   collectedVideos: VideoEntity[];
-  addCollectionBatch: (batch: CollectionBatchEntity, videos: VideoEntity[]) => void;
+  addCollectionBatch: (
+    batch: CollectionBatchEntity,
+    videos: VideoEntity[]
+  ) => void;
   currentPage: string;
   setCurrentPage: (page: string) => void;
 }
@@ -40,7 +44,9 @@ interface AppProviderProps {
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [currentPage, setCurrentPage] = useState('channels'); // 디버깅을 위해 임시로 다시 변경
-  const [collectionBatches, setCollectionBatches] = useState<CollectionBatchEntity[]>([]);
+  const [collectionBatches, setCollectionBatches] = useState<
+    CollectionBatchEntity[]
+  >([]);
   const [collectedVideos, setCollectedVideos] = useState<VideoEntity[]>([]);
 
   // 브라우저 히스토리 초기화
@@ -68,9 +74,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     };
   }, []);
 
-  const addCollectionBatch = (batch: CollectionBatchEntity, videos: VideoEntity[]) => {
-    setCollectionBatches(prev => [batch, ...prev]); // 최신순으로 추가
-    setCollectedVideos(prev => [...videos, ...prev]); // 최신순으로 추가
+  const addCollectionBatch = (
+    batch: CollectionBatchEntity,
+    videos: VideoEntity[]
+  ) => {
+    setCollectionBatches((prev) => [batch, ...prev]); // 최신순으로 추가
+    setCollectedVideos((prev) => [...videos, ...prev]); // 최신순으로 추가
   };
 
   // 페이지 변경 함수 (브라우저 히스토리에 추가)
@@ -92,28 +101,30 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   };
 
   return (
-    <AppContext.Provider value={contextValue}>
-      {children}
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-          success: {
+    <QueryProvider>
+      <AppContext.Provider value={contextValue}>
+        {children}
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
             style: {
-              background: '#10b981',
+              background: '#363636',
+              color: '#fff',
             },
-          },
-          error: {
-            style: {
-              background: '#ef4444',
+            success: {
+              style: {
+                background: '#10b981',
+              },
             },
-          },
-        }}
-      />
-    </AppContext.Provider>
+            error: {
+              style: {
+                background: '#ef4444',
+              },
+            },
+          }}
+        />
+      </AppContext.Provider>
+    </QueryProvider>
   );
 };

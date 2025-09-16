@@ -103,11 +103,10 @@ export interface VideoSystemMetadata {
  */
 export interface VideoEntity
   extends VideoCore,
-          VideoChannelInfo,
-          VideoAIAnalysis,
-          YouTubeSpecificData,
-          VideoSystemMetadata {
-
+    VideoChannelInfo,
+    VideoAIAnalysis,
+    YouTubeSpecificData,
+    VideoSystemMetadata {
   // 배치 수집 정보
   batchIds?: string[];
   collectedAt?: string;

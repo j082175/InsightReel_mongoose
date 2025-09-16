@@ -30,7 +30,7 @@ const ModalTestPage: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    message: ''
+    message: '',
   });
 
   // 폼 제출 핸들러
@@ -56,7 +56,9 @@ const ModalTestPage: React.FC = () => {
 
         {/* 기본 크기별 모달 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">📐 크기별 Modal</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            📐 크기별 Modal
+          </h2>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <button
@@ -98,11 +100,15 @@ const ModalTestPage: React.FC = () => {
 
         {/* 기능별 모달 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">⚙️ 기능별 Modal</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            ⚙️ 기능별 Modal
+          </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">중첩 Modal</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                중첩 Modal
+              </h3>
               <p className="text-gray-600 text-sm mb-4">
                 모달 위에 또 다른 모달을 열어 계층 구조를 테스트합니다.
               </p>
@@ -115,7 +121,9 @@ const ModalTestPage: React.FC = () => {
             </div>
 
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">Form Modal</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                Form Modal
+              </h3>
               <p className="text-gray-600 text-sm mb-4">
                 폼이 포함된 모달로 실제 데이터 입력을 테스트합니다.
               </p>
@@ -128,7 +136,9 @@ const ModalTestPage: React.FC = () => {
             </div>
 
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">Confirm Modal</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                Confirm Modal
+              </h3>
               <p className="text-gray-600 text-sm mb-4">
                 확인/취소 다이얼로그 형태의 모달을 테스트합니다.
               </p>
@@ -144,18 +154,44 @@ const ModalTestPage: React.FC = () => {
 
         {/* 접근성 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">♿ 접근성 테스트</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            ♿ 접근성 테스트
+          </h2>
 
           <div className="bg-blue-50 p-6 rounded-lg">
-            <h3 className="text-lg font-semibold text-blue-900 mb-4">키보드 네비게이션 가이드</h3>
+            <h3 className="text-lg font-semibold text-blue-900 mb-4">
+              키보드 네비게이션 가이드
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h4 className="font-medium text-blue-800 mb-2">키보드 단축키</h4>
+                <h4 className="font-medium text-blue-800 mb-2">
+                  키보드 단축키
+                </h4>
                 <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• <kbd className="px-2 py-1 bg-white rounded shadow">Esc</kbd> - 모달 닫기</li>
-                  <li>• <kbd className="px-2 py-1 bg-white rounded shadow">Tab</kbd> - 다음 요소로 포커스</li>
-                  <li>• <kbd className="px-2 py-1 bg-white rounded shadow">Shift + Tab</kbd> - 이전 요소로 포커스</li>
-                  <li>• <kbd className="px-2 py-1 bg-white rounded shadow">Enter</kbd> - 버튼 활성화</li>
+                  <li>
+                    •{' '}
+                    <kbd className="px-2 py-1 bg-white rounded shadow">Esc</kbd>{' '}
+                    - 모달 닫기
+                  </li>
+                  <li>
+                    •{' '}
+                    <kbd className="px-2 py-1 bg-white rounded shadow">Tab</kbd>{' '}
+                    - 다음 요소로 포커스
+                  </li>
+                  <li>
+                    •{' '}
+                    <kbd className="px-2 py-1 bg-white rounded shadow">
+                      Shift + Tab
+                    </kbd>{' '}
+                    - 이전 요소로 포커스
+                  </li>
+                  <li>
+                    •{' '}
+                    <kbd className="px-2 py-1 bg-white rounded shadow">
+                      Enter
+                    </kbd>{' '}
+                    - 버튼 활성화
+                  </li>
                 </ul>
               </div>
               <div>
@@ -194,7 +230,8 @@ const ModalTestPage: React.FC = () => {
         >
           <div className="p-4">
             <p className="text-gray-600 mb-4">
-              이것은 작은 크기의 모달입니다. 간단한 메시지나 확인 다이얼로그에 적합합니다.
+              이것은 작은 크기의 모달입니다. 간단한 메시지나 확인 다이얼로그에
+              적합합니다.
             </p>
             <div className="flex justify-end gap-2">
               <button
@@ -218,7 +255,9 @@ const ModalTestPage: React.FC = () => {
               기본 크기의 모달입니다. 대부분의 컨텐츠에 적합한 크기입니다.
             </p>
             <div className="bg-gray-50 p-4 rounded mb-4">
-              <h4 className="font-medium text-gray-800 mb-2">모달 기능 테스트</h4>
+              <h4 className="font-medium text-gray-800 mb-2">
+                모달 기능 테스트
+              </h4>
               <ul className="text-sm text-gray-600 space-y-1">
                 <li>✅ 오버레이 클릭으로 닫기</li>
                 <li>✅ ESC 키로 닫기</li>
@@ -245,9 +284,12 @@ const ModalTestPage: React.FC = () => {
           size="lg"
         >
           <div className="p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">대형 모달 컨텐츠</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              대형 모달 컨텐츠
+            </h3>
             <p className="text-gray-600 mb-6">
-              큰 크기의 모달로 많은 내용을 담을 수 있습니다. 복잡한 폼이나 상세 정보 표시에 적합합니다.
+              큰 크기의 모달로 많은 내용을 담을 수 있습니다. 복잡한 폼이나 상세
+              정보 표시에 적합합니다.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -255,12 +297,15 @@ const ModalTestPage: React.FC = () => {
                 <h4 className="font-medium text-gray-800 mb-2">왼쪽 컨텐츠</h4>
                 <div className="bg-blue-50 p-4 rounded">
                   <p className="text-blue-800 text-sm">
-                    Large 모달에서는 좌우로 컨텐츠를 배치할 수 있는 충분한 공간이 있습니다.
+                    Large 모달에서는 좌우로 컨텐츠를 배치할 수 있는 충분한
+                    공간이 있습니다.
                   </p>
                 </div>
               </div>
               <div>
-                <h4 className="font-medium text-gray-800 mb-2">오른쪽 컨텐츠</h4>
+                <h4 className="font-medium text-gray-800 mb-2">
+                  오른쪽 컨텐츠
+                </h4>
                 <div className="bg-green-50 p-4 rounded">
                   <p className="text-green-800 text-sm">
                     복잡한 레이아웃이나 여러 섹션을 포함할 수 있습니다.
@@ -294,16 +339,19 @@ const ModalTestPage: React.FC = () => {
           size="full"
         >
           <div className="p-8">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6">전체 화면 모달</h3>
+            <h3 className="text-2xl font-bold text-gray-800 mb-6">
+              전체 화면 모달
+            </h3>
             <p className="text-gray-600 mb-8">
-              전체 화면을 차지하는 모달입니다. 복잡한 에디터나 대시보드 같은 애플리케이션에 적합합니다.
+              전체 화면을 차지하는 모달입니다. 복잡한 에디터나 대시보드 같은
+              애플리케이션에 적합합니다.
             </p>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
               <div className="bg-white p-6 rounded-lg border shadow-sm">
                 <h4 className="font-semibold text-gray-800 mb-3">섹션 1</h4>
                 <div className="space-y-2">
-                  {[1, 2, 3, 4, 5].map(i => (
+                  {[1, 2, 3, 4, 5].map((i) => (
                     <div key={i} className="h-4 bg-gray-200 rounded"></div>
                   ))}
                 </div>
@@ -311,7 +359,7 @@ const ModalTestPage: React.FC = () => {
               <div className="bg-white p-6 rounded-lg border shadow-sm">
                 <h4 className="font-semibold text-gray-800 mb-3">섹션 2</h4>
                 <div className="space-y-2">
-                  {[1, 2, 3, 4, 5].map(i => (
+                  {[1, 2, 3, 4, 5].map((i) => (
                     <div key={i} className="h-4 bg-blue-200 rounded"></div>
                   ))}
                 </div>
@@ -319,7 +367,7 @@ const ModalTestPage: React.FC = () => {
               <div className="bg-white p-6 rounded-lg border shadow-sm">
                 <h4 className="font-semibold text-gray-800 mb-3">섹션 3</h4>
                 <div className="space-y-2">
-                  {[1, 2, 3, 4, 5].map(i => (
+                  {[1, 2, 3, 4, 5].map((i) => (
                     <div key={i} className="h-4 bg-green-200 rounded"></div>
                   ))}
                 </div>
@@ -376,7 +424,8 @@ const ModalTestPage: React.FC = () => {
         >
           <div className="p-6">
             <p className="text-gray-600 mb-4">
-              이것은 중첩된 두 번째 모달입니다. Z-index와 오버레이가 올바르게 작동하는지 확인해보세요.
+              이것은 중첩된 두 번째 모달입니다. Z-index와 오버레이가 올바르게
+              작동하는지 확인해보세요.
             </p>
             <div className="bg-red-50 p-4 rounded mb-4">
               <p className="text-red-800 text-sm">
@@ -418,7 +467,9 @@ const ModalTestPage: React.FC = () => {
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
@@ -430,7 +481,9 @@ const ModalTestPage: React.FC = () => {
                 <input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, email: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   required
                 />
@@ -441,7 +494,12 @@ const ModalTestPage: React.FC = () => {
                 </label>
                 <textarea
                   value={formData.message}
-                  onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      message: e.target.value,
+                    }))
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   rows={4}
                   placeholder="메시지를 입력하세요..."
@@ -478,8 +536,12 @@ const ModalTestPage: React.FC = () => {
             <div className="flex items-center mb-4">
               <div className="text-3xl mr-3">⚠️</div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-800">정말 삭제하시겠습니까?</h3>
-                <p className="text-gray-600 text-sm">이 작업은 되돌릴 수 없습니다.</p>
+                <h3 className="text-lg font-semibold text-gray-800">
+                  정말 삭제하시겠습니까?
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  이 작업은 되돌릴 수 없습니다.
+                </p>
               </div>
             </div>
 
@@ -512,11 +574,13 @@ const ModalTestPage: React.FC = () => {
           <div className="bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 p-8 text-white">
             <h2 className="text-2xl font-bold mb-4">🎨 Custom Styled Modal</h2>
             <p className="mb-6">
-              이 모달은 커스텀 스타일이 적용되었습니다. 그라데이션 배경과 흰색 텍스트를 사용합니다.
+              이 모달은 커스텀 스타일이 적용되었습니다. 그라데이션 배경과 흰색
+              텍스트를 사용합니다.
             </p>
             <div className="bg-white/20 backdrop-blur-sm p-4 rounded-lg mb-6">
               <p className="text-sm">
-                Modal 컴포넌트의 children 영역을 활용하여 완전히 다른 스타일을 적용할 수 있습니다.
+                Modal 컴포넌트의 children 영역을 활용하여 완전히 다른 스타일을
+                적용할 수 있습니다.
               </p>
             </div>
             <div className="flex justify-end">
@@ -533,7 +597,9 @@ const ModalTestPage: React.FC = () => {
         {/* 테스트 통계 */}
         <section className="mb-12">
           <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-6 rounded-lg">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">📊 Modal 테스트 현황</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              📊 Modal 테스트 현황
+            </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">9</div>

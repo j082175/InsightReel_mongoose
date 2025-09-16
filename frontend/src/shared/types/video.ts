@@ -11,29 +11,29 @@ export type ContentType = 'shortform' | 'longform' | 'mixed';
 export interface VideoCore {
   // 자동 생성 필드
   rowNumber?: number;
-  
+
   // 기본 메타데이터
   uploadDate: string;
   platform: Platform;
-  
+
   // 콘텐츠 분석 필드
   keywords?: string[];
   hashtags?: string[];
   mentions?: string[];
   description?: string;
   analysisContent?: string;
-  
+
   // 성과 지표 (선택적)
   likes?: number;
   commentsCount?: number;
-  
+
   // URL 정보
   url?: string;
   thumbnailUrl?: string;
-  
+
   // 제목 (필수)
   title: string;
-  
+
   // 레거시 호환성 필드
   shares?: number;
   videoUrl?: string;
@@ -86,11 +86,11 @@ export interface SystemMetadata {
     lastUpdated?: string;
     status?: 'pending' | 'synced' | 'error';
   };
-  
+
   // 데이터 출처 정보
   source?: 'videos' | 'trending';
   isFromTrending?: boolean;
-  
+
   // Mongoose 자동 생성 필드
   createdAt?: string;
   updatedAt?: string;
@@ -98,16 +98,21 @@ export interface SystemMetadata {
 }
 
 // ===== 전체 Video 인터페이스 조합 =====
-export interface Video extends VideoCore, ChannelInfo, AIAnalysis, YouTubeSpecific, SystemMetadata {
+export interface Video
+  extends VideoCore,
+    ChannelInfo,
+    AIAnalysis,
+    YouTubeSpecific,
+    SystemMetadata {
   // MongoDB 필드 (통일된 ID) - 모든 계층에서 _id 사용
-  _id: string;                 // MongoDB ObjectId → 필수 필드로 변경
+  _id: string; // MongoDB ObjectId → 필수 필드로 변경
 
   // UI 전용 필드 (레거시 호환용)
-  videoId?: string;            // 비디오 고유 ID
-  thumbnail?: string;          // thumbnailUrl과 동일
+  videoId?: string; // 비디오 고유 ID
+  thumbnail?: string; // thumbnailUrl과 동일
   channelAvatar?: string;
-  channelAvatarUrl?: string;   // channelAvatar와 동일
-  viewCount?: number;          // views와 동일
+  channelAvatarUrl?: string; // channelAvatar와 동일
+  viewCount?: number; // views와 동일
   daysAgo?: number;
   isTrending?: boolean;
   embedUrl?: string;
@@ -129,7 +134,7 @@ export interface Video extends VideoCore, ChannelInfo, AIAnalysis, YouTubeSpecif
 
 // ===== Extended Video Types =====
 export interface ExtendedVideo extends Video {
-  category?: string;  // mainCategory의 별칭
+  category?: string; // mainCategory의 별칭
 }
 
 // ===== AI 분석 결과 =====
@@ -150,4 +155,11 @@ export interface CollectionBatch {
   collectedAt: string;
   videoCount: number;
   channels: string[];
+}
+
+// ===== Trending Video =====
+export interface TrendingVideo extends Video {
+  trendingScore?: number;
+  collectionDate?: string;
+  isPopular?: boolean;
 }

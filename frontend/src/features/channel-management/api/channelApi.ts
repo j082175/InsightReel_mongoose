@@ -73,7 +73,9 @@ export const fetchChannels = async (): Promise<ChannelEntity[]> => {
 /**
  * 개별 채널 조회
  */
-export const fetchChannel = async (channelId: string): Promise<ChannelEntity> => {
+export const fetchChannel = async (
+  channelId: string
+): Promise<ChannelEntity> => {
   try {
     const response = await fetch(`/api/channels/${channelId}`);
     if (!response.ok) {
@@ -89,7 +91,9 @@ export const fetchChannel = async (channelId: string): Promise<ChannelEntity> =>
 /**
  * 새 채널 생성
  */
-export const createChannel = async (data: CreateChannelRequest): Promise<ChannelEntity> => {
+export const createChannel = async (
+  data: CreateChannelRequest
+): Promise<ChannelEntity> => {
   try {
     const response = await fetch('/api/channels', {
       method: 'POST',
@@ -158,7 +162,9 @@ export const deleteChannel = async (channelId: string): Promise<void> => {
 /**
  * 채널 통계 조회
  */
-export const fetchChannelStats = async (channelId: string): Promise<ChannelStatsResponse> => {
+export const fetchChannelStats = async (
+  channelId: string
+): Promise<ChannelStatsResponse> => {
   try {
     const response = await fetch(`/api/channels/${channelId}/stats`);
     if (!response.ok) {
@@ -265,7 +271,9 @@ export const deleteChannelGroup = async (groupId: string): Promise<void> => {
 /**
  * 여러 채널 일괄 삭제
  */
-export const deleteChannelsBulk = async (channelIds: string[]): Promise<void> => {
+export const deleteChannelsBulk = async (
+  channelIds: string[]
+): Promise<void> => {
   try {
     const response = await fetch('/api/channels/bulk-delete', {
       method: 'POST',

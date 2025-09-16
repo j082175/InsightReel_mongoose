@@ -22,7 +22,7 @@ const SidebarTestPage: React.FC = () => {
   // 테스트 액션 로그 추가
   const addTestLog = (action: string) => {
     const timestamp = new Date().toLocaleTimeString();
-    setTestActions(prev => [`[${timestamp}] ${action}`, ...prev.slice(0, 9)]);
+    setTestActions((prev) => [`[${timestamp}] ${action}`, ...prev.slice(0, 9)]);
   };
 
   const handleSidebarClose = () => {
@@ -60,14 +60,17 @@ const SidebarTestPage: React.FC = () => {
         {/* 테스트 콘텐츠 영역 */}
         <div className="flex-1 p-8">
           <div className="max-w-4xl mx-auto space-y-8">
-
             {/* 테스트 컨트롤 */}
             <section className="bg-white p-6 rounded-lg border border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">🎛️ 테스트 컨트롤</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                🎛️ 테스트 컨트롤
+              </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-semibold text-gray-800 mb-3">사이드바 상태</h3>
+                  <h3 className="font-semibold text-gray-800 mb-3">
+                    사이드바 상태
+                  </h3>
                   <div className="space-y-3">
                     <button
                       onClick={handleSidebarToggle}
@@ -82,7 +85,8 @@ const SidebarTestPage: React.FC = () => {
 
                     <div className="bg-gray-50 p-3 rounded">
                       <p className="text-sm text-gray-600">
-                        현재 상태: <span className="font-medium text-gray-800">
+                        현재 상태:{' '}
+                        <span className="font-medium text-gray-800">
                           {sidebarOpen ? '열림' : '닫힘'}
                         </span>
                       </p>
@@ -91,7 +95,9 @@ const SidebarTestPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold text-gray-800 mb-3">테스트 기능</h3>
+                  <h3 className="font-semibold text-gray-800 mb-3">
+                    테스트 기능
+                  </h3>
                   <div className="space-y-2">
                     <button
                       onClick={() => addTestLog('네비게이션 메뉴 테스트')}
@@ -118,32 +124,42 @@ const SidebarTestPage: React.FC = () => {
 
             {/* 기능별 테스트 */}
             <section className="bg-white p-6 rounded-lg border border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">🧪 기능별 테스트</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                🧪 기능별 테스트
+              </h2>
 
               <div className="space-y-6">
                 {/* 네비게이션 구조 테스트 */}
                 <div>
-                  <h3 className="font-semibold text-gray-800 mb-3">🧭 네비게이션 구조</h3>
+                  <h3 className="font-semibold text-gray-800 mb-3">
+                    🧭 네비게이션 구조
+                  </h3>
                   <div className="bg-gray-50 p-4 rounded">
                     <p className="text-sm text-gray-600 mb-3">
                       사이드바의 네비게이션 메뉴 항목들을 테스트합니다.
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                       <div className="bg-white p-3 rounded border">
-                        <h4 className="font-medium text-gray-800 mb-2">메인 메뉴</h4>
+                        <h4 className="font-medium text-gray-800 mb-2">
+                          메인 메뉴
+                        </h4>
                         <ul className="space-y-1 text-gray-600">
                           <li>• 대시보드</li>
                         </ul>
                       </div>
                       <div className="bg-white p-3 rounded border">
-                        <h4 className="font-medium text-gray-800 mb-2">관리 메뉴</h4>
+                        <h4 className="font-medium text-gray-800 mb-2">
+                          관리 메뉴
+                        </h4>
                         <ul className="space-y-1 text-gray-600">
                           <li>• 채널 관리</li>
                           <li>• 영상 아카이브</li>
                         </ul>
                       </div>
                       <div className="bg-white p-3 rounded border">
-                        <h4 className="font-medium text-gray-800 mb-2">분석 & 발굴</h4>
+                        <h4 className="font-medium text-gray-800 mb-2">
+                          분석 & 발굴
+                        </h4>
                         <ul className="space-y-1 text-gray-600">
                           <li>• 소재 발굴</li>
                           <li>• 콘텐츠 아이디어</li>
@@ -155,9 +171,13 @@ const SidebarTestPage: React.FC = () => {
 
                 {/* 테스트 모드 기능 */}
                 <div>
-                  <h3 className="font-semibold text-gray-800 mb-3">🧪 테스트 모드 기능</h3>
+                  <h3 className="font-semibold text-gray-800 mb-3">
+                    🧪 테스트 모드 기능
+                  </h3>
                   <div className="bg-yellow-50 p-4 rounded border border-yellow-200">
-                    <h4 className="font-medium text-yellow-800 mb-2">현재 활성화된 기능들</h4>
+                    <h4 className="font-medium text-yellow-800 mb-2">
+                      현재 활성화된 기능들
+                    </h4>
                     <ul className="text-sm text-yellow-700 space-y-1">
                       <li>• 라우터 독립 모드 (React Router 없이 동작)</li>
                       <li>• 안전한 네비게이션 처리</li>
@@ -171,7 +191,9 @@ const SidebarTestPage: React.FC = () => {
 
             {/* 테스트 로그 */}
             <section className="bg-white p-6 rounded-lg border border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">📋 테스트 로그</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                📋 테스트 로그
+              </h2>
 
               <div className="bg-gray-50 p-4 rounded h-64 overflow-y-auto">
                 {testActions.length === 0 ? (
@@ -181,7 +203,10 @@ const SidebarTestPage: React.FC = () => {
                 ) : (
                   <div className="space-y-1">
                     {testActions.map((action, index) => (
-                      <div key={index} className="text-sm font-mono text-gray-700">
+                      <div
+                        key={index}
+                        className="text-sm font-mono text-gray-700"
+                      >
                         {action}
                       </div>
                     ))}
@@ -192,24 +217,29 @@ const SidebarTestPage: React.FC = () => {
 
             {/* 사용법 안내 */}
             <section className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-              <h2 className="text-xl font-bold text-blue-900 mb-4">💡 사용법 안내</h2>
+              <h2 className="text-xl font-bold text-blue-900 mb-4">
+                💡 사용법 안내
+              </h2>
 
               <div className="space-y-3 text-sm text-blue-800">
                 <p>
-                  <strong>1. 기본 테스트:</strong> 왼쪽 사이드바의 메뉴 항목들을 클릭해보세요.
+                  <strong>1. 기본 테스트:</strong> 왼쪽 사이드바의 메뉴 항목들을
+                  클릭해보세요.
                 </p>
                 <p>
-                  <strong>2. 상태 변경:</strong> "사이드바 숨기기/보이기" 버튼으로 표시 상태를 변경할 수 있습니다.
+                  <strong>2. 상태 변경:</strong> "사이드바 숨기기/보이기"
+                  버튼으로 표시 상태를 변경할 수 있습니다.
                 </p>
                 <p>
-                  <strong>3. 드롭다운:</strong> "관리"와 "분석 & 발굴" 메뉴를 클릭하면 하위 메뉴가 표시됩니다.
+                  <strong>3. 드롭다운:</strong> "관리"와 "분석 & 발굴" 메뉴를
+                  클릭하면 하위 메뉴가 표시됩니다.
                 </p>
                 <p>
-                  <strong>4. 테스트 모드:</strong> 현재 Router 독립 모드로 안전하게 테스트할 수 있습니다.
+                  <strong>4. 테스트 모드:</strong> 현재 Router 독립 모드로
+                  안전하게 테스트할 수 있습니다.
                 </p>
               </div>
             </section>
-
           </div>
         </div>
       </div>

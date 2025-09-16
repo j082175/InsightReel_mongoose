@@ -7,8 +7,8 @@ import { Platform } from './video';
 
 // ===== 기본 채널 정보 (ChannelCore) =====
 export interface ChannelCore {
-  id: string;                   // MongoDB _id → id 변환된 값
-  channelId: string;           // YouTube/Instagram/TikTok 실제 채널 ID
+  id: string; // MongoDB _id → id 변환된 값
+  channelId: string; // YouTube/Instagram/TikTok 실제 채널 ID
   name: string;
   url?: string;
   platform: Platform;
@@ -25,7 +25,7 @@ export interface ChannelAIAnalysis {
   aiTags?: string[];
   deepInsightTags?: string[];
   allTags?: string[];
-  
+
   categoryInfo?: {
     majorCategory?: string;
     middleCategory?: string;
@@ -57,7 +57,7 @@ export interface ChannelStats {
   avgDurationSeconds?: number;
   avgDurationFormatted?: string;
   shortFormRatio?: number;
-  
+
   // 기간별 조회수
   viewsByPeriod?: {
     last7Days?: number;
@@ -65,17 +65,22 @@ export interface ChannelStats {
     last90Days?: number;
     lastYear?: number;
   };
-  
+
   totalVideos?: number;
   totalViews?: number;
   averageViewsPerVideo?: number;
-  
+
   uploadFrequency?: {
-    pattern?: 'daily' | 'weekly' | 'bi_weekly' | 'multiple_per_week' | 'irregular';
+    pattern?:
+      | 'daily'
+      | 'weekly'
+      | 'bi_weekly'
+      | 'multiple_per_week'
+      | 'irregular';
     avgDaysBetweenUploads?: number;
     consistency?: number;
   };
-  
+
   mostViewedVideo?: {
     videoId?: string;
     title?: string;
@@ -96,7 +101,7 @@ export interface ChannelMetadata {
   lastAnalyzedAt?: string;
   analysisVersion?: string;
   collectedAt?: string;
-  publishedAt?: string;      // 채널 실제 생성일
+  publishedAt?: string; // 채널 실제 생성일
   createdAt?: string;
   updatedAt?: string;
   version?: number;
@@ -104,22 +109,33 @@ export interface ChannelMetadata {
 }
 
 // ===== 전체 Channel 인터페이스 조합 =====
-export interface Channel extends ChannelCore, ChannelAIAnalysis, ChannelClusterInfo, ChannelStats, ChannelMetadata {
+export interface Channel
+  extends ChannelCore,
+    ChannelAIAnalysis,
+    ChannelClusterInfo,
+    ChannelStats,
+    ChannelMetadata {
   // MongoDB 필드 (통일된 ID) - 명시적 추가
-  _id?: string;                 // MongoDB ObjectId → 모든 API에서 사용
+  _id?: string; // MongoDB ObjectId → 모든 API에서 사용
 
   // UI 전용 필드 (레거시 호환)
-  videoCount?: number;          // totalVideos와 동일
-  subscriberCount?: number;     // subscribers와 동일
-  category?: string;            // categoryInfo.majorCategory와 동일
-  avatarUrl?: string;           // thumbnailUrl과 동일
-  channelUrl?: string;          // url과 동일
-  avgUploadsPerDay?: number;    // dailyUploadRate와 동일
-  viewsLast7Days?: number;      // last7DaysViews와 동일
-  avgVideoDuration?: number;    // avgDurationSeconds와 동일
+  videoCount?: number; // totalVideos와 동일
+  subscriberCount?: number; // subscribers와 동일
+  category?: string; // categoryInfo.majorCategory와 동일
+  avatarUrl?: string; // thumbnailUrl과 동일
+  channelUrl?: string; // url과 동일
+  avgUploadsPerDay?: number; // dailyUploadRate와 동일
+  viewsLast7Days?: number; // last7DaysViews와 동일
+  avgVideoDuration?: number; // avgDurationSeconds와 동일
 
   // 분석 상태 (UI용)
-  analysisStatus?: 'pending' | 'analyzing' | 'completed' | 'error' | 'active' | 'inactive';
+  analysisStatus?:
+    | 'pending'
+    | 'analyzing'
+    | 'completed'
+    | 'error'
+    | 'active'
+    | 'inactive';
 
   // 차트 데이터 (UI용)
   dailyViewsLast7Days?: number[];

@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from 'react';
 
 export interface Settings {
   general: {
@@ -26,7 +32,10 @@ export interface Settings {
 }
 
 // 카테고리별 설정 값 타입
-type SettingValue<T extends keyof Settings, K extends keyof Settings[T]> = Settings[T][K];
+type SettingValue<
+  T extends keyof Settings,
+  K extends keyof Settings[T],
+> = Settings[T][K];
 
 interface SettingsContextType {
   settings: Settings;
@@ -43,28 +52,30 @@ const defaultSettings: Settings = {
   general: {
     darkMode: false,
     notifications: true,
-    dashboardLayout: 'cards'
+    dashboardLayout: 'cards',
   },
   analysis: {
     aiModel: 'flash-lite',
     autoAnalysis: true,
     analysisInterval: 'hourly',
-    defaultCategory: 'auto'
+    defaultCategory: 'auto',
   },
   data: {
     savePath: './downloads',
     autoBackup: true,
     backupInterval: 'daily',
-    dataRetention: '30'
+    dataRetention: '30',
   },
   account: {
     username: '사용자',
     email: '',
-    apiKeyVisible: false
-  }
+    apiKeyVisible: false,
+  },
 };
 
-const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
+const SettingsContext = createContext<SettingsContextType | undefined>(
+  undefined
+);
 
 export const useSettings = () => {
   const context = useContext(SettingsContext);
@@ -78,7 +89,9 @@ interface SettingsProviderProps {
   children: ReactNode;
 }
 
-export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) => {
+export const SettingsProvider: React.FC<SettingsProviderProps> = ({
+  children,
+}) => {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
 
   // 컴포넌트 마운트 시 로컬 스토리지에서 설정 로드
@@ -103,17 +116,20 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
     }
   }, [settings.general.darkMode]);
 
-  const updateSettings = <T extends keyof Settings, K extends keyof Settings[T]>(
+  const updateSettings = <
+    T extends keyof Settings,
+    K extends keyof Settings[T],
+  >(
     category: T,
     key: K,
     value: SettingValue<T, K>
   ) => {
-    setSettings(prev => ({
+    setSettings((prev) => ({
       ...prev,
       [category]: {
         ...prev[category],
-        [key]: value
-      }
+        [key]: value,
+      },
     }));
   };
 
@@ -147,7 +163,7 @@ export const SettingsProvider: React.FC<SettingsProviderProps> = ({ children }) 
     settings,
     updateSettings,
     saveSettings,
-    resetSettings
+    resetSettings,
   };
 
   return (

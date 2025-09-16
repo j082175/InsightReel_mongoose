@@ -56,7 +56,12 @@ export interface ChannelStatistics {
   // 업로드 패턴
   dailyUploadRate?: number;
   uploadFrequency?: {
-    pattern: 'daily' | 'weekly' | 'bi_weekly' | 'multiple_per_week' | 'irregular';
+    pattern:
+      | 'daily'
+      | 'weekly'
+      | 'bi_weekly'
+      | 'multiple_per_week'
+      | 'irregular';
     avgDaysBetweenUploads: number;
     consistency: number; // 0-1 일관성 점수
   };
@@ -107,7 +112,13 @@ export interface ChannelSystemMetadata {
   // 분석 메타데이터
   lastAnalyzedAt?: string;
   analysisVersion?: string;
-  analysisStatus?: 'pending' | 'analyzing' | 'completed' | 'error' | 'active' | 'inactive';
+  analysisStatus?:
+    | 'pending'
+    | 'analyzing'
+    | 'completed'
+    | 'error'
+    | 'active'
+    | 'inactive';
 
   // 수집 메타데이터
   collectedAt?: string;
@@ -123,11 +134,10 @@ export interface ChannelSystemMetadata {
  */
 export interface ChannelEntity
   extends ChannelCore,
-          ChannelAIAnalysis,
-          ChannelStatistics,
-          ChannelClusterInfo,
-          ChannelSystemMetadata {
-
+    ChannelAIAnalysis,
+    ChannelStatistics,
+    ChannelClusterInfo,
+    ChannelSystemMetadata {
   // 차트 데이터 (분석용)
   dailyViewsLast7Days?: number[];
   dailyViewsLast30d?: number[];

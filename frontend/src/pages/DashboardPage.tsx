@@ -1,5 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { useTrendingStats, useQuotaStatus, useServerStatus } from '../shared/hooks';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import {
+  useTrendingStats,
+  useQuotaStatus,
+  useServerStatus,
+} from '../shared/hooks';
 import toast from 'react-hot-toast';
 import { Video } from '../shared/types';
 import { useAppContext } from '../app/providers';
@@ -8,6 +13,7 @@ import { DeleteConfirmationModal } from '../shared/ui';
 import { ChannelAnalysisModal } from '../features/channel-management';
 import { VideoCard, SearchBar } from '../shared/components';
 import { VideoManagement } from '../features';
+import { AnimatedList, FadeIn } from '../shared/components/animations';
 
 import { PLATFORMS } from '../shared/types/api';
 import { formatViews } from '../shared/utils';
@@ -17,7 +23,8 @@ import { ActionBar } from '../shared/components';
 const DashboardPage: React.FC = () => {
   const [selectedBatchId, setSelectedBatchId] = useState<string>('all');
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
-  const [selectedVideoForPlay, setSelectedVideoForPlay] = useState<Video | null>(null);
+  const [selectedVideoForPlay, setSelectedVideoForPlay] =
+    useState<Video | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [gridSize, setGridSize] = useState(1);
   const [itemToDelete, setItemToDelete] = useState<{
@@ -26,7 +33,6 @@ const DashboardPage: React.FC = () => {
     count?: number;
   } | null>(null);
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
-
 
   // VideoStore 사용 - 상태와 액션 분리
   const videoStore = VideoManagement.useVideoStore(selectedBatchId);
@@ -37,7 +43,6 @@ const DashboardPage: React.FC = () => {
     filters,
     selectedVideos,
     isSelectMode,
-    fetchVideos,
     deleteVideo,
     deleteVideos,
     updateFilters,
@@ -45,7 +50,7 @@ const DashboardPage: React.FC = () => {
     selectVideo,
     deselectVideo,
     selectAllVideos,
-    clearSelection
+    clearSelection,
   } = videoStore;
 
   // 기타 API 훅들
@@ -56,10 +61,7 @@ const DashboardPage: React.FC = () => {
   // 전역 상태에서 배치 정보 가져오기
   const { collectionBatches } = useAppContext();
 
-  // 컴포넌트 마운트 시 비디오 데이터 로드
-  useEffect(() => {
-    fetchVideos(selectedBatchId);
-  }, [fetchVideos, selectedBatchId]);
+  // React Query가 자동으로 데이터를 가져오므로 수동 호출 불필요
 
   // 선택된 비디오 개수 계산
   const selectedCount = selectedVideos.size;
@@ -107,7 +109,11 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  const handleDeleteClick = (item: { type: 'single' | 'bulk'; data?: Video; count?: number }) => {
+  const handleDeleteClick = (item: {
+    type: 'single' | 'bulk';
+    data?: Video;
+    count?: number;
+  }) => {
     setItemToDelete(item);
   };
 
@@ -121,7 +127,9 @@ const DashboardPage: React.FC = () => {
         const selectedVideoIds = Array.from(selectedVideos);
         await deleteVideos(selectedVideoIds);
         clearSelection();
-        toast.success(`선택된 ${selectedVideoIds.length}개 비디오가 삭제되었습니다`);
+        toast.success(
+          `선택된 ${selectedVideoIds.length}개 비디오가 삭제되었습니다`
+        );
       }
 
       setItemToDelete(null);
@@ -133,7 +141,7 @@ const DashboardPage: React.FC = () => {
   const gridLayouts: Record<number, string> = {
     1: 'grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8',
     2: 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6',
-    3: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+    3: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
   };
 
   // 통계 계산
@@ -141,10 +149,13 @@ const DashboardPage: React.FC = () => {
     totalVideos,
     totalViews: videos.reduce((sum, video) => sum + getViewCount(video), 0),
     totalLikes: videos.reduce((sum, video) => sum + (video.likes || 0), 0),
-    platformCounts: videos.reduce((acc, video) => {
-      acc[video.platform] = (acc[video.platform] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>)
+    platformCounts: videos.reduce(
+      (acc, video) => {
+        acc[video.platform] = (acc[video.platform] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    ),
   };
 
   if (loading && videos.length === 0) {
@@ -170,7 +181,9 @@ const DashboardPage: React.FC = () => {
         <div className="max-w-7xl mx-auto p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">영상 대시보드</h1>
+              <h1 className="text-3xl font-bold text-gray-900">
+                영상 대시보드
+              </h1>
               <p className="mt-1 text-sm text-gray-600">
                 수집된 영상들을 관리하고 분석하세요
               </p>
@@ -179,15 +192,21 @@ const DashboardPage: React.FC = () => {
             {/* 통계 요약 */}
             <div className="flex gap-6">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{stats.totalVideos}</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {stats.totalVideos}
+                </div>
                 <div className="text-xs text-gray-500">총 영상</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{formatViews(stats.totalViews)}</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {formatViews(stats.totalViews)}
+                </div>
                 <div className="text-xs text-gray-500">총 조회수</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">{formatViews(stats.totalLikes)}</div>
+                <div className="text-2xl font-bold text-purple-600">
+                  {formatViews(stats.totalLikes)}
+                </div>
                 <div className="text-xs text-gray-500">총 좋아요</div>
               </div>
             </div>
@@ -227,7 +246,8 @@ const DashboardPage: React.FC = () => {
         {/* 결과 정보 */}
         <div className="bg-white rounded-lg shadow mb-4 p-4">
           <div className="text-sm text-gray-500">
-            총 {totalVideos}개 영상 (키워드: "{filters.keyword || '없음'}", 플랫폼: {filters.platform || '전체'})
+            총 {totalVideos}개 영상 (키워드: "{filters.keyword || '없음'}",
+            플랫폼: {filters.platform || '전체'})
           </div>
         </div>
 
@@ -242,7 +262,10 @@ const DashboardPage: React.FC = () => {
         <div className="bg-white rounded-lg shadow">
           <div className="p-6">
             {videos.length > 0 ? (
-              <div className={`grid ${gridLayouts[gridSize] || gridLayouts[2]} gap-6`}>
+              <AnimatedList
+                className={`grid ${gridLayouts[gridSize] || gridLayouts[2]} gap-6`}
+                staggerDelay={0.05}
+              >
                 {videos.map((video) => (
                   <VideoCard
                     key={video._id}
@@ -256,11 +279,15 @@ const DashboardPage: React.FC = () => {
                     onSelectToggle={handleSelectToggle}
                   />
                 ))}
-              </div>
+              </AnimatedList>
             ) : (
               <div className="text-center py-12">
-                <div className="text-gray-500 text-lg mb-2">영상이 없습니다</div>
-                <div className="text-gray-400">비디오를 추가하거나 수집해보세요.</div>
+                <div className="text-gray-500 text-lg mb-2">
+                  영상이 없습니다
+                </div>
+                <div className="text-gray-400">
+                  비디오를 추가하거나 수집해보세요.
+                </div>
               </div>
             )}
           </div>
@@ -277,7 +304,9 @@ const DashboardPage: React.FC = () => {
             toggleSelectMode();
             clearSelection();
           }}
-          onDelete={() => handleDeleteClick({ type: 'bulk', count: selectedCount })}
+          onDelete={() =>
+            handleDeleteClick({ type: 'bulk', count: selectedCount })
+          }
         />
       </div>
 

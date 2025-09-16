@@ -54,7 +54,7 @@ const PAGE_COMPONENTS: Record<string, React.ComponentType> = {
   [ROUTES.TRENDING_DASHBOARD.id]: TrendingDashboardPage,
   // Test pages (development only)
   ...(process.env.NODE_ENV === 'development' && {
-    'test': TestMenuPage,
+    test: TestMenuPage,
     'test-shared': SharedTestPage,
     'test-features': FeaturesTestPage,
     'test-integration': IntegrationTestPage,
@@ -99,7 +99,7 @@ export const useNavigation = () => {
   };
 
   const getCurrentRoute = () => {
-    return Object.values(ROUTES).find(route => route.id === currentPage);
+    return Object.values(ROUTES).find((route) => route.id === currentPage);
   };
 
   return {

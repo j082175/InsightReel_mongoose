@@ -28,7 +28,7 @@ export interface ChannelFilters {
 export interface ChannelManagementState {
   // Data
   channels: Channel[];
-  channelGroups: any[];  // TODO: Define proper ChannelGroup type
+  channelGroups: any[]; // TODO: Define proper ChannelGroup type
   selectedChannels: string[];
 
   // UI State
@@ -52,7 +52,7 @@ export interface ChannelManagementActions {
   removeChannel: (channelId: string) => void;
 
   // Channel Groups
-  setChannelGroups: (groups: any[]) => void;  // TODO: Define proper ChannelGroup type
+  setChannelGroups: (groups: any[]) => void; // TODO: Define proper ChannelGroup type
   addChannelGroup: (group: any) => void;
   updateChannelGroup: (groupId: string, updates: any) => void;
   removeChannelGroup: (groupId: string) => void;
@@ -136,7 +136,9 @@ export const useChannelManagementStore = create<
         set(
           (state) => ({
             channels: state.channels.map((channel) =>
-              channel.channelId === channelId ? { ...channel, ...updates } : channel
+              channel.channelId === channelId
+                ? { ...channel, ...updates }
+                : channel
             ),
           }),
           false,
@@ -146,8 +148,12 @@ export const useChannelManagementStore = create<
       removeChannel: (channelId) =>
         set(
           (state) => ({
-            channels: state.channels.filter((channel) => channel.channelId !== channelId),
-            selectedChannels: state.selectedChannels.filter((id) => id !== channelId),
+            channels: state.channels.filter(
+              (channel) => channel.channelId !== channelId
+            ),
+            selectedChannels: state.selectedChannels.filter(
+              (id) => id !== channelId
+            ),
           }),
           false,
           'removeChannel'
@@ -178,7 +184,9 @@ export const useChannelManagementStore = create<
       removeChannelGroup: (groupId) =>
         set(
           (state) => ({
-            channelGroups: state.channelGroups.filter((group) => group._id !== groupId),
+            channelGroups: state.channelGroups.filter(
+              (group) => group._id !== groupId
+            ),
           }),
           false,
           'removeChannelGroup'
@@ -210,7 +218,10 @@ export const useChannelManagementStore = create<
 
         const filteredChannels = channels.filter((channel) => {
           // Platform filter
-          if (filters.platform !== 'ALL' && channel.platform !== filters.platform) {
+          if (
+            filters.platform !== 'ALL' &&
+            channel.platform !== filters.platform
+          ) {
             return false;
           }
 
@@ -225,7 +236,9 @@ export const useChannelManagementStore = create<
           // Search filter
           if (filters.searchTerm) {
             const searchLower = filters.searchTerm.toLowerCase();
-            const matchesName = channel.name?.toLowerCase().includes(searchLower);
+            const matchesName = channel.name
+              ?.toLowerCase()
+              .includes(searchLower);
             const matchesKeywords = channel.keywords?.some((keyword) =>
               keyword.toLowerCase().includes(searchLower)
             );
@@ -237,7 +250,10 @@ export const useChannelManagementStore = create<
 
           // Subscriber range filter
           const subscribers = channel.subscribers || 0;
-          if (subscribers < filters.subscriberRange.min || subscribers > filters.subscriberRange.max) {
+          if (
+            subscribers < filters.subscriberRange.min ||
+            subscribers > filters.subscriberRange.max
+          ) {
             return false;
           }
 
@@ -251,13 +267,18 @@ export const useChannelManagementStore = create<
         });
 
         set(
-          { selectedChannels: filteredChannels.map((channel) => channel.channelId) },
+          {
+            selectedChannels: filteredChannels.map(
+              (channel) => channel.channelId
+            ),
+          },
           false,
           'selectAllChannels'
         );
       },
 
-      clearSelection: () => set({ selectedChannels: [] }, false, 'clearSelection'),
+      clearSelection: () =>
+        set({ selectedChannels: [] }, false, 'clearSelection'),
 
       // Filters
       updateFilters: (newFilters) =>
@@ -267,18 +288,23 @@ export const useChannelManagementStore = create<
           'updateFilters'
         ),
 
-      resetFilters: () => set({ filters: defaultFilters }, false, 'resetFilters'),
+      resetFilters: () =>
+        set({ filters: defaultFilters }, false, 'resetFilters'),
 
       // UI State
       setLoading: (loading) => set({ isLoading: loading }, false, 'setLoading'),
       setError: (error) => set({ error }, false, 'setError'),
 
       // Modal Actions
-      openCreateModal: () => set({ showCreateModal: true }, false, 'openCreateModal'),
-      closeCreateModal: () => set({ showCreateModal: false }, false, 'closeCreateModal'),
+      openCreateModal: () =>
+        set({ showCreateModal: true }, false, 'openCreateModal'),
+      closeCreateModal: () =>
+        set({ showCreateModal: false }, false, 'closeCreateModal'),
 
-      openGroupModal: () => set({ showGroupModal: true }, false, 'openGroupModal'),
-      closeGroupModal: () => set({ showGroupModal: false }, false, 'closeGroupModal'),
+      openGroupModal: () =>
+        set({ showGroupModal: true }, false, 'openGroupModal'),
+      closeGroupModal: () =>
+        set({ showGroupModal: false }, false, 'closeGroupModal'),
 
       openAnalysisModal: (channelId) =>
         set(
@@ -295,7 +321,8 @@ export const useChannelManagementStore = create<
 
       openEditModal: (channel) =>
         set({ editingChannel: channel }, false, 'openEditModal'),
-      closeEditModal: () => set({ editingChannel: null }, false, 'closeEditModal'),
+      closeEditModal: () =>
+        set({ editingChannel: null }, false, 'closeEditModal'),
 
       // Computed Methods
 
@@ -304,7 +331,9 @@ export const useChannelManagementStore = create<
         const group = channelGroups.find((g) => g._id === groupId);
         if (!group) return [];
 
-        return channels.filter((channel) => group.channels.some(gc => gc.channelId === channel.channelId));
+        return channels.filter((channel) =>
+          group.channels.some((gc) => gc.channelId === channel.channelId)
+        );
       },
 
       getChannelStats: () => {
@@ -320,15 +349,19 @@ export const useChannelManagementStore = create<
           0
         );
 
-        const platformBreakdown = channels.reduce((acc, channel) => {
-          acc[channel.platform] = (acc[channel.platform] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
+        const platformBreakdown = channels.reduce(
+          (acc, channel) => {
+            acc[channel.platform] = (acc[channel.platform] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>
+        );
 
         return {
           totalChannels: channels.length,
           totalSubscribers,
-          averageViews: channels.length > 0 ? Math.round(totalViews / channels.length) : 0,
+          averageViews:
+            channels.length > 0 ? Math.round(totalViews / channels.length) : 0,
           platformBreakdown,
         };
       },
@@ -343,10 +376,10 @@ export const useChannelManagementStore = create<
 
 /**
  * 필터링된 채널 목록을 반환합니다
+ * React Query 데이터를 기반으로 필터링 로직 적용
  */
-export const useFilteredChannels = () => {
-  const channels = useChannelManagementStore(state => state.channels);
-  const filters = useChannelManagementStore(state => state.filters);
+export const useFilteredChannels = (channels: Channel[] = []) => {
+  const filters = useChannelManagementStore((state) => state.filters);
 
   return useMemo(() => {
     // 방어적 코딩: channels가 배열인지 확인
@@ -383,7 +416,10 @@ export const useFilteredChannels = () => {
 
       // Subscriber range filter
       const subscribers = channel.subscribers || 0;
-      if (subscribers < filters.subscriberRange.min || subscribers > filters.subscriberRange.max) {
+      if (
+        subscribers < filters.subscriberRange.min ||
+        subscribers > filters.subscriberRange.max
+      ) {
         return false;
       }
 
@@ -402,12 +438,18 @@ export const useFilteredChannels = () => {
  * 선택된 채널 목록과 선택 관련 함수들을 반환합니다
  */
 export const useChannelSelection = () => {
-  const selectedChannels = useChannelManagementStore((state) => state.selectedChannels);
+  const selectedChannels = useChannelManagementStore(
+    (state) => state.selectedChannels
+  );
   const toggleChannelSelection = useChannelManagementStore(
     (state) => state.toggleChannelSelection
   );
-  const selectAllChannels = useChannelManagementStore((state) => state.selectAllChannels);
-  const clearSelection = useChannelManagementStore((state) => state.clearSelection);
+  const selectAllChannels = useChannelManagementStore(
+    (state) => state.selectAllChannels
+  );
+  const clearSelection = useChannelManagementStore(
+    (state) => state.clearSelection
+  );
 
   return {
     selectedChannels,
@@ -422,7 +464,9 @@ export const useChannelSelection = () => {
  */
 export const useChannelFilters = () => {
   const filters = useChannelManagementStore((state) => state.filters);
-  const updateFilters = useChannelManagementStore((state) => state.updateFilters);
+  const updateFilters = useChannelManagementStore(
+    (state) => state.updateFilters
+  );
   const resetFilters = useChannelManagementStore((state) => state.resetFilters);
 
   return { filters, updateFilters, resetFilters };

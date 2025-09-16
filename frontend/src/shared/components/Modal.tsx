@@ -29,7 +29,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
   footer,
   className = '',
   customBackdrop = false,
-  customContainer = false
+  customContainer = false,
 }) => {
   const [isAnimating, setIsAnimating] = useState(false);
 
@@ -70,7 +70,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
     md: 'max-w-lg',
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
-    full: 'max-w-7xl'
+    full: 'max-w-7xl',
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -81,9 +81,13 @@ const BaseModal: React.FC<BaseModalProps> = ({
 
   if (customContainer) {
     return (
-      <div 
+      <div
         className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ${
-          customBackdrop ? '' : (isAnimating ? 'bg-black bg-opacity-50' : 'bg-black bg-opacity-0')
+          customBackdrop
+            ? ''
+            : isAnimating
+              ? 'bg-black bg-opacity-50'
+              : 'bg-black bg-opacity-0'
         }`}
         onClick={handleBackdropClick}
       >
@@ -93,13 +97,13 @@ const BaseModal: React.FC<BaseModalProps> = ({
   }
 
   return (
-    <div 
+    <div
       className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ${
         isAnimating ? 'bg-black bg-opacity-50' : 'bg-black bg-opacity-0'
       }`}
       onClick={handleBackdropClick}
     >
-      <div 
+      <div
         className={`bg-white rounded-lg shadow-xl w-full transition-all duration-200 ease-in-out ${
           isAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
         } ${sizeClasses[size]} ${className}`}
@@ -108,16 +112,24 @@ const BaseModal: React.FC<BaseModalProps> = ({
         {/* Header */}
         {(title || showCloseButton) && (
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            {title && (
-              <div>{title}</div>
-            )}
+            {title && <div>{title}</div>}
             {showCloseButton && (
               <button
                 onClick={handleClose}
                 className="text-gray-400 hover:text-gray-600 transition-colors"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             )}

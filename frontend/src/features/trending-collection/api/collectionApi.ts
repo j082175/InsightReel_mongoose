@@ -128,7 +128,9 @@ export const collectTrendingChannel = async (
 /**
  * 수집 배치 목록을 조회합니다
  */
-export const fetchCollectionBatches = async (): Promise<BatchCollectionResult[]> => {
+export const fetchCollectionBatches = async (): Promise<
+  BatchCollectionResult[]
+> => {
   try {
     const response = await fetch('/api/collection-batches');
     if (!response.ok) {
@@ -144,7 +146,9 @@ export const fetchCollectionBatches = async (): Promise<BatchCollectionResult[]>
 /**
  * 특정 배치의 상세 정보를 조회합니다
  */
-export const fetchBatchDetails = async (batchId: string): Promise<BatchCollectionResult> => {
+export const fetchBatchDetails = async (
+  batchId: string
+): Promise<BatchCollectionResult> => {
   try {
     const response = await fetch(`/api/collection-batches/${batchId}`);
     if (!response.ok) {
@@ -178,14 +182,12 @@ export const deleteBatch = async (batchId: string): Promise<void> => {
 /**
  * 트렌딩 영상 목록을 조회합니다
  */
-export const fetchTrendingVideos = async (
-  filters?: {
-    batchId?: string;
-    platform?: string;
-    dateRange?: { from: string; to: string };
-    limit?: number;
-  }
-): Promise<VideoEntity[]> => {
+export const fetchTrendingVideos = async (filters?: {
+  batchId?: string;
+  platform?: string;
+  dateRange?: { from: string; to: string };
+  limit?: number;
+}): Promise<VideoEntity[]> => {
   try {
     const queryParams = new URLSearchParams();
     if (filters?.batchId) queryParams.set('batchId', filters.batchId);
@@ -198,7 +200,9 @@ export const fetchTrendingVideos = async (
 
     const response = await fetch(`/api/trending/videos?${queryParams}`);
     if (!response.ok) {
-      throw new Error(`Failed to fetch trending videos: ${response.statusText}`);
+      throw new Error(
+        `Failed to fetch trending videos: ${response.statusText}`
+      );
     }
     return await response.json();
   } catch (error) {

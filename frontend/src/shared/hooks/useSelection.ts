@@ -19,7 +19,7 @@ export const useSelection = <T extends string | number>(
    * 단일 아이템 선택 토글
    */
   const toggle = useCallback((id: T) => {
-    setSelected(prev => {
+    setSelected((prev) => {
       const newSelection = new Set(prev);
       if (newSelection.has(id)) {
         newSelection.delete(id);
@@ -35,7 +35,7 @@ export const useSelection = <T extends string | number>(
    * @param items - 전체 선택할 아이템들의 ID 배열
    */
   const selectAll = useCallback((items: T[]) => {
-    setSelected(prev => {
+    setSelected((prev) => {
       // 현재 선택된 수와 전체 아이템 수가 같으면 전체 해제
       if (prev.size === items.length) {
         return new Set();
@@ -55,17 +55,20 @@ export const useSelection = <T extends string | number>(
   /**
    * 특정 아이템이 선택되었는지 확인
    */
-  const isSelected = useCallback((id: T) => {
-    return selected.has(id);
-  }, [selected]);
+  const isSelected = useCallback(
+    (id: T) => {
+      return selected.has(id);
+    },
+    [selected]
+  );
 
   /**
    * 여러 아이템 선택 추가
    */
   const addMultiple = useCallback((ids: T[]) => {
-    setSelected(prev => {
+    setSelected((prev) => {
       const newSelection = new Set(prev);
-      ids.forEach(id => newSelection.add(id));
+      ids.forEach((id) => newSelection.add(id));
       return newSelection;
     });
   }, []);
@@ -74,9 +77,9 @@ export const useSelection = <T extends string | number>(
    * 여러 아이템 선택 제거
    */
   const removeMultiple = useCallback((ids: T[]) => {
-    setSelected(prev => {
+    setSelected((prev) => {
       const newSelection = new Set(prev);
-      ids.forEach(id => newSelection.delete(id));
+      ids.forEach((id) => newSelection.delete(id));
       return newSelection;
     });
   }, []);

@@ -1,5 +1,12 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Video, FilterState } from '../../../shared/types';
+import {
+  useBatches,
+  useCreateBatch,
+  useDeleteBatch,
+  useDeleteBatches,
+  useVideos,
+} from '../../../shared/hooks/useApi';
 
 // Batch Types
 export interface CollectionBatch {
@@ -7,7 +14,7 @@ export interface CollectionBatch {
   name: string;
   description?: string;
   collectionType: 'group' | 'channels';
-  targetGroups?: Array<{_id: string, name: string, color: string}>;
+  targetGroups?: Array<{ _id: string; name: string; color: string }>;
   targetChannels?: string[];
   criteria: {
     daysBack: number;
@@ -24,7 +31,7 @@ export interface CollectionBatch {
   completedAt?: string;
   totalVideosFound: number;
   totalVideosSaved: number;
-  failedChannels?: Array<{channelName: string, error: string}>;
+  failedChannels?: Array<{ channelName: string; error: string }>;
   quotaUsed: number;
   stats?: {
     byPlatform: {
@@ -83,7 +90,6 @@ interface BatchStoreState {
 }
 
 interface BatchStoreActions {
-  fetchBatches: () => Promise<void>;
   createBatch: (batchData: BatchFormData) => Promise<void>;
   deleteBatch: (batchId: string) => Promise<void>;
   deleteBatches: (batchIds: string[]) => Promise<void>;
@@ -123,263 +129,216 @@ const defaultFormData: BatchFormData = {
     includeMidform: true,
     includeLongForm: true,
     keywords: [],
-    excludeKeywords: []
-  }
+    excludeKeywords: [],
+  },
 };
 
 export const useBatchStore = (): BatchStoreState & BatchStoreActions => {
+  // React Query 훅 사용
+  const {
+    data: batches = [],
+    isLoading: loading,
+    error: queryError,
+  } = useBatches();
+  const createBatchMutation = useCreateBatch();
+  const deleteBatchMutation = useDeleteBatch();
+  const deleteBatchesMutation = useDeleteBatches();
+  const { data: batchVideos = [], isLoading: videoLoading } = useVideos();
 
-  const [state, setState] = useState<BatchStoreState>({
-    batches: [],
-    loading: false,
-    error: null,
-    selectedBatches: new Set(),
+  const [state, setState] = useState({
+    selectedBatches: new Set<string>(),
     isSelectMode: false,
-    deletedBatchIds: new Set(),
+    deletedBatchIds: new Set<string>(),
     searchTerm: '',
     statusFilter: 'all',
     isFormOpen: false,
     isVideoListOpen: false,
     selectedBatchId: null,
-    batchVideos: [],
-    videoLoading: false,
-    formData: defaultFormData
+    formData: defaultFormData,
   });
+
+  // 에러 상태 처리
+  const error = queryError
+    ? (queryError as any)?.userMessage || '배치 조회에 실패했습니다'
+    : null;
 
   // 필터링된 배치 목록
   const filteredBatches = useMemo(() => {
-    const batchesArray = Array.isArray(state.batches) ? state.batches : [];
-    let filtered = batchesArray.filter(batch => !state.deletedBatchIds.has(batch._id));
+    const batchesArray = Array.isArray(batches) ? batches : [];
+    let filtered = batchesArray.filter(
+      (batch) => !state.deletedBatchIds.has(batch._id)
+    );
 
     if (state.searchTerm) {
       const keyword = state.searchTerm.toLowerCase();
-      filtered = filtered.filter(batch =>
-        batch.name?.toLowerCase().includes(keyword) ||
-        batch.description?.toLowerCase().includes(keyword)
+      filtered = filtered.filter(
+        (batch) =>
+          batch.name?.toLowerCase().includes(keyword) ||
+          batch.description?.toLowerCase().includes(keyword)
       );
     }
 
     if (state.statusFilter && state.statusFilter !== 'all') {
-      filtered = filtered.filter(batch => batch.status === state.statusFilter);
+      filtered = filtered.filter(
+        (batch) => batch.status === state.statusFilter
+      );
     }
 
     // 생성일 기준 내림차순 정렬
-    filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    filtered.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
     return filtered;
-  }, [state.batches, state.searchTerm, state.statusFilter, state.deletedBatchIds]);
+  }, [batches, state.searchTerm, state.statusFilter, state.deletedBatchIds]);
 
-  const fetchBatches = useCallback(async () => {
-    setState(prev => ({ ...prev, loading: true, error: null }));
-
-    try {
-      const response = await fetch('/api/batches');
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      let batchesData = [];
-      if (Array.isArray(result)) {
-        batchesData = result;
-      } else if (result && Array.isArray(result.data)) {
-        batchesData = result.data;
-      } else if (result && Array.isArray(result.batches)) {
-        batchesData = result.batches;
-      }
-
-      console.log('📦 BatchStore: API 응답 데이터', { result, batchesData });
-
-      setState(prev => ({
+  // React Query 기반 액션들
+  const createBatch = useCallback(
+    async (batchData: BatchFormData) => {
+      await createBatchMutation.mutateAsync(batchData);
+      setState((prev) => ({
         ...prev,
-        batches: batchesData,
-        loading: false
-      }));
-    } catch (error) {
-      console.error('❌ BatchStore: API 호출 실패', error);
-      setState(prev => ({
-        ...prev,
-        batches: [],
-        error: error instanceof Error ? error.message : '배치 조회에 실패했습니다',
-        loading: false
-      }));
-    }
-  }, []);
-
-  const createBatch = useCallback(async (batchData: BatchFormData) => {
-    try {
-      const response = await fetch('/api/batches', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(batchData)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const newBatch = await response.json();
-
-      setState(prev => ({
-        ...prev,
-        batches: [newBatch, ...prev.batches],
         isFormOpen: false,
-        formData: defaultFormData
+        formData: defaultFormData,
       }));
+    },
+    [createBatchMutation]
+  );
 
-      console.log('✅ 배치 생성 성공:', newBatch.name);
-    } catch (error) {
-      console.error('❌ 배치 생성 실패:', error);
-      throw error;
-    }
-  }, []);
-
-  const deleteBatch = useCallback(async (batchId: string) => {
-    try {
-      const response = await fetch(`/api/batches/${batchId}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      setState(prev => ({
+  const deleteBatch = useCallback(
+    async (batchId: string) => {
+      await deleteBatchMutation.mutateAsync(batchId);
+      setState((prev) => ({
         ...prev,
         deletedBatchIds: new Set([...prev.deletedBatchIds, batchId]),
-        selectedBatches: new Set([...prev.selectedBatches].filter(id => id !== batchId))
+        selectedBatches: new Set(
+          [...prev.selectedBatches].filter((id) => id !== batchId)
+        ),
       }));
-    } catch (error) {
-      throw error;
-    }
-  }, []);
+    },
+    [deleteBatchMutation]
+  );
 
-  const deleteBatches = useCallback(async (batchIds: string[]) => {
-    for (const batchId of batchIds) {
-      await deleteBatch(batchId);
-    }
-  }, [deleteBatch]);
+  const deleteBatches = useCallback(
+    async (batchIds: string[]) => {
+      await deleteBatchesMutation.mutateAsync(batchIds);
+      setState((prev) => ({
+        ...prev,
+        deletedBatchIds: new Set([...prev.deletedBatchIds, ...batchIds]),
+        selectedBatches: new Set(),
+        isSelectMode: false,
+      }));
+    },
+    [deleteBatchesMutation]
+  );
 
   const fetchBatchVideos = useCallback(async (batchId: string) => {
-    setState(prev => ({ ...prev, videoLoading: true }));
-
-    try {
-      const response = await fetch(`/api/batches/${batchId}/videos`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      const videosData = Array.isArray(result) ? result : result.data || result.videos || [];
-
-      setState(prev => ({
-        ...prev,
-        batchVideos: videosData,
-        videoLoading: false,
-        selectedBatchId: batchId,
-        isVideoListOpen: true
-      }));
-    } catch (error) {
-      console.error('❌ 배치 영상 조회 실패:', error);
-      setState(prev => ({
-        ...prev,
-        batchVideos: [],
-        videoLoading: false,
-        error: error instanceof Error ? error.message : '배치 영상 조회에 실패했습니다'
-      }));
-    }
+    setState((prev) => ({
+      ...prev,
+      selectedBatchId: batchId,
+      isVideoListOpen: true,
+    }));
+    // 비디오는 useVideos(batchId) 훅이 자동으로 로드함
   }, []);
 
   // UI Actions
   const toggleSelectMode = useCallback(() => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       isSelectMode: !prev.isSelectMode,
-      selectedBatches: new Set()
+      selectedBatches: new Set(),
     }));
   }, []);
 
   const selectBatch = useCallback((batchId: string) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      selectedBatches: new Set([...prev.selectedBatches, batchId])
+      selectedBatches: new Set([...prev.selectedBatches, batchId]),
     }));
   }, []);
 
   const deselectBatch = useCallback((batchId: string) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      selectedBatches: new Set([...prev.selectedBatches].filter(id => id !== batchId))
+      selectedBatches: new Set(
+        [...prev.selectedBatches].filter((id) => id !== batchId)
+      ),
     }));
   }, []);
 
   const selectAllBatches = useCallback(() => {
-    const allBatchIds = filteredBatches.map(batch => batch._id);
-    setState(prev => ({
+    const allBatchIds = filteredBatches.map((batch) => batch._id);
+    setState((prev) => ({
       ...prev,
-      selectedBatches: new Set(allBatchIds)
+      selectedBatches: new Set(allBatchIds),
     }));
   }, [filteredBatches]);
 
   const clearSelection = useCallback(() => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      selectedBatches: new Set()
+      selectedBatches: new Set(),
     }));
   }, []);
 
   // Filter Actions
   const updateSearchTerm = useCallback((searchTerm: string) => {
-    setState(prev => ({ ...prev, searchTerm }));
+    setState((prev) => ({ ...prev, searchTerm }));
   }, []);
 
   const updateStatusFilter = useCallback((statusFilter: string) => {
-    setState(prev => ({ ...prev, statusFilter }));
+    setState((prev) => ({ ...prev, statusFilter }));
   }, []);
 
   // Modal Actions
   const openForm = useCallback(() => {
-    setState(prev => ({ ...prev, isFormOpen: true, formData: defaultFormData }));
+    setState((prev) => ({
+      ...prev,
+      isFormOpen: true,
+      formData: defaultFormData,
+    }));
   }, []);
 
   const closeForm = useCallback(() => {
-    setState(prev => ({ ...prev, isFormOpen: false, formData: defaultFormData }));
+    setState((prev) => ({
+      ...prev,
+      isFormOpen: false,
+      formData: defaultFormData,
+    }));
   }, []);
 
-  const openVideoList = useCallback((batchId: string) => {
-    fetchBatchVideos(batchId);
-  }, [fetchBatchVideos]);
+  const openVideoList = useCallback(
+    (batchId: string) => {
+      fetchBatchVideos(batchId);
+    },
+    [fetchBatchVideos]
+  );
 
   const closeVideoList = useCallback(() => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       isVideoListOpen: false,
       selectedBatchId: null,
-      batchVideos: []
     }));
   }, []);
 
   const updateFormData = useCallback((updates: Partial<BatchFormData>) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      formData: { ...prev.formData, ...updates }
+      formData: { ...prev.formData, ...updates },
     }));
   }, []);
 
   const resetFormData = useCallback(() => {
-    setState(prev => ({ ...prev, formData: defaultFormData }));
+    setState((prev) => ({ ...prev, formData: defaultFormData }));
   }, []);
 
   return {
-    // State
+    // State (React Query 기반)
     batches: filteredBatches,
-    loading: state.loading,
-    error: state.error,
+    loading,
+    error,
     selectedBatches: state.selectedBatches,
     isSelectMode: state.isSelectMode,
     deletedBatchIds: state.deletedBatchIds,
@@ -388,12 +347,11 @@ export const useBatchStore = (): BatchStoreState & BatchStoreActions => {
     isFormOpen: state.isFormOpen,
     isVideoListOpen: state.isVideoListOpen,
     selectedBatchId: state.selectedBatchId,
-    batchVideos: state.batchVideos,
-    videoLoading: state.videoLoading,
+    batchVideos,
+    videoLoading,
     formData: state.formData,
 
-    // Actions
-    fetchBatches,
+    // Actions (React Query 기반)
     createBatch,
     deleteBatch,
     deleteBatches,
@@ -410,6 +368,6 @@ export const useBatchStore = (): BatchStoreState & BatchStoreActions => {
     openVideoList,
     closeVideoList,
     updateFormData,
-    resetFormData
+    resetFormData,
   };
 };

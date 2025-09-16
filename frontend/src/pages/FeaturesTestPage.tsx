@@ -1,18 +1,36 @@
 import React, { memo, useState } from 'react';
-import { ChannelGroupModal, ChannelCard, ChannelGroupCard, ChannelAnalysisModal } from '../features/channel-management';
+import {
+  ChannelGroupModal,
+  ChannelCard,
+  ChannelGroupCard,
+  ChannelAnalysisModal,
+} from '../features/channel-management';
 import { BulkCollectionModal } from '../features/trending-collection';
-import { VideoAnalysisModal, VideoModal, VideoOnlyModal, VideoListItem } from '../features/video-analysis';
-import { BatchCard, BatchForm, BatchVideoList } from '../features/batch-management';
+import {
+  VideoAnalysisModal,
+  VideoModal,
+  VideoOnlyModal,
+  VideoListItem,
+} from '../features/video-analysis';
+import {
+  BatchCard,
+  BatchForm,
+  BatchVideoList,
+} from '../features/batch-management';
 import { Video, Channel, CollectionBatch, ChannelGroup } from '../shared/types';
 
 const FeaturesTestPage: React.FC = memo(() => {
   const [isChannelGroupModalOpen, setChannelGroupModalOpen] = useState(false);
-  const [isBulkCollectionModalOpen, setBulkCollectionModalOpen] = useState(false);
+  const [isBulkCollectionModalOpen, setBulkCollectionModalOpen] =
+    useState(false);
   const [isVideoAnalysisModalOpen, setVideoAnalysisModalOpen] = useState(false);
   const [isVideoModalOpen, setVideoModalOpen] = useState(false);
   const [isVideoOnlyModalOpen, setVideoOnlyModalOpen] = useState(false);
-  const [isChannelAnalysisModalOpen, setChannelAnalysisModalOpen] = useState(false);
-  const [selectedChannelForAnalysis, setSelectedChannelForAnalysis] = useState<string | null>(null);
+  const [isChannelAnalysisModalOpen, setChannelAnalysisModalOpen] =
+    useState(false);
+  const [selectedChannelForAnalysis, setSelectedChannelForAnalysis] = useState<
+    string | null
+  >(null);
 
   // 테스트용 데이터들
   const testVideo: Video = {
@@ -25,13 +43,14 @@ const FeaturesTestPage: React.FC = memo(() => {
     uploadDate: '2024-01-15T10:30:00Z',
     duration: 'LONG',
     keywords: ['테스트', '분석', '유튜브'],
-    aiSummary: '이 영상은 테스트 목적으로 제작된 콘텐츠입니다. AI 분석 결과를 시연하기 위한 샘플 데이터를 포함하고 있습니다.',
+    aiSummary:
+      '이 영상은 테스트 목적으로 제작된 콘텐츠입니다. AI 분석 결과를 시연하기 위한 샘플 데이터를 포함하고 있습니다.',
     aiAnalysis: {
       summary: '테스트 영상 요약',
       keyPoints: ['주요 포인트 1', '주요 포인트 2', '주요 포인트 3'],
       sentiment: 'positive',
-      topics: ['기술', '교육', '리뷰']
-    }
+      topics: ['기술', '교육', '리뷰'],
+    },
   };
 
   const testChannels: Channel[] = [
@@ -41,7 +60,7 @@ const FeaturesTestPage: React.FC = memo(() => {
       name: '테크 채널',
       platform: 'YOUTUBE',
       subscribers: 1000000,
-      url: 'https://youtube.com/@tech-channel'
+      url: 'https://youtube.com/@tech-channel',
     },
     {
       _id: 'ch2',
@@ -49,7 +68,7 @@ const FeaturesTestPage: React.FC = memo(() => {
       name: '라이프스타일 채널',
       platform: 'INSTAGRAM',
       subscribers: 500000,
-      url: 'https://instagram.com/lifestyle-channel'
+      url: 'https://instagram.com/lifestyle-channel',
     },
     {
       _id: 'ch3',
@@ -57,8 +76,8 @@ const FeaturesTestPage: React.FC = memo(() => {
       name: '엔터테인먼트 채널',
       platform: 'TIKTOK',
       subscribers: 2000000,
-      url: 'https://tiktok.com/@entertainment-channel'
-    }
+      url: 'https://tiktok.com/@entertainment-channel',
+    },
   ];
 
   const testBatch: CollectionBatch = {
@@ -66,7 +85,7 @@ const FeaturesTestPage: React.FC = memo(() => {
     name: '테스트 배치',
     description: '테스트용 배치입니다',
     collectionType: 'group',
-    targetGroups: [{_id: 'group1', name: '테스트 그룹', color: 'blue'}],
+    targetGroups: [{ _id: 'group1', name: '테스트 그룹', color: 'blue' }],
     criteria: {
       daysBack: 7,
       minViews: 10000,
@@ -75,7 +94,7 @@ const FeaturesTestPage: React.FC = memo(() => {
       includeMidform: true,
       includeLongForm: true,
       keywords: ['테스트', '영상'],
-      excludeKeywords: ['광고']
+      excludeKeywords: ['광고'],
     },
     status: 'completed',
     startedAt: '2024-01-15T10:00:00Z',
@@ -87,16 +106,16 @@ const FeaturesTestPage: React.FC = memo(() => {
       byPlatform: {
         YOUTUBE: 15,
         INSTAGRAM: 5,
-        TIKTOK: 5
+        TIKTOK: 5,
       },
       byDuration: {
         SHORT: 10,
         MID: 8,
-        LONG: 7
-      }
+        LONG: 7,
+      },
     },
     createdAt: '2024-01-15T10:00:00Z',
-    updatedAt: '2024-01-15T10:30:00Z'
+    updatedAt: '2024-01-15T10:30:00Z',
   };
 
   const testBatchVideos: Video[] = [
@@ -106,15 +125,15 @@ const FeaturesTestPage: React.FC = memo(() => {
       _id: '2',
       title: '배치 수집 영상 2',
       views: 500000,
-      platform: 'INSTAGRAM'
+      platform: 'INSTAGRAM',
     },
     {
       ...testVideo,
       _id: '3',
       title: '배치 수집 영상 3',
       views: 750000,
-      platform: 'TIKTOK'
-    }
+      platform: 'TIKTOK',
+    },
   ];
 
   const testChannelGroups: ChannelGroup[] = [
@@ -125,12 +144,12 @@ const FeaturesTestPage: React.FC = memo(() => {
       color: 'blue',
       channels: [
         { channelId: 'UC123abc', name: '테크 채널 1' },
-        { channelId: 'UC456def', name: '테크 채널 2' }
+        { channelId: 'UC456def', name: '테크 채널 2' },
       ],
       keywords: ['기술', '프로그래밍', '리뷰'],
       isActive: true,
       createdAt: '2024-01-15T10:00:00Z',
-      updatedAt: '2024-01-15T10:30:00Z'
+      updatedAt: '2024-01-15T10:30:00Z',
     },
     {
       _id: 'group2',
@@ -139,13 +158,13 @@ const FeaturesTestPage: React.FC = memo(() => {
       color: 'pink',
       channels: [
         { channelId: 'IG789ghi', name: '라이프 채널 1' },
-        { channelId: 'IG012jkl', name: '라이프 채널 2' }
+        { channelId: 'IG012jkl', name: '라이프 채널 2' },
       ],
       keywords: ['라이프스타일', '패션', '뷰티'],
       isActive: true,
       createdAt: '2024-01-15T11:00:00Z',
-      updatedAt: '2024-01-15T11:30:00Z'
-    }
+      updatedAt: '2024-01-15T11:30:00Z',
+    },
   ];
 
   return (
@@ -153,13 +172,19 @@ const FeaturesTestPage: React.FC = memo(() => {
       <div className="max-w-6xl mx-auto">
         {/* 페이지 헤더 */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">🎛️ Feature Components</h1>
-          <p className="text-lg text-gray-600">기능별 컴포넌트들의 다양한 상태와 동작을 테스트할 수 있습니다.</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            🎛️ Feature Components
+          </h1>
+          <p className="text-lg text-gray-600">
+            기능별 컴포넌트들의 다양한 상태와 동작을 테스트할 수 있습니다.
+          </p>
         </div>
 
         {/* Channel Management Features */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">📺 Channel Management</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            📺 Channel Management
+          </h2>
 
           {/* ChannelGroupModal */}
           <div className="bg-gray-50 p-6 rounded-lg mb-6">
@@ -170,7 +195,9 @@ const FeaturesTestPage: React.FC = memo(() => {
             >
               ChannelGroupModal 열기 (생성 모드)
             </button>
-            <p className="text-sm text-gray-600 mt-2">채널 그룹을 생성하거나 편집할 수 있는 모달입니다.</p>
+            <p className="text-sm text-gray-600 mt-2">
+              채널 그룹을 생성하거나 편집할 수 있는 모달입니다.
+            </p>
           </div>
 
           {/* ChannelCard */}
@@ -191,7 +218,9 @@ const FeaturesTestPage: React.FC = memo(() => {
                 />
               ))}
             </div>
-            <p className="text-sm text-gray-600 mt-2">개별 채널 정보를 표시하는 카드 컴포넌트입니다.</p>
+            <p className="text-sm text-gray-600 mt-2">
+              개별 채널 정보를 표시하는 카드 컴포넌트입니다.
+            </p>
           </div>
 
           {/* ChannelGroupCard */}
@@ -209,7 +238,9 @@ const FeaturesTestPage: React.FC = memo(() => {
                 />
               ))}
             </div>
-            <p className="text-sm text-gray-600 mt-2">채널 그룹 정보를 표시하는 카드 컴포넌트입니다.</p>
+            <p className="text-sm text-gray-600 mt-2">
+              채널 그룹 정보를 표시하는 카드 컴포넌트입니다.
+            </p>
           </div>
 
           {/* ChannelAnalysisModal */}
@@ -224,13 +255,17 @@ const FeaturesTestPage: React.FC = memo(() => {
             >
               ChannelAnalysisModal 열기
             </button>
-            <p className="text-sm text-gray-600 mt-2">채널 분석 결과를 표시하는 모달입니다.</p>
+            <p className="text-sm text-gray-600 mt-2">
+              채널 분석 결과를 표시하는 모달입니다.
+            </p>
           </div>
         </section>
 
         {/* Trending Collection Features */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">📊 Trending Collection</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            📊 Trending Collection
+          </h2>
 
           <div className="space-y-6">
             <div>
@@ -240,7 +275,9 @@ const FeaturesTestPage: React.FC = memo(() => {
               >
                 BulkCollectionModal 열기
               </button>
-              <p className="text-sm text-gray-600 mt-2">대량 수집 설정 및 진행 상황을 관리하는 모달입니다.</p>
+              <p className="text-sm text-gray-600 mt-2">
+                대량 수집 설정 및 진행 상황을 관리하는 모달입니다.
+              </p>
             </div>
 
             <div className="bg-gray-50 p-6 rounded-lg">
@@ -251,7 +288,9 @@ const FeaturesTestPage: React.FC = memo(() => {
                   onEdit={(batch) => console.log('Edit batch:', batch)}
                   onDelete={(id) => console.log('Delete batch:', id)}
                   onViewVideos={(id) => console.log('View videos:', id)}
-                  onToggleStatus={(id, action) => console.log('Toggle status:', id, action)}
+                  onToggleStatus={(id, action) =>
+                    console.log('Toggle status:', id, action)
+                  }
                 />
               </div>
             </div>
@@ -261,7 +300,9 @@ const FeaturesTestPage: React.FC = memo(() => {
               <div className="max-w-2xl">
                 <BatchVideoList
                   videos={testBatchVideos}
-                  onVideoSelect={(video) => console.log('Selected video:', video)}
+                  onVideoSelect={(video) =>
+                    console.log('Selected video:', video)
+                  }
                 />
               </div>
             </div>
@@ -270,7 +311,9 @@ const FeaturesTestPage: React.FC = memo(() => {
 
         {/* Video Analysis Features */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">🎬 Video Analysis</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            🎬 Video Analysis
+          </h2>
 
           <div className="space-y-6">
             <div className="flex flex-wrap gap-4">
@@ -299,7 +342,9 @@ const FeaturesTestPage: React.FC = memo(() => {
               <div className="max-w-2xl">
                 <VideoListItem
                   video={testVideo}
-                  onSelect={(selected) => console.log('Video selected:', selected)}
+                  onSelect={(selected) =>
+                    console.log('Video selected:', selected)
+                  }
                   onAnalyze={(video) => console.log('Analyze video:', video)}
                 />
               </div>
@@ -309,21 +354,25 @@ const FeaturesTestPage: React.FC = memo(() => {
 
         {/* Batch Management Features */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">📋 Batch Management</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            📋 Batch Management
+          </h2>
 
           <div className="bg-gray-50 p-6 rounded-lg">
             <h3 className="text-lg font-semibold mb-4">BatchForm</h3>
             <div className="max-w-md">
               <BatchForm
-                onSubmit={(formData) => console.log('Form submitted:', formData)}
+                onSubmit={(formData) =>
+                  console.log('Form submitted:', formData)
+                }
                 initialData={{
                   name: '테스트 배치',
                   description: '테스트용 배치입니다',
                   settings: {
                     days: 7,
                     minViews: 10000,
-                    includeDuration: ['SHORT', 'MID', 'LONG']
-                  }
+                    includeDuration: ['SHORT', 'MID', 'LONG'],
+                  },
                 }}
               />
             </div>
@@ -332,10 +381,14 @@ const FeaturesTestPage: React.FC = memo(() => {
 
         {/* 상태 정보 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">📊 Component States</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            📊 Component States
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-blue-800">Channel Management</h3>
+              <h3 className="font-semibold text-blue-800">
+                Channel Management
+              </h3>
               <ul className="text-sm text-blue-700 mt-2">
                 <li>• 채널 그룹 생성/편집</li>
                 <li>• 채널 선택 인터페이스</li>
@@ -344,7 +397,9 @@ const FeaturesTestPage: React.FC = memo(() => {
             </div>
 
             <div className="bg-purple-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-purple-800">Trending Collection</h3>
+              <h3 className="font-semibold text-purple-800">
+                Trending Collection
+              </h3>
               <ul className="text-sm text-purple-700 mt-2">
                 <li>• 대량 수집 설정</li>
                 <li>• 배치 진행 상태</li>
@@ -382,8 +437,16 @@ const FeaturesTestPage: React.FC = memo(() => {
             isOpen={isBulkCollectionModalOpen}
             onClose={() => setBulkCollectionModalOpen(false)}
             channelGroups={[
-              { _id: 'group1', name: '테크 그룹', channels: testChannels.slice(0, 2) },
-              { _id: 'group2', name: '엔터 그룹', channels: testChannels.slice(1, 3) }
+              {
+                _id: 'group1',
+                name: '테크 그룹',
+                channels: testChannels.slice(0, 2),
+              },
+              {
+                _id: 'group2',
+                name: '엔터 그룹',
+                channels: testChannels.slice(1, 3),
+              },
             ]}
             onStartCollection={(settings) => {
               console.log('Collection started:', settings);

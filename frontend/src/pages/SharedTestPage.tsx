@@ -1,9 +1,21 @@
 import React, { memo, useState } from 'react';
 import { VideoCard, SearchBar, ActionBar, Modal } from '../shared/components';
 import { Header, Sidebar } from '../shared/components/layout';
-import { DeleteConfirmModal, ApiKeyManager, NotificationModal, SettingsModal } from '../shared/ui';
-import { formatViews, formatDate, getDurationLabel } from '../shared/utils/formatters';
-import { getPlatformStyle, getPlatformIconStyle } from '../shared/utils/platformStyles';
+import {
+  DeleteConfirmModal,
+  ApiKeyManager,
+  NotificationModal,
+  SettingsModal,
+} from '../shared/ui';
+import {
+  formatViews,
+  formatDate,
+  getDurationLabel,
+} from '../shared/utils/formatters';
+import {
+  getPlatformStyle,
+  getPlatformIconStyle,
+} from '../shared/utils/platformStyles';
 import { Video } from '../shared/types';
 
 const SharedTestPage: React.FC = memo(() => {
@@ -15,7 +27,9 @@ const SharedTestPage: React.FC = memo(() => {
   const [isNotificationModalOpen, setNotificationModalOpen] = useState(false);
   const [isSettingsModalOpen, setSettingsModalOpen] = useState(false);
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const [notificationType, setNotificationType] = useState<'success' | 'error' | 'warning' | 'info'>('info');
+  const [notificationType, setNotificationType] = useState<
+    'success' | 'error' | 'warning' | 'info'
+  >('info');
 
   // 테스트용 비디오 데이터들
   const testVideos: Video[] = [
@@ -32,7 +46,8 @@ const SharedTestPage: React.FC = memo(() => {
     },
     {
       _id: '2',
-      title: 'Instagram 릴스 - 매우 긴 제목이 있는 콘텐츠입니다 어떻게 표시될지 확인해보세요',
+      title:
+        'Instagram 릴스 - 매우 긴 제목이 있는 콘텐츠입니다 어떻게 표시될지 확인해보세요',
       views: 50000,
       platform: 'INSTAGRAM',
       thumbnailUrl: 'https://placehold.co/320x180/E4405F/FFFFFF?text=Instagram',
@@ -57,18 +72,19 @@ const SharedTestPage: React.FC = memo(() => {
       title: '높은 조회수 영상',
       views: 15678900,
       platform: 'YOUTUBE',
-      thumbnailUrl: 'https://placehold.co/320x180/FF0000/FFFFFF?text=High+Views',
+      thumbnailUrl:
+        'https://placehold.co/320x180/FF0000/FFFFFF?text=High+Views',
       channelName: 'Popular Channel',
       uploadDate: '2024-01-01T12:00:00Z',
       duration: 'LONG',
       keywords: ['바이럴', '인기'],
-    }
+    },
   ];
 
   const handleSelectToggle = (videoId: string) => {
-    setSelectedItems(prev => {
+    setSelectedItems((prev) => {
       if (prev.includes(videoId)) {
-        return prev.filter(id => id !== videoId);
+        return prev.filter((id) => id !== videoId);
       } else {
         return [...prev, videoId];
       }
@@ -89,13 +105,19 @@ const SharedTestPage: React.FC = memo(() => {
       <div className="max-w-6xl mx-auto">
         {/* 페이지 헤더 */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">🧱 Shared Components</h1>
-          <p className="text-lg text-gray-600">공유 컴포넌트들의 다양한 상태와 변형을 테스트할 수 있습니다.</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            🧱 Shared Components
+          </h1>
+          <p className="text-lg text-gray-600">
+            공유 컴포넌트들의 다양한 상태와 변형을 테스트할 수 있습니다.
+          </p>
         </div>
 
         {/* SearchBar 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">🔍 SearchBar</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            🔍 SearchBar
+          </h2>
           <div className="space-y-6">
             <div className="bg-gray-50 p-6 rounded-lg">
               <h3 className="text-lg font-semibold mb-4">기본 상태</h3>
@@ -119,7 +141,9 @@ const SharedTestPage: React.FC = memo(() => {
 
         {/* VideoCard 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">🎬 VideoCard</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            🎬 VideoCard
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {testVideos.map((video) => (
               <div key={video._id} className="bg-white p-4 rounded-lg shadow">
@@ -138,25 +162,35 @@ const SharedTestPage: React.FC = memo(() => {
 
         {/* ActionBar 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">⚡ ActionBar</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            ⚡ ActionBar
+          </h2>
           <div className="space-y-6">
             <div className="bg-gray-50 p-6 rounded-lg">
-              <h3 className="text-lg font-semibold mb-4">선택된 아이템이 없는 상태</h3>
+              <h3 className="text-lg font-semibold mb-4">
+                선택된 아이템이 없는 상태
+              </h3>
               <ActionBar
                 selectedCount={0}
                 totalCount={testVideos.length}
-                onSelectAll={() => setSelectedItems(testVideos.map(v => v.id))}
+                onSelectAll={() =>
+                  setSelectedItems(testVideos.map((v) => v.id))
+                }
                 onDeselectAll={() => setSelectedItems([])}
                 onDelete={() => setDeleteModalOpen(true)}
               />
             </div>
 
             <div className="bg-gray-50 p-6 rounded-lg">
-              <h3 className="text-lg font-semibold mb-4">일부 아이템이 선택된 상태 ({selectedItems.length}개 선택)</h3>
+              <h3 className="text-lg font-semibold mb-4">
+                일부 아이템이 선택된 상태 ({selectedItems.length}개 선택)
+              </h3>
               <ActionBar
                 selectedCount={selectedItems.length}
                 totalCount={testVideos.length}
-                onSelectAll={() => setSelectedItems(testVideos.map(v => v.id))}
+                onSelectAll={() =>
+                  setSelectedItems(testVideos.map((v) => v.id))
+                }
                 onDeselectAll={() => setSelectedItems([])}
                 onDelete={() => setDeleteModalOpen(true)}
               />
@@ -185,7 +219,9 @@ const SharedTestPage: React.FC = memo(() => {
 
         {/* 포맷터 함수 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">📊 Formatters</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            📊 Formatters
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-gray-50 p-6 rounded-lg">
               <h3 className="text-lg font-semibold mb-4">조회수 포맷팅</h3>
@@ -201,8 +237,12 @@ const SharedTestPage: React.FC = memo(() => {
             <div className="bg-gray-50 p-6 rounded-lg">
               <h3 className="text-lg font-semibold mb-4">날짜 포맷팅</h3>
               <div className="space-y-2 text-sm">
-                <div>2024-01-15T10:30:00Z → {formatDate('2024-01-15T10:30:00Z')}</div>
-                <div>2024-01-10T15:45:00Z → {formatDate('2024-01-10T15:45:00Z')}</div>
+                <div>
+                  2024-01-15T10:30:00Z → {formatDate('2024-01-15T10:30:00Z')}
+                </div>
+                <div>
+                  2024-01-10T15:45:00Z → {formatDate('2024-01-10T15:45:00Z')}
+                </div>
               </div>
             </div>
 
@@ -219,16 +259,22 @@ const SharedTestPage: React.FC = memo(() => {
 
         {/* 플랫폼 스타일 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">🎨 Platform Styles</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            🎨 Platform Styles
+          </h2>
           <div className="space-y-4">
-            {['YOUTUBE', 'INSTAGRAM', 'TIKTOK'].map(platform => (
+            {['YOUTUBE', 'INSTAGRAM', 'TIKTOK'].map((platform) => (
               <div key={platform} className="bg-gray-50 p-6 rounded-lg">
                 <h3 className="text-lg font-semibold mb-4">{platform}</h3>
                 <div className="flex items-center space-x-4">
-                  <span className={`px-3 py-1 rounded-full text-white text-sm font-medium ${getPlatformStyle(platform)}`}>
+                  <span
+                    className={`px-3 py-1 rounded-full text-white text-sm font-medium ${getPlatformStyle(platform)}`}
+                  >
                     {platform}
                   </span>
-                  <div className={`w-4 h-4 rounded ${getPlatformIconStyle(platform)}`}></div>
+                  <div
+                    className={`w-4 h-4 rounded ${getPlatformIconStyle(platform)}`}
+                  ></div>
                 </div>
               </div>
             ))}
@@ -306,7 +352,9 @@ const SharedTestPage: React.FC = memo(() => {
 
         {/* ApiKeyManager 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">🔑 API Key Manager</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            🔑 API Key Manager
+          </h2>
           <div className="space-y-6">
             <div className="bg-gray-50 p-6 rounded-lg">
               <h3 className="text-lg font-semibold mb-4">API 키 관리</h3>
@@ -322,28 +370,35 @@ const SharedTestPage: React.FC = memo(() => {
 
         {/* NotificationModal 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">🔔 Notification Modal</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            🔔 Notification Modal
+          </h2>
           <div className="space-y-6">
             <div className="bg-gray-50 p-6 rounded-lg">
               <h3 className="text-lg font-semibold mb-4">다양한 알림 타입</h3>
               <div className="flex flex-wrap gap-3">
-                {(['success', 'error', 'warning', 'info'] as const).map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => {
-                      setNotificationType(type);
-                      setNotificationModalOpen(true);
-                    }}
-                    className={`px-4 py-2 text-white rounded hover:opacity-90 ${
-                      type === 'success' ? 'bg-green-600' :
-                      type === 'error' ? 'bg-red-600' :
-                      type === 'warning' ? 'bg-yellow-600' :
-                      'bg-blue-600'
-                    }`}
-                  >
-                    {type.toUpperCase()} 알림
-                  </button>
-                ))}
+                {(['success', 'error', 'warning', 'info'] as const).map(
+                  (type) => (
+                    <button
+                      key={type}
+                      onClick={() => {
+                        setNotificationType(type);
+                        setNotificationModalOpen(true);
+                      }}
+                      className={`px-4 py-2 text-white rounded hover:opacity-90 ${
+                        type === 'success'
+                          ? 'bg-green-600'
+                          : type === 'error'
+                            ? 'bg-red-600'
+                            : type === 'warning'
+                              ? 'bg-yellow-600'
+                              : 'bg-blue-600'
+                      }`}
+                    >
+                      {type.toUpperCase()} 알림
+                    </button>
+                  )
+                )}
               </div>
             </div>
           </div>
@@ -351,7 +406,9 @@ const SharedTestPage: React.FC = memo(() => {
 
         {/* SettingsModal 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">⚙️ Settings Modal</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            ⚙️ Settings Modal
+          </h2>
           <div className="space-y-6">
             <div className="bg-gray-50 p-6 rounded-lg">
               <h3 className="text-lg font-semibold mb-4">설정 모달</h3>

@@ -29,13 +29,16 @@ export const useModal = (initialOpen = false): UseModalReturn => {
     setSelectedItem(null);
   }, []);
 
-  const toggleModal = useCallback((item?: string) => {
-    if (isOpen) {
-      closeModal();
-    } else {
-      openModal(item);
-    }
-  }, [isOpen, openModal, closeModal]);
+  const toggleModal = useCallback(
+    (item?: string) => {
+      if (isOpen) {
+        closeModal();
+      } else {
+        openModal(item);
+      }
+    },
+    [isOpen, openModal, closeModal]
+  );
 
   return {
     isOpen,
@@ -63,27 +66,34 @@ export const useMultiModal = <T extends string>(
   modalTypes: T[]
 ): UseMultiModalReturn<T> => {
   // 모든 Modal의 초기 상태를 false로 설정
-  const initialModals = modalTypes.reduce((acc, type) => {
-    acc[type] = false;
-    return acc;
-  }, {} as Record<T, boolean>);
+  const initialModals = modalTypes.reduce(
+    (acc, type) => {
+      acc[type] = false;
+      return acc;
+    },
+    {} as Record<T, boolean>
+  );
 
-  const initialItems = modalTypes.reduce((acc, type) => {
-    acc[type] = null;
-    return acc;
-  }, {} as Record<T, string | null>);
+  const initialItems = modalTypes.reduce(
+    (acc, type) => {
+      acc[type] = null;
+      return acc;
+    },
+    {} as Record<T, string | null>
+  );
 
   const [modals, setModals] = useState<Record<T, boolean>>(initialModals);
-  const [selectedItems, setSelectedItems] = useState<Record<T, string | null>>(initialItems);
+  const [selectedItems, setSelectedItems] =
+    useState<Record<T, string | null>>(initialItems);
 
   const openModal = useCallback((modalType: T, item?: string) => {
-    setModals(prev => ({ ...prev, [modalType]: true }));
-    setSelectedItems(prev => ({ ...prev, [modalType]: item || null }));
+    setModals((prev) => ({ ...prev, [modalType]: true }));
+    setSelectedItems((prev) => ({ ...prev, [modalType]: item || null }));
   }, []);
 
   const closeModal = useCallback((modalType: T) => {
-    setModals(prev => ({ ...prev, [modalType]: false }));
-    setSelectedItems(prev => ({ ...prev, [modalType]: null }));
+    setModals((prev) => ({ ...prev, [modalType]: false }));
+    setSelectedItems((prev) => ({ ...prev, [modalType]: null }));
   }, []);
 
   const closeAllModals = useCallback(() => {

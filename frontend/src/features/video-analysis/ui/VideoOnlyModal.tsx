@@ -8,7 +8,6 @@ interface VideoOnlyModalProps {
 }
 
 const VideoOnlyModal: React.FC<VideoOnlyModalProps> = ({ video, onClose }) => {
-
   if (!video) return null;
 
   const getYouTubeEmbedUrl = (url: string) => {
@@ -19,14 +18,14 @@ const VideoOnlyModal: React.FC<VideoOnlyModalProps> = ({ video, onClose }) => {
   const extractYouTubeVideoId = (url: string) => {
     const patterns = [
       /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([^&\n?#]+)/,
-      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([^&\n?#]+)/
+      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([^&\n?#]+)/,
     ];
-    
+
     for (const pattern of patterns) {
       const match = url.match(pattern);
       if (match) return match[1];
     }
-    
+
     return '';
   };
 
@@ -37,16 +36,16 @@ const VideoOnlyModal: React.FC<VideoOnlyModalProps> = ({ video, onClose }) => {
       customContainer={true}
       className="z-[100] bg-black bg-opacity-90"
     >
-      <div 
+      <div
         className={`relative ${
-          video?.aspectRatio === '16:9' 
+          video?.aspectRatio === '16:9'
             ? 'w-full max-w-4xl aspect-video' /* 16:9 롱폼 */
             : 'w-full max-w-sm aspect-[9/16]' /* 9:16 숏폼 */
         }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 닫기 버튼 */}
-        <button 
+        <button
           onClick={onClose}
           className="absolute -top-12 right-0 text-white hover:text-gray-300 text-2xl font-light z-10"
         >

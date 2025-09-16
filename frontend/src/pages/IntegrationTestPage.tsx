@@ -9,28 +9,38 @@ const IntegrationTestPage: React.FC = memo(() => {
   const [currentPage, setCurrentPage] = useState(1);
 
   // 실제 API 데이터 사용
-  const { data: videos, isLoading: videosLoading, error: videosError } = useVideos();
+  const {
+    data: videos,
+    isLoading: videosLoading,
+    error: videosError,
+  } = useVideos();
 
   // 🔍 실제 데이터 구조 확인
 
-  const { data: channels, isLoading: channelsLoading, error: channelsError } = useChannels();
+  const {
+    data: channels,
+    isLoading: channelsLoading,
+    error: channelsError,
+  } = useChannels();
 
   // 검색 필터링
-  const filteredVideos = videos?.filter(video =>
-    video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    video.channelName?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredVideos =
+    videos?.filter(
+      (video) =>
+        video.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        video.channelName?.toLowerCase().includes(searchTerm.toLowerCase())
+    ) || [];
 
   const handleSelection = (videoId: string, selected: boolean) => {
     if (selected) {
-      setSelectedItems(prev => [...prev, videoId]);
+      setSelectedItems((prev) => [...prev, videoId]);
     } else {
-      setSelectedItems(prev => prev.filter(id => id !== videoId));
+      setSelectedItems((prev) => prev.filter((id) => id !== videoId));
     }
   };
 
   const handleSelectAll = () => {
-    setSelectedItems(filteredVideos.map(v => v._id));
+    setSelectedItems(filteredVideos.map((v) => v._id));
   };
 
   const handleDeselectAll = () => {
@@ -65,32 +75,61 @@ const IntegrationTestPage: React.FC = memo(() => {
       <div className="max-w-6xl mx-auto">
         {/* 페이지 헤더 */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">🔗 Integration Tests</h1>
-          <p className="text-lg text-gray-600">실제 API 데이터와 상태 관리를 사용한 통합 테스트입니다.</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            🔗 Integration Tests
+          </h1>
+          <p className="text-lg text-gray-600">
+            실제 API 데이터와 상태 관리를 사용한 통합 테스트입니다.
+          </p>
         </div>
 
         {/* API 상태 정보 */}
         <section className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">📊 API Status</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            📊 API Status
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div key="videos-api-status" className="bg-blue-50 p-6 rounded-lg">
-              <h3 className="text-lg font-semibold text-blue-800 mb-2">Videos API</h3>
+              <h3 className="text-lg font-semibold text-blue-800 mb-2">
+                Videos API
+              </h3>
               <div className="space-y-2 text-sm">
-                <div key="videos-status">상태: {videosLoading ? '로딩 중...' : videosError ? '오류' : '정상'}</div>
+                <div key="videos-status">
+                  상태:{' '}
+                  {videosLoading ? '로딩 중...' : videosError ? '오류' : '정상'}
+                </div>
                 <div key="videos-count">데이터 수: {videos?.length || 0}개</div>
                 {videosError && (
-                  <div key="videos-error" className="text-red-600">오류: {videosError.message}</div>
+                  <div key="videos-error" className="text-red-600">
+                    오류: {videosError.message}
+                  </div>
                 )}
               </div>
             </div>
 
-            <div key="channels-api-status" className="bg-green-50 p-6 rounded-lg">
-              <h3 className="text-lg font-semibold text-green-800 mb-2">Channels API</h3>
+            <div
+              key="channels-api-status"
+              className="bg-green-50 p-6 rounded-lg"
+            >
+              <h3 className="text-lg font-semibold text-green-800 mb-2">
+                Channels API
+              </h3>
               <div className="space-y-2 text-sm">
-                <div key="channels-status">상태: {channelsLoading ? '로딩 중...' : channelsError ? '오류' : '정상'}</div>
-                <div key="channels-count">데이터 수: {channels?.length || 0}개</div>
+                <div key="channels-status">
+                  상태:{' '}
+                  {channelsLoading
+                    ? '로딩 중...'
+                    : channelsError
+                      ? '오류'
+                      : '정상'}
+                </div>
+                <div key="channels-count">
+                  데이터 수: {channels?.length || 0}개
+                </div>
                 {channelsError && (
-                  <div key="channels-error" className="text-red-600">오류: {channelsError.message}</div>
+                  <div key="channels-error" className="text-red-600">
+                    오류: {channelsError.message}
+                  </div>
                 )}
               </div>
             </div>
@@ -99,7 +138,9 @@ const IntegrationTestPage: React.FC = memo(() => {
 
         {/* 실제 검색 기능 */}
         <section className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">🔍 Live Search</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            🔍 Live Search
+          </h2>
           <div className="bg-gray-50 p-6 rounded-lg">
             <SearchBar
               value={searchTerm}
@@ -107,14 +148,17 @@ const IntegrationTestPage: React.FC = memo(() => {
               placeholder="실제 비디오 제목, 채널명으로 검색..."
             />
             <div className="mt-4 text-sm text-gray-600">
-              검색 결과: {filteredVideos.length}개 / 전체: {videos?.length || 0}개
+              검색 결과: {filteredVideos.length}개 / 전체: {videos?.length || 0}
+              개
             </div>
           </div>
         </section>
 
         {/* 실제 액션바 */}
         <section className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">⚡ Live Action Bar</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            ⚡ Live Action Bar
+          </h2>
           <div className="bg-gray-50 p-6 rounded-lg">
             <ActionBar
               selectedCount={selectedItems.length}
@@ -131,40 +175,55 @@ const IntegrationTestPage: React.FC = memo(() => {
 
         {/* 실제 비디오 목록 */}
         <section className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">🎬 Live Video List</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            🎬 Live Video List
+          </h2>
 
           {videosLoading ? (
             <div className="text-center py-8">
-              <div className="text-lg text-gray-600">비디오 데이터 로딩 중...</div>
+              <div className="text-lg text-gray-600">
+                비디오 데이터 로딩 중...
+              </div>
             </div>
           ) : videosError ? (
             <div className="text-center py-8">
               <div className="text-lg text-red-600">데이터 로딩 실패</div>
-              <div className="text-sm text-gray-600 mt-2">{videosError.message}</div>
+              <div className="text-sm text-gray-600 mt-2">
+                {videosError.message}
+              </div>
             </div>
           ) : filteredVideos.length === 0 ? (
             <div className="text-center py-8">
               <div className="text-lg text-gray-600">
-                {searchTerm ? '검색 결과가 없습니다' : '비디오 데이터가 없습니다'}
+                {searchTerm
+                  ? '검색 결과가 없습니다'
+                  : '비디오 데이터가 없습니다'}
               </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredVideos.slice((currentPage - 1) * 12, currentPage * 12).map((video, index) => (
-                <div key={`video-${video._id}-${index}`} className="bg-white p-4 rounded-lg shadow">
-                  <VideoCard
-                    video={video}
-                    isSelectMode={true}
-                    isSelected={selectedItems.includes(video._id)}
-                    onSelectToggle={(id) => handleSelection(id, !selectedItems.includes(id))}
-                    onClick={(video) => {
-                      console.log('실제 비디오 클릭:', video._id);
-                      // 실제 비디오 모달 열기 등
-                    }}
-                    onDelete={handleVideoDelete}
-                  />
-                </div>
-              ))}
+              {filteredVideos
+                .slice((currentPage - 1) * 12, currentPage * 12)
+                .map((video, index) => (
+                  <div
+                    key={`video-${video._id}-${index}`}
+                    className="bg-white p-4 rounded-lg shadow"
+                  >
+                    <VideoCard
+                      video={video}
+                      isSelectMode={true}
+                      isSelected={selectedItems.includes(video._id)}
+                      onSelectToggle={(id) =>
+                        handleSelection(id, !selectedItems.includes(id))
+                      }
+                      onClick={(video) => {
+                        console.log('실제 비디오 클릭:', video._id);
+                        // 실제 비디오 모달 열기 등
+                      }}
+                      onDelete={handleVideoDelete}
+                    />
+                  </div>
+                ))}
             </div>
           )}
 
@@ -172,19 +231,22 @@ const IntegrationTestPage: React.FC = memo(() => {
           {filteredVideos.length > 12 && (
             <div className="mt-8 flex justify-center">
               <div className="flex space-x-2">
-                {Array.from({ length: Math.ceil(filteredVideos.length / 12) }, (_, i) => (
-                  <button
-                    key={`page-${i + 1}`}
-                    onClick={() => setCurrentPage(i + 1)}
-                    className={`px-3 py-2 rounded ${
-                      currentPage === i + 1
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
+                {Array.from(
+                  { length: Math.ceil(filteredVideos.length / 12) },
+                  (_, i) => (
+                    <button
+                      key={`page-${i + 1}`}
+                      onClick={() => setCurrentPage(i + 1)}
+                      className={`px-3 py-2 rounded ${
+                        currentPage === i + 1
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      {i + 1}
+                    </button>
+                  )
+                )}
               </div>
             </div>
           )}
@@ -192,7 +254,9 @@ const IntegrationTestPage: React.FC = memo(() => {
 
         {/* 실제 상태 관리 정보 */}
         <section className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">🔧 State Management</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            🔧 State Management
+          </h2>
           <div className="bg-gray-50 p-6 rounded-lg">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div key="search-term">
@@ -217,10 +281,16 @@ const IntegrationTestPage: React.FC = memo(() => {
 
         {/* 개발 정보 */}
         <div className="mt-12 p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <h3 className="text-lg font-semibold text-yellow-800 mb-3">🚀 Integration Test Features</h3>
+          <h3 className="text-lg font-semibold text-yellow-800 mb-3">
+            🚀 Integration Test Features
+          </h3>
           <ul className="text-sm text-yellow-700 space-y-1">
-            <li key="api-data-handling">• 실제 API 데이터 로딩 및 에러 핸들링</li>
-            <li key="realtime-search">• 실시간 검색 기능 (클라이언트 사이드 필터링)</li>
+            <li key="api-data-handling">
+              • 실제 API 데이터 로딩 및 에러 핸들링
+            </li>
+            <li key="realtime-search">
+              • 실시간 검색 기능 (클라이언트 사이드 필터링)
+            </li>
             <li key="state-management">• 실제 선택 상태 관리 및 액션</li>
             <li key="pagination">• 페이지네이션 동작</li>
             <li key="realtime-monitoring">• 상태 변화 실시간 모니터링</li>

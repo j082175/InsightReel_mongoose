@@ -54,14 +54,14 @@ const BatchFormTestPage: React.FC = () => {
       includeMidform: true,
       includeLongForm: true,
       keywords: [],
-      excludeKeywords: []
-    }
+      excludeKeywords: [],
+    },
   });
 
   // 테스트 액션 로그 추가
   const addTestLog = (action: string) => {
     const timestamp = new Date().toLocaleTimeString();
-    setTestActions(prev => [`[${timestamp}] ${action}`, ...prev.slice(0, 9)]);
+    setTestActions((prev) => [`[${timestamp}] ${action}`, ...prev.slice(0, 9)]);
   };
 
   // 테스트용 채널 그룹 데이터
@@ -70,7 +70,7 @@ const BatchFormTestPage: React.FC = () => {
     { _id: 'group2', name: '푸드 크리에이터', color: '#10B981' },
     { _id: 'group3', name: 'K-POP 댄스', color: '#8B5CF6' },
     { _id: 'group4', name: '게임 실황', color: '#F59E0B' },
-    { _id: 'group5', name: '교육 콘텐츠', color: '#3B82F6' }
+    { _id: 'group5', name: '교육 콘텐츠', color: '#3B82F6' },
   ];
 
   // 테스트용 채널 데이터
@@ -82,7 +82,7 @@ const BatchFormTestPage: React.FC = () => {
     { _id: 'ch5', name: 'EBS' },
     { _id: 'ch6', name: '침착맨' },
     { _id: 'ch7', name: '쯔양' },
-    { _id: 'ch8', name: 'BTS' }
+    { _id: 'ch8', name: 'BTS' },
   ];
 
   // 테스트용 프리셋 데이터
@@ -101,8 +101,8 @@ const BatchFormTestPage: React.FC = () => {
         includeMidform: false,
         includeLongForm: false,
         keywords: ['트렌드', '바이럴', '숏폼'],
-        excludeKeywords: ['광고', '협찬']
-      }
+        excludeKeywords: ['광고', '협찬'],
+      },
     },
     {
       name: '롱폼 교육 콘텐츠 수집',
@@ -118,8 +118,8 @@ const BatchFormTestPage: React.FC = () => {
         includeMidform: true,
         includeLongForm: true,
         keywords: ['강의', '교육', '튜토리얼', '설명'],
-        excludeKeywords: ['리액션', '브이로그']
-      }
+        excludeKeywords: ['리액션', '브이로그'],
+      },
     },
     {
       name: '전체 콘텐츠 대량 수집',
@@ -135,9 +135,9 @@ const BatchFormTestPage: React.FC = () => {
         includeMidform: true,
         includeLongForm: true,
         keywords: [],
-        excludeKeywords: ['ASMR']
-      }
-    }
+        excludeKeywords: ['ASMR'],
+      },
+    },
   ];
 
   // 이벤트 핸들러
@@ -161,8 +161,8 @@ const BatchFormTestPage: React.FC = () => {
           includeMidform: true,
           includeLongForm: true,
           keywords: [],
-          excludeKeywords: []
-        }
+          excludeKeywords: [],
+        },
       });
       addTestLog('새 폼 열기');
     }
@@ -180,7 +180,10 @@ const BatchFormTestPage: React.FC = () => {
 
     // 제출 시뮬레이션
     setTimeout(() => {
-      setSavedForms(prev => [...prev, { ...data, name: data.name || `배치 ${Date.now()}` }]);
+      setSavedForms((prev) => [
+        ...prev,
+        { ...data, name: data.name || `배치 ${Date.now()}` },
+      ]);
       setIsSubmitting(false);
       setIsFormOpen(false);
       addTestLog(`폼 제출 완료: ${data.name || '무제'}`);
@@ -214,10 +217,11 @@ const BatchFormTestPage: React.FC = () => {
 
       <div className="container mx-auto p-8">
         <div className="max-w-6xl mx-auto space-y-8">
-
           {/* 테스트 컨트롤 */}
           <section className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">🎛️ 테스트 컨트롤</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              🎛️ 테스트 컨트롤
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
@@ -249,19 +253,25 @@ const BatchFormTestPage: React.FC = () => {
                 <div className="bg-gray-50 p-4 rounded space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">폼 열림:</span>
-                    <span className={`font-medium ${isFormOpen ? 'text-green-600' : 'text-gray-400'}`}>
+                    <span
+                      className={`font-medium ${isFormOpen ? 'text-green-600' : 'text-gray-400'}`}
+                    >
                       {isFormOpen ? 'YES' : 'NO'}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">제출 중:</span>
-                    <span className={`font-medium ${isSubmitting ? 'text-orange-600' : 'text-gray-400'}`}>
+                    <span
+                      className={`font-medium ${isSubmitting ? 'text-orange-600' : 'text-gray-400'}`}
+                    >
                       {isSubmitting ? 'YES' : 'NO'}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">저장된 폼:</span>
-                    <span className="font-medium text-blue-600">{savedForms.length}개</span>
+                    <span className="font-medium text-blue-600">
+                      {savedForms.length}개
+                    </span>
                   </div>
                 </div>
               </div>
@@ -294,23 +304,35 @@ const BatchFormTestPage: React.FC = () => {
 
           {/* 프리셋 템플릿 */}
           <section className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">📋 프리셋 템플릿</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              📋 프리셋 템플릿
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {presetForms.map((preset, index) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <h3 className="font-semibold text-gray-800 mb-2">{preset.name}</h3>
-                  <p className="text-sm text-gray-600 mb-3">{preset.description}</p>
+                <div
+                  key={index}
+                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                >
+                  <h3 className="font-semibold text-gray-800 mb-2">
+                    {preset.name}
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-3">
+                    {preset.description}
+                  </p>
 
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between">
                       <span className="text-gray-500">기간:</span>
-                      <span className="text-gray-700">{preset.criteria.daysBack}일</span>
+                      <span className="text-gray-700">
+                        {preset.criteria.daysBack}일
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">조회수:</span>
                       <span className="text-gray-700">
-                        {preset.criteria.minViews.toLocaleString()} ~ {preset.criteria.maxViews.toLocaleString()}
+                        {preset.criteria.minViews.toLocaleString()} ~{' '}
+                        {preset.criteria.maxViews.toLocaleString()}
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -319,8 +341,10 @@ const BatchFormTestPage: React.FC = () => {
                         {[
                           preset.criteria.includeShorts && 'SHORT',
                           preset.criteria.includeMidform && 'MID',
-                          preset.criteria.includeLongForm && 'LONG'
-                        ].filter(Boolean).join(', ')}
+                          preset.criteria.includeLongForm && 'LONG',
+                        ]
+                          .filter(Boolean)
+                          .join(', ')}
                       </span>
                     </div>
                   </div>
@@ -339,20 +363,30 @@ const BatchFormTestPage: React.FC = () => {
           {/* 저장된 폼 목록 */}
           {savedForms.length > 0 && (
             <section className="bg-white p-6 rounded-lg border border-gray-200">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">💾 저장된 폼 목록</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                💾 저장된 폼 목록
+              </h2>
 
               <div className="space-y-3">
                 {savedForms.map((form, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4">
+                  <div
+                    key={index}
+                    className="border border-gray-200 rounded-lg p-4"
+                  >
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-semibold text-gray-800">{form.name}</h3>
-                        <p className="text-sm text-gray-600">{form.description}</p>
+                        <h3 className="font-semibold text-gray-800">
+                          {form.name}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          {form.description}
+                        </p>
                         <div className="mt-2 text-xs text-gray-500">
-                          {form.collectionType === 'group' ?
-                            `그룹 ${form.selectedGroups.length}개` :
-                            `채널 ${form.selectedChannels.length}개`
-                          } | {form.criteria.daysBack}일 | {form.criteria.minViews.toLocaleString()}+ 조회수
+                          {form.collectionType === 'group'
+                            ? `그룹 ${form.selectedGroups.length}개`
+                            : `채널 ${form.selectedChannels.length}개`}{' '}
+                          | {form.criteria.daysBack}일 |{' '}
+                          {form.criteria.minViews.toLocaleString()}+ 조회수
                         </div>
                       </div>
                       <button
@@ -370,7 +404,9 @@ const BatchFormTestPage: React.FC = () => {
 
           {/* 테스트 로그 */}
           <section className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">📋 테스트 로그</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              📋 테스트 로그
+            </h2>
 
             <div className="bg-gray-50 p-4 rounded h-64 overflow-y-auto">
               {testActions.length === 0 ? (
@@ -380,7 +416,10 @@ const BatchFormTestPage: React.FC = () => {
               ) : (
                 <div className="space-y-1">
                   {testActions.map((action, index) => (
-                    <div key={index} className="text-sm font-mono text-gray-700">
+                    <div
+                      key={index}
+                      className="text-sm font-mono text-gray-700"
+                    >
                       {action}
                     </div>
                   ))}
@@ -391,27 +430,33 @@ const BatchFormTestPage: React.FC = () => {
 
           {/* 사용법 안내 */}
           <section className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-            <h2 className="text-xl font-bold text-blue-900 mb-4">💡 사용법 안내</h2>
+            <h2 className="text-xl font-bold text-blue-900 mb-4">
+              💡 사용법 안내
+            </h2>
 
             <div className="space-y-3 text-sm text-blue-800">
               <p>
-                <strong>1. 폼 열기:</strong> "새 배치 폼 열기" 버튼으로 빈 폼을 열거나 프리셋을 선택하세요.
+                <strong>1. 폼 열기:</strong> "새 배치 폼 열기" 버튼으로 빈 폼을
+                열거나 프리셋을 선택하세요.
               </p>
               <p>
-                <strong>2. 프리셋 활용:</strong> 미리 정의된 설정 템플릿을 사용해 빠르게 폼을 구성할 수 있습니다.
+                <strong>2. 프리셋 활용:</strong> 미리 정의된 설정 템플릿을
+                사용해 빠르게 폼을 구성할 수 있습니다.
               </p>
               <p>
-                <strong>3. 입력 테스트:</strong> 폼의 모든 필드(이름, 조건, 채널 선택 등)를 입력해보세요.
+                <strong>3. 입력 테스트:</strong> 폼의 모든 필드(이름, 조건, 채널
+                선택 등)를 입력해보세요.
               </p>
               <p>
-                <strong>4. 제출 테스트:</strong> 폼 제출 시 2초간 로딩 상태를 시뮬레이션합니다.
+                <strong>4. 제출 테스트:</strong> 폼 제출 시 2초간 로딩 상태를
+                시뮬레이션합니다.
               </p>
               <p>
-                <strong>5. 저장/불러오기:</strong> 제출된 폼은 저장되고 나중에 다시 불러올 수 있습니다.
+                <strong>5. 저장/불러오기:</strong> 제출된 폼은 저장되고 나중에
+                다시 불러올 수 있습니다.
               </p>
             </div>
           </section>
-
         </div>
       </div>
 

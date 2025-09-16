@@ -90,19 +90,20 @@ const SearchBarTestPage: React.FC = () => {
     }
 
     // 검색 로직
-    const results = testVideos.filter(video =>
-      video.title.toLowerCase().includes(query.toLowerCase()) ||
-      video.channelName.toLowerCase().includes(query.toLowerCase()) ||
-      video.keywords.some(keyword =>
-        keyword.toLowerCase().includes(query.toLowerCase())
-      )
+    const results = testVideos.filter(
+      (video) =>
+        video.title.toLowerCase().includes(query.toLowerCase()) ||
+        video.channelName.toLowerCase().includes(query.toLowerCase()) ||
+        video.keywords.some((keyword) =>
+          keyword.toLowerCase().includes(query.toLowerCase())
+        )
     );
 
     setSearchResults(results);
 
     // 검색 히스토리 업데이트
     if (query.length > 1 && !searchHistory.includes(query)) {
-      setSearchHistory(prev => [query, ...prev.slice(0, 4)]); // 최대 5개 유지
+      setSearchHistory((prev) => [query, ...prev.slice(0, 4)]); // 최대 5개 유지
     }
   };
 
@@ -127,10 +128,14 @@ const SearchBarTestPage: React.FC = () => {
 
         {/* 기본 SearchBar 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">🎯 기본 검색 기능</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            🎯 기본 검색 기능
+          </h2>
 
           <div className="bg-white p-6 rounded-lg border border-gray-200 mb-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">실시간 검색</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              실시간 검색
+            </h3>
             <SearchBar
               placeholder="비디오 제목, 채널명, 키워드로 검색..."
               onSearch={handleSearch}
@@ -142,18 +147,29 @@ const SearchBarTestPage: React.FC = () => {
             {currentQuery && (
               <div className="mt-4 p-4 bg-gray-50 rounded">
                 <p className="text-sm text-gray-600 mb-2">
-                  <strong>"{currentQuery}"</strong> 검색 결과: {searchResults.length}개
+                  <strong>"{currentQuery}"</strong> 검색 결과:{' '}
+                  {searchResults.length}개
                 </p>
 
                 {searchResults.length > 0 ? (
                   <div className="space-y-2">
-                    {searchResults.map(video => (
-                      <div key={video._id} className="p-3 bg-white rounded border">
-                        <h4 className="font-medium text-gray-900">{video.title}</h4>
-                        <p className="text-sm text-gray-600">{video.channelName}</p>
+                    {searchResults.map((video) => (
+                      <div
+                        key={video._id}
+                        className="p-3 bg-white rounded border"
+                      >
+                        <h4 className="font-medium text-gray-900">
+                          {video.title}
+                        </h4>
+                        <p className="text-sm text-gray-600">
+                          {video.channelName}
+                        </p>
                         <div className="flex gap-1 mt-1">
-                          {video.keywords.map(keyword => (
-                            <span key={keyword} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                          {video.keywords.map((keyword) => (
+                            <span
+                              key={keyword}
+                              className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
+                            >
                               {keyword}
                             </span>
                           ))}
@@ -171,11 +187,15 @@ const SearchBarTestPage: React.FC = () => {
 
         {/* 다양한 플레이스홀더 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">📝 플레이스홀더 변형</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            📝 플레이스홀더 변형
+          </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">기본 플레이스홀더</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                기본 플레이스홀더
+              </h3>
               <SearchBar
                 placeholder="검색어를 입력하세요..."
                 onSearch={() => {}}
@@ -183,7 +203,9 @@ const SearchBarTestPage: React.FC = () => {
             </div>
 
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">구체적 안내</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                구체적 안내
+              </h3>
               <SearchBar
                 placeholder="채널명 또는 비디오 제목으로 검색"
                 onSearch={() => {}}
@@ -191,7 +213,9 @@ const SearchBarTestPage: React.FC = () => {
             </div>
 
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">예시 포함</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                예시 포함
+              </h3>
               <SearchBar
                 placeholder="예: React, JavaScript, CSS..."
                 onSearch={() => {}}
@@ -199,7 +223,9 @@ const SearchBarTestPage: React.FC = () => {
             </div>
 
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">액션 안내</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                액션 안내
+              </h3>
               <SearchBar
                 placeholder="Enter 키를 누르거나 돋보기를 클릭하세요"
                 onSearch={() => {}}
@@ -210,11 +236,15 @@ const SearchBarTestPage: React.FC = () => {
 
         {/* 검색 히스토리 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">📜 검색 히스토리</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            📜 검색 히스토리
+          </h2>
 
           <div className="bg-white p-6 rounded-lg border border-gray-200">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">최근 검색어</h3>
+              <h3 className="text-lg font-semibold text-gray-800">
+                최근 검색어
+              </h3>
               <button
                 onClick={() => setSearchHistory([])}
                 className="text-sm text-gray-500 hover:text-gray-700"
@@ -243,34 +273,33 @@ const SearchBarTestPage: React.FC = () => {
 
         {/* 크기 및 스타일 변형 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">🎨 크기 및 스타일 변형</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            🎨 크기 및 스타일 변형
+          </h2>
 
           <div className="space-y-6">
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">컴팩트 사이즈</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                컴팩트 사이즈
+              </h3>
               <div className="max-w-sm">
-                <SearchBar
-                  placeholder="컴팩트 검색"
-                  onSearch={() => {}}
-                />
+                <SearchBar placeholder="컴팩트 검색" onSearch={() => {}} />
               </div>
             </div>
 
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">풀 사이즈</h3>
-              <SearchBar
-                placeholder="전체 너비 검색바"
-                onSearch={() => {}}
-              />
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                풀 사이즈
+              </h3>
+              <SearchBar placeholder="전체 너비 검색바" onSearch={() => {}} />
             </div>
 
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">중간 사이즈</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                중간 사이즈
+              </h3>
               <div className="max-w-md mx-auto">
-                <SearchBar
-                  placeholder="중간 크기 검색"
-                  onSearch={() => {}}
-                />
+                <SearchBar placeholder="중간 크기 검색" onSearch={() => {}} />
               </div>
             </div>
           </div>
@@ -278,11 +307,15 @@ const SearchBarTestPage: React.FC = () => {
 
         {/* 기능 상태 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">⚙️ 기능 상태 테스트</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            ⚙️ 기능 상태 테스트
+          </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">초기화 기능</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                초기화 기능
+              </h3>
               <SearchBar
                 placeholder="검색 후 X 버튼 확인"
                 onSearch={() => {}}
@@ -294,7 +327,9 @@ const SearchBarTestPage: React.FC = () => {
             </div>
 
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">엔터키 검색</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                엔터키 검색
+              </h3>
               <SearchBar
                 placeholder="엔터키로 검색"
                 onSearch={(query) => console.log('엔터키 검색:', query)}
@@ -308,10 +343,14 @@ const SearchBarTestPage: React.FC = () => {
 
         {/* 접근성 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">♿ 접근성 테스트</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            ♿ 접근성 테스트
+          </h2>
 
           <div className="bg-white p-6 rounded-lg border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">키보드 네비게이션</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              키보드 네비게이션
+            </h3>
             <SearchBar
               placeholder="Tab 키로 포커스, Enter로 검색, Escape로 초기화"
               onSearch={() => {}}
@@ -319,10 +358,29 @@ const SearchBarTestPage: React.FC = () => {
             <div className="mt-4 p-4 bg-blue-50 rounded">
               <h4 className="font-medium text-blue-900 mb-2">키보드 단축키</h4>
               <ul className="text-sm text-blue-800 space-y-1">
-                <li>• <kbd className="px-2 py-1 bg-white rounded shadow">Tab</kbd> - 검색바로 포커스 이동</li>
-                <li>• <kbd className="px-2 py-1 bg-white rounded shadow">Enter</kbd> - 검색 실행</li>
-                <li>• <kbd className="px-2 py-1 bg-white rounded shadow">Escape</kbd> - 검색어 초기화</li>
-                <li>• <kbd className="px-2 py-1 bg-white rounded shadow">Ctrl + A</kbd> - 전체 선택</li>
+                <li>
+                  • <kbd className="px-2 py-1 bg-white rounded shadow">Tab</kbd>{' '}
+                  - 검색바로 포커스 이동
+                </li>
+                <li>
+                  •{' '}
+                  <kbd className="px-2 py-1 bg-white rounded shadow">Enter</kbd>{' '}
+                  - 검색 실행
+                </li>
+                <li>
+                  •{' '}
+                  <kbd className="px-2 py-1 bg-white rounded shadow">
+                    Escape
+                  </kbd>{' '}
+                  - 검색어 초기화
+                </li>
+                <li>
+                  •{' '}
+                  <kbd className="px-2 py-1 bg-white rounded shadow">
+                    Ctrl + A
+                  </kbd>{' '}
+                  - 전체 선택
+                </li>
               </ul>
             </div>
           </div>
@@ -331,22 +389,32 @@ const SearchBarTestPage: React.FC = () => {
         {/* 테스트 통계 */}
         <section className="mb-12">
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">📊 테스트 현황</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              📊 테스트 현황
+            </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{testVideos.length}</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {testVideos.length}
+                </div>
                 <div className="text-sm text-gray-600">테스트 데이터</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{searchHistory.length}</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {searchHistory.length}
+                </div>
                 <div className="text-sm text-gray-600">검색 히스토리</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">{searchResults.length}</div>
+                <div className="text-2xl font-bold text-purple-600">
+                  {searchResults.length}
+                </div>
                 <div className="text-sm text-gray-600">검색 결과</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">{currentQuery.length}</div>
+                <div className="text-2xl font-bold text-orange-600">
+                  {currentQuery.length}
+                </div>
                 <div className="text-sm text-gray-600">현재 검색어 길이</div>
               </div>
             </div>

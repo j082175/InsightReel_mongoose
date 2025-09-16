@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useSelection } from '../../../shared/hooks';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Plus, X, AlertCircle } from 'lucide-react';
+import {
+  channelGroupFormSchema,
+  ChannelGroupFormData,
+  getDefaultChannelGroupFormData,
+  colorPalette,
+} from '../../../shared/schemas/channelGroupSchema';
+import { Modal } from '../../../shared/components';
 
 interface ChannelGroup {
   _id?: string;
@@ -22,9 +31,10 @@ interface Channel {
 interface ChannelGroupModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (group: ChannelGroup) => void;
+  onSave: (group: ChannelGroup) => Promise<void>;
   editingGroup?: ChannelGroup | null;
   availableChannels?: Channel[];
+  isSubmitting?: boolean;
 }
 
 const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
@@ -32,265 +42,351 @@ const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
   onClose,
   onSave,
   editingGroup,
-  availableChannels = []
+  availableChannels = [],
+  isSubmitting = false,
 }) => {
-  const [formData, setFormData] = useState<ChannelGroup>({
-    name: '',
-    description: '',
-    color: '#3B82F6',
-    channels: [],
-    keywords: [],
-    isActive: true
+  const [keywordInput, setKeywordInput] = useState('');
+
+  const {
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: { errors, isValid },
+  } = useForm<ChannelGroupFormData>({
+    resolver: zodResolver(channelGroupFormSchema),
+    defaultValues: getDefaultChannelGroupFormData(),
+    mode: 'onChange',
   });
 
-  const [keywordInput, setKeywordInput] = useState('');
-  const channelSelection = useSelection<string>();
-
-  // 편집 모드일 때 폼 데이터 설정
+  // 폼 초기화 (모달이 열릴 때)
   useEffect(() => {
-    if (editingGroup) {
-      setFormData(editingGroup);
-      // editingGroup.channels가 문자열 배열인 경우 (기존 데이터)
-      const channelIds = Array.isArray(editingGroup.channels)
-        ? editingGroup.channels
-        : [];
-      channelSelection.setSelected(new Set(channelIds));
-    } else {
-      setFormData({
-        name: '',
-        description: '',
-        color: '#3B82F6',
-        channels: [],
-        keywords: [],
-        isActive: true
-      });
-      channelSelection.clear();
+    if (isOpen) {
+      if (editingGroup) {
+        const formData: ChannelGroupFormData = {
+          name: editingGroup.name,
+          description: editingGroup.description || '',
+          color: editingGroup.color,
+          selectedChannels: editingGroup.channels || [],
+          keywords: editingGroup.keywords || [],
+          isActive: editingGroup.isActive,
+        };
+        reset(formData);
+      } else {
+        reset(getDefaultChannelGroupFormData());
+      }
+      setKeywordInput('');
     }
-    setKeywordInput('');
-  }, [editingGroup, isOpen]);
+  }, [isOpen, editingGroup, reset]);
 
-  const handleInputChange = (field: keyof ChannelGroup, value: string | boolean | string[]) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  // 현재 값들 감시
+  const keywords = watch('keywords');
+  const selectedChannels = watch('selectedChannels');
+  const currentColor = watch('color');
 
+  // 키워드 추가 함수
   const addKeyword = () => {
-    if (!keywordInput.trim()) return;
-    
-    const keywords = keywordInput.split(',').map(k => k.trim()).filter(k => k);
-    const newKeywords = [...formData.keywords, ...keywords.filter(k => !formData.keywords.includes(k))];
-    
-    setFormData(prev => ({ ...prev, keywords: newKeywords }));
-    setKeywordInput('');
-  };
+    if (keywordInput.trim()) {
+      const newKeywords = keywordInput
+        .split(',')
+        .map((k) => k.trim())
+        .filter((k) => k && !keywords.includes(k));
 
-  const removeKeyword = (keyword: string) => {
-    setFormData(prev => ({
-      ...prev,
-      keywords: prev.keywords.filter(k => k !== keyword)
-    }));
-  };
-
-  const toggleChannel = (channelId: string) => {
-    channelSelection.toggle(channelId);
-  };
-  
-  // channelSelection이 변경될 때 formData 동기화
-  useEffect(() => {
-    setFormData(prev => ({ ...prev, channels: Array.from(channelSelection.selected) }));
-  }, [channelSelection.selected]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.name.trim()) {
-      alert('그룹 이름을 입력해주세요.');
-      return;
+      if (newKeywords.length > 0) {
+        setValue('keywords', [...keywords, ...newKeywords]);
+        setKeywordInput('');
+      }
     }
-
-    onSave({
-      ...formData,
-      channels: Array.from(channelSelection.selected)
-    });
   };
 
-  if (!isOpen) return null;
+  const removeKeyword = (index: number) => {
+    setValue(
+      'keywords',
+      keywords.filter((_, i) => i !== index)
+    );
+  };
 
-  const colorOptions = [
-    '#3B82F6', '#EF4444', '#10B981', '#F59E0B', 
-    '#8B5CF6', '#F97316', '#06B6D4', '#84CC16'
-  ];
+  // 폼 제출
+  const onFormSubmit = async (data: ChannelGroupFormData) => {
+    try {
+      const groupData: ChannelGroup = {
+        _id: editingGroup?._id,
+        name: data.name,
+        description: data.description || '',
+        color: data.color,
+        channels: data.selectedChannels,
+        keywords: data.keywords,
+        isActive: data.isActive,
+      };
+
+      await onSave(groupData);
+      onClose();
+      reset();
+    } catch (error) {
+      console.error('채널 그룹 저장 실패:', error);
+    }
+  };
+
+  // 에러 메시지 컴포넌트
+  const ErrorMessage: React.FC<{ message?: string }> = ({ message }) => {
+    if (!message) return null;
+    return (
+      <div className="flex items-center mt-1 text-sm text-red-600">
+        <AlertCircle className="w-4 h-4 mr-1" />
+        {message}
+      </div>
+    );
+  };
+
+  const modalFooter = (
+    <>
+      <button
+        type="button"
+        onClick={onClose}
+        className="flex-1 px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+        disabled={isSubmitting}
+      >
+        취소
+      </button>
+      <button
+        type="submit"
+        form="channel-group-form"
+        disabled={!isValid || isSubmitting}
+        className="flex-1 px-4 py-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+      >
+        {isSubmitting ? '저장 중...' : editingGroup ? '수정' : '생성'}
+      </button>
+    </>
+  );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
-        <div className="flex justify-between items-center p-6 border-b">
-          <h2 className="text-xl font-bold text-gray-900">
-            {editingGroup ? '🔄 채널 그룹 수정' : '➕ 새 채널 그룹 생성'}
-          </h2>
-          <button 
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl font-light"
-          >
-            ×
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 140px)' }}>
-          <div className="space-y-6">
-            {/* 기본 정보 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  그룹 이름 *
-                </label>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="lg"
+      title={editingGroup ? '채널 그룹 수정' : '새 채널 그룹 생성'}
+      showFooter={true}
+      footer={modalFooter}
+    >
+      <form
+        id="channel-group-form"
+        onSubmit={handleSubmit(onFormSubmit)}
+        className="space-y-6"
+      >
+        {/* 기본 정보 */}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              그룹명 *
+            </label>
+            <Controller
+              name="name"
+              control={control}
+              render={({ field }) => (
                 <input
+                  {...field}
                   type="text"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  placeholder="예: 영화 채널 그룹 1"
-                  className="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                  required
+                  className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    errors.name ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="채널 그룹명을 입력하세요"
                 />
-              </div>
+              )}
+            />
+            <ErrorMessage message={errors.name?.message} />
+          </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  그룹 색상
-                </label>
-                <div className="flex space-x-2">
-                  {colorOptions.map(color => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => handleInputChange('color', color)}
-                      className={`w-8 h-8 rounded-full border-2 ${
-                        formData.color === color ? 'border-gray-800' : 'border-gray-300'
-                      }`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* 설명 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                설명
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                placeholder="이 그룹에 대한 설명을 입력하세요..."
-                rows={3}
-                className="w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-              />
-            </div>
-
-            {/* 키워드 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                키워드 태그
-              </label>
-              <div className="flex space-x-2 mb-2">
-                <input
-                  type="text"
-                  value={keywordInput}
-                  onChange={(e) => setKeywordInput(e.target.value)}
-                  placeholder="키워드를 쉼표로 구분하여 입력"
-                  className="flex-1 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              설명
+            </label>
+            <Controller
+              name="description"
+              control={control}
+              render={({ field }) => (
+                <textarea
+                  {...field}
+                  className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    errors.description ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  rows={3}
+                  placeholder="그룹에 대한 설명을 입력하세요"
                 />
-                <button
-                  type="button"
-                  onClick={addKeyword}
-                  className="px-3 py-2 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700"
-                >
-                  추가
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {formData.keywords.map((keyword, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 text-xs rounded-full"
-                  >
-                    {keyword}
-                    <button
-                      type="button"
-                      onClick={() => removeKeyword(keyword)}
-                      className="ml-1 text-indigo-500 hover:text-indigo-700"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
+              )}
+            />
+            <ErrorMessage message={errors.description?.message} />
+          </div>
 
-            {/* 채널 선택 */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                포함할 채널 ({channelSelection.count}개 선택)
-              </label>
-              <div className="bg-gray-50 rounded-lg p-4 max-h-40 overflow-y-auto">
-                {availableChannels.length > 0 ? (
-                  <div className="space-y-2">
-                    {availableChannels.map((channel, index) => (
-                      <label key={index} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={channelSelection.isSelected(channel.channelId)}
-                          onChange={() => toggleChannel(channel.channelId)}
-                          className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <span className="ml-2 text-sm text-gray-700">{channel.name}</span>
-                      </label>
+          {/* 색상 선택 */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              그룹 색상 *
+            </label>
+            <Controller
+              name="color"
+              control={control}
+              render={({ field }) => (
+                <div className="space-y-3">
+                  {/* 미리 정의된 색상 팔레트 */}
+                  <div className="grid grid-cols-6 gap-2">
+                    {colorPalette.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => field.onChange(color)}
+                        className={`w-8 h-8 rounded-full border-2 transition-all ${
+                          field.value === color
+                            ? 'border-gray-800 scale-110'
+                            : 'border-gray-300 hover:border-gray-500'
+                        }`}
+                        style={{ backgroundColor: color }}
+                        title={color}
+                      />
                     ))}
                   </div>
-                ) : (
-                  <div className="text-center py-4 text-gray-500">
-                    <p>선택 가능한 채널이 없습니다.</p>
-                    <p className="text-xs mt-1">먼저 채널을 추가해주세요.</p>
+
+                  {/* 커스텀 색상 입력 */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={field.value}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      className="w-8 h-8 rounded border border-gray-300"
+                    />
+                    <input
+                      type="text"
+                      value={field.value}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      className="px-2 py-1 text-sm border border-gray-300 rounded font-mono"
+                      placeholder="#000000"
+                    />
+                    <div
+                      className="w-6 h-6 rounded border border-gray-300"
+                      style={{ backgroundColor: currentColor }}
+                    />
                   </div>
+                </div>
+              )}
+            />
+            <ErrorMessage message={errors.color?.message} />
+          </div>
+
+          {/* 활성 상태 */}
+          <div>
+            <Controller
+              name="isActive"
+              control={control}
+              render={({ field }) => (
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={field.value}
+                    onChange={field.onChange}
+                    className="mr-2"
+                  />
+                  <span className="text-sm text-gray-700">활성 그룹</span>
+                </label>
+              )}
+            />
+          </div>
+        </div>
+
+        {/* 채널 선택 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            포함할 채널 * ({selectedChannels.length}개 선택됨)
+          </label>
+          <Controller
+            name="selectedChannels"
+            control={control}
+            render={({ field }) => (
+              <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-200 rounded p-3">
+                {availableChannels.length === 0 ? (
+                  <div className="text-gray-500 text-sm">
+                    등록된 채널이 없습니다
+                  </div>
+                ) : (
+                  availableChannels.map((channel) => (
+                    <label
+                      key={channel.channelId}
+                      className="flex items-center"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={field.value.includes(channel.channelId)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            field.onChange([...field.value, channel.channelId]);
+                          } else {
+                            field.onChange(
+                              field.value.filter(
+                                (id) => id !== channel.channelId
+                              )
+                            );
+                          }
+                        }}
+                        className="mr-2"
+                      />
+                      <span className="text-sm">{channel.name}</span>
+                    </label>
+                  ))
                 )}
               </div>
-            </div>
-
-            {/* 활성화 설정 */}
-            <div>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.isActive}
-                  onChange={(e) => handleInputChange('isActive', e.target.checked)}
-                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="ml-2 text-sm text-gray-700">
-                  그룹 활성화 (자동 수집 대상에 포함)
-                </span>
-              </label>
-            </div>
-          </div>
-        </form>
-
-        <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
-          <button 
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
-          >
-            취소
-          </button>
-          <button 
-            onClick={handleSubmit}
-            className="px-4 py-2 text-sm text-white bg-indigo-600 rounded hover:bg-indigo-700"
-          >
-            {editingGroup ? '수정' : '생성'}
-          </button>
+            )}
+          />
+          <ErrorMessage message={errors.selectedChannels?.message} />
         </div>
-      </div>
-    </div>
+
+        {/* 키워드 */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            키워드 태그
+          </label>
+          <div className="flex gap-2 mb-2">
+            <input
+              type="text"
+              value={keywordInput}
+              onChange={(e) => setKeywordInput(e.target.value)}
+              onKeyPress={(e) =>
+                e.key === 'Enter' && (e.preventDefault(), addKeyword())
+              }
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="키워드 입력 후 Enter (쉼표로 여러 개 구분 가능)"
+            />
+            <button
+              type="button"
+              onClick={addKeyword}
+              className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+          {keywords.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {keywords.map((keyword, index) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded"
+                >
+                  {keyword}
+                  <button
+                    type="button"
+                    onClick={() => removeKeyword(index)}
+                    className="ml-1 hover:text-blue-600"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="text-xs text-gray-500 mt-1">
+            키워드는 그룹 검색 및 필터링에 사용됩니다
+          </div>
+        </div>
+      </form>
+    </Modal>
   );
 };
 

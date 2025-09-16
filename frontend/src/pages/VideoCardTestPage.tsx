@@ -45,7 +45,8 @@ const VideoCardTestPage: React.FC = () => {
       title: 'TypeScript 고급 패턴 실무 활용법',
       views: 456000,
       platform: 'YOUTUBE',
-      thumbnailUrl: 'https://placehold.co/320x180/0066CC/FFFFFF?text=TypeScript',
+      thumbnailUrl:
+        'https://placehold.co/320x180/0066CC/FFFFFF?text=TypeScript',
       channelName: 'TypeScript Korea',
       uploadDate: '2024-01-05T08:20:00Z',
       duration: 'MID',
@@ -152,7 +153,9 @@ const VideoCardTestPage: React.FC = () => {
             {isSelectionMode && (
               <>
                 <button
-                  onClick={() => setSelectedVideos(new Set(testVideos.map(v => v._id)))}
+                  onClick={() =>
+                    setSelectedVideos(new Set(testVideos.map((v) => v._id)))
+                  }
                   className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
                 >
                   전체 선택
@@ -173,16 +176,20 @@ const VideoCardTestPage: React.FC = () => {
 
         {/* 플랫폼별 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">🌐 플랫폼별 VideoCard</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            🌐 플랫폼별 VideoCard
+          </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {['YOUTUBE', 'INSTAGRAM', 'TIKTOK'].map(platform => {
-              const video = testVideos.find(v => v.platform === platform);
+            {['YOUTUBE', 'INSTAGRAM', 'TIKTOK'].map((platform) => {
+              const video = testVideos.find((v) => v.platform === platform);
               if (!video) return null;
 
               return (
                 <div key={platform} className="space-y-3">
-                  <h3 className="text-lg font-semibold text-gray-800">{platform}</h3>
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    {platform}
+                  </h3>
                   <VideoCard
                     video={video}
                     isSelected={selectedVideos.has(video._id)}
@@ -204,15 +211,17 @@ const VideoCardTestPage: React.FC = () => {
 
         {/* 영상 길이별 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">⏱️ 영상 길이별 분류</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            ⏱️ 영상 길이별 분류
+          </h2>
 
           <div className="space-y-8">
-            {['SHORT', 'MID', 'LONG'].map(duration => {
-              const videos = testVideos.filter(v => v.duration === duration);
+            {['SHORT', 'MID', 'LONG'].map((duration) => {
+              const videos = testVideos.filter((v) => v.duration === duration);
               const durationLabels = {
                 SHORT: '숏폼 (60초 이하)',
                 MID: '미드폼 (1-3분)',
-                LONG: '롱폼 (3분 이상)'
+                LONG: '롱폼 (3분 이상)',
               };
 
               return (
@@ -221,7 +230,7 @@ const VideoCardTestPage: React.FC = () => {
                     {durationLabels[duration as keyof typeof durationLabels]}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {videos.map(video => (
+                    {videos.map((video) => (
                       <VideoCard
                         key={video._id}
                         video={video}
@@ -241,14 +250,32 @@ const VideoCardTestPage: React.FC = () => {
 
         {/* 조회수 범위별 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">👀 조회수 범위별 표시</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            👀 조회수 범위별 표시
+          </h2>
 
           <div className="space-y-6">
             {[
-              { range: '1천 미만', videos: testVideos.filter(v => v.views < 1000) },
-              { range: '1천 - 10만', videos: testVideos.filter(v => v.views >= 1000 && v.views < 100000) },
-              { range: '10만 - 100만', videos: testVideos.filter(v => v.views >= 100000 && v.views < 1000000) },
-              { range: '100만 이상', videos: testVideos.filter(v => v.views >= 1000000) },
+              {
+                range: '1천 미만',
+                videos: testVideos.filter((v) => v.views < 1000),
+              },
+              {
+                range: '1천 - 10만',
+                videos: testVideos.filter(
+                  (v) => v.views >= 1000 && v.views < 100000
+                ),
+              },
+              {
+                range: '10만 - 100만',
+                videos: testVideos.filter(
+                  (v) => v.views >= 100000 && v.views < 1000000
+                ),
+              },
+              {
+                range: '100만 이상',
+                videos: testVideos.filter((v) => v.views >= 1000000),
+              },
             ].map(({ range, videos }) => (
               <div key={range}>
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">
@@ -256,7 +283,7 @@ const VideoCardTestPage: React.FC = () => {
                 </h3>
                 {videos.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {videos.map(video => (
+                    {videos.map((video) => (
                       <VideoCard
                         key={video._id}
                         video={video}
@@ -269,7 +296,9 @@ const VideoCardTestPage: React.FC = () => {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-sm">해당 범위의 영상이 없습니다.</p>
+                  <p className="text-gray-500 text-sm">
+                    해당 범위의 영상이 없습니다.
+                  </p>
                 )}
               </div>
             ))}
@@ -278,12 +307,16 @@ const VideoCardTestPage: React.FC = () => {
 
         {/* 상태별 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">🎛️ 상태별 테스트</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            🎛️ 상태별 테스트
+          </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* 일반 모드 */}
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">일반 모드</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                일반 모드
+              </h3>
               <VideoCard
                 video={testVideos[0]}
                 isSelected={false}
@@ -297,7 +330,9 @@ const VideoCardTestPage: React.FC = () => {
 
             {/* 선택 모드 */}
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">선택 모드</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                선택 모드
+              </h3>
               <VideoCard
                 video={testVideos[1]}
                 isSelected={selectedVideos.has(testVideos[1]._id)}
@@ -312,7 +347,9 @@ const VideoCardTestPage: React.FC = () => {
 
             {/* 선택된 상태 */}
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">선택된 상태</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                선택된 상태
+              </h3>
               <VideoCard
                 video={testVideos[2]}
                 isSelected={true}
@@ -327,7 +364,9 @@ const VideoCardTestPage: React.FC = () => {
 
             {/* 호버 상태 시뮬레이션 */}
             <div className="bg-white p-6 rounded-lg border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">호버 효과</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                호버 효과
+              </h3>
               <div className="transform hover:scale-105 transition-transform duration-200">
                 <VideoCard
                   video={testVideos[3]}
@@ -345,14 +384,18 @@ const VideoCardTestPage: React.FC = () => {
 
         {/* 레이아웃 테스트 */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">📐 레이아웃 테스트</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            📐 레이아웃 테스트
+          </h2>
 
           <div className="space-y-8">
             {/* 1열 레이아웃 */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">1열 레이아웃 (모바일)</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                1열 레이아웃 (모바일)
+              </h3>
               <div className="grid grid-cols-1 gap-4 max-w-sm">
-                {testVideos.slice(0, 2).map(video => (
+                {testVideos.slice(0, 2).map((video) => (
                   <VideoCard
                     key={video._id}
                     video={video}
@@ -367,9 +410,11 @@ const VideoCardTestPage: React.FC = () => {
 
             {/* 2열 레이아웃 */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">2열 레이아웃 (태블릿)</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                2열 레이아웃 (태블릿)
+              </h3>
               <div className="grid grid-cols-2 gap-4 max-w-2xl">
-                {testVideos.slice(0, 4).map(video => (
+                {testVideos.slice(0, 4).map((video) => (
                   <VideoCard
                     key={video._id}
                     video={video}
@@ -384,9 +429,11 @@ const VideoCardTestPage: React.FC = () => {
 
             {/* 4열 레이아웃 */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">4열 레이아웃 (데스크톱)</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                4열 레이아웃 (데스크톱)
+              </h3>
               <div className="grid grid-cols-4 gap-4">
-                {testVideos.slice(0, 4).map(video => (
+                {testVideos.slice(0, 4).map((video) => (
                   <VideoCard
                     key={video._id}
                     video={video}
@@ -404,20 +451,26 @@ const VideoCardTestPage: React.FC = () => {
         {/* 테스트 통계 */}
         <section className="mb-12">
           <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-6 rounded-lg">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">📊 VideoCard 테스트 통계</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              📊 VideoCard 테스트 통계
+            </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">{testVideos.length}</div>
+                <div className="text-2xl font-bold text-purple-600">
+                  {testVideos.length}
+                </div>
                 <div className="text-sm text-gray-600">총 테스트 영상</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-pink-600">
-                  {new Set(testVideos.map(v => v.platform)).size}
+                  {new Set(testVideos.map((v) => v.platform)).size}
                 </div>
                 <div className="text-sm text-gray-600">지원 플랫폼</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{selectedVideos.size}</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {selectedVideos.size}
+                </div>
                 <div className="text-sm text-gray-600">선택된 영상</div>
               </div>
               <div className="text-center">
@@ -429,7 +482,9 @@ const VideoCardTestPage: React.FC = () => {
             </div>
 
             <div className="mt-6 p-4 bg-white rounded-lg">
-              <h3 className="font-semibold text-gray-900 mb-2">💡 테스트 가이드</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">
+                💡 테스트 가이드
+              </h3>
               <ul className="text-sm text-gray-600 space-y-1">
                 <li>• 각 카드를 클릭하여 클릭 이벤트 동작 확인</li>
                 <li>• 선택 모드 토글로 체크박스 표시/숨김 테스트</li>

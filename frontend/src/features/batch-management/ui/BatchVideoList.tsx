@@ -20,7 +20,7 @@ const BatchVideoList: React.FC<BatchVideoListProps> = ({
   batchName,
   videos,
   loading,
-  onVideoDelete
+  onVideoDelete,
 }) => {
   if (!isOpen || !batchId) return null;
 
@@ -30,17 +30,19 @@ const BatchVideoList: React.FC<BatchVideoListProps> = ({
         <div className="flex items-center justify-between p-6 border-b">
           <div>
             <h2 className="text-xl font-semibold">배치 영상 목록</h2>
-            {batchName && <p className="text-sm text-gray-600 mt-1">{batchName}</p>}
+            {batchName && (
+              <p className="text-sm text-gray-600 mt-1">{batchName}</p>
+            )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 80px)' }}>
+        <div
+          className="p-6 overflow-y-auto"
+          style={{ maxHeight: 'calc(90vh - 80px)' }}
+        >
           {loading ? (
             <div className="text-center py-12">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -48,8 +50,12 @@ const BatchVideoList: React.FC<BatchVideoListProps> = ({
             </div>
           ) : videos.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-gray-500 text-lg mb-2">수집된 영상이 없습니다</div>
-              <div className="text-gray-400">이 배치에서 수집된 영상이 없거나 데이터를 찾을 수 없습니다.</div>
+              <div className="text-gray-500 text-lg mb-2">
+                수집된 영상이 없습니다
+              </div>
+              <div className="text-gray-400">
+                이 배치에서 수집된 영상이 없거나 데이터를 찾을 수 없습니다.
+              </div>
             </div>
           ) : (
             <>

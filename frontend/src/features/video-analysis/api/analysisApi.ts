@@ -63,7 +63,9 @@ export interface BatchAnalysisResult {
 /**
  * 채널 목록에 대한 분석을 실행합니다
  */
-export const analyzeChannels = async (request: AnalysisRequest): Promise<BatchAnalysisResult> => {
+export const analyzeChannels = async (
+  request: AnalysisRequest
+): Promise<BatchAnalysisResult> => {
   try {
     const response = await fetch('/api/videos/analyze-channels', {
       method: 'POST',
@@ -87,7 +89,9 @@ export const analyzeChannels = async (request: AnalysisRequest): Promise<BatchAn
 /**
  * 개별 채널에 대한 상세 분석
  */
-export const analyzeChannel = async (channelId: string): Promise<ChannelAnalysisResult> => {
+export const analyzeChannel = async (
+  channelId: string
+): Promise<ChannelAnalysisResult> => {
   try {
     const response = await fetch(`/api/channels/${channelId}/analyze`, {
       method: 'POST',
@@ -110,7 +114,9 @@ export const analyzeChannel = async (channelId: string): Promise<ChannelAnalysis
 /**
  * 비디오 트렌드 분석
  */
-export const analyzeTrends = async (videoIds: string[]): Promise<{
+export const analyzeTrends = async (
+  videoIds: string[]
+): Promise<{
   trendingUp: VideoEntity[];
   trendingDown: VideoEntity[];
   insights: string[];
@@ -177,16 +183,21 @@ export const mockAnalyzeChannels = async (
     const channelName = channelNames[i];
 
     if (onProgress) {
-      onProgress(`${channelName} 분석 중...`, ((i + 1) / channelNames.length) * 100);
+      onProgress(
+        `${channelName} 분석 중...`,
+        ((i + 1) / channelNames.length) * 100
+      );
     }
 
     // 모의 지연
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
     const mockResult: ChannelAnalysisResult = {
       channelId: `channel_${i}`,
       channelName,
-      platform: ['YOUTUBE', 'TIKTOK', 'INSTAGRAM'][Math.floor(Math.random() * 3)],
+      platform: ['YOUTUBE', 'TIKTOK', 'INSTAGRAM'][
+        Math.floor(Math.random() * 3)
+      ],
       videoCount: Math.floor(Math.random() * 500) + 50,
       totalViews: Math.floor(Math.random() * 10000000) + 1000000,
       avgViews: Math.floor(Math.random() * 500000) + 50000,
@@ -194,13 +205,17 @@ export const mockAnalyzeChannels = async (
         id: `video_${i}_top`,
         title: `${channelName}의 인기 영상 제목`,
         views: Math.floor(Math.random() * 2000000) + 500000,
-        publishedAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
+        publishedAt: new Date(
+          Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000
+        ).toISOString(),
       },
       trends: {
         viewGrowth: Math.floor(Math.random() * 50) + 10,
         engagementRate: Math.random() * 10 + 2,
-        uploadFrequency: ['매일', '주 2-3회', '주간', '월 2-3회'][Math.floor(Math.random() * 4)],
-        consistency: Math.random() * 0.5 + 0.5
+        uploadFrequency: ['매일', '주 2-3회', '주간', '월 2-3회'][
+          Math.floor(Math.random() * 4)
+        ],
+        consistency: Math.random() * 0.5 + 0.5,
       },
       keywords: ['트렌드', '인기', '리뷰', '일상', 'VLOG']
         .sort(() => 0.5 - Math.random())
@@ -208,8 +223,10 @@ export const mockAnalyzeChannels = async (
       recommendations: [
         '업로드 빈도를 높이면 더 많은 노출 기회를 얻을 수 있습니다',
         '시청자 참여도가 높은 콘텐츠 유형을 더 제작해보세요',
-        '트렌딩 키워드를 활용한 콘텐츠 기획을 추천합니다'
-      ].sort(() => 0.5 - Math.random()).slice(0, 2)
+        '트렌딩 키워드를 활용한 콘텐츠 기획을 추천합니다',
+      ]
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 2),
     };
 
     results.push(mockResult);
@@ -219,8 +236,10 @@ export const mockAnalyzeChannels = async (
     totalChannels: results.length,
     totalVideos: results.reduce((sum, r) => sum + r.videoCount, 0),
     totalViews: results.reduce((sum, r) => sum + r.totalViews, 0),
-    avgEngagementRate: results.reduce((sum, r) => sum + r.trends.engagementRate, 0) / results.length,
+    avgEngagementRate:
+      results.reduce((sum, r) => sum + r.trends.engagementRate, 0) /
+      results.length,
     channels: results,
-    generatedAt: new Date().toISOString()
+    generatedAt: new Date().toISOString(),
   };
 };

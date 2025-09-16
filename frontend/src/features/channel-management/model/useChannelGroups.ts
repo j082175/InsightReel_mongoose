@@ -30,18 +30,22 @@ export const useChannelGroups = () => {
   const [error, setError] = useState<string | null>(null);
 
   // 모든 그룹 조회
-  const fetchGroups = async (filters?: { active?: boolean; keyword?: string }) => {
+  const fetchGroups = async (filters?: {
+    active?: boolean;
+    keyword?: string;
+  }) => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const params = new URLSearchParams();
-      if (filters?.active !== undefined) params.append('active', filters.active.toString());
+      if (filters?.active !== undefined)
+        params.append('active', filters.active.toString());
       if (filters?.keyword) params.append('keyword', filters.keyword);
 
       const response = await fetch(`/api/channel-groups?${params}`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -56,7 +60,8 @@ export const useChannelGroups = () => {
         throw new Error(data.message || '그룹 조회에 실패했습니다.');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+      const errorMessage =
+        err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
       setError(errorMessage);
       console.error('그룹 조회 실패:', err);
       return [];
@@ -66,7 +71,9 @@ export const useChannelGroups = () => {
   };
 
   // 새 그룹 생성
-  const createGroup = async (groupData: Omit<ChannelGroup, '_id' | 'createdAt' | 'updatedAt'>) => {
+  const createGroup = async (
+    groupData: Omit<ChannelGroup, '_id' | 'createdAt' | 'updatedAt'>
+  ) => {
     setIsLoading(true);
     setError(null);
 
@@ -74,7 +81,7 @@ export const useChannelGroups = () => {
       const response = await fetch('/api/channel-groups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(groupData)
+        body: JSON.stringify(groupData),
       });
 
       if (!response.ok) {
@@ -83,13 +90,14 @@ export const useChannelGroups = () => {
 
       const data = await response.json();
       if (data.success) {
-        setGroups(prev => [...prev, data.data]);
+        setGroups((prev) => [...prev, data.data]);
         return data.data;
       } else {
         throw new Error(data.message || '그룹 생성에 실패했습니다.');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+      const errorMessage =
+        err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
       setError(errorMessage);
       console.error('그룹 생성 실패:', err);
       throw err;
@@ -99,7 +107,10 @@ export const useChannelGroups = () => {
   };
 
   // 그룹 수정
-  const updateGroup = async (groupId: string, groupData: Partial<ChannelGroup>) => {
+  const updateGroup = async (
+    groupId: string,
+    groupData: Partial<ChannelGroup>
+  ) => {
     setIsLoading(true);
     setError(null);
 
@@ -107,7 +118,7 @@ export const useChannelGroups = () => {
       const response = await fetch(`/api/channel-groups/${groupId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(groupData)
+        body: JSON.stringify(groupData),
       });
 
       if (!response.ok) {
@@ -116,15 +127,16 @@ export const useChannelGroups = () => {
 
       const data = await response.json();
       if (data.success) {
-        setGroups(prev => prev.map(group =>
-          group._id === groupId ? data.data : group
-        ));
+        setGroups((prev) =>
+          prev.map((group) => (group._id === groupId ? data.data : group))
+        );
         return data.data;
       } else {
         throw new Error(data.message || '그룹 수정에 실패했습니다.');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+      const errorMessage =
+        err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
       setError(errorMessage);
       console.error('그룹 수정 실패:', err);
       throw err;
@@ -141,7 +153,7 @@ export const useChannelGroups = () => {
     try {
       const response = await fetch(`/api/channel-groups/${groupId}`, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
@@ -150,13 +162,14 @@ export const useChannelGroups = () => {
 
       const data = await response.json();
       if (data.success) {
-        setGroups(prev => prev.filter(group => group._id !== groupId));
+        setGroups((prev) => prev.filter((group) => group._id !== groupId));
         return true;
       } else {
         throw new Error(data.message || '그룹 삭제에 실패했습니다.');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+      const errorMessage =
+        err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
       setError(errorMessage);
       console.error('그룹 삭제 실패:', err);
       throw err;
@@ -166,7 +179,10 @@ export const useChannelGroups = () => {
   };
 
   // 특정 그룹 트렌딩 수집
-  const collectGroupTrending = async (groupId: string, options: CollectGroupOptions = {}) => {
+  const collectGroupTrending = async (
+    groupId: string,
+    options: CollectGroupOptions = {}
+  ) => {
     setIsLoading(true);
     setError(null);
 
@@ -175,14 +191,14 @@ export const useChannelGroups = () => {
       minViews: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.MIN_VIEWS,
       includeShorts: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_SHORTS,
       includeLongForm: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_LONGFORM,
-      ...options
+      ...options,
     };
 
     try {
       const response = await fetch(`/api/channel-groups/${groupId}/collect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(defaultOptions)
+        body: JSON.stringify(defaultOptions),
       });
 
       if (!response.ok) {
@@ -192,17 +208,20 @@ export const useChannelGroups = () => {
       const data = await response.json();
       if (data.success) {
         // 그룹의 lastCollectedAt 업데이트
-        setGroups(prev => prev.map(group =>
-          group._id === groupId
-            ? { ...group, lastCollectedAt: new Date().toISOString() }
-            : group
-        ));
+        setGroups((prev) =>
+          prev.map((group) =>
+            group._id === groupId
+              ? { ...group, lastCollectedAt: new Date().toISOString() }
+              : group
+          )
+        );
         return data.data;
       } else {
         throw new Error(data.message || '그룹 트렌딩 수집에 실패했습니다.');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+      const errorMessage =
+        err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
       setError(errorMessage);
       console.error('그룹 트렌딩 수집 실패:', err);
       throw err;
@@ -221,14 +240,14 @@ export const useChannelGroups = () => {
       minViews: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.MIN_VIEWS,
       includeShorts: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_SHORTS,
       includeLongForm: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_LONGFORM,
-      ...options
+      ...options,
     };
 
     try {
       const response = await fetch('/api/channel-groups/collect-all', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(defaultOptions)
+        body: JSON.stringify(defaultOptions),
       });
 
       if (!response.ok) {
@@ -239,17 +258,20 @@ export const useChannelGroups = () => {
       if (data.success) {
         // 모든 활성 그룹의 lastCollectedAt 업데이트
         const now = new Date().toISOString();
-        setGroups(prev => prev.map(group => 
-          group.isActive 
-            ? { ...group, lastCollectedAt: now }
-            : group
-        ));
+        setGroups((prev) =>
+          prev.map((group) =>
+            group.isActive ? { ...group, lastCollectedAt: now } : group
+          )
+        );
         return data.data;
       } else {
-        throw new Error(data.message || '전체 그룹 트렌딩 수집에 실패했습니다.');
+        throw new Error(
+          data.message || '전체 그룹 트렌딩 수집에 실패했습니다.'
+        );
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+      const errorMessage =
+        err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
       setError(errorMessage);
       console.error('전체 그룹 트렌딩 수집 실패:', err);
       throw err;
@@ -259,11 +281,14 @@ export const useChannelGroups = () => {
   };
 
   // 그룹의 트렌딩 영상 조회
-  const getGroupVideos = async (groupId: string, options?: {
-    limit?: number;
-    duration?: 'SHORT' | 'MID' | 'LONG';
-    sortBy?: 'collectionDate' | 'views';
-  }) => {
+  const getGroupVideos = async (
+    groupId: string,
+    options?: {
+      limit?: number;
+      duration?: 'SHORT' | 'MID' | 'LONG';
+      sortBy?: 'collectionDate' | 'views';
+    }
+  ) => {
     setIsLoading(true);
     setError(null);
 
@@ -273,10 +298,13 @@ export const useChannelGroups = () => {
       if (options?.duration) params.append('duration', options.duration);
       if (options?.sortBy) params.append('sortBy', options.sortBy);
 
-      const response = await fetch(`/api/channel-groups/${groupId}/videos?${params}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const response = await fetch(
+        `/api/channel-groups/${groupId}/videos?${params}`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`API 오류: ${response.status}`);
@@ -289,7 +317,8 @@ export const useChannelGroups = () => {
         throw new Error(data.message || '그룹 영상 조회에 실패했습니다.');
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+      const errorMessage =
+        err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
       setError(errorMessage);
       console.error('그룹 영상 조회 실패:', err);
       return [];
@@ -316,7 +345,7 @@ export const useChannelGroups = () => {
     getGroupVideos,
     // 편의 메서드
     refreshGroups: () => fetchGroups(),
-    getActiveGroups: () => groups.filter(group => group.isActive),
-    getGroupById: (id: string) => groups.find(group => group._id === id),
+    getActiveGroups: () => groups.filter((group) => group.isActive),
+    getGroupById: (id: string) => groups.find((group) => group._id === id),
   };
 };

@@ -1,4 +1,5 @@
 import React, { memo, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { Eye, Play, MoreVertical } from 'lucide-react';
 import { formatViews, formatDate, getDurationLabel } from '../utils/formatters';
 import { getPlatformStyle } from '../utils/platformStyles';
@@ -10,70 +11,138 @@ interface VideoCardProps {
   onClick?: (video: Video) => void;
   onInfoClick?: (video: Video) => void;
   onChannelClick?: (channelName: string) => void;
-  onDelete: (video: Video) => void;  // 필수 Props
+  onDelete: (video: Video) => void; // 필수 Props
   isSelectMode?: boolean;
   isSelected?: boolean;
   onSelectToggle?: (id: string | number) => void;
   showArchiveInfo?: boolean;
 }
 
-const VideoCard: React.FC<VideoCardProps> = memo(({
-  video,
-  onClick,
-  onInfoClick,
-  onChannelClick,
-  onDelete,
-  isSelectMode,
-  isSelected,
-  onSelectToggle,
-  showArchiveInfo
-}) => {
-  const videoId = getVideoId(video);
-  const thumbnailUrl = getThumbnailUrl(video);
-  const viewCount = getViewCount(video);
+const VideoCard: React.FC<VideoCardProps> = memo(
+  ({
+    video,
+    onClick,
+    onInfoClick,
+    onChannelClick,
+    onDelete,
+    isSelectMode,
+    isSelected,
+    onSelectToggle,
+    showArchiveInfo,
+  }) => {
+    const videoId = getVideoId(video);
+    const thumbnailUrl = getThumbnailUrl(video);
+    const viewCount = getViewCount(video);
 
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    if (isSelectMode) {
-      e.preventDefault();
-      e.stopPropagation();
-      if (onSelectToggle) {
-        onSelectToggle(videoId);
-      }
-    } else if (onClick) {
-      onClick(video);
-    }
-  }, [isSelectMode, onSelectToggle, videoId, onClick, video]);
+    const handleClick = useCallback(
+      (e: React.MouseEvent) => {
+        if (isSelectMode) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (onSelectToggle) {
+            onSelectToggle(videoId);
+          }
+        } else if (onClick) {
+          onClick(video);
+        }
+      },
+      [isSelectMode, onSelectToggle, videoId, onClick, video]
+    );
 
-  const handleInfoClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (onInfoClick) {
-      onInfoClick(video);
-    }
-  }, [onInfoClick, video]);
+    const handleInfoClick = useCallback(
+      (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (onInfoClick) {
+          onInfoClick(video);
+        }
+      },
+      [onInfoClick, video]
+    );
 
-  const handleChannelClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (onChannelClick && video.channelName) {
-      onChannelClick(video.channelName);
-    }
-  }, [onChannelClick, video.channelName]);
+    const handleChannelClick = useCallback(
+      (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (onChannelClick && video.channelName) {
+          onChannelClick(video.channelName);
+        }
+      },
+      [onChannelClick, video.channelName]
+    );
 
-  const handleDelete = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onDelete(video);
-  }, [onDelete, video]);
+    const handleDelete = useCallback(
+      (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onDelete(video);
+      },
+      [onDelete, video]
+    );
 
-  return (
-    <div
+    const cardVariants = {
+      initial: { opacity: 0, y: 20, scale: 0.95 },
+      animate: {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        transition: {
+          duration: 0.4,
+          ease: [0.4, 0, 0.2, 1],
+        },
+      },
+      hover: {
+        y: -8,
+        scale: 1.02,
+        transition: {
+          duration: 0.3,
+          ease: [0.4, 0, 0.2, 1],
+        },
+      },
+      tap: {
+        scale: 0.98,
+        transition: {
+          duration: 0.1,
+        },
+      },
+    };
+
+    const thumbnailVariants = {
+      hover: {
+        scale: 1.05,
+        transition: {
+          duration: 0.3,
+        },
+      },
+    };
+
+    const playButtonVariants = {
+      initial: { scale: 0, opacity: 0 },
+      hover: {
+        scale: 1,
+        opacity: 1,
+        transition: {
+          type: 'spring' as const,
+          stiffness: 300,
+          damping: 25,
+        },
+      },
+    };
+
+    return (
+      <motion.div
         className={`
-          relative group bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer overflow-hidden
+          relative group bg-white rounded-lg shadow-sm cursor-pointer overflow-hidden
           ${isSelected ? 'ring-2 ring-blue-500' : ''}
           ${isSelectMode ? 'hover:ring-2 hover:ring-blue-300' : ''}
         `}
+        variants={cardVariants}
+        initial="initial"
+        animate="animate"
+        whileHover="hover"
+        whileTap="tap"
         onClick={handleClick}
+        layout
       >
         {/* 선택 체크박스 */}
         {(isSelectMode || isSelected) && (
@@ -90,24 +159,43 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
 
         {/* 썸네일 */}
         <div className="relative aspect-video bg-gray-200 overflow-hidden">
-          <img
+          <motion.img
             src={thumbnailUrl}
             alt={video.title}
             className="w-full h-full object-cover"
             loading="lazy"
+            variants={thumbnailVariants}
           />
 
           {/* 재생 버튼 오버레이 */}
-          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
-            <Play className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          </div>
+          <motion.div
+            className="absolute inset-0 bg-black flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            whileHover={{ opacity: 0.3 }}
+            transition={{ duration: 0.3 }}
+          >
+            <motion.div
+              variants={playButtonVariants}
+              initial="initial"
+              whileHover="hover"
+            >
+              <Play className="w-12 h-12 text-white" />
+            </motion.div>
+          </motion.div>
 
           {/* 플랫폼 배지 */}
-          <div className="absolute top-3 right-3">
-            <span className={`px-2 py-1 rounded-full text-xs font-medium text-white ${getPlatformStyle(video.platform)}`}>
+          <motion.div
+            className="absolute top-3 right-3"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.3 }}
+          >
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-medium text-white ${getPlatformStyle(video.platform)}`}
+            >
               {video.platform}
             </span>
-          </div>
+          </motion.div>
 
           {/* 영상 길이 */}
           {video.duration && (
@@ -120,10 +208,20 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
         </div>
 
         {/* 비디오 정보 */}
-        <div className="p-4">
-          <h3 className="font-medium text-gray-900 text-sm line-clamp-2 mb-2">
+        <motion.div
+          className="p-4"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.4 }}
+        >
+          <motion.h3
+            className="font-medium text-gray-900 text-sm line-clamp-2 mb-2"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.3 }}
+          >
             {video.title}
-          </h3>
+          </motion.h3>
 
           <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
             <button
@@ -141,21 +239,27 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
 
               {/* 액션 버튼들 */}
               <div className="flex items-center gap-1">
-                <button
+                <motion.button
                   onClick={handleInfoClick}
                   className="p-1 hover:bg-gray-100 rounded"
                   title="상세 정보"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={{ duration: 0.2 }}
                 >
                   <Eye className="w-4 h-4" />
-                </button>
+                </motion.button>
 
-                <button
+                <motion.button
                   onClick={handleDelete}
                   className="p-1 hover:bg-red-100 hover:text-red-600 rounded transition-colors"
                   title="삭제"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={{ duration: 0.2 }}
                 >
                   <MoreVertical className="w-4 h-4" />
-                </button>
+                </motion.button>
               </div>
             </div>
           </div>
@@ -169,10 +273,11 @@ const VideoCard: React.FC<VideoCardProps> = memo(({
               수집: {formatDate(video.collectedAt)}
             </div>
           )}
-        </div>
-      </div>
-  );
-});
+        </motion.div>
+      </motion.div>
+    );
+  }
+);
 
 VideoCard.displayName = 'VideoCard';
 

@@ -12,7 +12,7 @@ interface ChannelCardProps {
   onCollect?: (channel: Channel) => void;
   onAnalyze?: (channel: Channel) => void;
   onEdit?: (channel: Channel) => void;
-  onDelete: (channel: Channel) => void;  // 필수 Props
+  onDelete: (channel: Channel) => void; // 필수 Props
   onKeywordClick?: (keyword: string) => void;
   showSelection?: boolean;
 }
@@ -27,7 +27,7 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
   onEdit,
   onDelete,
   onKeywordClick,
-  showSelection = false
+  showSelection = false,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -41,7 +41,7 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
     show: false,
     type: 'info',
     title: '',
-    message: ''
+    message: '',
   });
 
   // 플랫폼별 색상 테마
@@ -52,28 +52,28 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
           borderColor: 'border-l-red-500',
           bgGradient: 'bg-gradient-to-r from-white to-red-50/30',
           ringColor: 'ring-red-200',
-          badgeColor: 'from-red-500 to-red-600'
+          badgeColor: 'from-red-500 to-red-600',
         };
       case 'TIKTOK':
         return {
           borderColor: 'border-l-black',
           bgGradient: 'bg-gradient-to-r from-white to-gray-50',
           ringColor: 'ring-gray-300',
-          badgeColor: 'from-black to-gray-800'
+          badgeColor: 'from-black to-gray-800',
         };
       case 'INSTAGRAM':
         return {
           borderColor: 'border-l-purple-500',
           bgGradient: 'bg-gradient-to-r from-white to-purple-50/30',
           ringColor: 'ring-purple-200',
-          badgeColor: 'from-purple-500 via-pink-500 to-orange-400'
+          badgeColor: 'from-purple-500 via-pink-500 to-orange-400',
         };
       default:
         return {
           borderColor: 'border-l-blue-500',
           bgGradient: 'bg-white',
           ringColor: 'ring-blue-200',
-          badgeColor: 'from-blue-500 to-blue-600'
+          badgeColor: 'from-blue-500 to-blue-600',
         };
     }
   };
@@ -83,7 +83,7 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
     const date = new Date(dateString);
     const now = new Date();
     const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
+
     if (diff < 60) return '방금 전';
     if (diff < 3600) return `${Math.floor(diff / 60)}분 전`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}시간 전`;
@@ -112,7 +112,7 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
         show: true,
         type: 'success',
         title: '삭제 완료',
-        message: '채널이 성공적으로 삭제되었습니다.'
+        message: '채널이 성공적으로 삭제되었습니다.',
       });
     } catch (error: any) {
       console.error('삭제 실패:', error);
@@ -120,7 +120,8 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
         show: true,
         type: 'error',
         title: '삭제 실패',
-        message: error.message || '삭제 중 오류가 발생했습니다. 다시 시도해주세요.'
+        message:
+          error.message || '삭제 중 오류가 발생했습니다. 다시 시도해주세요.',
       });
     } finally {
       setIsDeleting(false);
@@ -134,7 +135,7 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
   }, [isDeleting]);
 
   return (
-    <div 
+    <div
       className={`
         ${theme.bgGradient} border border-gray-200 ${theme.borderColor} border-l-4 rounded-lg 
         hover:shadow-lg transition-all duration-200 cursor-pointer
@@ -156,16 +157,19 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
               className="mt-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
           )}
-          
+
           {/* 썸네일 */}
           <div className="flex-shrink-0">
-            <img 
-              src={channel.thumbnailUrl || `https://placehold.co/64x64/EF4444/FFFFFF?text=${(channel.name || 'C').charAt(0)}`} 
+            <img
+              src={
+                channel.thumbnailUrl ||
+                `https://placehold.co/64x64/EF4444/FFFFFF?text=${(channel.name || 'C').charAt(0)}`
+              }
               alt={channel.name || ''}
               className={`w-14 h-14 rounded-lg object-cover ring-2 ${theme.ringColor} ring-offset-1`}
             />
           </div>
-          
+
           {/* 채널 정보 - 메인 콘텐츠 */}
           <div className="flex-1 min-w-0">
             {/* 첫 번째 줄: 채널명 + 플랫폼 배지 */}
@@ -179,31 +183,65 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
               >
                 {channel.name}
               </button>
-              <span className={`inline-flex px-1.5 py-0.5 text-xs font-medium text-white rounded-full bg-gradient-to-r ${theme.badgeColor} shadow-sm`}>
+              <span
+                className={`inline-flex px-1.5 py-0.5 text-xs font-medium text-white rounded-full bg-gradient-to-r ${theme.badgeColor} shadow-sm`}
+              >
                 {channel.platform}
               </span>
             </div>
-            
+
             {/* 두 번째 줄: 초컴팩트 정보 표시 */}
             <div className="flex items-center gap-3 mb-1 text-sm">
-              <span className="flex items-center text-blue-600" title="구독자 수">
-                👥<span className="ml-1 font-medium">{formatViews(channel.subscribers || 0)}</span>
+              <span
+                className="flex items-center text-blue-600"
+                title="구독자 수"
+              >
+                👥
+                <span className="ml-1 font-medium">
+                  {formatViews(channel.subscribers || 0)}
+                </span>
               </span>
-              <span className="flex items-center text-green-600" title="총 영상 수">
-                📹<span className="ml-1 font-medium">{channel.totalVideos || 0}</span>
+              <span
+                className="flex items-center text-green-600"
+                title="총 영상 수"
+              >
+                📹
+                <span className="ml-1 font-medium">
+                  {channel.totalVideos || 0}
+                </span>
               </span>
-              <span className="flex items-center text-purple-600" title="총 조회수">
-                📊<span className="ml-1 font-medium">{formatViews(channel.totalViews || 0)}</span>
+              <span
+                className="flex items-center text-purple-600"
+                title="총 조회수"
+              >
+                📊
+                <span className="ml-1 font-medium">
+                  {formatViews(channel.totalViews || 0)}
+                </span>
               </span>
-              <span className="flex items-center text-orange-600" title="채널 생성일">
-                📅<span className="ml-1 font-medium text-xs">{channel.publishedAt ? new Date(channel.publishedAt).toLocaleDateString('ko-KR') : '미상'}</span>
+              <span
+                className="flex items-center text-orange-600"
+                title="채널 생성일"
+              >
+                📅
+                <span className="ml-1 font-medium text-xs">
+                  {channel.publishedAt
+                    ? new Date(channel.publishedAt).toLocaleDateString('ko-KR')
+                    : '미상'}
+                </span>
               </span>
             </div>
 
             {/* 세 번째 줄: 마지막 확인 시간 */}
             <div className="flex items-center text-xs text-gray-500 mb-1">
               <span className="flex items-center" title="마지막 확인">
-                ⏰<span className="ml-1">마지막 확인: {channel.updatedAt ? formatLastChecked(channel.updatedAt) : '미확인'}</span>
+                ⏰
+                <span className="ml-1">
+                  마지막 확인:{' '}
+                  {channel.updatedAt
+                    ? formatLastChecked(channel.updatedAt)
+                    : '미확인'}
+                </span>
               </span>
             </div>
 
@@ -230,7 +268,7 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
               </div>
             )}
           </div>
-          
+
           {/* 삭제 버튼 - 오른쪽 고정 */}
           <div className="flex-shrink-0">
             <button
@@ -260,7 +298,7 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
       {/* 알림 모달 */}
       <NotificationModal
         isOpen={notification.show}
-        onClose={() => setNotification(prev => ({ ...prev, show: false }))}
+        onClose={() => setNotification((prev) => ({ ...prev, show: false }))}
         type={notification.type}
         title={notification.title}
         message={notification.message}

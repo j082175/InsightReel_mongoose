@@ -3,7 +3,6 @@ import { AppProvider, SettingsProvider } from './app/providers';
 import { PageRouter } from './app/routing';
 import { Header } from './shared/components/layout';
 
-
 function App() {
   return (
     <SettingsProvider>

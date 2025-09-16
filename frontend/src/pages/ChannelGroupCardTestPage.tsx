@@ -35,7 +35,7 @@ const ChannelGroupCardTestPage: React.FC = () => {
   // 테스트 액션 로그 추가
   const addTestLog = (action: string) => {
     const timestamp = new Date().toLocaleTimeString();
-    setTestActions(prev => [`[${timestamp}] ${action}`, ...prev.slice(0, 9)]);
+    setTestActions((prev) => [`[${timestamp}] ${action}`, ...prev.slice(0, 9)]);
   };
 
   // 테스트용 채널 그룹 데이터
@@ -50,7 +50,7 @@ const ChannelGroupCardTestPage: React.FC = () => {
       isActive: true,
       lastCollectedAt: '2024-09-15T06:30:00.000Z',
       createdAt: '2024-09-01T10:00:00.000Z',
-      updatedAt: '2024-09-15T06:30:00.000Z'
+      updatedAt: '2024-09-15T06:30:00.000Z',
     },
     {
       _id: 'group-2',
@@ -62,19 +62,38 @@ const ChannelGroupCardTestPage: React.FC = () => {
       isActive: true,
       lastCollectedAt: '2024-09-14T14:20:00.000Z',
       createdAt: '2024-09-05T15:30:00.000Z',
-      updatedAt: '2024-09-14T14:20:00.000Z'
+      updatedAt: '2024-09-14T14:20:00.000Z',
     },
     {
       _id: 'group-3',
       name: 'K-POP 댄스 트렌드',
       description: '최신 K-POP 댄스와 트렌드를 다루는 채널들',
       color: '#8B5CF6',
-      channels: ['UC301abc', 'UC302def', 'UC303ghi', 'UC304jkl', 'UC305mno', 'UC306pqr', 'UC307stu', 'UC308vwx'],
-      keywords: ['K-POP', '댄스', '트렌드', '안무', '커버댄스', '챌린지', '아이돌', '뮤직비디오', '안무영상'],
+      channels: [
+        'UC301abc',
+        'UC302def',
+        'UC303ghi',
+        'UC304jkl',
+        'UC305mno',
+        'UC306pqr',
+        'UC307stu',
+        'UC308vwx',
+      ],
+      keywords: [
+        'K-POP',
+        '댄스',
+        '트렌드',
+        '안무',
+        '커버댄스',
+        '챌린지',
+        '아이돌',
+        '뮤직비디오',
+        '안무영상',
+      ],
       isActive: true,
       lastCollectedAt: '2024-09-13T09:15:00.000Z',
       createdAt: '2024-08-20T12:00:00.000Z',
-      updatedAt: '2024-09-13T09:15:00.000Z'
+      updatedAt: '2024-09-13T09:15:00.000Z',
     },
     {
       _id: 'group-4',
@@ -86,7 +105,7 @@ const ChannelGroupCardTestPage: React.FC = () => {
       isActive: false,
       lastCollectedAt: '2024-09-10T16:45:00.000Z',
       createdAt: '2024-08-15T14:00:00.000Z',
-      updatedAt: '2024-09-10T16:45:00.000Z'
+      updatedAt: '2024-09-10T16:45:00.000Z',
     },
     {
       _id: 'group-5',
@@ -97,7 +116,7 @@ const ChannelGroupCardTestPage: React.FC = () => {
       keywords: ['신규', '테스트'],
       isActive: true,
       createdAt: '2024-09-15T08:00:00.000Z',
-      updatedAt: '2024-09-15T08:00:00.000Z'
+      updatedAt: '2024-09-15T08:00:00.000Z',
     },
     {
       _id: 'group-6',
@@ -105,12 +124,23 @@ const ChannelGroupCardTestPage: React.FC = () => {
       description: '15개 이상의 채널을 포함한 대규모 그룹으로 성능 테스트용',
       color: '#EC4899',
       channels: Array.from({ length: 18 }, (_, i) => `UC${600 + i}abc`),
-      keywords: ['대규모', '성능', '테스트', '다수', '채널', '관리', '효율', '최적화', '스케일', '확장성'],
+      keywords: [
+        '대규모',
+        '성능',
+        '테스트',
+        '다수',
+        '채널',
+        '관리',
+        '효율',
+        '최적화',
+        '스케일',
+        '확장성',
+      ],
       isActive: true,
       lastCollectedAt: '2024-09-12T11:30:00.000Z',
       createdAt: '2024-08-01T09:00:00.000Z',
-      updatedAt: '2024-09-12T11:30:00.000Z'
-    }
+      updatedAt: '2024-09-12T11:30:00.000Z',
+    },
   ];
 
   // 이벤트 핸들러
@@ -129,9 +159,9 @@ const ChannelGroupCardTestPage: React.FC = () => {
   const handleCollect = (group: ChannelGroup) => {
     addTestLog(`트렌딩 수집 시작: ${group.name}`);
     // 임시로 로딩 상태 시뮬레이션
-    setGroupStates(prev => ({ ...prev, [group._id!]: true }));
+    setGroupStates((prev) => ({ ...prev, [group._id!]: true }));
     setTimeout(() => {
-      setGroupStates(prev => ({ ...prev, [group._id!]: false }));
+      setGroupStates((prev) => ({ ...prev, [group._id!]: false }));
       addTestLog(`트렌딩 수집 완료: ${group.name}`);
     }, 3000);
   };
@@ -152,10 +182,11 @@ const ChannelGroupCardTestPage: React.FC = () => {
 
       <div className="container mx-auto p-8">
         <div className="max-w-6xl mx-auto space-y-8">
-
           {/* 테스트 컨트롤 */}
           <section className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">🎛️ 테스트 컨트롤</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              🎛️ 테스트 컨트롤
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
@@ -163,25 +194,33 @@ const ChannelGroupCardTestPage: React.FC = () => {
                 <div className="bg-gray-50 p-4 rounded space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">총 그룹 수:</span>
-                    <span className="font-medium text-gray-800">{testGroups.length}개</span>
+                    <span className="font-medium text-gray-800">
+                      {testGroups.length}개
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">활성 그룹:</span>
                     <span className="font-medium text-green-600">
-                      {testGroups.filter(g => g.isActive).length}개
+                      {testGroups.filter((g) => g.isActive).length}개
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">총 채널 수:</span>
                     <span className="font-medium text-blue-600">
-                      {testGroups.reduce((total, group) => total + group.channels.length, 0)}개
+                      {testGroups.reduce(
+                        (total, group) => total + group.channels.length,
+                        0
+                      )}
+                      개
                     </span>
                   </div>
                 </div>
               </div>
 
               <div>
-                <h3 className="font-semibold text-gray-800 mb-3">빠른 테스트</h3>
+                <h3 className="font-semibold text-gray-800 mb-3">
+                  빠른 테스트
+                </h3>
                 <div className="space-y-2">
                   <button
                     onClick={() => addTestLog('색상 테마 테스트')}
@@ -205,7 +244,9 @@ const ChannelGroupCardTestPage: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="font-semibold text-gray-800 mb-3">액션 테스트</h3>
+                <h3 className="font-semibold text-gray-800 mb-3">
+                  액션 테스트
+                </h3>
                 <div className="space-y-2">
                   <button
                     onClick={() => addTestLog('수집 액션 테스트')}
@@ -232,7 +273,9 @@ const ChannelGroupCardTestPage: React.FC = () => {
 
           {/* 채널 그룹 카드 표시 */}
           <section className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">📁 채널 그룹 카드 테스트</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              📁 채널 그룹 카드 테스트
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {testGroups.map((group) => (
@@ -250,11 +293,15 @@ const ChannelGroupCardTestPage: React.FC = () => {
 
           {/* 그룹 특징 분석 */}
           <section className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">📊 그룹 특징 분석</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              📊 그룹 특징 분석
+            </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="bg-red-50 p-4 rounded border border-red-200">
-                <h3 className="font-semibold text-red-800 mb-2">🔴 소규모 그룹 (2-5개 채널)</h3>
+                <h3 className="font-semibold text-red-800 mb-2">
+                  🔴 소규모 그룹 (2-5개 채널)
+                </h3>
                 <ul className="text-sm text-red-700 space-y-1">
                   <li>• 빠른 수집 속도</li>
                   <li>• 집중적인 모니터링</li>
@@ -264,7 +311,9 @@ const ChannelGroupCardTestPage: React.FC = () => {
               </div>
 
               <div className="bg-purple-50 p-4 rounded border border-purple-200">
-                <h3 className="font-semibold text-purple-800 mb-2">🟣 중간 그룹 (6-10개 채널)</h3>
+                <h3 className="font-semibold text-purple-800 mb-2">
+                  🟣 중간 그룹 (6-10개 채널)
+                </h3>
                 <ul className="text-sm text-purple-700 space-y-1">
                   <li>• 균형잡힌 커버리지</li>
                   <li>• 다양한 콘텐츠</li>
@@ -274,7 +323,9 @@ const ChannelGroupCardTestPage: React.FC = () => {
               </div>
 
               <div className="bg-green-50 p-4 rounded border border-green-200">
-                <h3 className="font-semibold text-green-800 mb-2">🟢 대규모 그룹 (10+개 채널)</h3>
+                <h3 className="font-semibold text-green-800 mb-2">
+                  🟢 대규모 그룹 (10+개 채널)
+                </h3>
                 <ul className="text-sm text-green-700 space-y-1">
                   <li>• 포괄적인 데이터</li>
                   <li>• 트렌드 파악 우수</li>
@@ -287,7 +338,9 @@ const ChannelGroupCardTestPage: React.FC = () => {
 
           {/* 색상 테마 가이드 */}
           <section className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">🎨 색상 테마 가이드</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              🎨 색상 테마 가이드
+            </h2>
 
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               <div className="text-center">
@@ -325,7 +378,9 @@ const ChannelGroupCardTestPage: React.FC = () => {
 
           {/* 테스트 로그 */}
           <section className="bg-white p-6 rounded-lg border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">📋 테스트 로그</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">
+              📋 테스트 로그
+            </h2>
 
             <div className="bg-gray-50 p-4 rounded h-64 overflow-y-auto">
               {testActions.length === 0 ? (
@@ -335,7 +390,10 @@ const ChannelGroupCardTestPage: React.FC = () => {
               ) : (
                 <div className="space-y-1">
                   {testActions.map((action, index) => (
-                    <div key={index} className="text-sm font-mono text-gray-700">
+                    <div
+                      key={index}
+                      className="text-sm font-mono text-gray-700"
+                    >
                       {action}
                     </div>
                   ))}
@@ -346,30 +404,37 @@ const ChannelGroupCardTestPage: React.FC = () => {
 
           {/* 사용법 안내 */}
           <section className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-            <h2 className="text-xl font-bold text-blue-900 mb-4">💡 사용법 안내</h2>
+            <h2 className="text-xl font-bold text-blue-900 mb-4">
+              💡 사용법 안내
+            </h2>
 
             <div className="space-y-3 text-sm text-blue-800">
               <p>
-                <strong>1. 기본 상호작용:</strong> 그룹 카드를 클릭하거나 액션 버튼을 테스트해보세요.
+                <strong>1. 기본 상호작용:</strong> 그룹 카드를 클릭하거나 액션
+                버튼을 테스트해보세요.
               </p>
               <p>
-                <strong>2. 수집 기능:</strong> 플레이 버튼(▶️)을 클릭하면 트렌딩 수집이 시작됩니다.
+                <strong>2. 수집 기능:</strong> 플레이 버튼(▶️)을 클릭하면 트렌딩
+                수집이 시작됩니다.
               </p>
               <p>
-                <strong>3. 편집/삭제:</strong> 설정 버튼(⚙️)과 더보기 버튼(⋮)으로 관리 기능을 테스트하세요.
+                <strong>3. 편집/삭제:</strong> 설정 버튼(⚙️)과 더보기
+                버튼(⋮)으로 관리 기능을 테스트하세요.
               </p>
               <p>
-                <strong>4. 그룹 크기별 차이:</strong> 소규모, 중간, 대규모 그룹의 서로 다른 특징을 확인하세요.
+                <strong>4. 그룹 크기별 차이:</strong> 소규모, 중간, 대규모
+                그룹의 서로 다른 특징을 확인하세요.
               </p>
               <p>
-                <strong>5. 색상 테마:</strong> 각 그룹의 색상 테마가 카테고리를 나타냅니다.
+                <strong>5. 색상 테마:</strong> 각 그룹의 색상 테마가 카테고리를
+                나타냅니다.
               </p>
               <p>
-                <strong>6. 키워드 표시:</strong> 많은 키워드가 있을 때 오버플로우 처리를 확인하세요.
+                <strong>6. 키워드 표시:</strong> 많은 키워드가 있을 때
+                오버플로우 처리를 확인하세요.
               </p>
             </div>
           </section>
-
         </div>
       </div>
     </div>

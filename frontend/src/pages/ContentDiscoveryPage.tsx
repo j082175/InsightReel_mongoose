@@ -31,7 +31,11 @@ const ContentDiscoveryPage: React.FC = () => {
       difficulty: 'Medium',
       category: '기술/IT',
       relatedKeywords: ['미드저니', 'Stable Diffusion', 'DALL-E', '인공지능'],
-      suggestedTopics: ['AI 그림 툴 비교', '무료 AI 그림 생성 방법', 'AI 아트 창작 과정']
+      suggestedTopics: [
+        'AI 그림 툴 비교',
+        '무료 AI 그림 생성 방법',
+        'AI 아트 창작 과정',
+      ],
     },
     {
       id: 2,
@@ -42,7 +46,11 @@ const ContentDiscoveryPage: React.FC = () => {
       difficulty: 'Easy',
       category: '라이프스타일',
       relatedKeywords: ['커피', '원두', '라떼아트', '홈브루잉'],
-      suggestedTopics: ['집에서 카페 음료 만들기', '원두 추천', '홈카페 인테리어']
+      suggestedTopics: [
+        '집에서 카페 음료 만들기',
+        '원두 추천',
+        '홈카페 인테리어',
+      ],
     },
     {
       id: 3,
@@ -53,7 +61,11 @@ const ContentDiscoveryPage: React.FC = () => {
       difficulty: 'Medium',
       category: '교육/학습',
       relatedKeywords: ['OpenAI', '프롬프트', '자동화', 'AI 도구'],
-      suggestedTopics: ['업무 자동화', '학습 도우미 활용', 'ChatGPT 프롬프트 팁']
+      suggestedTopics: [
+        '업무 자동화',
+        '학습 도우미 활용',
+        'ChatGPT 프롬프트 팁',
+      ],
     },
     {
       id: 4,
@@ -64,7 +76,7 @@ const ContentDiscoveryPage: React.FC = () => {
       difficulty: 'Easy',
       category: '건강/피트니스',
       relatedKeywords: ['명상', '스트레칭', '필라테스', '홈트'],
-      suggestedTopics: ['초보자 요가', '아침 요가 루틴', '스트레스 해소 요가']
+      suggestedTopics: ['초보자 요가', '아침 요가 루틴', '스트레스 해소 요가'],
     },
     {
       id: 5,
@@ -75,8 +87,12 @@ const ContentDiscoveryPage: React.FC = () => {
       difficulty: 'Hard',
       category: '재테크',
       relatedKeywords: ['주식', '부동산', '펀드', '경제'],
-      suggestedTopics: ['초보자 투자 가이드', '분산투자 전략', '경제 지표 읽는 법']
-    }
+      suggestedTopics: [
+        '초보자 투자 가이드',
+        '분산투자 전략',
+        '경제 지표 읽는 법',
+      ],
+    },
   ];
 
   useEffect(() => {
@@ -84,45 +100,45 @@ const ContentDiscoveryPage: React.FC = () => {
   }, []);
 
   // Use search hook for keyword and category search
-  const { searchTerm, setSearchTerm, filteredData: searchedTrends } = useSearch<TrendData>(
-    trends,
-    {
-      searchFields: ['keyword', 'category'],
-      defaultSearchTerm: ''
-    }
-  );
+  const {
+    searchTerm,
+    setSearchTerm,
+    filteredData: searchedTrends,
+  } = useSearch<TrendData>(trends, {
+    searchFields: ['keyword', 'category'],
+    defaultSearchTerm: '',
+  });
 
   // Use filter hook for platform, difficulty, and category filters
-  const { 
-    filters, 
-    updateFilter, 
-    filteredData: filteredTrends 
-  } = useFilter<TrendData>(
-    searchedTrends,
-    {
-      defaultFilters: {
-        platform: 'All',
-        difficulty: 'All',
-        category: 'All'
-      },
-      filterFunctions: {
-        platform: (item, value) => value === 'All' || item.platform === value,
-        difficulty: (item, value) => value === 'All' || item.difficulty === value,
-        category: (item, value) => value === 'All' || item.category === value
-      }
-    }
-  );
+  const {
+    filters,
+    updateFilter,
+    filteredData: filteredTrends,
+  } = useFilter<TrendData>(searchedTrends, {
+    defaultFilters: {
+      platform: 'All',
+      difficulty: 'All',
+      category: 'All',
+    },
+    filterFunctions: {
+      platform: (item, value) => value === 'All' || item.platform === value,
+      difficulty: (item, value) => value === 'All' || item.difficulty === value,
+      category: (item, value) => value === 'All' || item.category === value,
+    },
+  });
 
-
-  const allCategories = Array.from(new Set(trends.map(t => t.category)));
-
+  const allCategories = Array.from(new Set(trends.map((t) => t.category)));
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case 'Easy': return 'bg-green-100 text-green-700';
-      case 'Medium': return 'bg-yellow-100 text-yellow-700';
-      case 'Hard': return 'bg-red-100 text-red-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'Easy':
+        return 'bg-green-100 text-green-700';
+      case 'Medium':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'Hard':
+        return 'bg-red-100 text-red-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
     }
   };
 
@@ -131,7 +147,9 @@ const ContentDiscoveryPage: React.FC = () => {
     // 실제로는 API 호출
     setTimeout(() => {
       setIsAnalyzing(false);
-      alert(`"${keyword}" 트렌드 분석 완료! (실제로는 상세 분석 모달이 열립니다)`);
+      alert(
+        `"${keyword}" 트렌드 분석 완료! (실제로는 상세 분석 모달이 열립니다)`
+      );
     }, 2000);
   };
 
@@ -140,27 +158,37 @@ const ContentDiscoveryPage: React.FC = () => {
       {/* 페이지 헤더 */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">🔍 소재 발굴</h1>
-        <p className="text-gray-600">실시간 트렌드를 분석하여 새로운 콘텐츠 아이디어를 발견하세요</p>
+        <p className="text-gray-600">
+          실시간 트렌드를 분석하여 새로운 콘텐츠 아이디어를 발견하세요
+        </p>
       </div>
 
       {/* 통계 카드들 */}
-      <div className="grid gap-6 mb-8" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+      <div
+        className="grid gap-6 mb-8"
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}
+      >
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-500">발견된 트렌드</h3>
-          <p className="mt-2 text-3xl font-bold text-gray-900">{trends.length}</p>
+          <p className="mt-2 text-3xl font-bold text-gray-900">
+            {trends.length}
+          </p>
           <p className="mt-1 text-sm text-green-600">+12개 오늘</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-500">평균 성장률</h3>
           <p className="mt-2 text-3xl font-bold text-gray-900">
-            {Math.round(trends.reduce((sum, t) => sum + t.growth, 0) / trends.length)}%
+            {Math.round(
+              trends.reduce((sum, t) => sum + t.growth, 0) / trends.length
+            )}
+            %
           </p>
           <p className="mt-1 text-sm text-gray-600">지난 주 대비</p>
         </div>
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-500">쉬운 난이도</h3>
           <p className="mt-2 text-3xl font-bold text-green-600">
-            {trends.filter(t => t.difficulty === 'Easy').length}
+            {trends.filter((t) => t.difficulty === 'Easy').length}
           </p>
           <p className="mt-1 text-sm text-green-600">진입 장벽 낮음</p>
         </div>
@@ -210,8 +238,10 @@ const ContentDiscoveryPage: React.FC = () => {
               className="border-gray-300 rounded-md"
             >
               <option value="All">모든 카테고리</option>
-              {allCategories.map(category => (
-                <option key={category} value={category}>{category}</option>
+              {allCategories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
               ))}
             </select>
             <button
@@ -240,47 +270,68 @@ const ContentDiscoveryPage: React.FC = () => {
                     <h3 className="text-lg font-semibold text-gray-900">
                       {trend.keyword}
                     </h3>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      trend.platform === 'YOUTUBE' ? 'bg-red-100 text-red-700' :
-                      trend.platform === 'TIKTOK' ? 'bg-pink-100 text-pink-700' :
-                      trend.platform === 'INSTAGRAM' ? 'bg-purple-100 text-purple-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${
+                        trend.platform === 'YOUTUBE'
+                          ? 'bg-red-100 text-red-700'
+                          : trend.platform === 'TIKTOK'
+                            ? 'bg-pink-100 text-pink-700'
+                            : trend.platform === 'INSTAGRAM'
+                              ? 'bg-purple-100 text-purple-700'
+                              : 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
                       {trend.platform}
                     </span>
-                    <span className={`px-2 py-1 text-xs rounded-full ${getDifficultyColor(trend.difficulty)}`}>
-                      {trend.difficulty === 'Easy' ? '쉬움' : 
-                       trend.difficulty === 'Medium' ? '보통' : '어려움'}
+                    <span
+                      className={`px-2 py-1 text-xs rounded-full ${getDifficultyColor(trend.difficulty)}`}
+                    >
+                      {trend.difficulty === 'Easy'
+                        ? '쉬움'
+                        : trend.difficulty === 'Medium'
+                          ? '보통'
+                          : '어려움'}
                     </span>
                     <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">
                       {trend.category}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center gap-6 mb-3 text-sm text-gray-600">
                     <div className="flex items-center gap-1">
-                      <span className="text-green-600 font-medium">↗ +{trend.growth}%</span>
+                      <span className="text-green-600 font-medium">
+                        ↗ +{trend.growth}%
+                      </span>
                       <span>성장률</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="font-medium">{formatViews(trend.volume)}</span>
+                      <span className="font-medium">
+                        {formatViews(trend.volume)}
+                      </span>
                       <span>월간 검색</span>
                     </div>
                   </div>
-                  
+
                   <div className="mb-3">
-                    <h4 className="text-sm font-medium text-gray-700 mb-1">연관 키워드</h4>
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">
+                      연관 키워드
+                    </h4>
                     <div className="flex flex-wrap gap-1">
                       {trend.relatedKeywords.map((keyword, index) => (
-                        <span key={index} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
+                        <span
+                          key={index}
+                          className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded"
+                        >
                           #{keyword}
                         </span>
                       ))}
                     </div>
                   </div>
-                  
+
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-1">추천 주제</h4>
+                    <h4 className="text-sm font-medium text-gray-700 mb-1">
+                      추천 주제
+                    </h4>
                     <ul className="text-sm text-gray-600 list-disc list-inside">
                       {trend.suggestedTopics.slice(0, 2).map((topic, index) => (
                         <li key={index}>{topic}</li>
@@ -288,7 +339,7 @@ const ContentDiscoveryPage: React.FC = () => {
                     </ul>
                   </div>
                 </div>
-                
+
                 <div className="flex flex-col gap-2 ml-4">
                   <button
                     onClick={() => handleAnalyzeTrend(trend.keyword)}
@@ -313,13 +364,15 @@ const ContentDiscoveryPage: React.FC = () => {
           </div>
         )}
       </div>
-      
+
       {isAnalyzing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white p-6 rounded-lg shadow-xl">
             <div className="flex items-center space-x-3">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-              <span className="text-lg font-medium text-gray-900">트렌드 분석 중...</span>
+              <span className="text-lg font-medium text-gray-900">
+                트렌드 분석 중...
+              </span>
             </div>
           </div>
         </div>

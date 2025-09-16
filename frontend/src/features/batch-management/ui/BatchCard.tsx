@@ -9,7 +9,7 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Eye
+  Eye,
 } from 'lucide-react';
 import { formatDate } from '../../../shared/utils';
 
@@ -18,7 +18,7 @@ interface CollectionBatch {
   name: string;
   description?: string;
   collectionType: 'group' | 'channels';
-  targetGroups?: Array<{_id: string, name: string, color: string}>;
+  targetGroups?: Array<{ _id: string; name: string; color: string }>;
   targetChannels?: string[];
   criteria: {
     daysBack: number;
@@ -35,7 +35,7 @@ interface CollectionBatch {
   completedAt?: string;
   totalVideosFound: number;
   totalVideosSaved: number;
-  failedChannels?: Array<{channelName: string, error: string}>;
+  failedChannels?: Array<{ channelName: string; error: string }>;
   quotaUsed: number;
   stats?: {
     byPlatform: {
@@ -67,40 +67,57 @@ const BatchCard: React.FC<BatchCardProps> = ({
   onEdit,
   onDelete,
   onViewVideos,
-  onToggleStatus
+  onToggleStatus,
 }) => {
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending': return <Clock className="w-4 h-4 text-yellow-500" />;
-      case 'running': return <Play className="w-4 h-4 text-blue-500" />;
-      case 'completed': return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'failed': return <XCircle className="w-4 h-4 text-red-500" />;
-      default: return <AlertCircle className="w-4 h-4 text-gray-500" />;
+      case 'pending':
+        return <Clock className="w-4 h-4 text-yellow-500" />;
+      case 'running':
+        return <Play className="w-4 h-4 text-blue-500" />;
+      case 'completed':
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'failed':
+        return <XCircle className="w-4 h-4 text-red-500" />;
+      default:
+        return <AlertCircle className="w-4 h-4 text-gray-500" />;
     }
   };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'pending': return '대기중';
-      case 'running': return '실행중';
-      case 'completed': return '완료';
-      case 'failed': return '실패';
-      default: return status;
+      case 'pending':
+        return '대기중';
+      case 'running':
+        return '실행중';
+      case 'completed':
+        return '완료';
+      case 'failed':
+        return '실패';
+      default:
+        return status;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-50 border-yellow-200';
-      case 'running': return 'bg-blue-50 border-blue-200';
-      case 'completed': return 'bg-green-50 border-green-200';
-      case 'failed': return 'bg-red-50 border-red-200';
-      default: return 'bg-gray-50 border-gray-200';
+      case 'pending':
+        return 'bg-yellow-50 border-yellow-200';
+      case 'running':
+        return 'bg-blue-50 border-blue-200';
+      case 'completed':
+        return 'bg-green-50 border-green-200';
+      case 'failed':
+        return 'bg-red-50 border-red-200';
+      default:
+        return 'bg-gray-50 border-gray-200';
     }
   };
 
   return (
-    <div className={`bg-white rounded-lg border-2 ${getStatusColor(batch.status)} p-6`}>
+    <div
+      className={`bg-white rounded-lg border-2 ${getStatusColor(batch.status)} p-6`}
+    >
       {/* 헤더 */}
       <div className="flex items-start justify-between mb-4">
         <div>
@@ -122,11 +139,15 @@ const BatchCard: React.FC<BatchCardProps> = ({
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
           <div className="text-sm font-medium text-gray-700">수집 기간</div>
-          <div className="text-sm text-gray-500">최근 {batch.criteria.daysBack}일</div>
+          <div className="text-sm text-gray-500">
+            최근 {batch.criteria.daysBack}일
+          </div>
         </div>
         <div>
           <div className="text-sm font-medium text-gray-700">최소 조회수</div>
-          <div className="text-sm text-gray-500">{batch.criteria.minViews.toLocaleString()}</div>
+          <div className="text-sm text-gray-500">
+            {batch.criteria.minViews.toLocaleString()}
+          </div>
         </div>
       </div>
 
@@ -135,26 +156,38 @@ const BatchCard: React.FC<BatchCardProps> = ({
         <div className="text-sm font-medium text-gray-700 mb-2">영상 길이</div>
         <div className="flex gap-2">
           {batch.criteria.includeShorts && (
-            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">숏폼</span>
+            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
+              숏폼
+            </span>
           )}
           {batch.criteria.includeMidform && (
-            <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">미드폼</span>
+            <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
+              미드폼
+            </span>
           )}
           {batch.criteria.includeLongForm && (
-            <span className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded">롱폼</span>
+            <span className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded">
+              롱폼
+            </span>
           )}
         </div>
       </div>
 
       {/* 키워드 정보 */}
-      {(batch.criteria.keywords?.length || batch.criteria.excludeKeywords?.length) && (
+      {(batch.criteria.keywords?.length ||
+        batch.criteria.excludeKeywords?.length) && (
         <div className="mb-4">
           {batch.criteria.keywords?.length > 0 && (
             <div className="mb-2">
-              <div className="text-sm font-medium text-gray-700">포함 키워드</div>
+              <div className="text-sm font-medium text-gray-700">
+                포함 키워드
+              </div>
               <div className="flex flex-wrap gap-1 mt-1">
                 {batch.criteria.keywords.slice(0, 3).map((keyword, index) => (
-                  <span key={index} className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">
+                  <span
+                    key={index}
+                    className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded"
+                  >
                     {keyword}
                   </span>
                 ))}
@@ -168,13 +201,20 @@ const BatchCard: React.FC<BatchCardProps> = ({
           )}
           {batch.criteria.excludeKeywords?.length > 0 && (
             <div>
-              <div className="text-sm font-medium text-gray-700">제외 키워드</div>
+              <div className="text-sm font-medium text-gray-700">
+                제외 키워드
+              </div>
               <div className="flex flex-wrap gap-1 mt-1">
-                {batch.criteria.excludeKeywords.slice(0, 3).map((keyword, index) => (
-                  <span key={index} className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded">
-                    {keyword}
-                  </span>
-                ))}
+                {batch.criteria.excludeKeywords
+                  .slice(0, 3)
+                  .map((keyword, index) => (
+                    <span
+                      key={index}
+                      className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded"
+                    >
+                      {keyword}
+                    </span>
+                  ))}
                 {batch.criteria.excludeKeywords.length > 3 && (
                   <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">
                     +{batch.criteria.excludeKeywords.length - 3}
@@ -188,7 +228,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
 
       {/* 대상 그룹/채널 표시 */}
       <div className="flex flex-wrap gap-2 mb-4">
-        {batch.targetGroups?.map(group => (
+        {batch.targetGroups?.map((group) => (
           <span
             key={group._id}
             className="px-2 py-1 text-xs rounded-full text-white"
@@ -198,7 +238,10 @@ const BatchCard: React.FC<BatchCardProps> = ({
           </span>
         ))}
         {batch.targetChannels?.slice(0, 3).map((channel, index) => (
-          <span key={index} className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full">
+          <span
+            key={index}
+            className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full"
+          >
             {channel}
           </span>
         ))}
@@ -212,15 +255,21 @@ const BatchCard: React.FC<BatchCardProps> = ({
       {/* 통계 정보 */}
       <div className="grid grid-cols-3 gap-4 mb-4 pt-4 border-t border-gray-200">
         <div className="text-center">
-          <div className="text-lg font-semibold text-gray-800">{batch.totalVideosFound}</div>
+          <div className="text-lg font-semibold text-gray-800">
+            {batch.totalVideosFound}
+          </div>
           <div className="text-sm text-gray-500">발견</div>
         </div>
         <div className="text-center">
-          <div className="text-lg font-semibold text-green-600">{batch.totalVideosSaved}</div>
+          <div className="text-lg font-semibold text-green-600">
+            {batch.totalVideosSaved}
+          </div>
           <div className="text-sm text-gray-500">저장</div>
         </div>
         <div className="text-center">
-          <div className="text-lg font-semibold text-blue-600">{batch.quotaUsed}</div>
+          <div className="text-lg font-semibold text-blue-600">
+            {batch.quotaUsed}
+          </div>
           <div className="text-sm text-gray-500">할당량</div>
         </div>
       </div>
