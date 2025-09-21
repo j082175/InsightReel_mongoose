@@ -1,4 +1,4 @@
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, Play, MoreVertical } from 'lucide-react';
 import { formatViews, formatDate, getDurationLabel } from '../utils/formatters';
@@ -6,6 +6,7 @@ import { getDocumentId } from '../utils/idUtils';
 import { getPlatformStyle } from '../utils/platformStyles';
 import { getVideoId, getThumbnailUrl, getViewCount } from '../utils/videoUtils';
 import { Video } from '../types';
+import { DeleteConfirmModal } from '../ui';
 
 interface VideoCardProps {
   video: Video;
@@ -31,6 +32,9 @@ const VideoCard: React.FC<VideoCardProps> = memo(
     onSelectToggle,
     showArchiveInfo,
   }) => {
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
     const videoId = getVideoId(video);
     const documentId = getDocumentId(video); // MongoDB Document ID
     const thumbnailUrl = getThumbnailUrl(video);
@@ -77,10 +81,26 @@ const VideoCard: React.FC<VideoCardProps> = memo(
       (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        onDelete(video);
+        setShowDeleteModal(true);
       },
-      [onDelete, video]
+      []
     );
+
+    const handleConfirmDelete = useCallback(async () => {
+      setIsDeleting(true);
+      try {
+        await onDelete(video);
+        setShowDeleteModal(false);
+      } catch (error) {
+        console.error('비디오 삭제 실패:', error);
+      } finally {
+        setIsDeleting(false);
+      }
+    }, [onDelete, video]);
+
+    const handleCloseModal = useCallback(() => {
+      setShowDeleteModal(false);
+    }, []);
 
     const cardVariants = {
       initial: { opacity: 0, y: 20, scale: 0.95 },
@@ -132,6 +152,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(
     };
 
     return (
+      <>
       <motion.div
         className={`
           relative group bg-white rounded-lg shadow-sm cursor-pointer overflow-hidden
@@ -277,7 +298,17 @@ const VideoCard: React.FC<VideoCardProps> = memo(
           )}
         </motion.div>
       </motion.div>
-    );
+
+      {/* 삭제 확인 모달 - motion.div 바깥에 위치 */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={handleCloseModal}
+        onConfirm={handleConfirmDelete}
+        title="비디오 삭제"
+        message="이 비디오를 삭제하시겠습니까? 삭제된 비디오는 복구할 수 없습니다."
+        isLoading={isDeleting}
+      />
+    </>);
   }
 );
 

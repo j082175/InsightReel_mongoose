@@ -186,7 +186,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
               <div className="flex flex-wrap gap-1 mt-1">
                 {batch.criteria.keywords.slice(0, 3).map((keyword, index) => (
                   <span
-                    key={`batch-include-${keyword}-${index}`}
+                    key={`batch-${batch.id}-include-${keyword}-${index}`}
                     className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded"
                   >
                     {keyword}
@@ -210,7 +210,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
                   .slice(0, 3)
                   .map((keyword, index) => (
                     <span
-                      key={`batch-exclude-${keyword}-${index}`}
+                      key={`batch-${batch.id}-exclude-${keyword}-${index}`}
                       className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded"
                     >
                       {keyword}
@@ -229,9 +229,9 @@ const BatchCard: React.FC<BatchCardProps> = ({
 
       {/* 대상 그룹/채널 표시 */}
       <div className="flex flex-wrap gap-2 mb-4">
-        {batch.targetGroups?.map((group) => (
+        {batch.targetGroups?.map((group, index) => (
           <span
-            key={group.id}
+            key={getDocumentId(group) || `group-${index}`}
             className="px-2 py-1 text-xs rounded-full text-white"
             style={{ backgroundColor: group.color }}
           >
@@ -240,7 +240,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
         ))}
         {batch.targetChannels?.slice(0, 3).map((channel, index) => (
           <span
-            key={`target-channel-${channel}-${index}`}
+            key={`batch-${batch.id}-target-channel-${channel}-${index}`}
             className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full"
           >
             {channel}
@@ -311,7 +311,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
             <strong>실패한 채널 ({batch.failedChannels.length}개):</strong>
             <div className="mt-1">
               {batch.failedChannels.slice(0, 2).map((failed, index) => (
-                <div key={`failed-${failed.channelName}-${index}`} className="text-xs">
+                <div key={`batch-${batch.id}-failed-${failed.channelName}-${index}`} className="text-xs">
                   • {failed.channelName}: {failed.error}
                 </div>
               ))}

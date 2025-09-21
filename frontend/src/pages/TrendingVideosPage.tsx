@@ -345,15 +345,32 @@ const TrendingVideosPage: React.FC = () => {
           <VideoCard
             key={video._id}
             video={video as any}
-            onDelete={(deletedVideo) => {
-              // UI에서 삭제된 비디오 제거 (VideoCard가 이미 DB 삭제 처리함)
-              setVideos((prev) =>
-                prev.filter((v) => v._id !== deletedVideo._id)
-              );
-              setPagination((prev) => ({
-                ...prev,
-                total: prev.total - 1,
-              }));
+            onDelete={async (deletedVideo) => {
+              try {
+                // 실제 DB에서 삭제
+                const response = await fetch(`/api/trending/videos/${deletedVideo._id}`, {
+                  method: 'DELETE',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                });
+
+                if (!response.ok) {
+                  throw new Error('삭제 실패');
+                }
+
+                // UI에서 삭제된 비디오 제거
+                setVideos((prev) =>
+                  prev.filter((v) => v._id !== deletedVideo._id)
+                );
+                setPagination((prev) => ({
+                  ...prev,
+                  total: prev.total - 1,
+                }));
+              } catch (error) {
+                console.error('트렌딩 비디오 삭제 실패:', error);
+                alert('삭제 중 오류가 발생했습니다.');
+              }
             }}
           />
         ))}
