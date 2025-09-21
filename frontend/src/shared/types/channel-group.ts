@@ -8,11 +8,11 @@ export interface ChannelGroupChannel {
 }
 
 export interface ChannelGroup {
-  _id: string; // 필수 필드로 변경
+  _id?: string; // 생성 시에는 없을 수 있음
   name: string;
   description: string;
   color: string;
-  channels: ChannelGroupChannel[] | string[]; // 두 형태 모두 지원
+  channels: ChannelGroupChannel[]; // 객체 배열만 지원 (서버 스키마와 일치)
   keywords: string[];
   isActive: boolean;
   lastCollectedAt?: string;

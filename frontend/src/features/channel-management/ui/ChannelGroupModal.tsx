@@ -110,15 +110,30 @@ const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
   // 폼 제출
   const onFormSubmit = async (data: ChannelGroupFormData) => {
     try {
+      // 문자열 배열을 객체 배열로 변환 (서버 스키마에 맞춰)
+      const channelObjects = data.selectedChannels.map(channelId => {
+        const channel = availableChannels.find(ch => ch._id === channelId || ch.channelId === channelId);
+        return {
+          channelId: channel?.channelId || channelId,
+          name: channel?.name || `Channel ${channelId}`
+        };
+      });
+
       const groupData: ChannelGroup = {
         _id: editingGroup?._id,
         name: data.name,
         description: data.description || '',
         color: data.color,
-        channels: data.selectedChannels,
+        channels: channelObjects,
         keywords: data.keywords,
         isActive: data.isActive,
       };
+
+      console.log('🔍 ChannelGroupModal - 전송할 데이터:', {
+        originalSelectedChannels: data.selectedChannels,
+        convertedChannelObjects: channelObjects,
+        finalGroupData: groupData
+      });
 
       await onSave(groupData);
       onClose();

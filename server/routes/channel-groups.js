@@ -81,6 +81,43 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { name, description, color, channels, keywords, isActive } = req.body;
+
+    // 디버깅: 수신된 데이터 구조 확인
+    ServerLogger.info('🔍 채널 그룹 생성 요청 데이터:', {
+      name,
+      description,
+      color,
+      channels: {
+        type: typeof channels,
+        isArray: Array.isArray(channels),
+        length: channels?.length,
+        firstItem: channels?.[0],
+        data: channels
+      },
+      keywords,
+      isActive
+    });
+
+    // 서버에서 채널 데이터 변환 (방어적 프로그래밍)
+    let processedChannels = channels || [];
+    if (Array.isArray(channels)) {
+      processedChannels = channels.map(channel => {
+        // 이미 객체 형태인 경우
+        if (typeof channel === 'object' && channel.channelId) {
+          return channel;
+        }
+        // 문자열인 경우 객체로 변환
+        if (typeof channel === 'string') {
+          return {
+            channelId: channel,
+            name: `Channel ${channel.substring(0, 8)}...` // 기본 이름
+          };
+        }
+        return channel;
+      });
+    }
+
+    ServerLogger.info('🔄 변환된 채널 데이터:', processedChannels);
     
     // 필수 필드 검증
     if (!name || !name.trim()) {
@@ -105,7 +142,7 @@ router.post('/', async (req, res) => {
       name: name.trim(),
       description: description?.trim() || '',
       color: color || '#3B82F6',
-      channels: channels || [],
+      channels: processedChannels,
       keywords: keywords || [],
       isActive: isActive !== false
     });
