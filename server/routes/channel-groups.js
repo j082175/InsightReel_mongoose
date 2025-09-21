@@ -495,28 +495,53 @@ router.post('/collect-multiple', async (req, res) => {
           // Channel 컬렉션에서 실제 채널 정보 조회
           const Channel = require('../models/Channel');
           let actualChannel;
+          let channelIdentifier;
 
-          if (typeof channel === 'object' && channel.name) {
+          console.log('🔍 DEBUG: 채널 데이터 타입 및 구조:', typeof channel, channel);
+
+          if (typeof channel === 'object' && channel.channelId) {
+            // 이미 channelId가 있는 경우 바로 사용
+            channelIds.push(channel.channelId);
+            console.log('✅ DEBUG: 기존 채널 ID 사용:', channel.channelId);
+            continue;
+          } else if (typeof channel === 'object' && channel.name) {
             // 채널 이름으로 조회
+            channelIdentifier = channel.name;
             actualChannel = await Channel.findOne({ name: channel.name });
-            console.log('🔍 DEBUG: 채널명', channel.name, '→ 조회 결과:', actualChannel?.id);
+            console.log('🔍 DEBUG: 채널명으로 조회:', channel.name, '→ 결과:', actualChannel?.channelId);
           } else if (typeof channel === 'string') {
-            // 문자열인 경우도 채널 이름으로 조회
-            actualChannel = await Channel.findOne({ name: channel });
-            console.log('🔍 DEBUG: 채널명', channel, '→ 조회 결과:', actualChannel?.channelId);
+            // 문자열인 경우 - UC로 시작하면 채널 ID, 아니면 채널 이름
+            if (channel.startsWith('UC') && channel.length === 24) {
+              channelIds.push(channel);
+              console.log('✅ DEBUG: 직접 채널 ID 사용:', channel);
+              continue;
+            } else {
+              // 채널 이름으로 조회
+              channelIdentifier = channel;
+              actualChannel = await Channel.findOne({ name: channel });
+              console.log('🔍 DEBUG: 문자열 채널명으로 조회:', channel, '→ 결과:', actualChannel?.channelId);
+            }
           }
 
           if (actualChannel && actualChannel.channelId) {
             channelIds.push(actualChannel.channelId);
             console.log('✅ DEBUG: 실제 YouTube 채널 ID 사용:', actualChannel.channelId);
           } else {
-            console.log('❌ DEBUG: 채널을 찾을 수 없음:', channel.name || channel);
-            // 기존 값 그대로 사용 (실패할 것이지만 로깅 목적)
-            channelIds.push(channel.channelId || channel);
+            console.log('❌ DEBUG: 채널을 찾을 수 없음:', channelIdentifier);
+            // 방어적으로 원본 값 추출 시도
+            const fallbackId = channel.channelId || channel.id || channel;
+            if (fallbackId && fallbackId !== 'undefined') {
+              channelIds.push(fallbackId);
+              console.log('⚠️ DEBUG: Fallback ID 사용:', fallbackId);
+            }
           }
         } catch (error) {
           console.error('❌ DEBUG: 채널 조회 실패:', error.message);
-          channelIds.push(channel.id || channel);
+          const fallbackId = channel.channelId || channel.id || channel;
+          if (fallbackId && fallbackId !== 'undefined') {
+            channelIds.push(fallbackId);
+            console.log('⚠️ DEBUG: 에러 시 Fallback ID 사용:', fallbackId);
+          }
         }
       }
 
@@ -524,8 +549,10 @@ router.post('/collect-multiple', async (req, res) => {
       groupNames.push(group.name);
     }
 
-    // 중복 채널 제거
-    const uniqueChannels = [...new Set(allChannels)];
+    // 중복 채널 제거 및 undefined/null 필터링
+    const uniqueChannels = [...new Set(allChannels.filter(channel =>
+      channel && channel !== 'undefined' && channel !== 'null' && typeof channel === 'string'
+    ))];
 
     // 🔥 배치 생성 및 저장
     const batchName = `${groupNames.join(', ')} - ${new Date().toLocaleDateString('ko-KR')} ${new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`;
@@ -552,6 +579,15 @@ router.post('/collect-multiple', async (req, res) => {
 
     // 배치 시작
     await batch.start();
+
+    // 유효한 채널이 있는지 확인
+    if (uniqueChannels.length === 0) {
+      return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        error: ERROR_CODES.INVALID_REQUEST,
+        message: '선택된 그룹에서 유효한 채널 ID를 찾을 수 없습니다. 채널 데이터를 확인해주세요.'
+      });
+    }
 
     ServerLogger.info(`📊 다중 그룹 수집 대상: ${groupNames.join(', ')} (총 ${uniqueChannels.length}개 채널)`);
 

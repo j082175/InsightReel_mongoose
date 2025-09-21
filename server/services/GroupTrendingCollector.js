@@ -60,8 +60,19 @@ class GroupTrendingCollector {
       ServerLogger.info(`🎯 그룹 "${group.name}" 트렌딩 수집 시작 (${group.channels.length}개 채널)`);
 
       // HighViewCollector로 영상 수집 (채널 ID만 추출)
-      const channelIds = group.channels.map(channel => channel.channelId);
+      const channelIds = group.channels.map(channel => {
+        // 다양한 데이터 구조 지원을 위한 방어적 프로그래밍
+        const id = channel.channelId || channel.id || channel;
+        console.log(`🔍 DEBUG: 채널 데이터 구조 - 원본:`, channel, `추출된 ID: ${id}`);
+        return id;
+      }).filter(id => id && id !== 'undefined'); // undefined 값 필터링
+
       ServerLogger.info(`🔍 추출된 채널 IDs: ${channelIds.join(', ')}`);
+
+      if (channelIds.length === 0) {
+        throw new Error(`그룹 "${group.name}"에서 유효한 채널 ID를 찾을 수 없습니다`);
+      }
+
       const results = await this.highViewCollector.collectFromChannels(channelIds, options);
       
       // 수집된 영상들을 TrendingVideo로 변환 및 저장

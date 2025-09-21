@@ -1,45 +1,5 @@
 [
   {
-    "timestamp": "2025-09-13T10:47:39.916Z",
-    "date": "2025. 9. 13.",
-    "totalChannels": 1,
-    "processedChannels": 0,
-    "totalVideos": 0,
-    "trendingVideos": 0,
-    "quotaUsed": 0,
-    "errors": [
-      {
-        "channelId": "영화미슐랭",
-        "error": "잘못된 채널 ID 형식: 영화미슐랭"
-      }
-    ],
-    "processingTimeMs": 108,
-    "processingTimeSeconds": "0.1",
-    "avgTimePerChannel": 0,
-    "trendingRate": 0,
-    "quotaEfficiency": 0
-  },
-  {
-    "timestamp": "2025-09-13T10:47:42.021Z",
-    "date": "2025. 9. 13.",
-    "totalChannels": 1,
-    "processedChannels": 0,
-    "totalVideos": 0,
-    "trendingVideos": 0,
-    "quotaUsed": 0,
-    "errors": [
-      {
-        "channelId": "영화미슐랭",
-        "error": "잘못된 채널 ID 형식: 영화미슐랭"
-      }
-    ],
-    "processingTimeMs": 110,
-    "processingTimeSeconds": "0.1",
-    "avgTimePerChannel": 0,
-    "trendingRate": 0,
-    "quotaEfficiency": 0
-  },
-  {
     "timestamp": "2025-09-13T10:47:48.113Z",
     "date": "2025. 9. 13.",
     "totalChannels": 1,
@@ -1065,5 +1025,45 @@
     "avgTimePerChannel": "715",
     "trendingRate": "100.0",
     "quotaEfficiency": "0.01"
+  },
+  {
+    "timestamp": "2025-09-21T16:39:08.885Z",
+    "date": "2025. 9. 22.",
+    "totalChannels": 1,
+    "processedChannels": 0,
+    "totalVideos": 0,
+    "trendingVideos": 0,
+    "quotaUsed": 0,
+    "errors": [
+      {
+        "error": "잘못된 채널 ID 형식: undefined"
+      }
+    ],
+    "videos": [],
+    "processingTimeMs": 112,
+    "processingTimeSeconds": "0.1",
+    "avgTimePerChannel": 0,
+    "trendingRate": 0,
+    "quotaEfficiency": 0
+  },
+  {
+    "timestamp": "2025-09-21T16:43:24.378Z",
+    "date": "2025. 9. 22.",
+    "totalChannels": 1,
+    "processedChannels": 0,
+    "totalVideos": 0,
+    "trendingVideos": 0,
+    "quotaUsed": 0,
+    "errors": [
+      {
+        "error": "잘못된 채널 ID 형식: undefined"
+      }
+    ],
+    "videos": [],
+    "processingTimeMs": 114,
+    "processingTimeSeconds": "0.1",
+    "avgTimePerChannel": 0,
+    "trendingRate": 0,
+    "quotaEfficiency": 0
   }
 ]

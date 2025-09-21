@@ -118,7 +118,7 @@ const ChannelManagementPage: React.FC = () => {
   const handleChannelDelete = useCallback(
     async (channel: Channel) => {
       try {
-        await deleteChannelMutation.mutateAsync(channel.id || channel.id);
+        await deleteChannelMutation.mutateAsync(channel._id || channel.channelId);
       } catch (error) {
         throw error;
       }
