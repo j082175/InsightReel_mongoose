@@ -2,6 +2,7 @@ import React, { memo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, Play, MoreVertical } from 'lucide-react';
 import { formatViews, formatDate, getDurationLabel } from '../utils/formatters';
+import { getDocumentId } from '../utils/idUtils';
 import { getPlatformStyle } from '../utils/platformStyles';
 import { getVideoId, getThumbnailUrl, getViewCount } from '../utils/videoUtils';
 import { Video } from '../types';
@@ -31,6 +32,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(
     showArchiveInfo,
   }) => {
     const videoId = getVideoId(video);
+    const documentId = getDocumentId(video); // MongoDB Document ID
     const thumbnailUrl = getThumbnailUrl(video);
     const viewCount = getViewCount(video);
 
@@ -39,14 +41,14 @@ const VideoCard: React.FC<VideoCardProps> = memo(
         if (isSelectMode) {
           e.preventDefault();
           e.stopPropagation();
-          if (onSelectToggle) {
-            onSelectToggle(videoId);
+          if (onSelectToggle && documentId) {
+            onSelectToggle(documentId);
           }
         } else if (onClick) {
           onClick(video);
         }
       },
-      [isSelectMode, onSelectToggle, videoId, onClick, video]
+      [isSelectMode, onSelectToggle, documentId, onClick, video]
     );
 
     const handleInfoClick = useCallback(
@@ -150,7 +152,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(
             <input
               type="checkbox"
               checked={isSelected || false}
-              onChange={() => onSelectToggle && onSelectToggle(videoId)}
+              onChange={() => onSelectToggle && documentId && onSelectToggle(documentId)}
               className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
               onClick={(e) => e.stopPropagation()}
             />

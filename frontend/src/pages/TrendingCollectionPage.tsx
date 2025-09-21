@@ -11,7 +11,7 @@ import { SearchBar, ActionBar, VideoCard } from '../shared/components';
 import { BulkCollectionModal } from '../features/trending-collection';
 import { VideoModal, VideoOnlyModal } from '../features/video-analysis';
 import { DeleteConfirmationModal } from '../shared/ui';
-import { formatDate, formatViews } from '../shared/utils';
+import { formatDate, formatViews, getDocumentId, isItemSelected } from '../shared/utils';
 import toast from 'react-hot-toast';
 import { useTrendingStore } from '../features/trending-collection/model/trendingStore';
 import { Video } from '../shared/types';
@@ -77,10 +77,13 @@ const TrendingCollectionPage: React.FC = () => {
   const handleVideoClick = useCallback(
     (video: Video) => {
       if (isSelectMode) {
-        if (selectedVideos.has(video._id)) {
-          deselectVideo(video._id);
+        const videoId = getDocumentId(video);
+        if (!videoId) return;
+
+        if (selectedVideos.has(videoId)) {
+          deselectVideo(videoId);
         } else {
-          selectVideo(video._id);
+          selectVideo(videoId);
         }
       } else {
         if (video.platform === PLATFORMS.YOUTUBE) {
@@ -120,7 +123,13 @@ const TrendingCollectionPage: React.FC = () => {
   const handleVideoDelete = useCallback(
     async (video: Video) => {
       try {
-        const response = await fetch(`/api/trending/videos/${video._id}`, {
+        const videoId = getDocumentId(video);
+        if (!videoId) {
+          console.error('❌ 비디오 ID가 없습니다:', video);
+          return;
+        }
+
+        const response = await fetch(`/api/trending/videos/${videoId}`, {
           method: 'DELETE',
         });
 
@@ -383,7 +392,7 @@ const TrendingCollectionPage: React.FC = () => {
                 <div className="max-h-40 overflow-y-auto border rounded-md p-2">
                   {channelGroups?.map((group) => (
                     <label
-                      key={group._id}
+                      key={getDocumentId(group)}
                       className="flex items-center p-2 hover:bg-gray-50 rounded"
                     >
                       <input
@@ -576,13 +585,13 @@ const TrendingCollectionPage: React.FC = () => {
               <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-6">
                 {trendingVideos?.map((video) => (
                   <VideoCard
-                    key={video._id}
+                    key={getDocumentId(video)}
                     video={video}
                     onClick={handleVideoClick}
                     onDelete={handleVideoDelete}
                     onInfoClick={setSelectedVideo}
                     isSelectMode={isSelectMode}
-                    isSelected={selectedVideos.has(video._id)}
+                    isSelected={isItemSelected(selectedVideos, video)}
                     onSelectToggle={handleSelectToggle}
                   />
                 ))}

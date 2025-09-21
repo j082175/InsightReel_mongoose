@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import BatchCard from '../features/batch-management/ui/BatchCard';
+import { getDocumentId } from '../shared/utils';
 
 interface CollectionBatch {
   _id: string;
@@ -485,7 +486,7 @@ const BatchCardTestPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {getDisplayBatches().map((batch) => (
                 <BatchCard
-                  key={batch._id}
+                  key={getDocumentId(batch)}
                   batch={batch}
                   onEdit={handleEdit}
                   onDelete={handleDelete}

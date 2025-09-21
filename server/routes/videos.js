@@ -149,6 +149,15 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { fromTrending = false } = req.query;
+
+    // ID 유효성 검사
+    if (!id || id === 'undefined' || id === 'null') {
+      return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        error: ERROR_CODES.INVALID_REQUEST,
+        message: '유효하지 않은 비디오 ID입니다.'
+      });
+    }
     
     ServerLogger.info(`🗑️ 영상 삭제 요청: ${id} (fromTrending: ${fromTrending})`);
     

@@ -8,7 +8,7 @@ import {
   ChannelGroupCard,
 } from '../features/channel-management';
 import { DeleteConfirmationModal } from '../shared/ui';
-import { formatViews } from '../shared/utils';
+import { formatViews, getDocumentId } from '../shared/utils';
 import toast from 'react-hot-toast';
 import {
   useChannels,
@@ -207,7 +207,12 @@ const ChannelManagementPage: React.FC = () => {
   const handleGroupDelete = useCallback(
     async (group: any) => {
       try {
-        await deleteChannelGroupMutation.mutateAsync(group.id);
+        const groupId = getDocumentId(group);
+      if (!groupId) {
+        console.error('❌ 그룹 ID가 없습니다:', group);
+        return;
+      }
+      await deleteChannelGroupMutation.mutateAsync(groupId);
       } catch (error) {
         throw error;
       }
@@ -383,7 +388,7 @@ const ChannelManagementPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {channelGroups.map((group) => (
                     <ChannelGroupCard
-                      key={group.id}
+                      key={getDocumentId(group)}
                       group={group}
                       onEdit={handleGroupEdit}
                       onDelete={handleGroupDelete}

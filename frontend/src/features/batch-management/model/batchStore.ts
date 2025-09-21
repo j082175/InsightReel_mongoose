@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Video, FilterState } from '../../../shared/types';
+import { getDocumentId } from '../../../shared/utils';
 import {
   useBatches,
   useCreateBatch,
@@ -166,7 +167,10 @@ export const useBatchStore = (): BatchStoreState & BatchStoreActions => {
   const filteredBatches = useMemo(() => {
     const batchesArray = Array.isArray(batches) ? batches : [];
     let filtered = batchesArray.filter(
-      (batch) => !state.deletedBatchIds.has(batch._id)
+      (batch) => {
+        const batchId = getDocumentId(batch);
+        return batchId ? !state.deletedBatchIds.has(batchId) : false;
+      }
     );
 
     if (state.searchTerm) {
@@ -268,7 +272,9 @@ export const useBatchStore = (): BatchStoreState & BatchStoreActions => {
   }, []);
 
   const selectAllBatches = useCallback(() => {
-    const allBatchIds = filteredBatches.map((batch) => batch._id);
+    const allBatchIds = filteredBatches
+      .map((batch) => getDocumentId(batch))
+      .filter((id): id is string => id !== undefined);
     setState((prev) => ({
       ...prev,
       selectedBatches: new Set(allBatchIds),

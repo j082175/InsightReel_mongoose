@@ -16,7 +16,7 @@ import { VideoManagement } from '../features';
 import { AnimatedList, FadeIn } from '../shared/components/animations';
 
 import { PLATFORMS } from '../shared/types/api';
-import { formatViews } from '../shared/utils';
+import { formatViews, getDocumentId, isItemSelected } from '../shared/utils';
 import { getVideoId, getViewCount } from '../shared/utils/videoUtils';
 import { ActionBar } from '../shared/components';
 
@@ -69,10 +69,13 @@ const DashboardPage: React.FC = () => {
 
   const handleVideoClick = (video: Video) => {
     if (isSelectMode) {
-      if (selectedVideos.has(video._id)) {
-        deselectVideo(video._id);
+      const videoId = getDocumentId(video);
+      if (!videoId) return;
+
+      if (selectedVideos.has(videoId)) {
+        deselectVideo(videoId);
       } else {
-        selectVideo(video._id);
+        selectVideo(videoId);
       }
     } else {
       if (video.platform === PLATFORMS.YOUTUBE) {
@@ -101,7 +104,12 @@ const DashboardPage: React.FC = () => {
 
   const handleVideoDelete = async (video: Video) => {
     try {
-      await deleteVideo(video._id);
+      const videoId = getDocumentId(video);
+      if (!videoId) {
+        console.error('❌ 비디오 ID가 없습니다:', video);
+        return;
+      }
+      await deleteVideo(videoId);
       toast.success(`비디오 "${video.title}" 삭제 완료`);
     } catch (error) {
       toast.error(`비디오 삭제 실패: ${error}`);
@@ -268,14 +276,14 @@ const DashboardPage: React.FC = () => {
               >
                 {videos.map((video) => (
                   <VideoCard
-                    key={video._id}
+                    key={getDocumentId(video)}
                     video={video}
                     onClick={handleVideoClick}
                     onDelete={handleVideoDelete}
                     onInfoClick={setSelectedVideo}
                     onChannelClick={setChannelToAnalyze}
                     isSelectMode={isSelectMode}
-                    isSelected={selectedVideos.has(video._id)}
+                    isSelected={isItemSelected(selectedVideos, video)}
                     onSelectToggle={handleSelectToggle}
                   />
                 ))}

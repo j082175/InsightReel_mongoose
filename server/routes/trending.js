@@ -152,6 +152,15 @@ router.get('/videos/:id', async (req, res) => {
 // DELETE /api/trending/videos/:id - 트렌딩 영상 삭제
 router.delete('/videos/:id', async (req, res) => {
   try {
+    // ID 유효성 검사
+    if (!req.params.id || req.params.id === 'undefined' || req.params.id === 'null') {
+      return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        error: ERROR_CODES.INVALID_REQUEST,
+        message: '유효하지 않은 트렌딩 비디오 ID입니다.'
+      });
+    }
+
     const video = await TrendingVideo.findById(req.params.id);
     
     if (!video) {

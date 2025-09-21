@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { VideoCard } from '../shared/components';
 import { Video } from '../shared/types';
+import { getDocumentId, isItemSelected } from '../shared/utils';
 
 /**
  * VideoCardTestPage - VideoCard 컴포넌트 전용 테스트 페이지
@@ -116,7 +117,8 @@ const VideoCardTestPage: React.FC = () => {
 
   // 카드 클릭
   const handleCardClick = (video: Video) => {
-    setClickedVideo(video._id);
+    const videoId = getDocumentId(video);
+    if (videoId) setClickedVideo(videoId);
     setTimeout(() => setClickedVideo(null), 1000); // 1초 후 초기화
   };
 
@@ -192,13 +194,13 @@ const VideoCardTestPage: React.FC = () => {
                   </h3>
                   <VideoCard
                     video={video}
-                    isSelected={selectedVideos.has(video._id)}
+                    isSelected={isItemSelected(selectedVideos, video)}
                     isSelectMode={isSelectionMode}
                     onSelectToggle={handleToggleSelection}
                     onClick={handleCardClick}
                     onDelete={handleVideoDelete}
                   />
-                  {clickedVideo === video._id && (
+                  {clickedVideo === getDocumentId(video) && (
                     <div className="p-2 bg-green-100 text-green-800 rounded text-sm">
                       ✅ 카드 클릭됨!
                     </div>
@@ -232,9 +234,9 @@ const VideoCardTestPage: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {videos.map((video) => (
                       <VideoCard
-                        key={video._id}
+                        key={getDocumentId(video)}
                         video={video}
-                        isSelected={selectedVideos.has(video._id)}
+                        isSelected={isItemSelected(selectedVideos, video)}
                         isSelectMode={isSelectionMode}
                         onSelectToggle={handleToggleSelection}
                         onClick={handleCardClick}
@@ -285,9 +287,9 @@ const VideoCardTestPage: React.FC = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {videos.map((video) => (
                       <VideoCard
-                        key={video._id}
+                        key={getDocumentId(video)}
                         video={video}
-                        isSelected={selectedVideos.has(video._id)}
+                        isSelected={isItemSelected(selectedVideos, video)}
                         isSelectMode={isSelectionMode}
                         onSelectToggle={handleToggleSelection}
                         onClick={handleCardClick}
@@ -397,9 +399,9 @@ const VideoCardTestPage: React.FC = () => {
               <div className="grid grid-cols-1 gap-4 max-w-sm">
                 {testVideos.slice(0, 2).map((video) => (
                   <VideoCard
-                    key={video._id}
+                    key={getDocumentId(video)}
                     video={video}
-                    isSelected={selectedVideos.has(video._id)}
+                    isSelected={isItemSelected(selectedVideos, video)}
                     isSelectMode={isSelectionMode}
                     onSelectToggle={handleToggleSelection}
                     onClick={handleCardClick}
@@ -416,9 +418,9 @@ const VideoCardTestPage: React.FC = () => {
               <div className="grid grid-cols-2 gap-4 max-w-2xl">
                 {testVideos.slice(0, 4).map((video) => (
                   <VideoCard
-                    key={video._id}
+                    key={getDocumentId(video)}
                     video={video}
-                    isSelected={selectedVideos.has(video._id)}
+                    isSelected={isItemSelected(selectedVideos, video)}
                     isSelectMode={isSelectionMode}
                     onSelectToggle={handleToggleSelection}
                     onClick={handleCardClick}
@@ -435,9 +437,9 @@ const VideoCardTestPage: React.FC = () => {
               <div className="grid grid-cols-4 gap-4">
                 {testVideos.slice(0, 4).map((video) => (
                   <VideoCard
-                    key={video._id}
+                    key={getDocumentId(video)}
                     video={video}
-                    isSelected={selectedVideos.has(video._id)}
+                    isSelected={isItemSelected(selectedVideos, video)}
                     isSelectMode={isSelectionMode}
                     onSelectToggle={handleToggleSelection}
                     onClick={handleCardClick}

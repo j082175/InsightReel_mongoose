@@ -236,6 +236,15 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { removeFromGroups = false } = req.query;
+
+    // ID 유효성 검사
+    if (!id || id === 'undefined' || id === 'null') {
+      return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        error: ERROR_CODES.INVALID_REQUEST,
+        message: '유효하지 않은 채널 ID입니다.'
+      });
+    }
     
     ServerLogger.info(`🗑️ 채널 삭제 요청: ${id}`);
     

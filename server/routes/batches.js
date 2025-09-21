@@ -206,6 +206,15 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/batches/:id - 배치 삭제
 router.delete('/:id', async (req, res) => {
   try {
+    // ID 유효성 검사
+    if (!req.params.id || req.params.id === 'undefined' || req.params.id === 'null') {
+      return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        error: ERROR_CODES.INVALID_REQUEST,
+        message: '유효하지 않은 배치 ID입니다.'
+      });
+    }
+
     const batch = await CollectionBatch.findById(req.params.id);
     
     if (!batch) {

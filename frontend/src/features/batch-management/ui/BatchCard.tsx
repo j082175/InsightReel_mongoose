@@ -11,7 +11,7 @@ import {
   AlertCircle,
   Eye,
 } from 'lucide-react';
-import { formatDate } from '../../../shared/utils';
+import { formatDate, getDocumentId } from '../../../shared/utils';
 
 interface CollectionBatch {
   id: string;
@@ -69,6 +69,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
   onViewVideos,
   onToggleStatus,
 }) => {
+  const batchId = getDocumentId(batch);
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending':
@@ -329,7 +330,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
         <div className="flex gap-2">
           {batch.status === 'completed' && batch.totalVideosSaved > 0 && (
             <button
-              onClick={() => onViewVideos(batch.id)}
+              onClick={() => batchId && onViewVideos(batchId)}
               className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
             >
               <Eye className="w-4 h-4" />
@@ -341,7 +342,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
         <div className="flex gap-2">
           {(batch.status === 'pending' || batch.status === 'failed') && (
             <button
-              onClick={() => onToggleStatus(batch.id, 'start')}
+              onClick={() => batchId && onToggleStatus(batchId, 'start')}
               className="flex items-center gap-1 px-3 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700"
             >
               <Play className="w-4 h-4" />
@@ -351,7 +352,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
 
           {batch.status === 'running' && (
             <button
-              onClick={() => onToggleStatus(batch.id, 'pause')}
+              onClick={() => batchId && onToggleStatus(batchId, 'pause')}
               className="flex items-center gap-1 px-3 py-2 text-sm bg-yellow-600 text-white rounded hover:bg-yellow-700"
             >
               <Pause className="w-4 h-4" />
@@ -368,7 +369,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
           </button>
 
           <button
-            onClick={() => onDelete(batch.id)}
+            onClick={() => batchId && onDelete(batchId)}
             className="flex items-center gap-1 px-3 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700"
           >
             <Trash2 className="w-4 h-4" />

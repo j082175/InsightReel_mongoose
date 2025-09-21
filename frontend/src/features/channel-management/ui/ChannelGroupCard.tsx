@@ -2,6 +2,7 @@ import React, { memo, useCallback, useState } from 'react';
 import { MoreVertical, PlayCircle, Settings } from 'lucide-react';
 import { DeleteConfirmModal, NotificationModal } from '../../../shared/ui';
 import { FRONTEND_CONSTANTS } from '../../../shared/config/constants';
+import { getDocumentId } from '../../../shared/utils';
 
 interface ChannelGroup {
   _id?: string;
@@ -26,6 +27,7 @@ interface ChannelGroupCardProps {
 
 const ChannelGroupCard: React.FC<ChannelGroupCardProps> = memo(
   ({ group, onClick, onEdit, onDelete, onCollect }) => {
+    const groupId = getDocumentId(group);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isCollecting, setIsCollecting] = useState(false);
@@ -111,8 +113,13 @@ const ChannelGroupCard: React.FC<ChannelGroupCardProps> = memo(
         try {
           console.log(`🎯 채널 그룹 "${group.name}" 트렌딩 수집 시작`);
 
+          if (!groupId) {
+            console.error('❌ 그룹 ID가 없습니다:', group);
+            return;
+          }
+
           const response = await fetch(
-            `http://localhost:3000/api/channel-groups/${group._id}/collect`,
+            `http://localhost:3000/api/channel-groups/${groupId}/collect`,
             {
               method: 'POST',
               headers: {

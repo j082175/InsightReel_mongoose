@@ -7,7 +7,7 @@ import {
   BatchVideoList,
 } from '../features/batch-management';
 import { DeleteConfirmationModal } from '../shared/ui';
-import { formatDate, formatViews } from '../shared/utils';
+import { formatDate, formatViews, getDocumentId, isItemSelected } from '../shared/utils';
 import {
   useBatchStore,
   CollectionBatch,
@@ -61,14 +61,22 @@ const BatchManagementPage: React.FC = () => {
   const handleBatchClick = useCallback(
     (batch: CollectionBatch) => {
       if (isSelectMode) {
-        if (selectedBatches.has(batch._id)) {
-          deselectBatch(batch._id);
+        const batchId = getDocumentId(batch);
+        if (!batchId) return;
+
+        if (selectedBatches.has(batchId)) {
+          deselectBatch(batchId);
         } else {
-          selectBatch(batch._id);
+          selectBatch(batchId);
         }
       } else {
         // 배치 상세 보기 또는 영상 목록 열기
-        openVideoList(batch._id);
+        const batchId = getDocumentId(batch);
+      if (!batchId) {
+        console.error('❌ 배치 ID가 없습니다:', batch);
+        return;
+      }
+      openVideoList(batchId);
       }
     },
     [isSelectMode, selectedBatches, deselectBatch, selectBatch, openVideoList]
@@ -99,7 +107,12 @@ const BatchManagementPage: React.FC = () => {
   const handleBatchDelete = useCallback(
     async (batch: CollectionBatch) => {
       try {
-        await deleteBatch(batch._id);
+        const batchId = getDocumentId(batch);
+      if (!batchId) {
+        console.error('❌ 배치 ID가 없습니다:', batch);
+        return;
+      }
+      await deleteBatch(batchId);
         toast.success(`배치 "${batch.name}" 삭제 완료`);
       } catch (error) {
         toast.error(`배치 삭제 실패: ${error}`);
@@ -308,7 +321,7 @@ const BatchManagementPage: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {safeBatches.map((batch) => (
                   <BatchCard
-                    key={batch._id}
+                    key={getDocumentId(batch)}
                     batch={batch}
                     onEdit={handleEditBatch}
                     onDelete={(batchId) =>

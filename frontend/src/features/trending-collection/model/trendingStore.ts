@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Channel, Video } from '../../../shared/types';
+import { getDocumentId } from '../../../shared/utils';
 import {
   useChannelGroups,
   useChannels,
@@ -437,7 +438,9 @@ export const useTrendingStore = (): TrendingStoreState &
   }, []);
 
   const selectAllVideos = useCallback(() => {
-    const allVideoIds = filteredVideos.map((video) => video._id);
+    const allVideoIds = filteredVideos
+      .map((video) => getDocumentId(video))
+      .filter((id): id is string => id !== undefined);
     setState((prev) => ({
       ...prev,
       selectedVideos: new Set(allVideoIds),
