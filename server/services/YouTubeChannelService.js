@@ -149,7 +149,94 @@ class YouTubeChannelService {
      */
     async searchChannelByName(channelName) {
         try {
-            // 1. 먼저 검색 API로 채널 찾기
+            ServerLogger.info(`🔍 채널명 검색 최적화 시작: ${channelName}`);
+
+            // 1. forHandle로 시도 (1 unit) - @없이도 핸들명 검색 가능
+            let channelData = await this.getChannelByHandle(channelName);
+            if (channelData) {
+                ServerLogger.success(`✅ forHandle로 채널 발견: ${channelData.channelName}`);
+                return channelData;
+            }
+
+            // 2. forUsername으로 시도 (1 unit) - 구 방식 사용자명
+            channelData = await this.getChannelByUsername(channelName);
+            if (channelData) {
+                ServerLogger.success(`✅ forUsername으로 채널 발견: ${channelData.channelName}`);
+                return channelData;
+            }
+
+            // 3. 최후의 수단: search.list (100 units) - 로그 경고 포함
+            ServerLogger.warn(`⚠️ 고비용 search.list API 사용: ${channelName} (100 units 소모)`);
+            return await this.fallbackSearch(channelName);
+
+        } catch (error) {
+            if (error.response?.status === 403) {
+                ServerLogger.error('❌ YouTube API 할당량 초과 또는 권한 없음');
+            }
+            throw error;
+        }
+    }
+
+    /**
+     * forHandle로 채널 검색 (1 unit)
+     */
+    async getChannelByHandle(handle) {
+        try {
+            // @ 기호 제거 후 시도
+            const cleanHandle = handle.replace('@', '');
+
+            const response = await axios.get(`${this.baseURL}/channels`, {
+                params: {
+                    key: await this.getApiKey(),
+                    part: 'snippet,statistics',
+                    forHandle: cleanHandle,
+                    maxResults: 1,
+                },
+            });
+
+            this.usageTracker.increment('youtube-channels', true);
+
+            if (response.data.items && response.data.items.length > 0) {
+                return this.formatChannelData(response.data.items[0]);
+            }
+            return null;
+        } catch (error) {
+            // forHandle 실패는 정상적 - 로그 없이 null 반환
+            return null;
+        }
+    }
+
+    /**
+     * forUsername으로 채널 검색 (1 unit)
+     */
+    async getChannelByUsername(username) {
+        try {
+            const response = await axios.get(`${this.baseURL}/channels`, {
+                params: {
+                    key: await this.getApiKey(),
+                    part: 'snippet,statistics',
+                    forUsername: username,
+                    maxResults: 1,
+                },
+            });
+
+            this.usageTracker.increment('youtube-channels', true);
+
+            if (response.data.items && response.data.items.length > 0) {
+                return this.formatChannelData(response.data.items[0]);
+            }
+            return null;
+        } catch (error) {
+            // forUsername 실패는 정상적 - 로그 없이 null 반환
+            return null;
+        }
+    }
+
+    /**
+     * 최후의 수단: search.list API (100 units)
+     */
+    async fallbackSearch(channelName) {
+        try {
             const searchResponse = await axios.get(`${this.baseURL}/search`, {
                 params: {
                     key: await this.getApiKey(),
@@ -170,15 +257,13 @@ class YouTubeChannelService {
                 const searchResult = searchResponse.data.items[0];
                 const channelId = searchResult.snippet.channelId;
 
-                // 2. 채널 ID로 상세 정보 가져오기
+                // 채널 ID로 상세 정보 가져오기
                 return await this.getChannelById(channelId);
             }
 
             return null;
         } catch (error) {
-            if (error.response?.status === 403) {
-                ServerLogger.error('❌ YouTube API 할당량 초과 또는 권한 없음');
-            }
+            ServerLogger.error('❌ 최후의 search.list API도 실패:', error.message);
             throw error;
         }
     }
@@ -200,7 +285,7 @@ class YouTubeChannelService {
             description: snippet.description || '',
             customUrl: snippet.customUrl || '',
             thumbnailUrl:
-                snippet.thumbnails?.high?.url ||
+                snippet.thumbnails?.medium?.url ||
                 snippet.thumbnails?.default?.url ||
                 '',
             subscribers:
