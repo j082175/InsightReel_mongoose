@@ -267,10 +267,10 @@ router.post('/check-duplicate', async (req, res) => {
         let normalizedChannelId = null; // 스코프 밖에서도 사용할 수 있도록
 
         try {
-            // 1. 채널 식별자 정규화 (@ 추가 처리)
-            normalizedChannelId = decodedChannelIdentifier.startsWith('@') 
-                ? decodedChannelIdentifier 
-                : `@${decodedChannelIdentifier}`;
+            // 1. 채널 식별자 정규화 (@ 추가 처리 + 소문자 변환)
+            normalizedChannelId = (decodedChannelIdentifier.startsWith('@')
+                ? decodedChannelIdentifier
+                : `@${decodedChannelIdentifier}`).toLowerCase();
 
             ServerLogger.info(`🔧 정규화된 채널 ID: ${normalizedChannelId}`);
 
