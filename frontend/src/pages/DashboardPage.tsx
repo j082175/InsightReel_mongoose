@@ -8,7 +8,6 @@ import {
 import toast from 'react-hot-toast';
 import { Video } from '../shared/types';
 import { useAppContext } from '../app/providers';
-import { VideoModal, VideoOnlyModal } from '../features/video-analysis';
 import { DeleteConfirmationModal } from '../shared/ui';
 import { ChannelAnalysisModal } from '../features/channel-management';
 import { VideoCard, SearchBar } from '../shared/components';
@@ -22,9 +21,6 @@ import { ActionBar } from '../shared/components';
 
 const DashboardPage: React.FC = () => {
   const [selectedBatchId, setSelectedBatchId] = useState<string>('all');
-  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
-  const [selectedVideoForPlay, setSelectedVideoForPlay] =
-    useState<Video | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [gridSize, setGridSize] = useState(1);
   const [itemToDelete, setItemToDelete] = useState<{
@@ -67,32 +63,6 @@ const DashboardPage: React.FC = () => {
   const selectedCount = selectedVideos.size;
   const totalVideos = videos.length;
 
-  const handleVideoClick = (video: Video) => {
-    if (isSelectMode) {
-      const videoId = getDocumentId(video);
-      if (!videoId) return;
-
-      if (selectedVideos.has(videoId)) {
-        deselectVideo(videoId);
-      } else {
-        selectVideo(videoId);
-      }
-    } else {
-      if (video.platform === PLATFORMS.YOUTUBE) {
-        setSelectedVideoForPlay(video);
-      } else {
-        window.open(video.url, '_blank', 'noopener,noreferrer');
-      }
-    }
-  };
-
-  const handleSelectToggle = (videoId: string) => {
-    if (selectedVideos.has(videoId)) {
-      deselectVideo(videoId);
-    } else {
-      selectVideo(videoId);
-    }
-  };
 
   const handleSelectAll = () => {
     if (selectedCount === totalVideos) {
@@ -274,19 +244,28 @@ const DashboardPage: React.FC = () => {
                 className={`grid ${gridLayouts[gridSize] || gridLayouts[2]} gap-6`}
                 staggerDelay={0.05}
               >
-                {videos.map((video) => (
-                  <VideoCard
-                    key={getDocumentId(video)}
-                    video={video}
-                    onClick={handleVideoClick}
-                    onDelete={handleVideoDelete}
-                    onInfoClick={setSelectedVideo}
-                    onChannelClick={setChannelToAnalyze}
-                    isSelectMode={isSelectMode}
-                    isSelected={isItemSelected(selectedVideos, video)}
-                    onSelectToggle={handleSelectToggle}
-                  />
-                ))}
+                {videos.map((video) => {
+                  const videoId = getDocumentId(video);
+                  if (!videoId) return null;
+
+                  return (
+                    <VideoCard
+                      key={videoId}
+                      video={video}
+                      onChannelClick={setChannelToAnalyze}
+                      onDelete={handleVideoDelete}
+                      isSelected={isItemSelected(selectedVideos, video)}
+                      isSelectMode={isSelectMode}
+                      onSelect={(id) => {
+                        if (isItemSelected(selectedVideos, { _id: id })) {
+                          deselectVideo(id);
+                        } else {
+                          selectVideo(id);
+                        }
+                      }}
+                    />
+                  );
+                })}
               </AnimatedList>
             ) : (
               <div className="text-center py-12">
@@ -319,16 +298,6 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* 모달들 */}
-      <VideoModal
-        video={selectedVideo}
-        onClose={() => setSelectedVideo(null)}
-      />
-
-      <VideoOnlyModal
-        video={selectedVideoForPlay}
-        onClose={() => setSelectedVideoForPlay(null)}
-      />
-
       <DeleteConfirmationModal
         itemToDelete={itemToDelete}
         onConfirm={handleDeleteConfirm}

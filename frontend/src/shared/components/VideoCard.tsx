@@ -7,63 +7,83 @@ import { getPlatformStyle } from '../utils/platformStyles';
 import { getVideoId, getThumbnailUrl, getViewCount } from '../utils/videoUtils';
 import { Video } from '../types';
 import { DeleteConfirmModal } from '../ui';
+import { VideoModal, VideoOnlyModal } from '../../features/video-analysis';
+import { PLATFORMS } from '../types/api';
+import toast from 'react-hot-toast';
 
 interface VideoCardProps {
   video: Video;
-  onClick?: (video: Video) => void;
-  onInfoClick?: (video: Video) => void;
   onChannelClick?: (channelName: string) => void;
-  onDelete: (video: Video) => void; // 필수 Props
-  isSelectMode?: boolean;
-  isSelected?: boolean;
-  onSelectToggle?: (id: string | number) => void;
+  onDelete?: (video: Video) => void;
   showArchiveInfo?: boolean;
+  // 선택 시스템 (페이지에서 제어)
+  isSelected?: boolean;
+  isSelectMode?: boolean;
+  onSelect?: (videoId: string) => void;
 }
 
 const VideoCard: React.FC<VideoCardProps> = memo(
   ({
     video,
-    onClick,
-    onInfoClick,
     onChannelClick,
     onDelete,
-    isSelectMode,
-    isSelected,
-    onSelectToggle,
     showArchiveInfo,
+    isSelected = false,
+    isSelectMode = false,
+    onSelect,
   }) => {
+    // 모달 상태 관리 (내장)
+    const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+    const [selectedVideoForPlay, setSelectedVideoForPlay] = useState<Video | null>(null);
+
+    // 삭제 상태
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
     const videoId = getVideoId(video);
-    const documentId = getDocumentId(video); // MongoDB Document ID
+    const documentId = getDocumentId(video);
     const thumbnailUrl = getThumbnailUrl(video);
     const viewCount = getViewCount(video);
 
+    // 내장 이벤트 핸들러들
     const handleClick = useCallback(
       (e: React.MouseEvent) => {
         if (isSelectMode) {
           e.preventDefault();
           e.stopPropagation();
-          if (onSelectToggle && documentId) {
-            onSelectToggle(documentId);
+          if (onSelect) {
+            onSelect(getDocumentId(video));
           }
-        } else if (onClick) {
-          onClick(video);
+        } else {
+          // 재생 로직
+          if (video.platform === PLATFORMS.YOUTUBE) {
+            setSelectedVideoForPlay(video);
+          } else {
+            window.open(video.url, '_blank', 'noopener,noreferrer');
+          }
         }
       },
-      [isSelectMode, onSelectToggle, documentId, onClick, video]
+      [isSelectMode, onSelect, video]
+    );
+
+    const handleSelectToggle = useCallback(
+      (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (onSelect) {
+          onSelect(getDocumentId(video));
+        }
+      },
+      [onSelect, video]
     );
 
     const handleInfoClick = useCallback(
       (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (onInfoClick) {
-          onInfoClick(video);
-        }
+        setSelectedVideo(video);
       },
-      [onInfoClick, video]
+      [video]
     );
 
     const handleChannelClick = useCallback(
@@ -89,10 +109,23 @@ const VideoCard: React.FC<VideoCardProps> = memo(
     const handleConfirmDelete = useCallback(async () => {
       setIsDeleting(true);
       try {
-        await onDelete(video);
+        if (onDelete) {
+          // 페이지에서 커스텀 삭제 로직 제공된 경우
+          await onDelete(video);
+        } else {
+          // 기본 삭제 로직 (내장)
+          const response = await fetch(`/api/videos/${getDocumentId(video)}`, {
+            method: 'DELETE',
+          });
+          if (!response.ok) {
+            throw new Error('삭제 실패');
+          }
+          toast.success(`"${video.title}" 삭제 완료`);
+        }
         setShowDeleteModal(false);
       } catch (error) {
         console.error('비디오 삭제 실패:', error);
+        toast.error('삭제 중 오류가 발생했습니다.');
       } finally {
         setIsDeleting(false);
       }
@@ -172,14 +205,13 @@ const VideoCard: React.FC<VideoCardProps> = memo(
           <div className="absolute top-3 left-3 z-10">
             <input
               type="checkbox"
-              checked={isSelected || false}
-              onChange={() => onSelectToggle && documentId && onSelectToggle(documentId)}
+              checked={isSelected}
+              onChange={handleSelectToggle}
               className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
               onClick={(e) => e.stopPropagation()}
             />
           </div>
         )}
-
         {/* 썸네일 */}
         <div className="relative aspect-video bg-gray-200 overflow-hidden">
           <motion.img
@@ -208,7 +240,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(
 
           {/* 플랫폼 배지 */}
           <motion.div
-            className="absolute top-3 right-3"
+            className="absolute bottom-3 left-3"
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.3 }}
@@ -299,7 +331,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(
         </motion.div>
       </motion.div>
 
-      {/* 삭제 확인 모달 - motion.div 바깥에 위치 */}
+      {/* 모든 모달들 */}
       <DeleteConfirmModal
         isOpen={showDeleteModal}
         onClose={handleCloseModal}
@@ -307,6 +339,16 @@ const VideoCard: React.FC<VideoCardProps> = memo(
         title="비디오 삭제"
         message="이 비디오를 삭제하시겠습니까? 삭제된 비디오는 복구할 수 없습니다."
         isLoading={isDeleting}
+      />
+
+      <VideoModal
+        video={selectedVideo}
+        onClose={() => setSelectedVideo(null)}
+      />
+
+      <VideoOnlyModal
+        video={selectedVideoForPlay}
+        onClose={() => setSelectedVideoForPlay(null)}
       />
     </>);
   }

@@ -367,9 +367,11 @@ const TrendingVideosPage: React.FC = () => {
                   ...prev,
                   total: prev.total - 1,
                 }));
+
+                toast.success(`트렌딩 비디오 "${deletedVideo.title}" 삭제 완료`);
               } catch (error) {
                 console.error('트렌딩 비디오 삭제 실패:', error);
-                alert('삭제 중 오류가 발생했습니다.');
+                toast.error('삭제 중 오류가 발생했습니다.');
               }
             }}
           />

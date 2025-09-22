@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { SearchBar, ActionBar, VideoCard } from '../shared/components';
 import { BulkCollectionModal } from '../features/trending-collection';
-import { VideoModal, VideoOnlyModal } from '../features/video-analysis';
 import { DeleteConfirmationModal } from '../shared/ui';
 import { formatDate, formatViews, getDocumentId, isItemSelected } from '../shared/utils';
 import toast from 'react-hot-toast';
@@ -56,9 +55,6 @@ const TrendingCollectionPage: React.FC = () => {
   } = trendingStore;
 
   // Local State
-  const [selectedVideo, setSelectedVideo] = React.useState<Video | null>(null);
-  const [selectedVideoForPlay, setSelectedVideoForPlay] =
-    React.useState<Video | null>(null);
   const [showCollectionModal, setShowCollectionModal] = React.useState(false);
   const [itemToDelete, setItemToDelete] = React.useState<{
     type: 'single' | 'bulk';
@@ -74,38 +70,6 @@ const TrendingCollectionPage: React.FC = () => {
   }, [fetchChannelGroups, fetchChannels, fetchTrendingVideos]);
 
   // Event Handlers
-  const handleVideoClick = useCallback(
-    (video: Video) => {
-      if (isSelectMode) {
-        const videoId = getDocumentId(video);
-        if (!videoId) return;
-
-        if (selectedVideos.has(videoId)) {
-          deselectVideo(videoId);
-        } else {
-          selectVideo(videoId);
-        }
-      } else {
-        if (video.platform === PLATFORMS.YOUTUBE) {
-          setSelectedVideoForPlay(video);
-        } else {
-          window.open(video.url, '_blank', 'noopener,noreferrer');
-        }
-      }
-    },
-    [isSelectMode, selectedVideos, deselectVideo, selectVideo]
-  );
-
-  const handleSelectToggle = useCallback(
-    (videoId: string) => {
-      if (selectedVideos.has(videoId)) {
-        deselectVideo(videoId);
-      } else {
-        selectVideo(videoId);
-      }
-    },
-    [selectedVideos, deselectVideo, selectVideo]
-  );
 
   const handleSelectAll = useCallback(() => {
     if (selectedVideos.size === (trendingVideos?.length || 0)) {
@@ -583,18 +547,27 @@ const TrendingCollectionPage: React.FC = () => {
               </div>
             ) : (trendingVideos?.length || 0) > 0 ? (
               <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-6">
-                {trendingVideos?.map((video) => (
-                  <VideoCard
-                    key={getDocumentId(video)}
-                    video={video}
-                    onClick={handleVideoClick}
-                    onDelete={handleVideoDelete}
-                    onInfoClick={setSelectedVideo}
-                    isSelectMode={isSelectMode}
-                    isSelected={isItemSelected(selectedVideos, video)}
-                    onSelectToggle={handleSelectToggle}
-                  />
-                ))}
+                {trendingVideos?.map((video) => {
+                  const videoId = getDocumentId(video);
+                  if (!videoId) return null;
+
+                  return (
+                    <VideoCard
+                      key={videoId}
+                      video={video}
+                      onDelete={handleVideoDelete}
+                      isSelected={isItemSelected(selectedVideos, video)}
+                      isSelectMode={isSelectMode}
+                      onSelect={(id) => {
+                        if (isItemSelected(selectedVideos, { _id: id })) {
+                          deselectVideo(id);
+                        } else {
+                          selectVideo(id);
+                        }
+                      }}
+                    />
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-12">
@@ -636,15 +609,6 @@ const TrendingCollectionPage: React.FC = () => {
         onResetFilters={resetFilters}
       />
 
-      <VideoModal
-        video={selectedVideo}
-        onClose={() => setSelectedVideo(null)}
-      />
-
-      <VideoOnlyModal
-        video={selectedVideoForPlay}
-        onClose={() => setSelectedVideoForPlay(null)}
-      />
 
       <DeleteConfirmationModal
         itemToDelete={itemToDelete}
