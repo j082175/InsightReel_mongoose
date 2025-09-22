@@ -11,6 +11,56 @@ import { VideoModal, VideoOnlyModal } from '../../features/video-analysis';
 import { PLATFORMS } from '../types/api';
 import toast from 'react-hot-toast';
 
+// 🚀 성능 최적화: Animation Variants를 컴포넌트 외부로 이동
+const CARD_VARIANTS = {
+  initial: { opacity: 0, y: 20, scale: 0.95 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.4,
+      ease: [0.4, 0, 0.2, 1],
+    },
+  },
+  hover: {
+    y: -8,
+    scale: 1.02,
+    transition: {
+      duration: 0.3,
+      ease: [0.4, 0, 0.2, 1],
+    },
+  },
+  tap: {
+    scale: 0.98,
+    transition: {
+      duration: 0.1,
+    },
+  },
+};
+
+const THUMBNAIL_VARIANTS = {
+  hover: {
+    scale: 1.05,
+    transition: {
+      duration: 0.3,
+    },
+  },
+};
+
+const PLAY_BUTTON_VARIANTS = {
+  initial: { scale: 0, opacity: 0 },
+  hover: {
+    scale: 1,
+    opacity: 1,
+    transition: {
+      type: 'spring' as const,
+      stiffness: 300,
+      damping: 25,
+    },
+  },
+};
+
 interface VideoCardProps {
   video: Video;
   onChannelClick?: (channelName: string) => void;
@@ -135,55 +185,6 @@ const VideoCard: React.FC<VideoCardProps> = memo(
       setShowDeleteModal(false);
     }, []);
 
-    const cardVariants = {
-      initial: { opacity: 0, y: 20, scale: 0.95 },
-      animate: {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        transition: {
-          duration: 0.4,
-          ease: [0.4, 0, 0.2, 1],
-        },
-      },
-      hover: {
-        y: -8,
-        scale: 1.02,
-        transition: {
-          duration: 0.3,
-          ease: [0.4, 0, 0.2, 1],
-        },
-      },
-      tap: {
-        scale: 0.98,
-        transition: {
-          duration: 0.1,
-        },
-      },
-    };
-
-    const thumbnailVariants = {
-      hover: {
-        scale: 1.05,
-        transition: {
-          duration: 0.3,
-        },
-      },
-    };
-
-    const playButtonVariants = {
-      initial: { scale: 0, opacity: 0 },
-      hover: {
-        scale: 1,
-        opacity: 1,
-        transition: {
-          type: 'spring' as const,
-          stiffness: 300,
-          damping: 25,
-        },
-      },
-    };
-
     return (
       <>
       <motion.div
@@ -192,7 +193,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(
           ${isSelected ? 'ring-2 ring-blue-500' : ''}
           ${isSelectMode ? 'hover:ring-2 hover:ring-blue-300' : ''}
         `}
-        variants={cardVariants}
+        variants={CARD_VARIANTS}
         initial="initial"
         animate="animate"
         whileHover="hover"
@@ -219,7 +220,9 @@ const VideoCard: React.FC<VideoCardProps> = memo(
             alt={video.title}
             className="w-full h-full object-cover"
             loading="lazy"
-            variants={thumbnailVariants}
+            decoding="async"
+            fetchPriority="low"
+            variants={THUMBNAIL_VARIANTS}
           />
 
           {/* 재생 버튼 오버레이 */}
@@ -230,7 +233,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(
             transition={{ duration: 0.3 }}
           >
             <motion.div
-              variants={playButtonVariants}
+              variants={PLAY_BUTTON_VARIANTS}
               initial="initial"
               whileHover="hover"
             >
@@ -351,6 +354,18 @@ const VideoCard: React.FC<VideoCardProps> = memo(
         onClose={() => setSelectedVideoForPlay(null)}
       />
     </>);
+  },
+  // 🚀 성능 최적화: 커스텀 비교 함수로 불필요한 리렌더링 방지
+  (prevProps, nextProps) => {
+    // true를 반환하면 리렌더링 방지, false를 반환하면 리렌더링 수행
+    return (
+      prevProps.video._id === nextProps.video._id &&
+      prevProps.video.views === nextProps.video.views &&
+      prevProps.video.title === nextProps.video.title &&
+      prevProps.isSelected === nextProps.isSelected &&
+      prevProps.isSelectMode === nextProps.isSelectMode &&
+      prevProps.showArchiveInfo === nextProps.showArchiveInfo
+    );
   }
 );
 
