@@ -10,7 +10,6 @@ import React, { useCallback, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { BulkCollectionModal } from '../features/trending-collection';
 import { useTrendingStore } from '../features/trending-collection/model/trendingStore';
-import { SearchBar } from '../shared/components';
 import { UniversalGrid } from '../widgets';
 import { Video } from '../shared/types';
 import { formatViews, getDocumentId } from '../shared/utils';
@@ -427,21 +426,6 @@ const TrendingCollectionPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 검색 및 필터 바 */}
-        <SearchBar
-          searchTerm={searchTerm}
-          onSearchTermChange={updateSearchTerm}
-          placeholder="트렌딩 영상 검색..."
-          showFilters={true}
-        />
-
-        {/* 결과 정보 */}
-        <div className="bg-white rounded-lg shadow mb-4 p-4">
-          <div className="text-sm text-gray-500">
-            총 {trendingVideos?.length || 0}개 트렌딩 영상 (키워드: "
-            {searchTerm || '없음'}")
-          </div>
-        </div>
 
         {/* 에러 표시 */}
         {(error || groupsError) && (
@@ -464,6 +448,11 @@ const TrendingCollectionPage: React.FC = () => {
           <UniversalGrid
             data={trendingVideos || []}
             cardType="video"
+            enableSearch={true}
+            searchPlaceholder="트렌딩 영상 검색..."
+            onSearchChange={(searchTerm, filteredData) => {
+              console.log('TrendingCollection Search:', searchTerm, 'Results:', filteredData.length);
+            }}
             onSelectionChange={(selectedIds) => {
               // TrendingStore에 동기화 (필요시)
               console.log('Selected items changed:', selectedIds);

@@ -1,20 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Search,
-  Filter,
   Calendar,
-  Eye,
-  Play,
-  ExternalLink,
-  Clock,
   TrendingUp,
-  Youtube,
-  Instagram,
-  Video,
-  BarChart3,
 } from 'lucide-react';
-import { VideoCard } from '../shared/components';
-import { formatViews, formatDate, getDurationLabel } from '../shared/utils';
+import { SearchBar } from '../shared/components';
+import { UniversalGrid } from '../widgets';
+import { useTrendingStore } from '../features/trending-collection/model/trendingStore';
+import { formatViews, formatDate, getDurationLabel, getDocumentId } from '../shared/utils';
 import toast from 'react-hot-toast';
 
 interface TrendingVideo {
@@ -53,9 +45,26 @@ interface ApiResponse {
 }
 
 const TrendingVideosPage: React.FC = () => {
-  const [videos, setVideos] = useState<TrendingVideo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // TrendingStore 사용
+  const trendingStore = useTrendingStore();
+  const {
+    trendingVideos: videos,
+    videosLoading: loading,
+    error,
+    searchTerm,
+    selectedVideos,
+    isSelectMode,
+    updateSearchTerm,
+    toggleSelectMode,
+    selectVideo,
+    deselectVideo,
+    selectAllVideos,
+    clearSelection,
+    deleteTrendingVideo,
+    deleteTrendingVideos,
+    fetchTrendingVideos,
+  } = trendingStore;
+
   const [pagination, setPagination] = useState<PaginationInfo>({
     total: 0,
     limit: 50,
@@ -82,12 +91,9 @@ const TrendingVideosPage: React.FC = () => {
   >([]);
 
   useEffect(() => {
+    fetchTrendingVideos();
     fetchChannelGroups();
-  }, []);
-
-  useEffect(() => {
-    fetchVideos();
-  }, [filters, pagination.offset]);
+  }, [fetchTrendingVideos]);
 
   const fetchChannelGroups = async () => {
     try {
@@ -101,43 +107,6 @@ const TrendingVideosPage: React.FC = () => {
     }
   };
 
-  const fetchVideos = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const params = new URLSearchParams();
-      params.append('limit', pagination.limit.toString());
-      params.append('offset', pagination.offset.toString());
-
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value && value.trim()) {
-          params.append(key, value);
-        }
-      });
-
-      const response = await fetch(`/api/trending/videos?${params}`);
-      const result: ApiResponse = await response.json();
-
-      if (result.success) {
-        setVideos(result.data);
-        setPagination((prev) => ({
-          ...prev,
-          total: result.pagination.total,
-          hasMore: result.pagination.hasMore,
-        }));
-      } else {
-        setError('영상 데이터 조회에 실패했습니다.');
-      }
-    } catch (error) {
-      const errorMessage = '서버 연결에 실패했습니다.';
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
     setPagination((prev) => ({ ...prev, offset: 0 })); // 필터 변경 시 첫 페이지로
@@ -145,6 +114,33 @@ const TrendingVideosPage: React.FC = () => {
 
   const handlePageChange = (newOffset: number) => {
     setPagination((prev) => ({ ...prev, offset: newOffset }));
+  };
+
+  // TrendingStore 기반 핸들러들
+  const handleVideoDelete = async (video: any) => {
+    try {
+      await deleteTrendingVideo(video);
+      toast.success(`트렌딩 비디오 "${video.title}" 삭제 완료`);
+    } catch (error) {
+      toast.error('삭제 중 오류가 발생했습니다.');
+      throw error;
+    }
+  };
+
+  const handleBulkDelete = async (selectedVideos: any[]) => {
+    try {
+      const deletedIds = await deleteTrendingVideos(selectedVideos);
+      if (deletedIds && deletedIds.length > 0) {
+        toast.success(`선택된 ${deletedIds.length}개 트렌딩 비디오가 삭제되었습니다`);
+      }
+    } catch (error) {
+      toast.error(`일괄 삭제 실패: ${error}`);
+    }
+  };
+
+  const handleSelectionChange = (selectedIds: string[]) => {
+    // TrendingStore가 내부적으로 selectedVideos를 관리하므로 필요시에만 추가 로직 구현
+    console.log('Selected videos changed:', selectedIds);
   };
 
   if (loading && videos.length === 0) {
@@ -178,23 +174,9 @@ const TrendingVideosPage: React.FC = () => {
         </p>
       </div>
 
-      {/* 검색 및 필터 */}
+      {/* 필터 */}
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* 검색 */}
-          <div className="lg:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Search className="w-4 h-4 inline mr-1" />
-              검색 (제목, 채널명, 키워드)
-            </label>
-            <input
-              type="text"
-              value={filters.keyword}
-              onChange={(e) => handleFilterChange('keyword', e.target.value)}
-              placeholder="검색어를 입력하세요..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
 
           {/* 플랫폼 */}
           <div>
@@ -339,44 +321,31 @@ const TrendingVideosPage: React.FC = () => {
         </div>
       )}
 
-      {/* 영상 목록 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        {videos.map((video) => (
-          <VideoCard
-            key={video._id}
-            video={video as any}
-            onDelete={async (deletedVideo) => {
-              try {
-                // 실제 DB에서 삭제
-                const response = await fetch(`/api/trending/videos/${deletedVideo._id}`, {
-                  method: 'DELETE',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                });
-
-                if (!response.ok) {
-                  throw new Error('삭제 실패');
-                }
-
-                // UI에서 삭제된 비디오 제거
-                setVideos((prev) =>
-                  prev.filter((v) => v._id !== deletedVideo._id)
-                );
-                setPagination((prev) => ({
-                  ...prev,
-                  total: prev.total - 1,
-                }));
-
-                toast.success(`트렌딩 비디오 "${deletedVideo.title}" 삭제 완료`);
-              } catch (error) {
-                console.error('트렌딩 비디오 삭제 실패:', error);
-                toast.error('삭제 중 오류가 발생했습니다.');
-              }
-            }}
-          />
-        ))}
-      </div>
+      {/* 영상 목록 - UniversalGrid 사용 */}
+      {!loading && videos.length > 0 ? (
+        <UniversalGrid
+          data={videos as any[]}
+          cardType="video"
+          enableSearch={true}
+          searchPlaceholder="제목, 채널명, 키워드로 검색..."
+          onSearchChange={(searchTerm, filteredData) => {
+            console.log('Search changed:', searchTerm, 'Results:', filteredData.length);
+          }}
+          onSelectionChange={handleSelectionChange}
+          onDelete={handleVideoDelete as any}
+          onBulkDelete={handleBulkDelete as any}
+          onCardClick={(video) => {
+            // 비디오 클릭 시 외부 링크로 이동
+            if (video.url) {
+              window.open(video.url, '_blank');
+            }
+          }}
+          initialItemsPerPage={pagination.limit}
+          showVirtualScrolling={false}
+          gridSize={1}
+          className="mb-6"
+        />
+      ) : null}
 
       {/* 로딩 중일 때 */}
       {loading && videos.length > 0 && (

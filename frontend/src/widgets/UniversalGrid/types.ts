@@ -20,6 +20,12 @@ export interface UniversalGridProps<T extends GridItem> {
   onBulkDelete?: (selectedItems: T[]) => void;
   onCardClick?: (item: T) => void;
 
+  // 검색 기능
+  enableSearch?: boolean;
+  searchPlaceholder?: string;
+  searchFields?: (keyof T)[];
+  onSearchChange?: (searchTerm: string, filteredData: T[]) => void;
+
   // 페이지네이션 설정
   initialItemsPerPage?: number;
   showVirtualScrolling?: boolean;

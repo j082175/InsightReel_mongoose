@@ -65,6 +65,7 @@ interface TrendingStoreState {
   searchTerm: string;
   selectedVideos: Set<string>;
   isSelectMode: boolean;
+  deletedVideoIds: Set<string>;
 }
 
 interface TrendingStoreActions {
@@ -92,6 +93,10 @@ interface TrendingStoreActions {
   selectAllVideos: () => void;
   clearSelection: () => void;
   updateSearchTerm: (searchTerm: string) => void;
+
+  // Video Delete Actions
+  deleteTrendingVideo: (video: Video) => Promise<void>;
+  deleteTrendingVideos: (videos: Video[]) => Promise<void>;
 }
 
 const defaultFilters: CollectionFilters = {
@@ -133,6 +138,7 @@ export const useTrendingStore = (): TrendingStoreState &
     searchTerm: '',
     selectedVideos: new Set<string>(),
     isSelectMode: false,
+    deletedVideoIds: new Set<string>(),
   });
 
   // 에러 상태 처리
@@ -144,7 +150,11 @@ export const useTrendingStore = (): TrendingStoreState &
   // 필터링된 영상 목록
   const filteredVideos = useMemo(() => {
     const videosArray = Array.isArray(trendingVideos) ? trendingVideos : [];
-    let filtered = videosArray;
+    // 삭제된 비디오 제외
+    let filtered = videosArray.filter((video) => {
+      const videoId = getDocumentId(video);
+      return videoId ? !state.deletedVideoIds.has(videoId) : false;
+    });
 
     if (state.searchTerm) {
       const keyword = state.searchTerm.toLowerCase();
@@ -162,7 +172,7 @@ export const useTrendingStore = (): TrendingStoreState &
     );
 
     return filtered;
-  }, [trendingVideos, state.searchTerm]);
+  }, [trendingVideos, state.searchTerm, state.deletedVideoIds]);
 
   // Collection Actions
   const updateCollectionTarget = useCallback(
@@ -458,6 +468,67 @@ export const useTrendingStore = (): TrendingStoreState &
     setState((prev) => ({ ...prev, searchTerm }));
   }, []);
 
+  // Video Delete Actions
+  const deleteTrendingVideo = useCallback(async (video: Video) => {
+    try {
+      const videoId = getDocumentId(video);
+      if (!videoId) {
+        throw new Error('비디오 ID가 없습니다');
+      }
+
+      const response = await fetch(`/api/trending/videos/${videoId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('삭제 실패');
+      }
+
+      // 낙관적 업데이트: UI에서 즉시 제거
+      setState((prev) => ({
+        ...prev,
+        deletedVideoIds: new Set([...prev.deletedVideoIds, videoId]),
+        selectedVideos: new Set([...prev.selectedVideos].filter(id => id !== videoId)),
+      }));
+
+      // 성공 토스트는 호출하는 쪽에서 처리
+    } catch (error) {
+      console.error('트렌딩 비디오 삭제 실패:', error);
+      throw error; // 에러를 다시 throw해서 호출하는 쪽에서 처리
+    }
+  }, []);
+
+  const deleteTrendingVideos = useCallback(async (videos: Video[]) => {
+    try {
+      const deletedIds: string[] = [];
+
+      for (const video of videos) {
+        try {
+          await deleteTrendingVideo(video);
+          const videoId = getDocumentId(video);
+          if (videoId) deletedIds.push(videoId);
+        } catch (error) {
+          // 개별 삭제 실패는 로그만 남기고 계속 진행
+          console.error(`비디오 ${video.title} 삭제 실패:`, error);
+        }
+      }
+
+      // 선택 상태 초기화
+      setState((prev) => ({
+        ...prev,
+        selectedVideos: new Set(),
+      }));
+
+      return deletedIds; // 성공적으로 삭제된 ID들 반환
+    } catch (error) {
+      console.error('일괄 삭제 실패:', error);
+      throw error;
+    }
+  }, [deleteTrendingVideo]);
+
   return {
     // State
     collectionTarget: state.collectionTarget,
@@ -475,6 +546,7 @@ export const useTrendingStore = (): TrendingStoreState &
     searchTerm: state.searchTerm,
     selectedVideos: state.selectedVideos,
     isSelectMode: state.isSelectMode,
+    deletedVideoIds: state.deletedVideoIds,
 
     // Actions
     updateCollectionTarget,
@@ -494,5 +566,7 @@ export const useTrendingStore = (): TrendingStoreState &
     selectAllVideos,
     clearSelection,
     updateSearchTerm,
+    deleteTrendingVideo,
+    deleteTrendingVideos,
   };
 };

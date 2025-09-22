@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { UniversalGridProps, GridItem } from './types';
 import { useUniversalPagination } from './hooks';
 import { getCardRenderer } from './renderers';
 import { VirtualizedVideoGrid } from '../../shared/components/VirtualizedVideoGrid';
+import { SearchBar } from '../../shared/components';
 import { getDocumentId } from '../../shared/utils';
 
 /**
@@ -17,6 +18,10 @@ export const UniversalGrid = <T extends GridItem>({
   onDelete,
   onBulkDelete,
   onCardClick,
+  enableSearch = false,
+  searchPlaceholder = '검색...',
+  searchFields,
+  onSearchChange,
   initialItemsPerPage = 20,
   showVirtualScrolling = true,
   gridSize = 1,
@@ -30,8 +35,48 @@ export const UniversalGrid = <T extends GridItem>({
   // 내부 선택 상태 관리
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
-  // 통합 페이지네이션 훅 사용
-  const pagination = useUniversalPagination(data, { initialItemsPerPage });
+
+  // 검색 상태 관리
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // 검색 필터링된 데이터
+  const filteredData = useMemo(() => {
+    if (!enableSearch || !searchTerm.trim()) {
+      return data;
+    }
+
+    const searchLower = searchTerm.toLowerCase();
+
+    return data.filter((item) => {
+      if (searchFields && searchFields.length > 0) {
+        // 지정된 필드에서만 검색
+        return searchFields.some((field) => {
+          const value = item[field];
+          return value && String(value).toLowerCase().includes(searchLower);
+        });
+      } else {
+        // 기본 검색 (타입별로 다른 필드 검색)
+        if (cardType === 'video') {
+          const video = item as any;
+          return (
+            video.title?.toLowerCase().includes(searchLower) ||
+            video.channelName?.toLowerCase().includes(searchLower) ||
+            video.keywords?.some((k: string) => k.toLowerCase().includes(searchLower))
+          );
+        } else if (cardType === 'channel') {
+          const channel = item as any;
+          return (
+            channel.name?.toLowerCase().includes(searchLower) ||
+            channel.description?.toLowerCase().includes(searchLower)
+          );
+        }
+        return false;
+      }
+    });
+  }, [data, searchTerm, enableSearch, searchFields, cardType]);
+
+  // 통합 페이지네이션 훅 사용 (필터링된 데이터로)
+  const pagination = useUniversalPagination(filteredData, { initialItemsPerPage });
 
   const {
     currentData,
@@ -80,6 +125,12 @@ export const UniversalGrid = <T extends GridItem>({
   };
 
   const visiblePages = getVisiblePages();
+
+  // 검색 핸들러
+  const handleSearchChange = useCallback((newSearchTerm: string) => {
+    setSearchTerm(newSearchTerm);
+    onSearchChange?.(newSearchTerm, filteredData);
+  }, [onSearchChange, filteredData]);
 
   // 선택 관련 핸들러
   const handleSelect = useCallback((id: string) => {
@@ -188,12 +239,25 @@ export const UniversalGrid = <T extends GridItem>({
 
   return (
     <div className={`space-y-4 ${className}`}>
+      {/* 검색바 (활성화된 경우만) */}
+      {enableSearch && (
+        <SearchBar
+          searchTerm={searchTerm}
+          onSearchChange={handleSearchChange}
+          placeholder={searchPlaceholder}
+          className="mb-4"
+        />
+      )}
+
       {/* 상단: 정보 표시 + 설정 */}
       <div className={`flex items-center justify-between ${headerClassName}`}>
         <div className="flex items-center space-x-4">
           {/* 정보 표시 */}
           <div className="text-sm text-gray-500">
             총 {totalItems}개 아이템
+            {enableSearch && searchTerm && (
+              <span> • "{searchTerm}" 검색 결과</span>
+            )}
             {!useVirtualScrolling && totalPages > 1 && (
               <span> • {currentPage}/{totalPages} 페이지</span>
             )}
