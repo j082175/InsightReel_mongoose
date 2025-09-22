@@ -1,20 +1,19 @@
-import React, { useEffect, useCallback } from 'react';
 import {
-  Play,
+  Calendar,
   Pause,
+  Play,
   Settings,
   TrendingUp,
   Users,
-  Calendar,
 } from 'lucide-react';
-import { SearchBar, ActionBar, VideoCard } from '../shared/components';
-import { BulkCollectionModal } from '../features/trending-collection';
-import { DeleteConfirmationModal } from '../shared/ui';
-import { formatDate, formatViews, getDocumentId, isItemSelected } from '../shared/utils';
+import React, { useCallback, useEffect } from 'react';
 import toast from 'react-hot-toast';
+import { BulkCollectionModal } from '../features/trending-collection';
 import { useTrendingStore } from '../features/trending-collection/model/trendingStore';
+import { SearchBar } from '../shared/components';
+import { UniversalGrid } from '../widgets';
 import { Video } from '../shared/types';
-import { PLATFORMS } from '../shared/types/api';
+import { formatViews, getDocumentId } from '../shared/utils';
 
 const TrendingCollectionPage: React.FC = () => {
   // TrendingStore 사용
@@ -33,8 +32,6 @@ const TrendingCollectionPage: React.FC = () => {
     error,
     groupsError,
     searchTerm,
-    selectedVideos,
-    isSelectMode,
     updateCollectionTarget,
     updateFilters,
     resetFilters,
@@ -46,21 +43,11 @@ const TrendingCollectionPage: React.FC = () => {
     handleGroupSelection,
     handleChannelSelection,
     handleTargetTypeChange,
-    toggleSelectMode,
-    selectVideo,
-    deselectVideo,
-    selectAllVideos,
-    clearSelection,
     updateSearchTerm,
   } = trendingStore;
 
   // Local State
   const [showCollectionModal, setShowCollectionModal] = React.useState(false);
-  const [itemToDelete, setItemToDelete] = React.useState<{
-    type: 'single' | 'bulk';
-    data?: Video;
-    count?: number;
-  } | null>(null);
 
   // 컴포넌트 마운트 시 데이터 로드
   useEffect(() => {
@@ -70,19 +57,6 @@ const TrendingCollectionPage: React.FC = () => {
   }, [fetchChannelGroups, fetchChannels, fetchTrendingVideos]);
 
   // Event Handlers
-
-  const handleSelectAll = useCallback(() => {
-    if (selectedVideos.size === (trendingVideos?.length || 0)) {
-      clearSelection();
-    } else {
-      selectAllVideos();
-    }
-  }, [
-    selectedVideos.size,
-    trendingVideos?.length || 0,
-    clearSelection,
-    selectAllVideos,
-  ]);
 
   const handleVideoDelete = useCallback(
     async (video: Video) => {
@@ -112,52 +86,6 @@ const TrendingCollectionPage: React.FC = () => {
     [fetchTrendingVideos]
   );
 
-  const handleDeleteClick = useCallback(
-    (item: { type: 'single' | 'bulk'; data?: Video; count?: number }) => {
-      setItemToDelete(item);
-    },
-    []
-  );
-
-  const handleDeleteConfirm = useCallback(async () => {
-    if (!itemToDelete) return;
-
-    try {
-      if (itemToDelete.type === 'single' && itemToDelete.data) {
-        await handleVideoDelete(itemToDelete.data);
-      } else if (itemToDelete.type === 'bulk') {
-        // 선택된 비디오들 삭제
-        let successCount = 0;
-        for (const videoId of selectedVideos) {
-          const video = trendingVideos.find((v) => v.id === videoId);
-          if (video) {
-            try {
-              await handleVideoDelete(video);
-              successCount++;
-            } catch (error) {
-              // 개별 비디오 삭제 실패는 handleVideoDelete에서 이미 알림 처리됨
-            }
-          }
-        }
-        clearSelection();
-        if (successCount > 0) {
-          toast.success(
-            `선택된 ${successCount}개 트렌딩 비디오가 삭제되었습니다`
-          );
-        }
-      }
-
-      setItemToDelete(null);
-    } catch (error) {
-      toast.error(`삭제 실패: ${error}`);
-    }
-  }, [
-    itemToDelete,
-    handleVideoDelete,
-    selectedVideos,
-    trendingVideos,
-    clearSelection,
-  ]);
 
   const handleStartCollection = useCallback(async () => {
     if (
@@ -505,20 +433,7 @@ const TrendingCollectionPage: React.FC = () => {
           onSearchTermChange={updateSearchTerm}
           placeholder="트렌딩 영상 검색..."
           showFilters={true}
-        >
-          <div className="flex items-center gap-2">
-            <button
-              onClick={toggleSelectMode}
-              className={`px-3 py-1 text-sm rounded ${
-                isSelectMode
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-200 text-gray-700'
-              }`}
-            >
-              {isSelectMode ? '선택 취소' : '선택 모드'}
-            </button>
-          </div>
-        </SearchBar>
+        />
 
         {/* 결과 정보 */}
         <div className="bg-white rounded-lg shadow mb-4 p-4">
@@ -535,69 +450,66 @@ const TrendingCollectionPage: React.FC = () => {
           </div>
         )}
 
-        {/* 트렌딩 영상 목록 */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6">
-            {videosLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-                <p className="mt-2 text-sm text-gray-500">
-                  트렌딩 영상을 불러오는 중...
-                </p>
-              </div>
-            ) : (trendingVideos?.length || 0) > 0 ? (
-              <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-6">
-                {trendingVideos?.map((video) => {
-                  const videoId = getDocumentId(video);
-                  if (!videoId) return null;
-
-                  return (
-                    <VideoCard
-                      key={videoId}
-                      video={video}
-                      onDelete={handleVideoDelete}
-                      isSelected={isItemSelected(selectedVideos, video)}
-                      isSelectMode={isSelectMode}
-                      onSelect={(id) => {
-                        if (isItemSelected(selectedVideos, { _id: id })) {
-                          deselectVideo(id);
-                        } else {
-                          selectVideo(id);
-                        }
-                      }}
-                    />
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <TrendingUp className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">
-                  트렌딩 영상이 없습니다
-                </h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  수집을 시작해서 트렌딩 영상을 가져오세요.
-                </p>
-              </div>
-            )}
+        {/* 🚀 UniversalGrid - 간소화된 통합 그리드 */}
+        {videosLoading ? (
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+              <p className="mt-2 text-sm text-gray-500">
+                트렌딩 영상을 불러오는 중...
+              </p>
+            </div>
           </div>
-        </div>
+        ) : (trendingVideos?.length || 0) > 0 ? (
+          <UniversalGrid
+            data={trendingVideos || []}
+            cardType="video"
+            onSelectionChange={(selectedIds) => {
+              // TrendingStore에 동기화 (필요시)
+              console.log('Selected items changed:', selectedIds);
+            }}
+            onDelete={handleVideoDelete}
+            onBulkDelete={async (selectedVideos) => {
+              try {
+                let successCount = 0;
+                for (const video of selectedVideos) {
+                  try {
+                    await handleVideoDelete(video);
+                    successCount++;
+                  } catch (error) {
+                    // 개별 비디오 삭제 실패는 handleVideoDelete에서 이미 알림 처리됨
+                  }
+                }
+                if (successCount > 0) {
+                  toast.success(`선택된 ${successCount}개 트렌딩 비디오가 삭제되었습니다`);
+                }
+              } catch (error) {
+                toast.error(`일괄 삭제 실패: ${error}`);
+              }
+            }}
+            onCardClick={() => {}} // 채널 클릭 기능 없음
+            initialItemsPerPage={20}
+            showVirtualScrolling={true}
+            gridSize={1}
+            containerWidth={1200}
+            containerHeight={600}
+            className="bg-white rounded-lg shadow p-6"
+          />
+        ) : (
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="text-center py-12">
+              <TrendingUp className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                트렌딩 영상이 없습니다
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                수집을 시작해서 트렌딩 영상을 가져오세요.
+              </p>
+            </div>
+          </div>
+        )}
 
-        {/* 선택 모드 액션 바 */}
-        <ActionBar
-          isVisible={isSelectMode}
-          selectedCount={selectedVideos.size}
-          totalCount={trendingVideos?.length || 0}
-          itemType="개"
-          onSelectAll={handleSelectAll}
-          onClearSelection={() => {
-            toggleSelectMode();
-            clearSelection();
-          }}
-          onDelete={() =>
-            handleDeleteClick({ type: 'bulk', count: selectedVideos.size })
-          }
-        />
+
       </div>
 
       {/* 모달들 */}
@@ -609,12 +521,6 @@ const TrendingCollectionPage: React.FC = () => {
         onResetFilters={resetFilters}
       />
 
-
-      <DeleteConfirmationModal
-        itemToDelete={itemToDelete}
-        onConfirm={handleDeleteConfirm}
-        onCancel={() => setItemToDelete(null)}
-      />
     </div>
   );
 };

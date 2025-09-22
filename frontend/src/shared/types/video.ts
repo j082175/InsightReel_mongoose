@@ -104,6 +104,7 @@ export interface Video
     AIAnalysis,
     YouTubeSpecific,
     SystemMetadata {
+  id: string;
   // MongoDB 필드 (통일된 ID) - 모든 계층에서 _id 사용
   _id: string; // MongoDB ObjectId → 필수 필드로 변경
 

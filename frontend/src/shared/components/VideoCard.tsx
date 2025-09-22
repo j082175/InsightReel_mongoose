@@ -9,6 +9,7 @@ import { Video } from '../types';
 import { DeleteConfirmModal } from '../ui';
 import { VideoModal, VideoOnlyModal } from '../../features/video-analysis';
 import { PLATFORMS } from '../types/api';
+import { OptimizedImage } from './OptimizedImage';
 import toast from 'react-hot-toast';
 
 // 🚀 성능 최적화: Animation Variants를 컴포넌트 외부로 이동
@@ -215,15 +216,18 @@ const VideoCard: React.FC<VideoCardProps> = memo(
         )}
         {/* 썸네일 */}
         <div className="relative aspect-video bg-gray-200 overflow-hidden">
-          <motion.img
-            src={thumbnailUrl}
-            alt={video.title}
-            className="w-full h-full object-cover"
-            loading="lazy"
-            decoding="async"
-            fetchPriority="low"
-            variants={THUMBNAIL_VARIANTS}
-          />
+          <motion.div variants={THUMBNAIL_VARIANTS}>
+            <OptimizedImage
+              src={thumbnailUrl}
+              alt={video.title}
+              width={280}
+              height={157}
+              className="w-full h-full"
+              priority={false}
+              responsive={true}
+              quality={85}
+            />
+          </motion.div>
 
           {/* 재생 버튼 오버레이 */}
           <motion.div

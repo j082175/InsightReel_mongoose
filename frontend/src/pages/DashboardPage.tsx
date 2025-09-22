@@ -8,46 +8,34 @@ import {
 import toast from 'react-hot-toast';
 import { Video } from '../shared/types';
 import { useAppContext } from '../app/providers';
-import { DeleteConfirmationModal } from '../shared/ui';
 import { ChannelAnalysisModal } from '../features/channel-management';
-import { VideoCard, SearchBar } from '../shared/components';
+import { SearchBar } from '../shared/components';
+import { UniversalGrid } from '../widgets';
 import { VideoManagement } from '../features';
-import { AnimatedList, FadeIn } from '../shared/components/animations';
+import { FadeIn } from '../shared/components/animations';
 
 import { PLATFORMS } from '../shared/types/api';
-import { formatViews, getDocumentId, isItemSelected } from '../shared/utils';
-import { getVideoId, getViewCount } from '../shared/utils/videoUtils';
-import { ActionBar } from '../shared/components';
+import { getDocumentId } from '../shared/utils';
+import { formatViews } from '../shared/utils/formatters';
 
 const DashboardPage: React.FC = () => {
   const [selectedBatchId, setSelectedBatchId] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [gridSize, setGridSize] = useState(1);
-  const [itemToDelete, setItemToDelete] = useState<{
-    type: 'single' | 'bulk';
-    data?: Video;
-    count?: number;
-  } | null>(null);
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
 
-  // VideoStore 사용 - 상태와 액션 분리
+
+  // VideoStore 사용 - 간소화 (선택 상태는 UniversalGrid에서 관리)
   const videoStore = VideoManagement.useVideoStore(selectedBatchId);
   const {
     videos,
     loading,
     error,
     filters,
-    selectedVideos,
-    isSelectMode,
     deleteVideo,
-    deleteVideos,
     updateFilters,
-    toggleSelectMode,
-    selectVideo,
-    deselectVideo,
-    selectAllVideos,
-    clearSelection,
   } = videoStore;
+
 
   // 기타 API 훅들
   const { data: trendingStats } = useTrendingStats();
@@ -58,19 +46,6 @@ const DashboardPage: React.FC = () => {
   const { collectionBatches } = useAppContext();
 
   // React Query가 자동으로 데이터를 가져오므로 수동 호출 불필요
-
-  // 선택된 비디오 개수 계산
-  const selectedCount = selectedVideos.size;
-  const totalVideos = videos.length;
-
-
-  const handleSelectAll = () => {
-    if (selectedCount === totalVideos) {
-      clearSelection();
-    } else {
-      selectAllVideos();
-    }
-  };
 
   const handleVideoDelete = async (video: Video) => {
     try {
@@ -87,45 +62,11 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  const handleDeleteClick = (item: {
-    type: 'single' | 'bulk';
-    data?: Video;
-    count?: number;
-  }) => {
-    setItemToDelete(item);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!itemToDelete) return;
-
-    try {
-      if (itemToDelete.type === 'single' && itemToDelete.data) {
-        await handleVideoDelete(itemToDelete.data);
-      } else if (itemToDelete.type === 'bulk') {
-        const selectedVideoIds = Array.from(selectedVideos);
-        await deleteVideos(selectedVideoIds);
-        clearSelection();
-        toast.success(
-          `선택된 ${selectedVideoIds.length}개 비디오가 삭제되었습니다`
-        );
-      }
-
-      setItemToDelete(null);
-    } catch (error) {
-      toast.error(`삭제 실패: ${error}`);
-    }
-  };
-
-  const gridLayouts: Record<number, string> = {
-    1: 'grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8',
-    2: 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6',
-    3: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
-  };
 
   // 통계 계산
   const stats = {
-    totalVideos,
-    totalViews: videos.reduce((sum, video) => sum + getViewCount(video), 0),
+    totalVideos: videos.length,
+    totalViews: videos.reduce((sum, video) => sum + (video.views || 0), 0),
     totalLikes: videos.reduce((sum, video) => sum + (video.likes || 0), 0),
     platformCounts: videos.reduce(
       (acc, video) => {
@@ -211,20 +152,12 @@ const DashboardPage: React.FC = () => {
             <option value="INSTAGRAM">Instagram</option>
           </select>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={toggleSelectMode}
-              className={`px-3 py-1 text-sm rounded ${isSelectMode ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'}`}
-            >
-              {isSelectMode ? '선택 취소' : '선택 모드'}
-            </button>
-          </div>
         </SearchBar>
 
         {/* 결과 정보 */}
         <div className="bg-white rounded-lg shadow mb-4 p-4">
           <div className="text-sm text-gray-500">
-            총 {totalVideos}개 영상 (키워드: "{filters.keyword || '없음'}",
+            총 {videos.length}개 영상 (키워드: "{filters.keyword || '없음'}",
             플랫폼: {filters.platform || '전체'})
           </div>
         </div>
@@ -236,74 +169,37 @@ const DashboardPage: React.FC = () => {
           </div>
         )}
 
-        {/* 메인 콘텐츠 */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6">
-            {videos.length > 0 ? (
-              <AnimatedList
-                className={`grid ${gridLayouts[gridSize] || gridLayouts[2]} gap-6`}
-                staggerDelay={0.05}
-              >
-                {videos.map((video) => {
-                  const videoId = getDocumentId(video);
-                  if (!videoId) return null;
-
-                  return (
-                    <VideoCard
-                      key={videoId}
-                      video={video}
-                      onChannelClick={setChannelToAnalyze}
-                      onDelete={handleVideoDelete}
-                      isSelected={isItemSelected(selectedVideos, video)}
-                      isSelectMode={isSelectMode}
-                      onSelect={(id) => {
-                        if (isItemSelected(selectedVideos, { _id: id })) {
-                          deselectVideo(id);
-                        } else {
-                          selectVideo(id);
-                        }
-                      }}
-                    />
-                  );
-                })}
-              </AnimatedList>
-            ) : (
-              <div className="text-center py-12">
-                <div className="text-gray-500 text-lg mb-2">
-                  영상이 없습니다
-                </div>
-                <div className="text-gray-400">
-                  비디오를 추가하거나 수집해보세요.
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 선택 모드 액션 바 */}
-        <ActionBar
-          isVisible={isSelectMode}
-          selectedCount={selectedCount}
-          totalCount={totalVideos}
-          itemType="개"
-          onSelectAll={handleSelectAll}
-          onClearSelection={() => {
-            toggleSelectMode();
-            clearSelection();
+        {/* 🚀 UniversalGrid - 간소화된 통합 그리드 */}
+        <UniversalGrid
+          data={videos}
+          cardType="video"
+          onSelectionChange={(selectedIds) => {
+            // VideoStore에 동기화 (필요시)
+            console.log('Selected items changed:', selectedIds);
           }}
-          onDelete={() =>
-            handleDeleteClick({ type: 'bulk', count: selectedCount })
-          }
+          onDelete={handleVideoDelete}
+          onBulkDelete={async (selectedVideos) => {
+            try {
+              const selectedVideoIds = selectedVideos.map(video => getDocumentId(video)).filter(Boolean) as string[];
+              for (const videoId of selectedVideoIds) {
+                await deleteVideo(videoId);
+              }
+              toast.success(`선택된 ${selectedVideoIds.length}개 비디오가 삭제되었습니다`);
+            } catch (error) {
+              toast.error(`일괄 삭제 실패: ${error}`);
+            }
+          }}
+          onCardClick={(video) => setChannelToAnalyze(video.channelName)}
+          initialItemsPerPage={20}
+          showVirtualScrolling={true}
+          gridSize={gridSize}
+          containerWidth={1200}
+          containerHeight={600}
+          className="bg-white rounded-lg shadow p-6"
         />
       </div>
 
       {/* 모달들 */}
-      <DeleteConfirmationModal
-        itemToDelete={itemToDelete}
-        onConfirm={handleDeleteConfirm}
-        onCancel={() => setItemToDelete(null)}
-      />
-
       <ChannelAnalysisModal
         channelName={channelToAnalyze}
         onClose={() => setChannelToAnalyze(null)}

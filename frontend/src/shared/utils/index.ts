@@ -4,3 +4,4 @@ export * from './platformStyles';
 export * from './videoUtils';
 export * from './logger';
 export * from './idUtils';
+export * from './imageOptimizer';
