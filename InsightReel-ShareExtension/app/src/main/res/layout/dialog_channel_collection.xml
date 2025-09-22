@@ -1,0 +1,392 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/white"
+    android:padding="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- 모달 헤더 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:layout_marginBottom="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📊 채널 수집 설정"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="#1976d2"
+                android:layout_marginBottom="5dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="키워드를 선택하여 채널을 수집하세요"
+                android:textSize="14sp"
+                android:textColor="#666666" />
+
+        </LinearLayout>
+
+        <!-- 채널 정보 헤더 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:background="#f8f9fa"
+            android:padding="15dp"
+            android:layout_marginBottom="20dp"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/channelThumbnail"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:layout_marginEnd="12dp"
+                android:scaleType="centerCrop"
+                android:background="#ddd"
+                android:src="@android:drawable/ic_menu_gallery" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/channelName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="채널명"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="#333333"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:id="@+id/channelSubscribers"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="구독자 10만명"
+                    android:textSize="13sp"
+                    android:textColor="#666666" />
+
+                <TextView
+                    android:id="@+id/channelPlatform"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="YouTube"
+                    android:textSize="12sp"
+                    android:textColor="#1976d2"
+                    android:layout_marginTop="2dp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- 최근 키워드 섹션 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔄 최근 사용한 키워드"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#333333"
+                android:layout_marginBottom="10dp" />
+
+            <!-- 최근 키워드 버튼들 (동적으로 추가될 예정) -->
+            <LinearLayout
+                android:id="@+id/recentKeywordsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="10dp">
+
+                <!-- 예시 키워드 버튼들 -->
+                <Button
+                    android:id="@+id/keywordButton1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:text="#테크"
+                    android:textSize="12sp"
+                    android:textColor="#1976d2"
+                    android:background="@android:color/transparent"
+                    android:drawableStart="@android:drawable/ic_input_add"
+                    android:layout_marginEnd="8dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingHorizontal="8dp" />
+
+                <Button
+                    android:id="@+id/keywordButton2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:text="#리뷰"
+                    android:textSize="12sp"
+                    android:textColor="#1976d2"
+                    android:background="@android:color/transparent"
+                    android:drawableStart="@android:drawable/ic_input_add"
+                    android:layout_marginEnd="8dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingHorizontal="8dp" />
+
+                <Button
+                    android:id="@+id/keywordButton3"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:text="#게임"
+                    android:textSize="12sp"
+                    android:textColor="#1976d2"
+                    android:background="@android:color/transparent"
+                    android:drawableStart="@android:drawable/ic_input_add"
+                    android:layout_marginEnd="8dp"
+                    android:minWidth="0dp"
+                    android:minHeight="0dp"
+                    android:paddingHorizontal="8dp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- 키워드 입력 섹션 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✏️ 새 키워드 입력"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#333333"
+                android:layout_marginBottom="8dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <AutoCompleteTextView
+                    android:id="@+id/customKeywordInput"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:hint="키워드를 입력하세요 (예: #AI, #스마트폰)"
+                    android:textSize="14sp"
+                    android:paddingHorizontal="12dp"
+                    android:background="#f5f5f5"
+                    android:layout_marginEnd="8dp"
+                    android:maxLines="1"
+                    android:imeOptions="actionDone"
+                    android:completionThreshold="1"
+                    android:dropDownHeight="200dp" />
+
+                <Button
+                    android:id="@+id/addKeywordButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="추가"
+                    android:textSize="12sp"
+                    android:textColor="#FFFFFF"
+                    android:background="#1976d2"
+                    android:minWidth="60dp"
+                    android:paddingHorizontal="12dp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- 선택된 키워드 표시 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✅ 선택된 키워드"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#333333"
+                android:layout_marginBottom="8dp" />
+
+            <!-- 선택된 키워드들이 동적으로 표시될 컨테이너 -->
+            <LinearLayout
+                android:id="@+id/selectedKeywordsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="#e8f5e8"
+                android:padding="10dp"
+                android:minHeight="40dp">
+
+                <TextView
+                    android:id="@+id/selectedKeywordsText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="선택된 키워드가 없습니다"
+                    android:textSize="13sp"
+                    android:textColor="#666666"
+                    android:gravity="center" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- 수집 옵션 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#f9f9f9"
+            android:padding="15dp"
+            android:layout_marginBottom="20dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🛠️ 수집 옵션"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#333333"
+                android:layout_marginBottom="10dp" />
+
+            <!-- 콘텐츠 타입 선택 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="10dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📹 콘텐츠 타입:"
+                    android:textSize="13sp"
+                    android:textColor="#666666"
+                    android:layout_marginEnd="10dp"
+                    android:gravity="center_vertical" />
+
+                <RadioGroup
+                    android:id="@+id/contentTypeRadioGroup"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <RadioButton
+                        android:id="@+id/radioAllContent"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="전체"
+                        android:textSize="12sp"
+                        android:checked="true"
+                        android:layout_marginEnd="15dp" />
+
+                    <RadioButton
+                        android:id="@+id/radioShortsOnly"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="숏폼만"
+                        android:textSize="12sp"
+                        android:layout_marginEnd="15dp" />
+
+                    <RadioButton
+                        android:id="@+id/radioLongformOnly"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="일반 영상"
+                        android:textSize="12sp" />
+
+                </RadioGroup>
+
+            </LinearLayout>
+
+            <!-- AI 분석 옵션 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🤖 AI 분석:"
+                    android:textSize="13sp"
+                    android:textColor="#666666"
+                    android:layout_marginEnd="10dp" />
+
+                <Switch
+                    android:id="@+id/aiAnalysisSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="활성화"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:textColor="#2e7d32"
+                    android:layout_marginStart="8dp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- 버튼 섹션 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/buttonCancelCollection"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="취소"
+                android:textSize="14sp"
+                android:textColor="#333333"
+                android:background="#f5f5f5"
+                android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/buttonStartCollection"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="📊 수집 시작"
+                android:textSize="14sp"
+                android:textColor="#FFFFFF"
+                android:background="#1976d2"
+                android:layout_marginStart="8dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>

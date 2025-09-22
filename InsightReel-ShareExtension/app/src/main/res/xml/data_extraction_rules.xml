@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <!-- 클라우드 백업 규칙 -->
+    </cloud-backup>
+    <device-transfer>
+        <!-- 기기 간 전송 규칙 -->
+    </device-transfer>
+</data-extraction-rules>

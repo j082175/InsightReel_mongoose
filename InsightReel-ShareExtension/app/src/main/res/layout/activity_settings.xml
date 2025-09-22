@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:background="#f5f5f5">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- 헤더 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🎬 InsightReel 설정"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#333"
+            android:gravity="center"
+            android:layout_marginBottom="24dp" />
+
+        <!-- 분석 타입 설정 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/settings_card_background"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="📊 분석 타입 선택"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#333"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="공유할 때 어떤 분석을 수행할지 선택하세요"
+                android:textSize="14sp"
+                android:textColor="#666"
+                android:layout_marginBottom="16dp" />
+
+            <RadioGroup
+                android:id="@+id/radioGroupAnalysisType"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <RadioButton
+                    android:id="@+id/radioVideoOnly"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🎥 영상 분석만"
+                    android:textSize="16sp"
+                    android:padding="8dp" />
+
+                <RadioButton
+                    android:id="@+id/radioChannelOnly"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="📺 채널 분석만"
+                    android:textSize="16sp"
+                    android:padding="8dp" />
+
+                <RadioButton
+                    android:id="@+id/radioBoth"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="🎬 영상+채널 분석 (둘 다)"
+                    android:textSize="16sp"
+                    android:padding="8dp" />
+            </RadioGroup>
+        </LinearLayout>
+
+        <!-- 모달 표시 설정 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/settings_card_background"
+            android:padding="16dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="💬 전송 방식 설정"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#333"
+                android:layout_marginBottom="12dp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="확인창 표시"
+                    android:textSize="16sp"
+                    android:textColor="#333" />
+
+                <Switch
+                    android:id="@+id/switchShowModal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="• ON: 전송 전 확인창 표시\n• OFF: 바로 전송"
+                android:textSize="14sp"
+                android:textColor="#666"
+                android:layout_marginTop="8dp" />
+        </LinearLayout>
+
+        <!-- 현재 설정 표시 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/current_settings_background"
+            android:padding="16dp"
+            android:layout_marginBottom="24dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🔍 현재 설정"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#333"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/textCurrentSettings"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="📊 분석 타입: 영상 분석만\n💬 전송 방식: 모달 표시"
+                android:textSize="14sp"
+                android:textColor="#444"
+                android:lineSpacingMultiplier="1.2" />
+        </LinearLayout>
+
+        <!-- 버튼들 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/buttonTest"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="🧪 테스트"
+                android:textSize="16sp"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/button_test_background" />
+
+            <Button
+                android:id="@+id/buttonSave"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="💾 저장"
+                android:textSize="16sp"
+                android:textColor="#FFFFFF"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/button_save_background" />
+        </LinearLayout>
+
+        <!-- 안내 텍스트 -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="💡 설정은 앱을 다시 시작해도 유지됩니다"
+            android:textSize="12sp"
+            android:textColor="#999"
+            android:gravity="center"
+            android:layout_marginTop="16dp" />
+
+    </LinearLayout>
+</ScrollView>
