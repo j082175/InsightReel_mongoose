@@ -1,6 +1,16 @@
-const fs = require('fs').promises;
-const path = require('path');
-const { ServerLogger } = require('../../utils/logger');
+import { promises as fs } from 'fs';
+import path from 'path';
+import { ServerLogger } from '../../utils/logger';
+import {
+  ChannelData,
+  AnalysisData,
+  YouTubeChannelData,
+  CreateOrUpdateOptions,
+  ChannelAnalysisResult,
+  EnhancedChannelAnalysisResult
+} from '../../types/channel.types';
+
+// 일시적으로 require 문 유지 (다른 파일들이 아직 TypeScript로 변환되지 않음)
 const YouTubeChannelService = require('../../services/YouTubeChannelService');
 const YouTubeChannelAnalyzer = require('../../services/YouTubeChannelAnalyzer');
 const Channel = require('../../models/ChannelModel');
@@ -137,8 +147,21 @@ class ChannelAnalysisService {
     /**
      * 🍃 MongoDB에 채널 데이터 저장
      */
-    async saveToMongoDB(channelData) {
+    async saveToMongoDB(channelData: ChannelData): Promise<ChannelData> {
         try {
+            // 🔍 저장 전 channelData 확인
+            ServerLogger.info('🔍 저장 전 channelData:', {
+                targetAudience: channelData.targetAudience,
+                contentStyle: channelData.contentStyle,
+                uniqueFeatures: channelData.uniqueFeatures,
+                channelPersonality: channelData.channelPersonality,
+                hasTargetAudience: !!channelData.targetAudience,
+                hasContentStyle: !!channelData.contentStyle,
+                hasUniqueFeatures: !!channelData.uniqueFeatures && channelData.uniqueFeatures.length > 0,
+                hasChannelPersonality: !!channelData.channelPersonality,
+                allKeys: Object.keys(channelData)
+            });
+
             // MongoDB upsert (존재하면 업데이트, 없으면 생성)
             // Channel 스키마에서는 'id' 필드를 사용하므로 '_id' 대신 'id'로 조회
             const result = await Channel.findOneAndUpdate(
@@ -163,6 +186,18 @@ class ChannelAnalysisService {
                     createdAt.getTime() === updatedAt.getTime(),
             });
 
+            // 🔍 저장된 실제 데이터 확인
+            ServerLogger.info('🔍 저장 후 실제 DB 데이터:', {
+                targetAudience: result.targetAudience,
+                contentStyle: result.contentStyle,
+                uniqueFeatures: result.uniqueFeatures,
+                channelPersonality: result.channelPersonality,
+                hasTargetAudience: !!result.targetAudience,
+                hasContentStyle: !!result.contentStyle,
+                hasUniqueFeatures: !!result.uniqueFeatures && result.uniqueFeatures.length > 0,
+                hasChannelPersonality: !!result.channelPersonality
+            });
+
             return result;
         } catch (error) {
             ServerLogger.error('❌ MongoDB 채널 저장 실패', error);
@@ -175,13 +210,15 @@ class ChannelAnalysisService {
      * 📊 YouTube API에서 채널 상세 분석 후 생성/업데이트
      */
     async createOrUpdateWithAnalysis(
-        channelIdentifier,
-        userKeywords = [],
-        includeAnalysis = true,
-        skipAIAnalysis = false,
-        queueNormalizedChannelId = null, // Queue에서 생성한 정규화 ID
-    ) {
+        channelIdentifier: string,
+        userKeywords: string[] = [],
+        includeAnalysis: boolean = true,
+        skipAIAnalysis: boolean = false,
+        queueNormalizedChannelId: string | null = null, // Queue에서 생성한 정규화 ID
+    ): Promise<ChannelData> {
         try {
+            ServerLogger.info(`🚀 createOrUpdateWithAnalysis 함수 호출됨!`);
+
             // URL 디코딩 처리
             const decodedChannelIdentifier = decodeURIComponent(channelIdentifier);
 
@@ -197,7 +234,7 @@ class ChannelAnalysisService {
             });
 
             // 1. 기본 채널 정보 가져오기 (채널 ID 확인용)
-            let youtubeData = null;
+            let youtubeData: YouTubeChannelData | null = null;
 
             // 영상 URL인지 채널 식별자인지 판별
             if (decodedChannelIdentifier.includes('/watch') || decodedChannelIdentifier.includes('/shorts/')) {
@@ -249,7 +286,7 @@ class ChannelAnalysisService {
                 name: youtubeData.channelName,
             });
 
-            let analysisData = null;
+            let analysisData: AnalysisData | null = null;
 
             // 2. 상세 분석 수행 (선택적)
             const enableContentAnalysis = !skipAIAnalysis;
@@ -296,16 +333,19 @@ class ChannelAnalysisService {
                         analysisResultKeys: Object.keys(analysisResult)
                     });
 
-                    // 향상된 분석 데이터가 있으면 추가
-                    if (analysisResult.enhancedAnalysis) {
-                        analysisData.enhancedAnalysis =
-                            analysisResult.enhancedAnalysis;
+                    // 향상된 분석 데이터 저장 (analysisResult 자체가 enhanced 분석 결과)
+                    if (analysisResult.targetAudience || analysisResult.contentStyle) {
+                        analysisData.enhancedAnalysis = analysisResult;
 
                         // 🔍 실제 AI 응답 구조 확인
                         ServerLogger.info(`🔍 실제 AI 응답 구조:`, {
-                            hasChannelIdentity: !!analysisResult.enhancedAnalysis.channelIdentity,
-                            channelIdentityKeys: analysisResult.enhancedAnalysis.channelIdentity ? Object.keys(analysisResult.enhancedAnalysis.channelIdentity) : [],
-                            uniqueFeatures: analysisResult.enhancedAnalysis.channelIdentity?.uniqueFeatures
+                            hasTargetAudience: !!analysisResult.targetAudience,
+                            hasContentStyle: !!analysisResult.contentStyle,
+                            hasUniqueFeatures: !!analysisResult.uniqueFeatures,
+                            hasChannelPersonality: !!analysisResult.channelPersonality,
+                            targetAudience: analysisResult.targetAudience,
+                            contentStyle: analysisResult.contentStyle?.substring(0, 50),
+                            uniqueFeatures: analysisResult.uniqueFeatures
                         });
                         if (skipAIAnalysis) {
                             ServerLogger.success(
@@ -335,7 +375,7 @@ class ChannelAnalysisService {
 
             // 3. 채널 데이터 구성
             ServerLogger.info(`🐛 DEBUG: youtubeData.publishedAt = ${youtubeData.publishedAt}`);
-            const channelData = {
+            const channelData: ChannelData = {
                 channelId: youtubeData.id,
                 name: youtubeData.channelName,
                 url: youtubeData.channelUrl,
@@ -390,69 +430,89 @@ class ChannelAnalysisService {
                 // AI 태그 (향상된 분석에서 추출 또는 빈 배열)
                 aiTags: skipAIAnalysis
                     ? []
-                    : analysisData?.enhancedAnalysis?.channelIdentity?.channelTags || [],
+                    : analysisData?.enhancedAnalysis?.channelTags || [],
                 deepInsightTags: [], // 일단 빈 배열로 초기화, 나중에 재해석으로 채움
                 allTags: skipAIAnalysis
                     ? [...(userKeywords || [])]
                     : [
                           ...(userKeywords || []),
-                          ...(analysisData?.enhancedAnalysis?.channelIdentity
-                              ?.channelTags || []),
+                          ...(analysisData?.enhancedAnalysis?.channelTags || []),
                       ].filter((tag, index, arr) => arr.indexOf(tag) === index), // 중복 제거
 
-                // 🔍 analysisData 구조 확인
+                // 🔍 analysisData.enhancedAnalysis 구조 확인
                 ...(() => {
-                    ServerLogger.info(`🔍 analysisData 구조 확인:`, {
+                    ServerLogger.info(`🔍 analysisData.enhancedAnalysis 구조 확인:`, {
                         hasAnalysisData: !!analysisData,
                         hasEnhancedAnalysis: !!analysisData?.enhancedAnalysis,
+                        enhancedAnalysisKeys: analysisData?.enhancedAnalysis ? Object.keys(analysisData.enhancedAnalysis) : [],
                         hasChannelIdentity: !!analysisData?.enhancedAnalysis?.channelIdentity,
-                        analysisDataKeys: analysisData ? Object.keys(analysisData) : [],
-                        enhancedAnalysisKeys: analysisData?.enhancedAnalysis ? Object.keys(analysisData.enhancedAnalysis) : []
+                        channelIdentityKeys: analysisData?.enhancedAnalysis?.channelIdentity ? Object.keys(analysisData.enhancedAnalysis.channelIdentity) : [],
+                        channelIdentityData: analysisData?.enhancedAnalysis?.channelIdentity,
+                        actualTargetAudience: analysisData?.enhancedAnalysis?.channelIdentity?.targetAudience,
+                        actualContentStyle: analysisData?.enhancedAnalysis?.channelIdentity?.contentStyle,
+                        actualUniqueFeatures: analysisData?.enhancedAnalysis?.channelIdentity?.uniqueFeatures,
+                        actualChannelPersonality: analysisData?.enhancedAnalysis?.channelIdentity?.channelPersonality
                     });
                     return {};
                 })(),
 
-                // channelIdentity 추가 정보
-                targetAudience: skipAIAnalysis
-                    ? ''
-                    : (() => {
-                        const value = analysisData?.enhancedAnalysis?.channelIdentity?.targetAudience || '';
-                        ServerLogger.info(`🔍 DB 저장 targetAudience: ${value}`);
-                        return value;
-                    })(),
-                contentStyle: skipAIAnalysis
-                    ? ''
-                    : (() => {
-                        const value = analysisData?.enhancedAnalysis?.channelIdentity?.contentStyle || '';
-                        ServerLogger.info(`🔍 DB 저장 contentStyle: ${value.substring(0, 50)}...`);
-                        return value;
-                    })(),
-                uniqueFeatures: skipAIAnalysis
-                    ? []
-                    : (() => {
-                        const value = analysisData?.enhancedAnalysis?.channelIdentity?.uniqueFeatures || [];
-                        ServerLogger.info(`🔍 DB 저장 uniqueFeatures: ${JSON.stringify(value)}`);
-                        return value;
-                    })(),
-                channelPersonality: skipAIAnalysis
-                    ? ''
-                    : (() => {
-                        const value = analysisData?.enhancedAnalysis?.channelIdentity?.channelPersonality || '';
-                        ServerLogger.info(`🔍 DB 저장 channelPersonality: ${value}`);
-                        return value;
-                    })(),
+                // channelIdentity 필드들 초기값
+                targetAudience: '',
+                contentStyle: '',
+                uniqueFeatures: [],
+                channelPersonality: '',
 
-                clusterIds: [],
-                suggestedClusters: [],
-                contentType:
-                    analysisData?.shortFormRatio > 70
-                        ? 'shortform'
-                        : analysisData?.shortFormRatio < 30
-                        ? 'longform'
-                        : analysisData?.shortFormRatio !== undefined
-                        ? 'mixed'
-                        : 'unknown',
             };
+
+            // channelIdentity 추가 정보 (별도로 추가)
+            const targetAudience = skipAIAnalysis
+                ? ''
+                : analysisData?.enhancedAnalysis?.channelIdentity?.targetAudience || '';
+            const contentStyle = skipAIAnalysis
+                ? ''
+                : analysisData?.enhancedAnalysis?.channelIdentity?.contentStyle || '';
+            const uniqueFeatures = skipAIAnalysis
+                ? []
+                : analysisData?.enhancedAnalysis?.channelIdentity?.uniqueFeatures || [];
+            const channelPersonality = skipAIAnalysis
+                ? ''
+                : analysisData?.enhancedAnalysis?.channelIdentity?.channelPersonality || '';
+
+            ServerLogger.info(`🔍 DB 저장 targetAudience: "${targetAudience}"`);
+            ServerLogger.info(`🔍 DB 저장 contentStyle: "${contentStyle.substring(0, 50)}..."`);
+            ServerLogger.info(`🔍 DB 저장 uniqueFeatures: ${JSON.stringify(uniqueFeatures)}`);
+            ServerLogger.info(`🔍 DB 저장 channelPersonality: "${channelPersonality}"`);
+
+            // channelIdentity 필드들을 channelData에 추가
+            ServerLogger.info(`🔍 할당 전 channelData 상태:`, {
+                isObject: typeof channelData === 'object',
+                isFrozen: Object.isFrozen(channelData),
+                isSealed: Object.isSealed(channelData),
+                hasTargetAudience: 'targetAudience' in channelData
+            });
+
+            channelData.targetAudience = targetAudience;
+            channelData.contentStyle = contentStyle;
+            channelData.uniqueFeatures = uniqueFeatures;
+            channelData.channelPersonality = channelPersonality;
+
+            ServerLogger.info(`🔍 할당 후 즉시 확인:`, {
+                targetAudience: channelData.targetAudience,
+                contentStyle: channelData.contentStyle,
+                uniqueFeatures: channelData.uniqueFeatures,
+                channelPersonality: channelData.channelPersonality
+            });
+
+            // 나머지 필드들 추가
+            channelData.clusterIds = [];
+            channelData.suggestedClusters = [];
+            channelData.contentType = analysisData?.shortFormRatio > 70
+                ? 'shortform'
+                : analysisData?.shortFormRatio < 30
+                ? 'longform'
+                : analysisData?.shortFormRatio !== undefined
+                ? 'mixed'
+                : 'unknown';
 
             // 🔄 AI 재해석 수행 (사용자 카테고리가 있고 AI 분석을 건너뛰지 않은 경우에만)
             // DEBUG 로그는 개발 환경에서만
@@ -594,6 +654,12 @@ class ChannelAnalysisService {
                 clusterIds: [],
                 suggestedClusters: [],
                 contentType: 'mixed',
+
+                // channelIdentity 기본값 (AI 분석 없는 경우)
+                targetAudience: '',
+                contentStyle: '',
+                uniqueFeatures: [],
+                channelPersonality: '',
             };
 
             // 기존 createOrUpdate 메서드 호출
@@ -611,7 +677,7 @@ class ChannelAnalysisService {
     /**
      * 🆕 채널 생성 또는 업데이트
      */
-    async createOrUpdate(channelData) {
+    async createOrUpdate(channelData: ChannelData): Promise<ChannelData> {
         try {
             const channel = {
                 channelId: channelData.channelId,
@@ -691,7 +757,7 @@ class ChannelAnalysisService {
                 publishedAt: channel.publishedAt,
                 keys: Object.keys(channel)
             });
-            const savedChannel = await this.saveToMongoDB(channel);
+            const savedChannel = await this.saveToMongoDB(channelData);
 
             // 🔍 저장 후 실제 DB 값 확인
             ServerLogger.info(`🔍 저장 후 DB 확인:`, {
