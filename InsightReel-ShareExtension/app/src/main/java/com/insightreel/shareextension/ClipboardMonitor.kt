@@ -14,6 +14,7 @@ class ClipboardMonitor(private val context: Context) {
             "instagram.com", "www.instagram.com",
             "tiktok.com", "www.tiktok.com"
         )
+        private const val POLLING_INTERVAL = 2000L // 2초마다 폴링
     }
 
     private val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -27,7 +28,19 @@ class ClipboardMonitor(private val context: Context) {
 
     // 클립보드 변경 리스너
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
+        println("🔥 클립보드 리스너 트리거됨!")
         checkClipboardForUrl()
+    }
+
+    // 백업 폴링 런어블 (리스너가 작동하지 않을 경우를 대비)
+    private val pollingRunnable = object : Runnable {
+        override fun run() {
+            if (isMonitoring) {
+                println("🔍 클립보드 폴링 체크...")
+                checkClipboardForUrl()
+                handler.postDelayed(this, POLLING_INTERVAL)
+            }
+        }
     }
 
     /**
@@ -36,12 +49,16 @@ class ClipboardMonitor(private val context: Context) {
     fun startMonitoring() {
         if (!isMonitoring) {
             try {
+                // 리스너 등록
                 clipboardManager.addPrimaryClipChangedListener(clipboardListener)
                 isMonitoring = true
-                println("📋 클립보드 모니터링 시작됨")
+                println("📋 클립보드 모니터링 시작됨 (리스너 + 폴링)")
 
                 // 최초 실행 시 현재 클립보드 내용 확인
                 checkClipboardForUrl()
+
+                // 백업 폴링 시작 (리스너가 작동하지 않을 경우를 대비)
+                handler.postDelayed(pollingRunnable, POLLING_INTERVAL)
             } catch (e: Exception) {
                 println("❌ 클립보드 모니터링 시작 실패: ${e.message}")
             }
@@ -55,8 +72,9 @@ class ClipboardMonitor(private val context: Context) {
         if (isMonitoring) {
             try {
                 clipboardManager.removePrimaryClipChangedListener(clipboardListener)
+                handler.removeCallbacks(pollingRunnable)
                 isMonitoring = false
-                println("📋 클립보드 모니터링 중지됨")
+                println("📋 클립보드 모니터링 중지됨 (리스너 + 폴링)")
             } catch (e: Exception) {
                 println("❌ 클립보드 모니터링 중지 실패: ${e.message}")
             }
@@ -193,6 +211,7 @@ class ClipboardMonitor(private val context: Context) {
      */
     fun cleanup() {
         stopMonitoring()
+        handler.removeCallbacks(pollingRunnable)
         onValidUrlDetected = null
         onInvalidUrlDetected = null
         lastClipText = ""

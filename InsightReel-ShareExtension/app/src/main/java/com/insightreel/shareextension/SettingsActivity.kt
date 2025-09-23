@@ -140,7 +140,20 @@ class SettingsActivity : AppCompatActivity() {
             val transmissionText = if (showModal) "모달 표시" else "백그라운드 전송"
 
             val floatingButtonStatus = if (permissionHelper.hasOverlayPermission()) {
-                if (isFloatingButtonServiceRunning()) "🎈 플로팅 버튼 실행 중" else "🎈 플로팅 버튼 비활성화"
+                if (isFloatingButtonServiceRunning()) {
+                    // 클립보드 상태도 함께 표시
+                    val clipText = try {
+                        val clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        val clipData = clipboardManager.primaryClip
+                        if (clipData != null && clipData.itemCount > 0) {
+                            clipData.getItemAt(0).text?.toString()?.take(30) ?: ""
+                        } else ""
+                    } catch (e: Exception) { "" }
+
+                    "🎈 플로팅 버튼 실행 중\n📋 현재 클립보드: $clipText"
+                } else {
+                    "🎈 플로팅 버튼 비활성화"
+                }
             } else {
                 "🎈 플로팅 버튼 권한 필요"
             }
