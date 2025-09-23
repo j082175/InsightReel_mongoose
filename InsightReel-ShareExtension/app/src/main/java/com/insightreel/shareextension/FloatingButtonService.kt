@@ -5,11 +5,13 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 
 class FloatingButtonService : Service() {
 
     companion object {
+        private const val TAG = "FloatingButtonService"
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_ID = "floating_button_channel"
         private const val ACTION_START_FLOATING = "action_start_floating"
@@ -51,7 +53,7 @@ class FloatingButtonService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        println("🎈 FloatingButtonService 생성")
+        Log.d(TAG, "🎈 FloatingButtonService 생성")
 
         // 컴포넌트 초기화
         preferencesManager = PreferencesManager(this)
@@ -100,20 +102,20 @@ class FloatingButtonService : Service() {
             // 클립보드 모니터 초기화 및 시작
             clipboardMonitor = ClipboardMonitor(this)
             clipboardMonitor.setOnValidUrlDetected { url ->
-                println("🎈 유효한 URL 감지, 플로팅 버튼 표시: $url")
+                Log.d(TAG, "🎈 유효한 URL 감지, 플로팅 버튼 표시: $url")
                 floatingButton.show(url)
             }
             clipboardMonitor.setOnInvalidUrlDetected {
-                println("🎈 무효한 URL, 플로팅 버튼 숨김")
+                Log.d(TAG, "🎈 무효한 URL, 플로팅 버튼 숨김")
                 floatingButton.hide()
             }
             clipboardMonitor.startMonitoring()
 
             isServiceRunning = true
-            println("✅ 플로팅 버튼 서비스 시작 완료")
+            Log.d(TAG, "✅ 플로팅 버튼 서비스 시작 완료")
 
         } catch (e: Exception) {
-            println("❌ 플로팅 버튼 서비스 시작 실패: ${e.message}")
+            Log.e(TAG, "❌ 플로팅 버튼 서비스 시작 실패: ${e.message}")
             stopSelf()
         }
     }

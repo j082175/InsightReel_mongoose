@@ -269,8 +269,7 @@ class ChannelAnalysisService {
             // 항상 기본 통계는 수집하되, AI 분석만 선택적으로 수행
             try {
                 // skipAIAnalysis가 true면 AI 콘텐츠 분석만 건너뛰고 기본 통계는 수집
-                // const enableContentAnalysis = includeAnalysis && !skipAIAnalysis;
-                const enableContentAnalysis = !skipAIAnalysis;
+                // enableContentAnalysis는 위에서 이미 정의됨
 
                 ServerLogger.info(
                     `🔍 빠른 수집 디버그: skipAIAnalysis=${skipAIAnalysis}, enableContentAnalysis=${enableContentAnalysis}`,
@@ -401,32 +400,32 @@ class ChannelAnalysisService {
                               ?.channelTags || []),
                       ].filter((tag, index, arr) => arr.indexOf(tag) === index), // 중복 제거
 
-                // channelIdentity 추가 정보 (올바른 경로 사용)
+                // channelIdentity 추가 정보
                 targetAudience: skipAIAnalysis
                     ? ''
                     : (() => {
-                        const value = analysisResult?.analysis?.enhancedAnalysis?.channelIdentity?.targetAudience || '';
+                        const value = analysisData?.enhancedAnalysis?.channelIdentity?.targetAudience || '';
                         ServerLogger.info(`🔍 DB 저장 targetAudience: ${value}`);
                         return value;
                     })(),
                 contentStyle: skipAIAnalysis
                     ? ''
                     : (() => {
-                        const value = analysisResult?.analysis?.enhancedAnalysis?.channelIdentity?.contentStyle || '';
+                        const value = analysisData?.enhancedAnalysis?.channelIdentity?.contentStyle || '';
                         ServerLogger.info(`🔍 DB 저장 contentStyle: ${value.substring(0, 50)}...`);
                         return value;
                     })(),
                 uniqueFeatures: skipAIAnalysis
                     ? []
                     : (() => {
-                        const value = analysisResult?.analysis?.enhancedAnalysis?.channelIdentity?.uniqueFeatures || [];
+                        const value = analysisData?.enhancedAnalysis?.channelIdentity?.uniqueFeatures || [];
                         ServerLogger.info(`🔍 DB 저장 uniqueFeatures: ${JSON.stringify(value)}`);
                         return value;
                     })(),
                 channelPersonality: skipAIAnalysis
                     ? ''
                     : (() => {
-                        const value = analysisResult?.analysis?.enhancedAnalysis?.channelIdentity?.channelPersonality || '';
+                        const value = analysisData?.enhancedAnalysis?.channelIdentity?.channelPersonality || '';
                         ServerLogger.info(`🔍 DB 저장 channelPersonality: ${value}`);
                         return value;
                     })(),

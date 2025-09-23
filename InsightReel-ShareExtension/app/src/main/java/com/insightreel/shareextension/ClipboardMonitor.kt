@@ -4,11 +4,13 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import kotlinx.coroutines.*
 
 class ClipboardMonitor(private val context: Context) {
 
     companion object {
+        private const val TAG = "ClipboardMonitor"
         private val SUPPORTED_DOMAINS = listOf(
             "youtube.com", "youtu.be", "www.youtube.com",
             "instagram.com", "www.instagram.com",
@@ -28,12 +30,12 @@ class ClipboardMonitor(private val context: Context) {
 
     // 클립보드 변경 리스너
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
-        println("🔥 클립보드 리스너 트리거됨!")
+        Log.d(TAG, "🔥 클립보드 리스너 트리거됨!")
 
         // Android 10+에서는 클립보드 변경 감지는 되지만 내용 읽기가 제한될 수 있음
         // 따라서 변경 감지만으로도 플로팅 버튼을 표시해보는 대안 로직 추가
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            println("🔥 Android 10+ 클립보드 변경 감지 - 대안 방법 시도")
+            Log.d(TAG, "🔥 Android 10+ 클립보드 변경 감지 - 대안 방법 시도")
             handleClipboardChangeForAndroid10Plus()
         } else {
             checkClipboardForUrl()
@@ -44,7 +46,7 @@ class ClipboardMonitor(private val context: Context) {
     private val pollingRunnable = object : Runnable {
         override fun run() {
             if (isMonitoring) {
-                println("🔍 클립보드 폴링 체크...")
+                Log.d(TAG, "🔍 클립보드 폴링 체크...")
                 checkClipboardForUrl()
                 handler.postDelayed(this, POLLING_INTERVAL)
             }
@@ -60,7 +62,7 @@ class ClipboardMonitor(private val context: Context) {
                 // 리스너 등록
                 clipboardManager.addPrimaryClipChangedListener(clipboardListener)
                 isMonitoring = true
-                println("📋 클립보드 모니터링 시작됨 (리스너 + 폴링)")
+                Log.d(TAG, "📋 클립보드 모니터링 시작됨 (리스너 + 폴링)")
 
                 // 최초 실행 시 현재 클립보드 내용 확인
                 checkClipboardForUrl()
@@ -68,7 +70,7 @@ class ClipboardMonitor(private val context: Context) {
                 // 백업 폴링 시작 (리스너가 작동하지 않을 경우를 대비)
                 handler.postDelayed(pollingRunnable, POLLING_INTERVAL)
             } catch (e: Exception) {
-                println("❌ 클립보드 모니터링 시작 실패: ${e.message}")
+                Log.e(TAG, "❌ 클립보드 모니터링 시작 실패: ${e.message}")
             }
         }
     }
@@ -108,15 +110,24 @@ class ClipboardMonitor(private val context: Context) {
      */
     private fun handleClipboardChangeForAndroid10Plus() {
         try {
-            // 클립보드 변경이 감지되었으므로, 사용자에게 수동으로 확인을 요청하는 방식
-            println("🎈 Android 10+ 클립보드 변경 감지 - 플로팅 버튼 표시")
+            Log.d(TAG, "🎈 Android 10+ 클립보드 변경 감지 - 플로팅 버튼 표시")
 
-            // 임시 URL로 플로팅 버튼 표시 (실제 URL은 사용자가 직접 확인)
-            val temporaryUrl = "https://www.youtube.com/watch?v=temp"
-            onValidUrlDetected?.invoke(temporaryUrl)
+            // 짧은 지연 후 실제 클립보드 내용 읽기 시도 (때때로 성공할 수 있음)
+            handler.postDelayed({
+                val clipText = getCurrentClipboardText()
+                if (clipText.isNotEmpty() && isValidVideoUrl(clipText)) {
+                    Log.d(TAG, "✅ Android 10+에서 실제 URL 읽기 성공: ${clipText.take(30)}...")
+                    onValidUrlDetected?.invoke(clipText)
+                } else {
+                    Log.d(TAG, "⚠️ Android 10+ 클립보드 읽기 실패 - 임시 버튼 표시")
+                    // 임시 URL로 플로팅 버튼 표시 (실제 URL은 클릭 시점에 읽기)
+                    val temporaryUrl = "https://www.youtube.com/watch?v=temp"
+                    onValidUrlDetected?.invoke(temporaryUrl)
+                }
+            }, 100) // 100ms 지연
 
         } catch (e: Exception) {
-            println("❌ Android 10+ 클립보드 처리 실패: ${e.message}")
+            Log.e(TAG, "❌ Android 10+ 클립보드 처리 실패: ${e.message}")
         }
     }
 
