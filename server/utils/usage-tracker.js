@@ -10,6 +10,7 @@ const { YOUTUBE_API_LIMITS, GEMINI_API_LIMITS } = require('../config/api-constan
 class UsageTracker {
     static instances = new Map(); // 싱글톤 인스턴스 저장
     static fileWatcher = null; // 파일 감시자 저장
+    static maxInstances = 50; // 최대 인스턴스 수 제한
 
     constructor(apiKey = null) {
         const key = apiKey || this.getDefaultApiKey();
@@ -17,6 +18,16 @@ class UsageTracker {
         // 이미 동일한 API 키로 인스턴스가 있으면 반환
         if (UsageTracker.instances.has(key)) {
             return UsageTracker.instances.get(key);
+        }
+
+        // 인스턴스 수 제한 - 오래된 것부터 정리
+        if (UsageTracker.instances.size >= UsageTracker.maxInstances) {
+            const oldestKey = UsageTracker.instances.keys().next().value;
+            const oldestInstance = UsageTracker.instances.get(oldestKey);
+            if (oldestInstance) {
+                oldestInstance.destroy();
+            }
+            UsageTracker.instances.delete(oldestKey);
         }
         this.usageFilePath = path.join(
             __dirname,
@@ -1304,6 +1315,56 @@ class UsageTracker {
         } catch (error) {
             ServerLogger.error('사용량 파일 삭제 중 오류 발생', error, 'USAGE-TRACKER');
             return false;
+        }
+    }
+
+    /**
+     * 인스턴스 메모리 해제
+     */
+    destroy() {
+        try {
+            // 파일 감시자 정리
+            if (UsageTracker.fileWatcher) {
+                UsageTracker.fileWatcher.close();
+                UsageTracker.fileWatcher = null;
+            }
+
+            // 인스턴스에서 제거
+            for (const [key, instance] of UsageTracker.instances.entries()) {
+                if (instance === this) {
+                    UsageTracker.instances.delete(key);
+                    break;
+                }
+            }
+
+            ServerLogger.info('🧹 UsageTracker 인스턴스 메모리 정리 완료', null, 'USAGE-TRACKER');
+        } catch (error) {
+            ServerLogger.error('UsageTracker 정리 중 오류', error, 'USAGE-TRACKER');
+        }
+    }
+
+    /**
+     * 모든 인스턴스 정리
+     */
+    static destroyAll() {
+        try {
+            // 파일 감시자 정리
+            if (UsageTracker.fileWatcher) {
+                UsageTracker.fileWatcher.close();
+                UsageTracker.fileWatcher = null;
+            }
+
+            // 모든 인스턴스 정리
+            for (const instance of UsageTracker.instances.values()) {
+                if (instance && typeof instance.destroy === 'function') {
+                    instance.destroy();
+                }
+            }
+
+            UsageTracker.instances.clear();
+            ServerLogger.info('🧹 모든 UsageTracker 인스턴스 정리 완료', null, 'USAGE-TRACKER');
+        } catch (error) {
+            ServerLogger.error('UsageTracker 전체 정리 중 오류', error, 'USAGE-TRACKER');
         }
     }
 }

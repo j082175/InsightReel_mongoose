@@ -10,16 +10,17 @@ import kotlinx.coroutines.*
 
 class MainActivity : AppCompatActivity() {
 
-    private val networkManager = NetworkManager()
+    private lateinit var networkManager: NetworkManager
+    private lateinit var preferencesManager: PreferencesManager
     private val activityScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
-    companion object {
-        private const val SERVER_URL = "http://192.168.0.2:3000"
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        networkManager = NetworkManager(this)
+        preferencesManager = PreferencesManager(this)
 
         setupUI()
     }
@@ -53,19 +54,22 @@ class MainActivity : AppCompatActivity() {
 
         activityScope.launch {
             try {
+                val serverUrl = preferencesManager.getCurrentServerUrl()
                 val success = networkManager.sendVideoUrl(
-                    "http://192.168.0.2:3000",
+                    serverUrl,
                     "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
                 )
+
+                val networkType = if (networkManager.isWifiConnected()) "WiFi" else "LTE"
                 if (success) {
-                    Toast.makeText(this@MainActivity, "✅ 서버 연결 성공!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "✅ 서버 연결 성공! ($networkType)", Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(this@MainActivity, "❌ 서버 연결 실패", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "❌ 서버 연결 실패 ($networkType)", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                Toast.makeText(this@MainActivity, "❌ 네트워크 오류", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "❌ 네트워크 오류: ${e.message}", Toast.LENGTH_SHORT).show()
             } finally {
-                findViewById<Button>(R.id.testButton).text = "🧪 기능 테스트"
+                findViewById<Button>(R.id.testButton).text = "🧪 연결 테스트"
             }
         }
     }

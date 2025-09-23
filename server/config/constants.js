@@ -48,6 +48,13 @@ const SERVER_CONSTANTS = {
         MAX_CONCURRENT_PROCESSES: 5,
     },
 
+    // 📄 API 페이지네이션
+    PAGINATION: {
+        DEFAULT_LIMIT: 50,        // 기본 페이지당 항목 수
+        MAX_LIMIT: 200,          // 최대 페이지당 항목 수
+        DEFAULT_OFFSET: 0,       // 기본 오프셋
+    },
+
     // 🔍 AI 설정
     AI: {
         // 재시도 설정 (모든 AI 시스템 공통)

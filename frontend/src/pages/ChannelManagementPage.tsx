@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Channel } from '../shared/types';
-import { SearchBar, ActionBar } from '../shared/components';
+import { SearchBar } from '../shared/components';
 import {
   ChannelCard,
   ChannelAnalysisModal,
@@ -71,7 +71,7 @@ const ChannelManagementPage: React.FC = () => {
   // Local State
   const [activeTab, setActiveTab] = useState<'groups' | 'channels'>('channels');
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
-  const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
+  const [channelToAnalyze, setChannelToAnalyze] = useState<Channel | null>(null);
   const [itemToDelete, setItemToDelete] = useState<{
     type: 'single' | 'bulk';
     data?: Channel;
@@ -87,8 +87,8 @@ const ChannelManagementPage: React.FC = () => {
       if (isSelectMode) {
         toggleChannelSelection(channel.channelId);
       } else {
-        // 채널 상세 분석 모달 열기 (채널 이름 전달)
-        setChannelToAnalyze(channel.name);
+        // 채널 상세 분석 모달 열기 (채널 객체 전달)
+        setChannelToAnalyze(channel);
       }
     },
     [isSelectMode, toggleChannelSelection]
@@ -115,7 +115,7 @@ const ChannelManagementPage: React.FC = () => {
   ]);
 
   const handleChannelAnalyze = useCallback((channel: Channel) => {
-    setChannelToAnalyze(channel.channelId);
+    setChannelToAnalyze(channel);
   }, []);
 
   const handleChannelDelete = useCallback(
@@ -373,10 +373,7 @@ const ChannelManagementPage: React.FC = () => {
                 onFilterChange={updateFilters}
                 onToggleSelectMode={toggleSelectMode}
                 onSelectAll={handleSelectAll}
-                onClearSelection={() => {
-                  toggleSelectMode();
-                  clearSelection();
-                }}
+                onClearSelection={clearSelection}
                 onChannelClick={handleChannelClick}
                 onChannelSelect={handleSelectToggle}
                 onChannelDelete={handleDeleteClick}
@@ -389,31 +386,20 @@ const ChannelManagementPage: React.FC = () => {
                 onCreateGroup={handleCreateGroup}
                 onEditGroup={handleGroupEdit}
                 onDeleteGroup={handleGroupDelete}
+                onCollectGroup={(group) => {
+                  console.log('트렌딩 수집:', group.name);
+                  // TODO: 트렌딩 수집 로직 구현
+                }}
               />
             )}
           </div>
         </div>
 
-        {/* 선택 모드 액션 바 */}
-        <ActionBar
-          isVisible={isSelectMode}
-          selectedCount={selectedChannels.length}
-          totalCount={filteredChannels.length}
-          itemType="개"
-          onSelectAll={handleSelectAll}
-          onClearSelection={() => {
-            toggleSelectMode();
-            clearSelection();
-          }}
-          onDelete={() =>
-            handleDeleteClick({ type: 'bulk', count: selectedChannels.length })
-          }
-        />
       </div>
 
       {/* 모달들 */}
       <ChannelAnalysisModal
-        channelName={channelToAnalyze}
+        channel={channelToAnalyze}
         onClose={() => setChannelToAnalyze(null)}
       />
 

@@ -15,8 +15,13 @@ class ChannelAnalysisQueue extends EventEmitter {
         this.isProcessing = false;
         this.jobs = new Map(); // jobId -> job 정보
         this.ChannelAnalysisService = null;
+        this.timers = new Set(); // setTimeout/setInterval 추적
+        this.isShuttingDown = false;
 
         this.initializeChannelAnalysisService();
+
+        // 메모리 정리를 위한 자동 정리 타이머 (1시간마다)
+        this.setupAutoCleanup();
 
         ServerLogger.success('📋 채널 분석 큐 시스템 초기화 완료');
     }
@@ -24,7 +29,21 @@ class ChannelAnalysisQueue extends EventEmitter {
     async initializeChannelAnalysisService() {
         this.ChannelAnalysisService = ChannelAnalysisService.getInstance();
         // ChannelAnalysisService 초기화 대기
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await new Promise((resolve) => {
+            const timer = setTimeout(resolve, 2000);
+            this.timers.add(timer);
+        });
+    }
+
+    setupAutoCleanup() {
+        // 1시간마다 완료된 작업 정리
+        const cleanupInterval = setInterval(() => {
+            if (!this.isShuttingDown) {
+                this.cleanupCompletedJobs(1); // 1시간 이상 된 작업 정리
+            }
+        }, 60 * 60 * 1000);
+
+        this.timers.add(cleanupInterval);
     }
 
     /**
@@ -459,6 +478,30 @@ class ChannelAnalysisQueue extends EventEmitter {
         }
 
         return cleaned;
+    }
+
+    /**
+     * 메모리 해제 및 정리
+     */
+    destroy() {
+        this.isShuttingDown = true;
+
+        // 모든 타이머 정리
+        this.timers.forEach(timer => {
+            clearTimeout(timer);
+            clearInterval(timer);
+        });
+        this.timers.clear();
+
+        // EventEmitter 리스너 모두 제거
+        this.removeAllListeners();
+
+        // 큐와 작업 데이터 정리
+        this.queue = [];
+        this.jobs.clear();
+        this.currentJob = null;
+
+        ServerLogger.info('🧹 ChannelAnalysisQueue 메모리 정리 완료');
     }
 }
 

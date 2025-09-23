@@ -1537,7 +1537,10 @@ app.post('/api/process-video', async (req, res) => {
 // 저장된 비디오 목록 조회 (최적화: 단일 Video 모델 쿼리)
 app.get('/api/videos', async (req, res) => {
     try {
-        const limit = parseInt(req.query.limit) || 10;
+        const limit = Math.min(
+            parseInt(req.query.limit) || SERVER_CONSTANTS.PAGINATION.DEFAULT_LIMIT,
+            SERVER_CONSTANTS.PAGINATION.MAX_LIMIT
+        );
         const sortBy = req.query.sortBy || 'timestamp'; // timestamp는 이제 원본 게시일
         const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
         const platform = req.query.platform; // 플랫폼 필터 (선택적)
@@ -3847,6 +3850,15 @@ try {
     ServerLogger.error('❌ 개별 채널 라우트 등록 실패:', error);
 }
 
+// 시스템 상태 및 메모리 관리 API
+try {
+    const systemRoutes = require('./routes/system');
+    app.use('/api/system', systemRoutes);
+    ServerLogger.info('🔧 시스템 관리 API 등록 완료');
+} catch (error) {
+    ServerLogger.error('❌ 시스템 라우트 등록 실패:', error);
+}
+
 // 404 핸들러 (모든 라우트 등록 후 마지막에)
 app.use((req, res) => {
     ResponseHandler.notFound(res, `경로 '${req.path}'를 찾을 수 없습니다.`);
@@ -3896,6 +3908,11 @@ const startServer = async () => {
         UsageTracker.startFileWatcher();
 
         const server = app.listen(PORT, () => {
+            // 메모리 모니터링 시작
+            const MemoryMonitor = require('./utils/memory-monitor');
+            const memoryMonitor = MemoryMonitor.getInstance();
+            memoryMonitor.startMonitoring(60000); // 1분마다
+
             ServerLogger.info(
                 `
 🎬 InsightReel 서버 실행중
@@ -3908,6 +3925,7 @@ const startServer = async () => {
                         : 'Google Sheets'
                 }
 👀 API 키 자동 감지: 활성화
+🔍 메모리 모니터링: 활성화 (1분 간격)
 
 📋 설정 체크리스트:
 [ ] Gemini API 키 설정 (.env 파일)
@@ -3918,6 +3936,7 @@ const startServer = async () => {
 - 구글 시트 테스트: http://localhost:${PORT}/api/test-sheets
 - MongoDB 상태 확인: http://localhost:${PORT}/api/database/health
 - 설정 상태 확인: http://localhost:${PORT}/api/config/health
+- 메모리 사용량 확인: http://localhost:${PORT}/api/system/memory
   `,
                 'START',
             );
@@ -3927,12 +3946,43 @@ const startServer = async () => {
         const gracefulShutdown = (signal) => {
             ServerLogger.info(`🛑 ${signal} 신호 수신 - 서버를 안전하게 종료합니다...`, 'SHUTDOWN');
 
-            // API 키 파일 감시 중지
-            UsageTracker.stopFileWatcher();
+            // 메모리 정리 시작
+            try {
+                // 1. MemoryMonitor 정리
+                const MemoryMonitor = require('./utils/memory-monitor');
+                const memoryMonitor = MemoryMonitor.getInstance();
+                if (memoryMonitor && typeof memoryMonitor.destroy === 'function') {
+                    memoryMonitor.destroy();
+                }
+
+                // 2. ChannelAnalysisQueue 정리
+                const ChannelAnalysisQueueManager = require('./services/ChannelAnalysisQueue');
+                const queueInstance = ChannelAnalysisQueueManager.getInstance();
+                if (queueInstance && typeof queueInstance.destroy === 'function') {
+                    queueInstance.destroy();
+                }
+
+                // 3. UsageTracker 정리
+                const UsageTracker = require('./utils/usage-tracker');
+                UsageTracker.destroyAll();
+
+                // 4. API 키 파일 감시 중지
+                UsageTracker.stopFileWatcher();
+
+                // 5. 가비지 컬렉션 강제 실행
+                if (global.gc) {
+                    global.gc();
+                    ServerLogger.info('🧹 가비지 컬렉션 실행 완료', 'SHUTDOWN');
+                }
+
+                ServerLogger.info('🧹 메모리 정리 완료', 'SHUTDOWN');
+            } catch (cleanupError) {
+                ServerLogger.error('⚠️ 메모리 정리 중 오류 (무시하고 계속)', cleanupError.message, 'SHUTDOWN');
+            }
 
             server.close(() => {
                 ServerLogger.info('✅ HTTP 서버가 종료되었습니다', 'SHUTDOWN');
-                
+
                 // MongoDB 연결 종료
                 if (process.env.USE_MONGODB === 'true') {
                     DatabaseManager.disconnect().then(() => {

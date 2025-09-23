@@ -322,10 +322,14 @@ class UnifiedGeminiManager {
           generationConfig.thinkingBudget = thinkingBudget;
         }
         
-        const result = await model.generateContent(requestData, {
-          ...generationConfig,
-          timeout: UnifiedGeminiManager.getTimeoutForModel(modelName)
-        });
+        // 타임아웃 설정 - null이면 제외
+        const requestOptions = { ...generationConfig };
+        const timeout = UnifiedGeminiManager.getTimeoutForModel(modelName);
+        if (timeout !== null) {
+          requestOptions.timeout = timeout;
+        }
+
+        const result = await model.generateContent(requestData, requestOptions);
         const response = result.response;
         const text = response.text();
         
@@ -596,10 +600,14 @@ class UnifiedGeminiManager {
       generationConfig.thinkingBudget = thinkingBudget;
     }
     
-    const result = await model.generateContent(requestData, {
-      ...generationConfig,
-      timeout: UnifiedGeminiManager.getTimeoutForModel(modelId || modelType || 'flash')
-    });
+    // 타임아웃 설정 - null이면 제외
+    const requestOptions = { ...generationConfig };
+    const timeout = UnifiedGeminiManager.getTimeoutForModel(modelId || modelType || 'flash');
+    if (timeout !== null) {
+      requestOptions.timeout = timeout;
+    }
+
+    const result = await model.generateContent(requestData, requestOptions);
     const response = await result.response;
     
     return {
@@ -646,10 +654,14 @@ class UnifiedGeminiManager {
       generationConfig.thinkingBudget = thinkingBudget;
     }
     
-    const result = await model.generateContent(requestData, {
-      ...generationConfig,
-      timeout: UnifiedGeminiManager.getTimeoutForModel(modelId || modelType || 'flash')
-    });
+    // 타임아웃 설정 - null이면 제외
+    const requestOptions = { ...generationConfig };
+    const timeout = UnifiedGeminiManager.getTimeoutForModel(modelId || modelType || 'flash');
+    if (timeout !== null) {
+      requestOptions.timeout = timeout;
+    }
+
+    const result = await model.generateContent(requestData, requestOptions);
     const response = await result.response;
     
     return {
@@ -952,10 +964,14 @@ class UnifiedGeminiManager {
           generationConfig.thinkingBudget = thinkingBudget;
         }
         
-        const apiResult = await this.singleModelInstance.generateContent(requestData, {
-          ...generationConfig,
-          timeout: UnifiedGeminiManager.getTimeoutForModel(this.singleModel)
-        });
+        // 타임아웃 설정 - null이면 제외
+        const requestOptions = { ...generationConfig };
+        const timeout = UnifiedGeminiManager.getTimeoutForModel(this.singleModel);
+        if (timeout !== null) {
+          requestOptions.timeout = timeout;
+        }
+
+        const apiResult = await this.singleModelInstance.generateContent(requestData, requestOptions);
         const response = await apiResult.response;
         
         const result = {
@@ -1091,10 +1107,14 @@ class UnifiedGeminiManager {
       generationConfig.thinkingBudget = thinkingBudget;
     }
     
-    const result = await model.generateContent(requestData, {
-      ...generationConfig,
-      timeout: UnifiedGeminiManager.getTimeoutForModel(modelId || modelType || 'flash')
-    });
+    // 타임아웃 설정 - null이면 제외
+    const requestOptions = { ...generationConfig };
+    const timeout = UnifiedGeminiManager.getTimeoutForModel(modelId || modelType || 'flash');
+    if (timeout !== null) {
+      requestOptions.timeout = timeout;
+    }
+
+    const result = await model.generateContent(requestData, requestOptions);
     const response = await result.response;
     
     return {
@@ -1127,10 +1147,14 @@ class UnifiedGeminiManager {
       generationConfig.thinkingBudget = thinkingBudget;
     }
     
-    const result = await model.generateContent(requestData, {
-      ...generationConfig,
-      timeout: UnifiedGeminiManager.getTimeoutForModel(modelId || modelType || 'flash')
-    });
+    // 타임아웃 설정 - null이면 제외
+    const requestOptions = { ...generationConfig };
+    const timeout = UnifiedGeminiManager.getTimeoutForModel(modelId || modelType || 'flash');
+    if (timeout !== null) {
+      requestOptions.timeout = timeout;
+    }
+
+    const result = await model.generateContent(requestData, requestOptions);
     const response = await result.response;
     
     return {

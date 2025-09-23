@@ -63,7 +63,17 @@ export const videosApi = {
   getVideos: async (batchId?: string): Promise<Video[]> => {
     const params = batchId && batchId !== 'all' ? { batchId } : {};
     const response = await axiosInstance.get('/api/videos', { params });
-    return response.data.success ? response.data.data : [];
+
+    // 서버 응답 구조: { success: true, data: { videos: [...] } }
+    if (response.data.success && response.data.data) {
+      if (response.data.data.videos && Array.isArray(response.data.data.videos)) {
+        console.log('✅ [videosApi.getVideos] 비디오 데이터 파싱 성공:', response.data.data.videos.length);
+        return response.data.data.videos;
+      }
+    }
+
+    console.warn('⚠️ [videosApi.getVideos] 예상과 다른 응답 구조:', response.data);
+    return [];
   },
 
   deleteVideo: async (videoId: string): Promise<void> => {
