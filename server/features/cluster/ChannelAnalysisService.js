@@ -252,6 +252,14 @@ class ChannelAnalysisService {
             let analysisData = null;
 
             // 2. 상세 분석 수행 (선택적)
+            const enableContentAnalysis = !skipAIAnalysis;
+
+            ServerLogger.info(`🔍 AI 분석 설정 확인:`, {
+                skipAIAnalysis: skipAIAnalysis,
+                enableContentAnalysis: enableContentAnalysis,
+                willRunAIAnalysis: !skipAIAnalysis
+            });
+
             // DEBUG 로그는 개발 환경에서만
             if (process.env.NODE_ENV === 'development') {
                 ServerLogger.debug(
@@ -281,10 +289,25 @@ class ChannelAnalysisService {
                         );
                     analysisData = analysisResult.analysis;
 
+                    // 🔍 분석 결과 전체 구조 확인
+                    ServerLogger.info(`🔍 analysisResult 전체 구조:`, {
+                        hasAnalysis: !!analysisResult.analysis,
+                        hasEnhancedAnalysis: !!analysisResult.enhancedAnalysis,
+                        skipAIAnalysis: skipAIAnalysis,
+                        analysisResultKeys: Object.keys(analysisResult)
+                    });
+
                     // 향상된 분석 데이터가 있으면 추가
                     if (analysisResult.enhancedAnalysis) {
                         analysisData.enhancedAnalysis =
                             analysisResult.enhancedAnalysis;
+
+                        // 🔍 실제 AI 응답 구조 확인
+                        ServerLogger.info(`🔍 실제 AI 응답 구조:`, {
+                            hasChannelIdentity: !!analysisResult.enhancedAnalysis.channelIdentity,
+                            channelIdentityKeys: analysisResult.enhancedAnalysis.channelIdentity ? Object.keys(analysisResult.enhancedAnalysis.channelIdentity) : [],
+                            uniqueFeatures: analysisResult.enhancedAnalysis.channelIdentity?.uniqueFeatures
+                        });
                         if (skipAIAnalysis) {
                             ServerLogger.success(
                                 `📊 기본 통계 분석 완료: ${analysisResult.videosCount}개 영상 (AI 분석 건너뜀)`,
@@ -378,32 +401,32 @@ class ChannelAnalysisService {
                               ?.channelTags || []),
                       ].filter((tag, index, arr) => arr.indexOf(tag) === index), // 중복 제거
 
-                // channelIdentity 추가 정보
+                // channelIdentity 추가 정보 (올바른 경로 사용)
                 targetAudience: skipAIAnalysis
                     ? ''
                     : (() => {
-                        const value = analysisData?.enhancedAnalysis?.channelIdentity?.targetAudience || '';
+                        const value = analysisResult?.analysis?.enhancedAnalysis?.channelIdentity?.targetAudience || '';
                         ServerLogger.info(`🔍 DB 저장 targetAudience: ${value}`);
                         return value;
                     })(),
                 contentStyle: skipAIAnalysis
                     ? ''
                     : (() => {
-                        const value = analysisData?.enhancedAnalysis?.channelIdentity?.contentStyle || '';
+                        const value = analysisResult?.analysis?.enhancedAnalysis?.channelIdentity?.contentStyle || '';
                         ServerLogger.info(`🔍 DB 저장 contentStyle: ${value.substring(0, 50)}...`);
                         return value;
                     })(),
                 uniqueFeatures: skipAIAnalysis
                     ? []
                     : (() => {
-                        const value = analysisData?.enhancedAnalysis?.channelIdentity?.uniqueFeatures || [];
+                        const value = analysisResult?.analysis?.enhancedAnalysis?.channelIdentity?.uniqueFeatures || [];
                         ServerLogger.info(`🔍 DB 저장 uniqueFeatures: ${JSON.stringify(value)}`);
                         return value;
                     })(),
                 channelPersonality: skipAIAnalysis
                     ? ''
                     : (() => {
-                        const value = analysisData?.enhancedAnalysis?.channelIdentity?.channelPersonality || '';
+                        const value = analysisResult?.analysis?.enhancedAnalysis?.channelIdentity?.channelPersonality || '';
                         ServerLogger.info(`🔍 DB 저장 channelPersonality: ${value}`);
                         return value;
                     })(),

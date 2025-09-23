@@ -29,7 +29,15 @@ class ClipboardMonitor(private val context: Context) {
     // 클립보드 변경 리스너
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
         println("🔥 클립보드 리스너 트리거됨!")
-        checkClipboardForUrl()
+
+        // Android 10+에서는 클립보드 변경 감지는 되지만 내용 읽기가 제한될 수 있음
+        // 따라서 변경 감지만으로도 플로팅 버튼을 표시해보는 대안 로직 추가
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            println("🔥 Android 10+ 클립보드 변경 감지 - 대안 방법 시도")
+            handleClipboardChangeForAndroid10Plus()
+        } else {
+            checkClipboardForUrl()
+        }
     }
 
     // 백업 폴링 런어블 (리스너가 작동하지 않을 경우를 대비)
@@ -96,6 +104,23 @@ class ClipboardMonitor(private val context: Context) {
     }
 
     /**
+     * Android 10+ 클립보드 변경 처리 (내용 읽기 제한 대응)
+     */
+    private fun handleClipboardChangeForAndroid10Plus() {
+        try {
+            // 클립보드 변경이 감지되었으므로, 사용자에게 수동으로 확인을 요청하는 방식
+            println("🎈 Android 10+ 클립보드 변경 감지 - 플로팅 버튼 표시")
+
+            // 임시 URL로 플로팅 버튼 표시 (실제 URL은 사용자가 직접 확인)
+            val temporaryUrl = "https://www.youtube.com/watch?v=temp"
+            onValidUrlDetected?.invoke(temporaryUrl)
+
+        } catch (e: Exception) {
+            println("❌ Android 10+ 클립보드 처리 실패: ${e.message}")
+        }
+    }
+
+    /**
      * 클립보드 내용 확인 및 URL 검증
      */
     private fun checkClipboardForUrl() {
@@ -130,13 +155,27 @@ class ClipboardMonitor(private val context: Context) {
      */
     private fun getCurrentClipboardText(): String {
         return try {
+            // Android 10+ (API 29+)에서는 앱이 포커스되지 않으면 클립보드 접근이 제한됨
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                // 앱이 포커스되지 않은 상태에서는 클립보드 접근이 제한될 수 있음
+                println("ℹ️ Android 10+ 클립보드 접근 시도...")
+            }
+
             val clipData = clipboardManager.primaryClip
             if (clipData != null && clipData.itemCount > 0) {
                 val item = clipData.getItemAt(0)
-                item.text?.toString() ?: ""
+                val text = item.text?.toString() ?: ""
+                if (text.isNotEmpty()) {
+                    println("📋 클립보드 읽기 성공: ${text.take(30)}...")
+                }
+                text
             } else {
+                println("📋 클립보드가 비어있음")
                 ""
             }
+        } catch (e: SecurityException) {
+            println("❌ 클립보드 보안 접근 제한: ${e.message}")
+            ""
         } catch (e: Exception) {
             println("❌ 클립보드 텍스트 읽기 실패: ${e.message}")
             ""

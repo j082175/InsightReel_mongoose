@@ -1619,5 +1619,62 @@
       "last90Days": 66920276,
       "lastYear": 191433972
     }
+  },
+  {
+    "_id": "68d29fe5c406735266abaee1",
+    "channelId": "UCx9VO38pVY9Atrf8Mz6yfpQ",
+    "__v": 0,
+    "aiTags": [],
+    "allTags": [
+      "지식"
+    ],
+    "analysisVersion": "",
+    "averageViewsPerVideo": 0,
+    "avgDurationFormatted": "",
+    "avgDurationSeconds": 0,
+    "channelPersonality": "",
+    "clusterIds": [],
+    "collectedAt": "Tue Sep 23 2025 22:25:57 GMT+0900 (대한민국 표준시)",
+    "contentStyle": "",
+    "contentType": "unknown",
+    "country": "",
+    "createdAt": "Tue Sep 23 2025 22:25:57 GMT+0900 (대한민국 표준시)",
+    "customUrl": "@분석좌",
+    "dailyUploadRate": 0,
+    "deepInsightTags": [],
+    "defaultLanguage": "",
+    "description": "",
+    "keywords": [
+      "지식"
+    ],
+    "lastAnalyzedAt": "2025-09-23T13:25:57.879Z",
+    "mostViewedVideo": {
+      "categoryId": "",
+      "commentCount": 0,
+      "duration": "",
+      "durationSeconds": 0,
+      "likeCount": 0,
+      "tags": [],
+      "thumbnailUrl": "",
+      "title": "",
+      "videoId": "",
+      "viewCount": 0
+    },
+    "name": "분석좌",
+    "platform": "YOUTUBE",
+    "publishedAt": "2014-08-18T09:23:31.000Z",
+    "shortFormRatio": 0,
+    "subscribers": 0,
+    "suggestedClusters": [],
+    "targetAudience": "",
+    "thumbnailUrl": "https://yt3.ggpht.com/ytc/AIdro_kSgzsn-PaGdvyWXb6AMhFa1gscZpG84RXiatevNLqmSu1hqWQ=s240-c-k-c0x00ffffff-no-rj",
+    "uniqueFeatures": [],
+    "updatedAt": "Tue Sep 23 2025 22:25:57 GMT+0900 (대한민국 표준시)",
+    "uploadFrequency": {
+      "avgDaysBetweenUploads": 0,
+      "consistency": 0
+    },
+    "url": "https://youtube.com/channel/UCx9VO38pVY9Atrf8Mz6yfpQ",
+    "version": 1
   }
 ]

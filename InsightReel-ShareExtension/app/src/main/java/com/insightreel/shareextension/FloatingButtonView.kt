@@ -233,11 +233,6 @@ class FloatingButtonView(
      * 분석 실행
      */
     private fun performAnalysis() {
-        if (currentUrl.isBlank()) {
-            Toast.makeText(context, "❌ 분석할 URL이 없습니다", Toast.LENGTH_SHORT).show()
-            return
-        }
-
         vibrate()
         Toast.makeText(context, "📤 분석 시작...", Toast.LENGTH_SHORT).show()
 
@@ -247,14 +242,23 @@ class FloatingButtonView(
         // 백그라운드에서 분석 실행
         coroutineScope.launch {
             try {
+                // 실제 클립보드에서 현재 URL 가져오기 (Android 10+ 대응)
+                val actualUrl = getCurrentClipboardUrl()
+
+                if (actualUrl.isBlank()) {
+                    println("❌ 클립보드에서 유효한 URL을 찾을 수 없음")
+                    showToast("❌ 유효한 URL이 없습니다")
+                    return@launch
+                }
+
                 val analysisFlags = preferencesManager.getAnalysisFlags()
                 val serverUrl = preferencesManager.getCurrentServerUrl()
                 val networkType = if (networkManager.isWifiConnected()) "WiFi" else "LTE"
 
                 println("🎈 플로팅 버튼 분석: $networkType 네트워크로 $serverUrl 서버에 전송")
-                println("🎈 분석 URL: $currentUrl")
+                println("🎈 분석 URL: $actualUrl")
 
-                val success = networkManager.sendVideoUrl(serverUrl, currentUrl, analysisFlags)
+                val success = networkManager.sendVideoUrl(serverUrl, actualUrl, analysisFlags)
 
                 if (success) {
                     println("✅ 플로팅 버튼 분석 완료! ($networkType)")
@@ -455,4 +459,62 @@ class FloatingButtonView(
      * 표시 여부 확인
      */
     fun isShowing(): Boolean = parent != null
+
+    /**
+     * 현재 클립보드에서 실제 URL 가져오기 (Android 10+ 대응)
+     */
+    private fun getCurrentClipboardUrl(): String {
+        return try {
+            val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            val clipData = clipboardManager.primaryClip
+
+            if (clipData != null && clipData.itemCount > 0) {
+                val item = clipData.getItemAt(0)
+                val text = item.text?.toString() ?: ""
+
+                // 지원되는 플랫폼 URL인지 확인
+                val supportedDomains = listOf(
+                    "youtube.com", "youtu.be", "www.youtube.com",
+                    "instagram.com", "www.instagram.com",
+                    "tiktok.com", "www.tiktok.com"
+                )
+
+                val isValidUrl = try {
+                    val urlPattern = Regex("https?://[^\\s]+")
+                    val urls = urlPattern.findAll(text).map { it.value }.toList()
+
+                    urls.any { url ->
+                        supportedDomains.any { domain ->
+                            url.contains(domain, ignoreCase = true)
+                        }
+                    }
+                } catch (e: Exception) {
+                    false
+                }
+
+                if (isValidUrl) {
+                    println("📋 플로팅 버튼에서 유효한 URL 확인: ${text.take(50)}...")
+                    text
+                } else {
+                    println("📋 플로팅 버튼에서 무효한 URL: ${text.take(30)}...")
+                    ""
+                }
+            } else {
+                println("📋 클립보드가 비어있음")
+                ""
+            }
+        } catch (e: SecurityException) {
+            println("❌ 클립보드 보안 제한: ${e.message}")
+            // Android 10+에서 보안 제한이 있을 경우, 저장된 현재 URL 사용
+            if (currentUrl.isNotEmpty() && currentUrl != "https://www.youtube.com/watch?v=temp") {
+                println("📋 저장된 URL 사용: $currentUrl")
+                currentUrl
+            } else {
+                ""
+            }
+        } catch (e: Exception) {
+            println("❌ 클립보드 URL 읽기 실패: ${e.message}")
+            ""
+        }
+    }
 }
