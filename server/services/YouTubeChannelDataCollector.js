@@ -163,7 +163,7 @@ class YouTubeChannelDataCollector {
                 publishedAt: channel.snippet.publishedAt,
                 thumbnailUrl: channel.snippet.thumbnails,
                 channelCountry: channel.snippet.country,
-                language: channel.snippet.defaultLanguage,
+                language: channel.snippet.defaultLanguage || '',
                 
                 // 통계
                 statistics: {
@@ -292,7 +292,7 @@ class YouTubeChannelDataCollector {
                             uploadDate: item.snippet.publishedAt,
                             thumbnailUrl: item.snippet.thumbnails,
                             categoryId: item.snippet.categoryId,
-                            language: item.snippet.defaultLanguage,
+                            language: item.snippet.defaultLanguage || item.snippet.defaultAudioLanguage || '',
                             
                             // 통계
                             statistics: {

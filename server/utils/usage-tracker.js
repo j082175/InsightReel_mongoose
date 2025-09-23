@@ -1325,7 +1325,8 @@ class UsageTracker {
         try {
             // 파일 감시자 정리
             if (UsageTracker.fileWatcher) {
-                UsageTracker.fileWatcher.close();
+                const apiKeysPath = path.join(__dirname, '../data/api-keys.json');
+                fs.unwatchFile(apiKeysPath);
                 UsageTracker.fileWatcher = null;
             }
 
@@ -1350,7 +1351,8 @@ class UsageTracker {
         try {
             // 파일 감시자 정리
             if (UsageTracker.fileWatcher) {
-                UsageTracker.fileWatcher.close();
+                const apiKeysPath = path.join(__dirname, '../data/api-keys.json');
+                fs.unwatchFile(apiKeysPath);
                 UsageTracker.fileWatcher = null;
             }
 

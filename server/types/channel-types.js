@@ -77,30 +77,30 @@ const ChannelAIAnalysis = {
   allTags: [{ type: String }],
   
   categoryInfo: {
-    majorCategory: { 
-      type: String, 
+    majorCategory: {
+      type: String,
       required: false
     },
-    middleCategory: { 
-      type: String, 
+    middleCategory: {
+      type: String,
       required: false
     },
-    subCategory: { 
-      type: String, 
-      required: false 
-    },
-    fullCategoryPath: { 
-      type: String, 
+    subCategory: {
+      type: String,
       required: false
     },
-    categoryDepth: { 
-      type: Number, 
+    fullCategoryPath: {
+      type: String,
+      required: false
+    },
+    categoryDepth: {
+      type: Number,
       required: false,
       min: 1,
       max: 6
     },
-    categoryConfidence: { 
-      type: Number, 
+    categoryConfidence: {
+      type: Number,
       required: false,
       min: 0,
       max: 1
@@ -115,6 +115,27 @@ const ChannelAIAnalysis = {
       type: String,
       required: false
     }
+  },
+
+  // channelIdentity 추가 정보
+  targetAudience: {
+    type: String,
+    required: false,
+    default: ''
+  },
+
+  contentStyle: {
+    type: String,
+    required: false,
+    default: ''
+  },
+
+  uniqueFeatures: [{ type: String }],
+
+  channelPersonality: {
+    type: String,
+    required: false,
+    default: ''
   }
 };
 

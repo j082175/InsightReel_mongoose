@@ -377,6 +377,37 @@ class ChannelAnalysisService {
                           ...(analysisData?.enhancedAnalysis?.channelIdentity
                               ?.channelTags || []),
                       ].filter((tag, index, arr) => arr.indexOf(tag) === index), // 중복 제거
+
+                // channelIdentity 추가 정보
+                targetAudience: skipAIAnalysis
+                    ? ''
+                    : (() => {
+                        const value = analysisData?.enhancedAnalysis?.channelIdentity?.targetAudience || '';
+                        ServerLogger.info(`🔍 DB 저장 targetAudience: ${value}`);
+                        return value;
+                    })(),
+                contentStyle: skipAIAnalysis
+                    ? ''
+                    : (() => {
+                        const value = analysisData?.enhancedAnalysis?.channelIdentity?.contentStyle || '';
+                        ServerLogger.info(`🔍 DB 저장 contentStyle: ${value.substring(0, 50)}...`);
+                        return value;
+                    })(),
+                uniqueFeatures: skipAIAnalysis
+                    ? []
+                    : (() => {
+                        const value = analysisData?.enhancedAnalysis?.channelIdentity?.uniqueFeatures || [];
+                        ServerLogger.info(`🔍 DB 저장 uniqueFeatures: ${JSON.stringify(value)}`);
+                        return value;
+                    })(),
+                channelPersonality: skipAIAnalysis
+                    ? ''
+                    : (() => {
+                        const value = analysisData?.enhancedAnalysis?.channelIdentity?.channelPersonality || '';
+                        ServerLogger.info(`🔍 DB 저장 channelPersonality: ${value}`);
+                        return value;
+                    })(),
+
                 clusterIds: [],
                 suggestedClusters: [],
                 contentType:
