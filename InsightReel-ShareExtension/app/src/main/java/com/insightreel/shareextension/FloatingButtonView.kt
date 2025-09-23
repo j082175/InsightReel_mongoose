@@ -288,19 +288,29 @@ class FloatingButtonView(
 
         try {
             if (parent == null) {
+                // 새로 표시하는 경우
                 windowManager.addView(this, layoutParams)
-                println("🎈 플로팅 버튼 표시: $url")
+                println("🎈 플로팅 버튼 새로 표시: $url")
+
+                // 페이드인 애니메이션
+                alpha = 0f
+                visibility = VISIBLE
+                ObjectAnimator.ofFloat(this, "alpha", 0f, buttonAlpha).apply {
+                    duration = ANIMATION_DURATION
+                    start()
+                }
+            } else {
+                // 이미 표시 중인 경우 - URL 업데이트 및 자동숨김 시간 리셋
+                println("🎈 플로팅 버튼 URL 업데이트: $url")
+
+                // 살짝 강조 애니메이션 (버튼이 업데이트되었음을 알림)
+                animateScale(1.0f, 1.2f)
+                handler.postDelayed({
+                    animateScale(1.2f, 1.0f)
+                }, 100)
             }
 
-            // 페이드인 애니메이션
-            alpha = 0f
-            visibility = VISIBLE
-            ObjectAnimator.ofFloat(this, "alpha", 0f, buttonAlpha).apply {
-                duration = ANIMATION_DURATION
-                start()
-            }
-
-            // 자동 숨김 스케줄링
+            // 자동 숨김 스케줄링 (기존 타이머 취소 후 새로 설정)
             scheduleAutoHide()
 
         } catch (e: Exception) {

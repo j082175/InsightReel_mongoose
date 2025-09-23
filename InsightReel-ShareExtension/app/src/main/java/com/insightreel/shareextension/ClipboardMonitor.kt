@@ -84,12 +84,12 @@ class ClipboardMonitor(private val context: Context) {
         try {
             val clipText = getCurrentClipboardText()
 
-            // 같은 내용이면 무시 (중복 처리 방지)
-            if (clipText == lastClipText) {
-                return
-            }
-
+            // 같은 내용이지만 플로팅 버튼이 숨겨진 상태라면 다시 표시
+            // (사용자가 의도적으로 같은 URL을 다시 복사한 경우를 고려)
+            val isDuplicate = clipText == lastClipText
             lastClipText = clipText
+
+            println("📋 클립보드 처리: 중복=${isDuplicate}, 텍스트=${clipText.take(30)}...")
 
             if (clipText.isNotEmpty()) {
                 println("📋 클립보드 변경 감지: ${clipText.take(50)}...")

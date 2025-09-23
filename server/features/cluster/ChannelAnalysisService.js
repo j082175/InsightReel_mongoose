@@ -659,6 +659,14 @@ class ChannelAnalysisService {
             });
             const savedChannel = await this.saveToMongoDB(channel);
 
+            // 🔍 저장 후 실제 DB 값 확인
+            ServerLogger.info(`🔍 저장 후 DB 확인:`, {
+                targetAudience: savedChannel.targetAudience,
+                contentStyle: savedChannel.contentStyle ? savedChannel.contentStyle.substring(0, 50) + '...' : '',
+                uniqueFeatures: savedChannel.uniqueFeatures,
+                channelPersonality: savedChannel.channelPersonality
+            });
+
             // ✅ 채널 저장 성공 후에만 중복검사 DB 업데이트 (기존 processing → completed)
             try {
                 // Queue에서 생성한 정규화 ID를 우선 사용 (중복 방지)
