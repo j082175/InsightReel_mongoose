@@ -189,11 +189,41 @@ class ChannelAnalysisService {
                 `🔍 YouTube 채널 상세 분석: ${decodedChannelIdentifier}`,
             );
             ServerLogger.info(`🔍 DEBUG: queueNormalizedChannelId = ${queueNormalizedChannelId}`);
+            ServerLogger.info(`🏷️ DEBUG: 받은 키워드 타입과 내용:`, {
+                type: typeof userKeywords,
+                isArray: Array.isArray(userKeywords),
+                content: userKeywords,
+                length: userKeywords?.length
+            });
 
             // 1. 기본 채널 정보 가져오기 (채널 ID 확인용)
-            const youtubeData = await this.youtubeService.getChannelInfo(
-                decodedChannelIdentifier,
-            );
+            let youtubeData = null;
+
+            // 영상 URL인지 채널 식별자인지 판별
+            if (decodedChannelIdentifier.includes('/watch') || decodedChannelIdentifier.includes('/shorts/')) {
+                // 영상 URL에서 채널 정보 추출
+                ServerLogger.info(`🎥 상세 분석 - 영상 URL에서 채널 정보 추출: ${decodedChannelIdentifier}`);
+                const VideoProcessor = require('../../services/VideoProcessor');
+                const videoProcessor = new VideoProcessor();
+
+                try {
+                    const videoInfo = await videoProcessor.getYouTubeVideoInfo(decodedChannelIdentifier);
+                    if (videoInfo && videoInfo.channelId && videoInfo.channelName) {
+                        youtubeData = {
+                            id: videoInfo.channelId,
+                            channelName: videoInfo.channelName,
+                            url: videoInfo.channelUrl || `https://www.youtube.com/channel/${videoInfo.channelId}`,
+                            subscriberCount: videoInfo.subscriberCount || 0
+                        };
+                        ServerLogger.info(`✅ 상세 분석 - 영상에서 채널 정보 추출 성공: ${youtubeData.channelName} (${youtubeData.id})`);
+                    }
+                } catch (videoError) {
+                    ServerLogger.warn(`⚠️ 상세 분석 - 영상에서 채널 정보 추출 실패: ${videoError.message}`);
+                }
+            } else {
+                // 채널 식별자로 직접 검색
+                youtubeData = await this.youtubeService.getChannelInfo(decodedChannelIdentifier);
+            }
 
             if (!youtubeData) {
                 throw new Error(
@@ -476,7 +506,7 @@ class ChannelAnalysisService {
             const channelData = {
                 channelId: youtubeData.id,
                 name: youtubeData.channelName,
-                url: youtubeData.channelUrl,
+                url: youtubeData.channelUrl, // channelUrl 필드 사용
                 platform: 'YOUTUBE',
 
                 // YouTube API에서 가져온 정보
@@ -484,6 +514,7 @@ class ChannelAnalysisService {
                 description: youtubeData.description,
                 thumbnailUrl: youtubeData.thumbnailUrl,
                 customUrl: youtubeData.customUrl,
+                publishedAt: youtubeData.publishedAt, // 누락된 필드 추가
 
                 // 언어 및 지역 정보
                 defaultLanguage: youtubeData.defaultLanguage || '',

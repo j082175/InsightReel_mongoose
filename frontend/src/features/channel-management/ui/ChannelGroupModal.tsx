@@ -64,14 +64,23 @@ const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       if (editingGroup) {
+        console.log('🔍 [ChannelGroupModal] editingGroup 디버그:', {
+          editingGroup,
+          channels: editingGroup.channels,
+          channelsType: typeof editingGroup.channels,
+          channelsLength: editingGroup.channels?.length,
+        });
+
         const formData: ChannelGroupFormData = {
           name: editingGroup.name,
           description: editingGroup.description || '',
           color: editingGroup.color,
-          selectedChannels: editingGroup.channels || [],
+          selectedChannels: editingGroup.channels?.map(ch => ch.channelId) || [],
           keywords: editingGroup.keywords || [],
           isActive: editingGroup.isActive,
         };
+
+        console.log('🔍 [ChannelGroupModal] formData:', formData);
         reset(formData);
       } else {
         reset(getDefaultChannelGroupFormData());
@@ -84,6 +93,16 @@ const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
   const keywords = watch('keywords');
   const selectedChannels = watch('selectedChannels');
   const currentColor = watch('color');
+
+  // 디버깅: 폼 유효성 상태 감시
+  useEffect(() => {
+    console.log('🔍 [ChannelGroupModal] Form validation state:', {
+      isValid,
+      errors,
+      selectedChannels,
+      selectedChannelsLength: selectedChannels?.length || 0,
+    });
+  }, [isValid, errors, selectedChannels]);
 
   // 키워드 추가 함수
   const addKeyword = () => {

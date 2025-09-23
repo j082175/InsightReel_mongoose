@@ -36,6 +36,29 @@ router.post('/collect-channel', async (req, res) => {
         // auto 값을 mixed와 동일하게 처리
         const normalizedContentType = contentType === 'auto' ? 'mixed' : contentType;
 
+        // 영상 URL에서 채널 정보 추출 처리
+        if (channelData?.extractFromVideo && channelData?.url) {
+            try {
+                const VideoProcessor = require('../../services/VideoProcessor');
+                const videoProcessor = new VideoProcessor();
+                const youtubeInfo = await videoProcessor.getYouTubeVideoInfo(channelData.url);
+
+                // 채널 데이터 업데이트
+                channelData.name = youtubeInfo.channelName;
+                channelData.channelId = youtubeInfo.channelId;
+                channelData.url = youtubeInfo.channelUrl;
+
+                ServerLogger.info(`🔍 영상에서 채널 정보 추출: ${youtubeInfo.channelName} (${youtubeInfo.channelId})`);
+            } catch (extractError) {
+                ServerLogger.warn(`⚠️ 채널 정보 추출 실패: ${extractError.message}`);
+                return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+                    success: false,
+                    error: ERROR_CODES.PROCESSING_ERROR,
+                    message: '채널 정보를 추출할 수 없습니다',
+                });
+            }
+        }
+
         if (!channelData || !channelData.name) {
             return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
                 success: false,

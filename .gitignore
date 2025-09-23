@@ -65,3 +65,78 @@ ehthumbs.db
 Thumbs.db
 *storybook.log
 storybook-static
+
+# Android Studio / IntelliJ IDEA
+*.iml
+.idea/
+*.iws
+*.ipr
+out/
+.gradle/
+build/
+captures/
+.externalNativeBuild
+.cxx
+local.properties
+
+# Android build outputs
+*.apk
+*.ap_
+*.aab
+
+# Android signing files
+*.jks
+*.keystore
+
+# Android Studio installer
+android-studio-installer.exe
+
+# Backup files
+*.backup.*
+*.backup
+
+# Android generated files
+bin/
+gen/
+obj/
+
+# Gradle files (Android specific)
+gradle-app.setting
+!gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# Android Studio Navigation editor temp files
+.navigation/
+
+# Android Studio captures folder
+captures/
+
+# Keystore files
+*.jks
+*.keystore
+
+# External native build folder generated in Android Studio 2.2 and later
+.externalNativeBuild
+.cxx/
+
+# Android Profiling
+*.hprof
+
+# NDK
+obj/
+
+# Android lint
+lint/intermediates/
+lint/generated/
+lint/outputs/
+lint/tmp/
+
+# APK debug files
+*.apk.cache
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class

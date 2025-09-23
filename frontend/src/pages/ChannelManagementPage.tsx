@@ -6,6 +6,8 @@ import {
   ChannelAnalysisModal,
   ChannelGroupModal,
   ChannelGroupCard,
+  IndividualChannelsTab,
+  ChannelGroupsTab,
 } from '../features/channel-management';
 import { DeleteConfirmationModal } from '../shared/ui';
 import { formatViews, getDocumentId } from '../shared/utils';
@@ -67,6 +69,7 @@ const ChannelManagementPage: React.FC = () => {
   const error = queryError?.message || null;
 
   // Local State
+  const [activeTab, setActiveTab] = useState<'groups' | 'channels'>('channels');
   const [selectedChannel, setSelectedChannel] = useState<Channel | null>(null);
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
   const [itemToDelete, setItemToDelete] = useState<{
@@ -175,6 +178,11 @@ const ChannelManagementPage: React.FC = () => {
 
   const handleCreateGroup = useCallback(() => {
     setShowGroupModal(true);
+  }, []);
+
+  const handleAddChannel = useCallback(() => {
+    // TODO: 채널 추가 로직 구현
+    console.log('채널 추가 기능 구현 필요');
   }, []);
 
   const handleSaveGroup = useCallback(
@@ -314,125 +322,74 @@ const ChannelManagementPage: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto p-6">
-        {/* 검색 및 필터 바 */}
-        <SearchBar
-          searchTerm={filters.searchTerm}
-          onSearchTermChange={(term) => updateFilters({ searchTerm: term })}
-          placeholder="채널명, 설명 검색..."
-          showFilters={true}
-        >
-          <select
-            value={filters.platform}
-            onChange={(e) => updateFilters({ platform: e.target.value as any })}
-            className="border-gray-300 rounded-md"
-          >
-            <option value="ALL">모든 플랫폼</option>
-            <option value="YOUTUBE">YouTube</option>
-            <option value="INSTAGRAM">Instagram</option>
-            <option value="TIKTOK">TikTok</option>
-          </select>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={toggleSelectMode}
-              className={`px-3 py-1 text-sm rounded ${
-                isSelectMode
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-200 text-gray-700'
-              }`}
-            >
-              {isSelectMode ? '선택 취소' : '선택 모드'}
-            </button>
-          </div>
-        </SearchBar>
-
-        {/* 결과 정보 */}
-        <div className="bg-white rounded-lg shadow mb-4 p-4">
-          <div className="text-sm text-gray-500">
-            총 {filteredChannels.length}개 채널 (키워드: "
-            {filters.searchTerm || '없음'}", 플랫폼:{' '}
-            {filters.platform === 'ALL' ? '전체' : filters.platform})
+        {/* 탭 네비게이션 */}
+        <div className="bg-white rounded-lg shadow mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+              <button
+                onClick={() => setActiveTab('channels')}
+                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'channels'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                📺 개별 채널
+                <span className="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2.5 rounded-full text-xs">
+                  {channels.length}
+                </span>
+              </button>
+              <button
+                onClick={() => setActiveTab('groups')}
+                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'groups'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                📁 채널 그룹
+                <span className="ml-2 bg-gray-100 text-gray-600 py-0.5 px-2.5 rounded-full text-xs">
+                  {channelGroups.length}
+                </span>
+              </button>
+            </nav>
           </div>
         </div>
 
-        {/* 에러 표시 */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <div className="text-red-800">{error}</div>
-          </div>
-        )}
-
-        {/* 채널 그룹 섹션 */}
-        {channelGroups.length > 0 && (
-          <div className="bg-white rounded-lg shadow mb-6">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  채널 그룹
-                </h2>
-                <span className="text-sm text-gray-500">
-                  {channelGroups.length}개 그룹
-                </span>
-              </div>
-
-              {isLoadingGroups ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[...Array(3)].map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-40 bg-gray-200 rounded-lg animate-pulse"
-                    ></div>
-                  ))}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {channelGroups.map((group) => (
-                    <ChannelGroupCard
-                      key={getDocumentId(group)}
-                      group={group}
-                      onEdit={handleGroupEdit}
-                      onDelete={handleGroupDelete}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* 메인 콘텐츠 */}
+        {/* 탭 콘텐츠 */}
         <div className="bg-white rounded-lg shadow">
           <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">채널 목록</h2>
-              <span className="text-sm text-gray-500">
-                {filteredChannels.length}개 채널
-              </span>
-            </div>
-
-            {filteredChannels.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredChannels.map((channel, index) => (
-                  <ChannelCard
-                    key={`${channel.channelId}-${channel.name}-${index}`}
-                    channel={channel}
-                    onChannelClick={handleChannelClick}
-                    onDelete={(ch) =>
-                      handleDeleteClick({ type: 'single', data: ch })
-                    }
-                    showSelection={isSelectMode}
-                    isSelected={selectedChannels.includes(channel.channelId)}
-                    onSelect={handleSelectToggle}
-                  />
-                ))}
-              </div>
+            {activeTab === 'channels' ? (
+              <IndividualChannelsTab
+                channels={channels}
+                filteredChannels={filteredChannels}
+                isLoading={isLoading}
+                isSelectMode={isSelectMode}
+                selectedChannels={selectedChannels}
+                searchTerm={filters.searchTerm}
+                filters={filters}
+                stats={stats}
+                onSearchChange={(term) => updateFilters({ searchTerm: term })}
+                onFilterChange={updateFilters}
+                onToggleSelectMode={toggleSelectMode}
+                onSelectAll={handleSelectAll}
+                onClearSelection={() => {
+                  toggleSelectMode();
+                  clearSelection();
+                }}
+                onChannelClick={handleChannelClick}
+                onChannelSelect={handleSelectToggle}
+                onChannelDelete={handleDeleteClick}
+                onAddChannel={handleAddChannel}
+              />
             ) : (
-              <div className="text-center py-12">
-                <div className="text-gray-500 text-lg mb-2">
-                  채널이 없습니다
-                </div>
-                <div className="text-gray-400">새로운 채널을 추가해보세요.</div>
-              </div>
+              <ChannelGroupsTab
+                groups={channelGroups}
+                isLoading={isLoadingGroups}
+                onCreateGroup={handleCreateGroup}
+                onEditGroup={handleGroupEdit}
+                onDeleteGroup={handleGroupDelete}
+              />
             )}
           </div>
         </div>

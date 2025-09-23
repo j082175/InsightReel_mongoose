@@ -372,4 +372,56 @@ router.post('/check-duplicate', async (req, res) => {
     }
 });
 
+/**
+ * 영상 URL에서 채널명 추출 (Android용)
+ * POST /api/channel-queue/extract-channel-name
+ */
+router.post('/extract-channel-name', async (req, res) => {
+    try {
+        const { videoUrl } = req.body;
+
+        if (!videoUrl) {
+            return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+                success: false,
+                error: ERROR_CODES.MISSING_REQUIRED_FIELD,
+                message: 'videoUrl이 필요합니다.',
+            });
+        }
+
+        ServerLogger.info(`🎥 영상 URL에서 채널명 추출 요청: ${videoUrl}`);
+
+        // VideoProcessor로 채널 정보 추출
+        const VideoProcessor = require('../services/VideoProcessor');
+        const videoProcessor = new VideoProcessor();
+
+        const videoInfo = await videoProcessor.getYouTubeVideoInfo(videoUrl);
+
+        if (!videoInfo || !videoInfo.channelName) {
+            return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
+                success: false,
+                error: ERROR_CODES.RESOURCE_NOT_FOUND,
+                message: '영상에서 채널 정보를 찾을 수 없습니다.',
+            });
+        }
+
+        ServerLogger.success(`✅ 채널명 추출 성공: ${videoInfo.channelName}`);
+
+        res.json({
+            success: true,
+            data: {
+                channelName: videoInfo.channelName,
+                channelId: videoInfo.channelId,
+                channelUrl: videoInfo.channelUrl,
+            },
+        });
+    } catch (error) {
+        ServerLogger.error('❌ 채널명 추출 실패', error);
+        res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+            success: false,
+            error: ERROR_CODES.INTERNAL_SERVER_ERROR,
+            message: error.message,
+        });
+    }
+});
+
 module.exports = router;

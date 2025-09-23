@@ -1122,7 +1122,7 @@ class VideoProcessor {
 
             // 숏폼/롱폼 구분 (60초 기준)
             const isShortForm = duration <= 60;
-            const contentType = isShortForm ? 'Shorts' : 'Video';
+            const contentType = isShortForm ? 'shortform' : 'longform';
 
             // 해시태그와 멘션 추출
             const hashtags = this.extractHashtags(snippet.description);

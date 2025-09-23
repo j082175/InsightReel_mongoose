@@ -1335,6 +1335,8 @@ app.post('/api/process-video', async (req, res) => {
                     }
                 }
 
+                // 🎯 채널 분석은 이제 /api/cluster/collect-channel에서 처리됨
+
                 // 🕰️ 처리 시간 계산
                 const processingEndTime = Date.now();
                 const totalProcessingTime = 2000; // 임시값
@@ -1488,6 +1490,7 @@ app.post('/api/process-video', async (req, res) => {
                     responseData.aiError = analysis.aiError;
                 }
 
+                // 🎯 채널 분석은 이제 별도 API에서 처리되므로 응답에서 제외
                 return responseData;
             },
         });

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Video } from '../../../shared/types';
 import { PLATFORMS } from '../../../shared/types';
 import { formatViews, formatDate } from '../../../shared/utils';

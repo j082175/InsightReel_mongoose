@@ -1,87 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { Modal } from '../../../shared/components';
 import { formatViews } from '../../../shared/utils';
-import { getViewCount } from '../../../shared/utils/videoUtils';
-
-interface ChannelData {
-  name: string;
-  avatar: string;
-  subscriberCount: number;
-  videoCount: number;
-  totalViews: number;
-  avgViews: number;
-  engagement: number;
-  growthRate: number;
-  topVideos: Array<{
-    _id: string;
-    title: string;
-    views: number;
-    thumbnail: string;
-  }>;
-  keywords: string[];
-  uploadFrequency: string;
-  bestUploadTime: string;
-}
+import { Channel } from '../../../shared/types';
 
 interface ChannelAnalysisModalProps {
-  channelName: string | null;
+  channel: Channel | null;
   onClose: () => void;
 }
 
 const ChannelAnalysisModal: React.FC<ChannelAnalysisModalProps> = ({
-  channelName,
+  channel,
   onClose,
 }) => {
-  const [loading, setLoading] = useState(true);
-  const [channelData, setChannelData] = useState<ChannelData | null>(null);
+  if (!channel) return null;
 
-  // Mock 데이터 생성 함수
-  const generateMockChannelData = (name: string): ChannelData => ({
-    name,
-    avatar: `https://placehold.co/100x100/3B82F6/FFFFFF?text=${name.charAt(0)}`,
-    subscriberCount: Math.floor(Math.random() * 1000000) + 100000,
-    videoCount: Math.floor(Math.random() * 500) + 50,
-    totalViews: Math.floor(Math.random() * 50000000) + 1000000,
-    avgViews: Math.floor(Math.random() * 100000) + 10000,
-    engagement: Math.floor(Math.random() * 10) + 2,
-    growthRate: Math.floor(Math.random() * 20) - 5,
-    topVideos: [
-      {
-        _id: `${name}-video-1`,
-        title: `${name}의 최고 인기 영상`,
-        views: Math.floor(Math.random() * 1000000) + 100000,
-        thumbnail: 'https://placehold.co/200x120/3B82F6/FFFFFF?text=Video1',
-      },
-      {
-        _id: `${name}-video-2`,
-        title: `${name}의 화제작`,
-        views: Math.floor(Math.random() * 800000) + 80000,
-        thumbnail: 'https://placehold.co/200x120/F43F5E/FFFFFF?text=Video2',
-      },
-      {
-        _id: `${name}-video-3`,
-        title: `${name}의 추천 영상`,
-        views: Math.floor(Math.random() * 600000) + 60000,
-        thumbnail: 'https://placehold.co/200x120/8B5CF6/FFFFFF?text=Video3',
-      },
-    ],
-    keywords: ['엔터테인먼트', '라이프스타일', '일상', 'VLOG', '리뷰'],
-    uploadFrequency: '주 2-3회',
-    bestUploadTime: '오후 8-10시',
-  });
-
-  useEffect(() => {
-    if (channelName) {
-      // 실제 API 호출 시뮬레이션
-      setLoading(true);
-      setTimeout(() => {
-        setChannelData(generateMockChannelData(channelName));
-        setLoading(false);
-      }, 1500);
+  // 데이터 없을 때 표시하는 헬퍼 함수
+  const renderDataOrEmpty = (data: string[] | undefined, label: string) => {
+    if (!data || data.length === 0) {
+      return <span className="text-gray-500">(없음)</span>;
     }
-  }, [channelName]);
-
-  if (!channelName) return null;
+    return data.map((item, index) => (
+      <span
+        key={index}
+        className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-sm rounded-full mr-2 mb-1"
+      >
+        {item}
+      </span>
+    ));
+  };
 
   const footer = (
     <>
@@ -91,9 +37,12 @@ const ChannelAnalysisModal: React.FC<ChannelAnalysisModalProps> = ({
       >
         닫기
       </button>
-      {channelData && (
-        <button className="px-4 py-2 text-sm text-white bg-indigo-600 rounded hover:bg-indigo-700 transition-colors">
-          채널 구독 추가
+      {channel.url && (
+        <button
+          onClick={() => window.open(channel.url, '_blank')}
+          className="px-4 py-2 text-sm text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors"
+        >
+          채널 URL 열기
         </button>
       )}
     </>
@@ -101,156 +50,187 @@ const ChannelAnalysisModal: React.FC<ChannelAnalysisModalProps> = ({
 
   return (
     <Modal
-      isOpen={!!channelName}
+      isOpen={!!channel}
       onClose={onClose}
-      title="📊 채널 분석"
+      title={`📊 채널 분석 - ${channel.name}`}
       size="xl"
       showFooter={true}
       footer={footer}
     >
-      <div className="p-6">
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-            <p className="text-gray-500">채널 데이터를 분석 중입니다...</p>
+      <div className="p-6 space-y-6">
+        {/* 헤더 섹션 */}
+        <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+          <img
+            src={
+              channel.thumbnailUrl ||
+              `https://placehold.co/64x64/3B82F6/FFFFFF?text=${channel.name.charAt(0)}`
+            }
+            alt={channel.name}
+            className="w-16 h-16 rounded-full"
+          />
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {channel.name}
+            </h3>
+            <p className="text-sm text-gray-600">
+              구독자 {formatViews(channel.subscribers || 0)}명 · 플랫폼: {channel.platform}
+            </p>
           </div>
-        ) : channelData ? (
-          <div className="space-y-6">
-            {/* 채널 기본 정보 */}
+        </div>
+
+        {/* 핵심 성과 지표 */}
+        <div className="space-y-3">
+          <h4 className="text-lg font-semibold text-gray-900">📈 성과 지표</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-blue-50 p-4 rounded-lg text-center">
+              <p className="text-2xl font-bold text-blue-600">
+                {channel.totalVideos || 0}
+              </p>
+              <p className="text-sm text-gray-600">총 영상수</p>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg text-center">
+              <p className="text-2xl font-bold text-green-600">
+                {formatViews(channel.totalViews || 0)}
+              </p>
+              <p className="text-sm text-gray-600">총 조회수</p>
+            </div>
+            <div className="bg-purple-50 p-4 rounded-lg text-center">
+              <p className="text-2xl font-bold text-purple-600">
+                {formatViews(channel.averageViewsPerVideo || 0)}
+              </p>
+              <p className="text-sm text-gray-600">평균 조회수</p>
+            </div>
+            <div className="bg-orange-50 p-4 rounded-lg text-center">
+              <p className="text-2xl font-bold text-orange-600">
+                {formatViews(channel.last7DaysViews || 0)}
+              </p>
+              <p className="text-sm text-gray-600">최근7일</p>
+            </div>
+          </div>
+        </div>
+
+        {/* 대표 영상 */}
+        {channel.mostViewedVideo && (
+          <div className="space-y-3">
+            <h4 className="text-lg font-semibold text-gray-900">🔥 대표 영상</h4>
             <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
               <img
-                src={channelData.avatar}
-                alt={channelData.name}
-                className="w-16 h-16 rounded-full"
+                src={
+                  channel.mostViewedVideo.thumbnailUrl ||
+                  'https://placehold.co/120x68/gray/white?text=Video'
+                }
+                alt={channel.mostViewedVideo.title}
+                className="w-30 h-17 rounded object-cover"
               />
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {channelData.name}
-                </h3>
+                <h5 className="font-medium text-gray-900 mb-1">
+                  {channel.mostViewedVideo.title}
+                </h5>
                 <p className="text-sm text-gray-600">
-                  구독자 {formatViews(channelData.subscriberCount)}명
+                  {formatViews(channel.mostViewedVideo.viewCount || 0)} 조회수 ·{' '}
+                  {channel.mostViewedVideo.durationSeconds}초 ·{' '}
+                  {channel.mostViewedVideo.publishedAt ?
+                    new Date(channel.mostViewedVideo.publishedAt).toLocaleDateString('ko-KR') :
+                    '날짜 미상'
+                  }
                 </p>
               </div>
             </div>
-
-            {/* 통계 카드들 */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg text-center">
-                <p className="text-2xl font-bold text-blue-600">
-                  {channelData.videoCount}
-                </p>
-                <p className="text-sm text-gray-600">총 영상 수</p>
-              </div>
-              <div className="bg-green-50 p-4 rounded-lg text-center">
-                <p className="text-2xl font-bold text-green-600">
-                  {formatViews(channelData.totalViews)}
-                </p>
-                <p className="text-sm text-gray-600">총 조회수</p>
-              </div>
-              <div className="bg-purple-50 p-4 rounded-lg text-center">
-                <p className="text-2xl font-bold text-purple-600">
-                  {formatViews(channelData.avgViews)}
-                </p>
-                <p className="text-sm text-gray-600">평균 조회수</p>
-              </div>
-              <div className="bg-orange-50 p-4 rounded-lg text-center">
-                <p className="text-2xl font-bold text-orange-600">
-                  {channelData.engagement}%
-                </p>
-                <p className="text-sm text-gray-600">참여율</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* 성장 지표 */}
-              <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-gray-900">
-                  📈 성장 지표
-                </h4>
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                    <span className="text-sm text-gray-600">성장률 (월간)</span>
-                    <span
-                      className={`text-sm font-medium ${
-                        channelData.growthRate >= 0
-                          ? 'text-green-600'
-                          : 'text-red-600'
-                      }`}
-                    >
-                      {channelData.growthRate >= 0 ? '+' : ''}
-                      {channelData.growthRate}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                    <span className="text-sm text-gray-600">업로드 빈도</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {channelData.uploadFrequency}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                    <span className="text-sm text-gray-600">
-                      최적 업로드 시간
-                    </span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {channelData.bestUploadTime}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 키워드 분석 */}
-              <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-gray-900">
-                  🏷️ 주요 키워드
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {channelData.keywords.map((keyword, index) => (
-                    <span
-                      key={index}
-                      className="px-3 py-1 bg-indigo-100 text-indigo-700 text-sm rounded-full"
-                    >
-                      #{keyword}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* 인기 영상 */}
-            <div className="space-y-4">
-              <h4 className="text-lg font-semibold text-gray-900">
-                🔥 인기 영상 TOP 3
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {channelData.topVideos.map((video, index) => (
-                  <div
-                    key={video._id}
-                    className="bg-gray-50 rounded-lg overflow-hidden"
-                  >
-                    <img
-                      src={video.thumbnail}
-                      alt={video.title}
-                      className="w-full h-32 object-cover"
-                    />
-                    <div className="p-3">
-                      <h5 className="text-sm font-medium text-gray-900 mb-1 line-clamp-2">
-                        {video.title}
-                      </h5>
-                      <p className="text-xs text-gray-500">
-                        {formatViews(video.views)} 조회수
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-12 text-gray-500">
-            <p className="text-lg">😅</p>
-            <p className="mt-2">채널 데이터를 불러올 수 없습니다.</p>
           </div>
         )}
+
+        {/* 콘텐츠 분석 */}
+        <div className="space-y-3">
+          <h4 className="text-lg font-semibold text-gray-900">🎯 콘텐츠 분석</h4>
+          <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-600">콘텐츠 타입:</span>
+              <span className="text-sm font-medium">{channel.contentType || '미분류'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-600">평균 영상 길이:</span>
+              <span className="text-sm font-medium">{channel.avgDurationFormatted || '정보 없음'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-600">숏폼 비율:</span>
+              <span className="text-sm font-medium">{channel.shortFormRatio || 0}%</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-600">업로드 패턴:</span>
+              <span className="text-sm font-medium">
+                {channel.uploadFrequency?.pattern || '분석 안됨'}
+                {channel.uploadFrequency?.avgDaysBetweenUploads &&
+                  ` (${channel.uploadFrequency.avgDaysBetweenUploads.toFixed(1)}일 간격)`
+                }
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* 🏷️ 키워드 & 분류 (메인 섹션) */}
+        <div className="space-y-3 border-2 border-blue-200 rounded-lg p-4 bg-blue-50/30">
+          <h4 className="text-lg font-semibold text-gray-900 text-center">
+            🏷️ 키워드 & 분류
+          </h4>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                🔑 키워드:
+              </label>
+              <div className="min-h-[2rem]">
+                {renderDataOrEmpty(channel.keywords, '키워드')}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                🤖 AI 태그:
+              </label>
+              <div className="min-h-[2rem]">
+                {renderDataOrEmpty(channel.aiTags, 'AI 태그')}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                🧠 심화 분석:
+              </label>
+              <div className="min-h-[2rem]">
+                {renderDataOrEmpty(channel.deepInsightTags, '심화 분석')}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                📊 클러스터 ID:
+              </label>
+              <div className="min-h-[2rem]">
+                {renderDataOrEmpty(channel.clusterIds, '클러스터 ID')}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                💡 추천 클러스터:
+              </label>
+              <div className="min-h-[2rem]">
+                {(!channel.suggestedClusters || channel.suggestedClusters.length === 0) ? (
+                  <span className="text-gray-500">(없음)</span>
+                ) : (
+                  channel.suggestedClusters.map((cluster, index) => (
+                    <span
+                      key={index}
+                      className="inline-block px-2 py-1 bg-green-100 text-green-700 text-sm rounded-full mr-2 mb-1"
+                    >
+                      {cluster.name || cluster.id}
+                    </span>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </Modal>
   );

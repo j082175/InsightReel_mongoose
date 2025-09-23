@@ -44,7 +44,7 @@ class HybridDataConverter {
                 durationFormatted: YouTubeDataProcessor.formatDuration(
                     hybridData.duration || 0,
                 ),
-                contentType: hybridData.duration <= 60 ? 'Shorts' : 'Video',
+                contentType: hybridData.duration <= 60 ? 'shortform' : 'longform',
                 isShortForm: hybridData.duration <= 60,
 
                 // 메타데이터
@@ -132,7 +132,7 @@ class HybridDataConverter {
                 categoryId: '0',
                 duration: 0,
                 durationFormatted: '00:00',
-                contentType: 'Video',
+                contentType: 'longform',
                 isShortForm: false,
                 tags: [],
                 views: '0',

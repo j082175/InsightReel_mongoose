@@ -36,10 +36,34 @@ class ChannelAnalysisQueue extends EventEmitter {
         ServerLogger.info(`🔍 채널 중복 검사 시작: ${decodedChannelIdentifier}`);
 
         try {
-            // 1. YouTube 채널 정보 수집 (채널 ID 확정)
-            const YouTubeChannelService = require('./YouTubeChannelService');
-            const youtubeService = new YouTubeChannelService();
-            const youtubeData = await youtubeService.getChannelInfo(decodedChannelIdentifier);
+            let youtubeData = null;
+
+            // 1. 영상 URL인지 채널 식별자인지 판별
+            if (decodedChannelIdentifier.includes('/watch') || decodedChannelIdentifier.includes('/shorts/')) {
+                // 영상 URL에서 채널 정보 추출
+                ServerLogger.info(`🎥 영상 URL에서 채널 정보 추출: ${decodedChannelIdentifier}`);
+                const VideoProcessor = require('./VideoProcessor');
+                const videoProcessor = new VideoProcessor();
+
+                try {
+                    const videoInfo = await videoProcessor.getYouTubeVideoInfo(decodedChannelIdentifier);
+                    if (videoInfo && videoInfo.channelId && videoInfo.channelName) {
+                        youtubeData = {
+                            id: videoInfo.channelId,
+                            channelName: videoInfo.channelName,
+                            url: videoInfo.channelUrl || `https://www.youtube.com/channel/${videoInfo.channelId}`
+                        };
+                        ServerLogger.info(`✅ 영상에서 채널 정보 추출 성공: ${youtubeData.channelName} (${youtubeData.id})`);
+                    }
+                } catch (videoError) {
+                    ServerLogger.warn(`⚠️ 영상에서 채널 정보 추출 실패: ${videoError.message}`);
+                }
+            } else {
+                // 채널 식별자로 직접 검색
+                const YouTubeChannelService = require('./YouTubeChannelService');
+                const youtubeService = new YouTubeChannelService();
+                youtubeData = await youtubeService.getChannelInfo(decodedChannelIdentifier);
+            }
 
             if (!youtubeData) {
                 throw new Error(`YouTube에서 채널을 찾을 수 없음: ${decodedChannelIdentifier}`);
@@ -224,13 +248,19 @@ class ChannelAnalysisQueue extends EventEmitter {
             ServerLogger.info(
                 `🔍 Queue DEBUG: 분석 요청 전송 - includeAnalysis = ${job.options.includeAnalysis}, skipAIAnalysis = ${job.options.skipAIAnalysis}`,
             );
+            ServerLogger.info(`🏷️ Queue DEBUG: 전달할 키워드:`, {
+                type: typeof job.keywords,
+                isArray: Array.isArray(job.keywords),
+                content: job.keywords,
+                length: job.keywords?.length
+            });
             const result =
                 await this.ChannelAnalysisService.createOrUpdateWithAnalysis(
-                    job.channelIdentifier,
+                    job.channelIdentifier, // 원본 대소문자 유지
                     job.keywords,
                     job.options.includeAnalysis,
                     job.options.skipAIAnalysis,
-                    job.normalizedChannelId, // 중복 방지를 위한 정규화된 채널 ID 전달
+                    job.normalizedChannelId, // 중복 방지를 위한 정규화된 채널 ID (소문자)
                 );
 
             // 완료 처리
