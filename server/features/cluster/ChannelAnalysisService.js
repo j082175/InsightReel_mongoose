@@ -400,6 +400,18 @@ class ChannelAnalysisService {
                               ?.channelTags || []),
                       ].filter((tag, index, arr) => arr.indexOf(tag) === index), // 중복 제거
 
+                // 🔍 analysisData 구조 확인
+                ...(() => {
+                    ServerLogger.info(`🔍 analysisData 구조 확인:`, {
+                        hasAnalysisData: !!analysisData,
+                        hasEnhancedAnalysis: !!analysisData?.enhancedAnalysis,
+                        hasChannelIdentity: !!analysisData?.enhancedAnalysis?.channelIdentity,
+                        analysisDataKeys: analysisData ? Object.keys(analysisData) : [],
+                        enhancedAnalysisKeys: analysisData?.enhancedAnalysis ? Object.keys(analysisData.enhancedAnalysis) : []
+                    });
+                    return {};
+                })(),
+
                 // channelIdentity 추가 정보
                 targetAudience: skipAIAnalysis
                     ? ''

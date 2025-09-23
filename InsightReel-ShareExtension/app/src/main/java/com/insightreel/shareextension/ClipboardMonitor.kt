@@ -32,11 +32,13 @@ class ClipboardMonitor(private val context: Context) {
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
         Log.d(TAG, "🔥 클립보드 리스너 트리거됨!")
 
-        // Android 10+에서는 클립보드 변경 감지는 되지만 내용 읽기가 제한될 수 있음
-        // 따라서 변경 감지만으로도 플로팅 버튼을 표시해보는 대안 로직 추가
+        // Android 10+에서는 클립보드 변경 감지는 되지만 내용 읽기가 제한됨
+        // 따라서 변경 감지만으로 플로팅 버튼을 표시하고, 실제 URL은 클릭 시점에 읽기
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            Log.d(TAG, "🔥 Android 10+ 클립보드 변경 감지 - 대안 방법 시도")
-            handleClipboardChangeForAndroid10Plus()
+            Log.d(TAG, "🔥 Android 10+ 클립보드 변경 감지 - 무조건 플로팅 버튼 표시")
+            // 클립보드 변경이 감지되었으므로 무조건 플로팅 버튼 표시
+            val temporaryUrl = "clipboard_changed"
+            onValidUrlDetected?.invoke(temporaryUrl)
         } else {
             checkClipboardForUrl()
         }
@@ -67,8 +69,13 @@ class ClipboardMonitor(private val context: Context) {
                 // 최초 실행 시 현재 클립보드 내용 확인
                 checkClipboardForUrl()
 
-                // 백업 폴링 시작 (리스너가 작동하지 않을 경우를 대비)
-                handler.postDelayed(pollingRunnable, POLLING_INTERVAL)
+                // 백업 폴링 시작 (Android 9 이하에서만, Android 10+는 어차피 클립보드 읽기 불가)
+                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
+                    handler.postDelayed(pollingRunnable, POLLING_INTERVAL)
+                    Log.d(TAG, "📋 Android 9 이하 - 폴링 시작")
+                } else {
+                    Log.d(TAG, "📋 Android 10+ - 폴링 생략 (클립보드 접근 제한)")
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "❌ 클립보드 모니터링 시작 실패: ${e.message}")
             }
