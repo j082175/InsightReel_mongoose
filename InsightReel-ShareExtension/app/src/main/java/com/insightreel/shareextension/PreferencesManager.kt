@@ -120,10 +120,20 @@ class PreferencesManager(private val context: Context) {
 
     /**
      * 현재 활성 서버 URL 가져오기
-     * 간단화: WiFi/LTE 구분 없이 터널 주소로 통일
+     * WiFi/LTE 자동 감지하여 적절한 서버 URL 반환
      */
     fun getCurrentServerUrl(): String {
-        return DEFAULT_LTE_SERVER_URL  // 항상 터널 주소 사용
+        return if (getAutoDetectNetwork()) {
+            // 자동 감지 모드: WiFi면 로컬 IP, LTE면 터널 사용
+            if (isWifiConnected()) {
+                getOptimalWifiUrl()
+            } else {
+                getLteServerUrl()
+            }
+        } else {
+            // 수동 모드: 설정된 URL 사용
+            getManualServerUrl()
+        }
     }
 
     /**
