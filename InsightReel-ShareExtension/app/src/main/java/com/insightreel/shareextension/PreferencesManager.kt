@@ -8,6 +8,11 @@ class PreferencesManager(private val context: Context) {
     private val sharedPreferences: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    init {
+        // 앱 시작 시 URL 마이그레이션 실행
+        migrateServerUrls()
+    }
+
     companion object {
         private const val PREFS_NAME = "InsightReel_Settings"
 
@@ -27,9 +32,14 @@ class PreferencesManager(private val context: Context) {
         // 기본값
         private const val DEFAULT_ANALYSIS_TYPE = ANALYSIS_VIDEO_ONLY
         private const val DEFAULT_SHOW_MODAL = true
-        private const val DEFAULT_WIFI_SERVER_URL = "http://localhost:3000"
-        private const val DEFAULT_LTE_SERVER_URL = "https://insightreel-real-test.loca.lt"
+        private const val DEFAULT_WIFI_SERVER_URL = "http://192.168.0.2:3000"
+        private const val DEFAULT_LTE_SERVER_URL = "https://insightreel-mobile-test.loca.lt"
         private const val DEFAULT_AUTO_DETECT_NETWORK = true
+
+        // 마이그레이션용 상수
+        private const val KEY_MIGRATION_VERSION = "migration_version"
+        private const val CURRENT_MIGRATION_VERSION = 2
+        private const val OLD_LTE_URL = "https://lemon-brooms-shave.loca.lt"
     }
 
     /**
@@ -110,19 +120,27 @@ class PreferencesManager(private val context: Context) {
 
     /**
      * 현재 활성 서버 URL 가져오기
-     * 자동 감지 모드면 네트워크 상태에 따라 자동 선택
+     * 간단화: WiFi/LTE 구분 없이 터널 주소로 통일
      */
     fun getCurrentServerUrl(): String {
-        return if (getAutoDetectNetwork()) {
-            // 자동 감지 모드: 네트워크 상태에 따라 선택
-            if (isWifiConnected()) {
-                getWifiServerUrl()
-            } else {
-                getLteServerUrl()
-            }
+        return DEFAULT_LTE_SERVER_URL  // 항상 터널 주소 사용
+    }
+
+    /**
+     * 에뮬레이터/실제 기기를 구분하여 적절한 WiFi URL 반환
+     */
+    private fun getOptimalWifiUrl(): String {
+        // 에뮬레이터인지 확인
+        val isEmulator = android.os.Build.FINGERPRINT.contains("generic") ||
+                android.os.Build.FINGERPRINT.contains("unknown") ||
+                android.os.Build.MODEL.contains("google_sdk") ||
+                android.os.Build.MODEL.contains("Emulator") ||
+                android.os.Build.MODEL.contains("Android SDK")
+
+        return if (isEmulator) {
+            "http://10.0.2.2:3000"      // 에뮬레이터용
         } else {
-            // 수동 모드: 직접 설정된 URL 사용
-            getManualServerUrl()
+            getWifiServerUrl()          // 실제 기기용 (설정된 값 또는 기본값)
         }
     }
 
@@ -205,6 +223,45 @@ class PreferencesManager(private val context: Context) {
             lteUrl = getLteServerUrl(),
             manualUrl = getManualServerUrl()
         )
+    }
+
+    /**
+     * 서버 URL 마이그레이션 함수
+     * 앱 업데이트 시 기존 설정을 새 URL로 자동 전환
+     */
+    private fun migrateServerUrls() {
+        try {
+            val currentVersion = sharedPreferences.getInt(KEY_MIGRATION_VERSION, 0)
+
+            if (currentVersion < CURRENT_MIGRATION_VERSION) {
+                println("🔄 URL 마이그레이션 시작: v$currentVersion -> v$CURRENT_MIGRATION_VERSION")
+
+                // 버전 1: 기존 LTE URL을 새 터널 URL로 업데이트
+                if (currentVersion < 1) {
+                    val currentLteUrl = sharedPreferences.getString(KEY_LTE_SERVER_URL, "")
+                    if (currentLteUrl == OLD_LTE_URL || currentLteUrl?.contains("lemon-brooms-shave") == true) {
+                        println("🔄 LTE URL 마이그레이션: $currentLteUrl -> $DEFAULT_LTE_SERVER_URL")
+                        setLteServerUrl(DEFAULT_LTE_SERVER_URL)
+                    }
+                }
+
+                // 버전 2: 향후 추가 마이그레이션을 위한 예약
+                if (currentVersion < 2) {
+                    // 필요시 추가 마이그레이션 로직
+                }
+
+                // 마이그레이션 버전 업데이트
+                sharedPreferences.edit()
+                    .putInt(KEY_MIGRATION_VERSION, CURRENT_MIGRATION_VERSION)
+                    .apply()
+
+                println("✅ URL 마이그레이션 완료")
+            } else {
+                println("ℹ️ URL 마이그레이션 불필요 (최신 버전)")
+            }
+        } catch (e: Exception) {
+            println("❌ URL 마이그레이션 실패: ${e.message}")
+        }
     }
 }
 
