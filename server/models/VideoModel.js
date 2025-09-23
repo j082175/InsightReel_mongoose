@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { createBasicVideoSchema } = require('../types/video-types');
+const { createBasicVideoSchema } = require('../schemas/video-schema');
 
 /**
  * 🚀 Video 모델 (새 인터페이스 기반)

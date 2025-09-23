@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { createChannelSchema } = require('../types/channel-types');
+const { createChannelSchema } = require('../schemas/channel-schema');
 
 /**
  * 🚀 Channel 모델 (새 인터페이스 기반)

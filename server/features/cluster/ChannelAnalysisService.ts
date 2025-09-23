@@ -757,7 +757,12 @@ class ChannelAnalysisService {
                 publishedAt: channel.publishedAt,
                 keys: Object.keys(channel)
             });
-            const savedChannel = await this.saveToMongoDB(channelData);
+            // MongoDB에 직접 저장 (upsert 사용) - 무한 재귀 호출 방지
+            const savedChannel = await Channel.findOneAndUpdate(
+                { channelId: channelData.channelId },
+                channelData,
+                { upsert: true, new: true }
+            );
 
             // 🔍 저장 후 실제 DB 값 확인
             ServerLogger.info(`🔍 저장 후 DB 확인:`, {
