@@ -26,7 +26,7 @@ class ShareActivity : AppCompatActivity() {
         )
     }
 
-    private val networkManager = NetworkManager()
+    private lateinit var networkManager: NetworkManager
     private val activityScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private lateinit var preferencesManager: PreferencesManager
 
@@ -35,6 +35,7 @@ class ShareActivity : AppCompatActivity() {
 
         // 설정 관리자 초기화
         preferencesManager = PreferencesManager(this)
+        networkManager = NetworkManager(this)
 
         when {
             intent?.action == Intent.ACTION_SEND -> {
@@ -65,7 +66,7 @@ class ShareActivity : AppCompatActivity() {
             } else {
                 // 바로 전송
                 val analysisType = preferencesManager.getAnalysisTypeName()
-                showToast("📤 InsightReel로 전송 중... ($analysisType)")
+                showToast("📤 백그라운드에서 전송 중... ($analysisType)")
                 sendToInsightReel(url)
             }
         } else {
@@ -142,7 +143,8 @@ class ShareActivity : AppCompatActivity() {
         // 서버 연결 상태 확인
         activityScope.launch {
             try {
-                val response = networkManager.checkServerHealth(SERVER_URL)
+                val serverUrl = preferencesManager.getCurrentServerUrl()
+                val response = networkManager.checkServerHealth(serverUrl)
                 if (response) {
                     statusIcon.text = "✅"
                     statusText.text = "서버 연결됨"
@@ -173,7 +175,7 @@ class ShareActivity : AppCompatActivity() {
 
         buttonConfirm.setOnClickListener {
             val analysisType = preferencesManager.getAnalysisTypeName()
-            showToast("📤 InsightReel로 전송 중... ($analysisType)")
+            showToast("📤 백그라운드에서 전송 중... ($analysisType)")
             dialog.dismiss()
             sendToInsightReel(url)
         }
@@ -204,23 +206,32 @@ class ShareActivity : AppCompatActivity() {
     }
 
     private fun sendToInsightReel(url: String) {
+        // 즉시 토스트 표시하고 액티비티 종료
+        showToast("📤 백그라운드에서 전송 중...")
+
+        // 백그라운드에서 처리
         activityScope.launch {
             try {
-                // 현재 설정에 따른 분석 플래그 가져오기
+                // 현재 설정에 따른 분석 플래그 및 서버 URL 가져오기
                 val analysisFlags = preferencesManager.getAnalysisFlags()
+                val serverUrl = preferencesManager.getCurrentServerUrl()
+                val networkType = if (networkManager.isWifiConnected()) "WiFi" else "LTE"
 
-                val success = networkManager.sendVideoUrl(SERVER_URL, url, analysisFlags)
+                println("📡 전송: $networkType 네트워크로 $serverUrl 서버에 전송")
+
+                val success = networkManager.sendVideoUrl(serverUrl, url, analysisFlags)
                 if (success) {
-                    showToast("✅ 전송 완료!")
+                    println("✅ 백그라운드 전송 완료! ($networkType)")
                 } else {
-                    showToast("❌ 전송 실패")
+                    println("❌ 백그라운드 전송 실패 ($networkType)")
                 }
             } catch (e: Exception) {
-                showToast("❌ 네트워크 오류")
-            } finally {
-                finish()
+                println("❌ 백그라운드 네트워크 오류: ${e.message}")
             }
         }
+
+        // 즉시 액티비티 종료하여 다른 앱 사용 가능하게 함
+        finish()
     }
 
     private fun showToast(message: String) {

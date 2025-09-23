@@ -29,6 +29,8 @@ class NetworkManager(private val context: Context) {
         return withContext(Dispatchers.IO) {
             try {
                 println("🔗 연결 시도: $serverUrl/api/process-video")
+                println("🔍 비디오 URL: $videoUrl")
+                println("🔍 분석 플래그: $analysisFlags")
 
                 val json = JSONObject().apply {
                     put("url", videoUrl)
@@ -72,6 +74,12 @@ class NetworkManager(private val context: Context) {
                 val response = client.newCall(request).execute()
                 println("📡 응답 코드: ${response.code}")
                 println("📡 응답 성공: ${response.isSuccessful}")
+
+                if (!response.isSuccessful) {
+                    val errorBody = response.body?.string() ?: "응답 본문 없음"
+                    println("❌ 응답 실패 내용: $errorBody")
+                    println("❌ 응답 헤더: ${response.headers}")
+                }
 
                 response.isSuccessful
             } catch (e: Exception) {

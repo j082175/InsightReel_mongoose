@@ -3913,6 +3913,24 @@ const startServer = async () => {
             const memoryMonitor = MemoryMonitor.getInstance();
             memoryMonitor.startMonitoring(60000); // 1분마다
 
+            // 간단한 메모리 로깅 추가
+            setInterval(() => {
+                const used = process.memoryUsage();
+                const timestamp = new Date().toISOString();
+                const rssInMB = Math.round(used.rss / 1024 / 1024);
+                const heapUsedInMB = Math.round(used.heapUsed / 1024 / 1024);
+
+                console.log(`[${timestamp}] 🧠 메모리: RSS ${rssInMB}MB, Heap ${heapUsedInMB}MB`);
+
+                // 경고 임계값
+                if (rssInMB > 500) {
+                    console.log(`⚠️ 메모리 경고: ${rssInMB}MB (임계값: 500MB)`);
+                }
+                if (rssInMB > 1000) {
+                    console.log(`🚨 메모리 위험: ${rssInMB}MB (임계값: 1000MB)`);
+                }
+            }, 60000); // 1분마다
+
             ServerLogger.info(
                 `
 🎬 InsightReel 서버 실행중

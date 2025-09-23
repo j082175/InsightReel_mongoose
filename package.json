@@ -5,7 +5,8 @@
   "description": "InsightReel - 자동 영상 저장 및 AI 분석 도구",
   "main": "server/index.js",
   "scripts": {
-    "dev": "npm run kill-port && nodemon server/index.js",
+    "dev": "npm run kill-port && node server/index.js",
+    "dev-watch": "npm run kill-port && nodemon server/index.js",
     "start": "npm run kill-port && node server/index.js",
     "kill-port": "npx kill-port 3000 || echo 'Port 3000 was already free'",
     "cleanup": "npx kill-port 3000 && npx kill-port 8000 && echo 'All ports cleaned'",

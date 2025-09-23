@@ -67,8 +67,16 @@ class ChannelCollectionModal(
         // 다이얼로그 생성 및 표시
         dialog = AlertDialog.Builder(context)
             .setView(dialogView)
-            .setCancelable(true)
+            .setCancelable(true)  // 뒤로가기 버튼으로 취소 가능
             .create()
+
+        // 다이얼로그 외부 터치로 닫기 허용
+        dialog.setCanceledOnTouchOutside(true)
+
+        // 다이얼로그 취소 시 콜백 호출
+        dialog.setOnCancelListener {
+            onCollectionComplete(false)
+        }
 
         dialog.show()
     }
@@ -338,11 +346,22 @@ class ChannelCollectionModal(
     ) {
         coroutineScope.launch {
             try {
-                dialog.dismiss()
+                // 분석 시작 알림
                 Toast.makeText(context, "📊 채널 수집을 시작합니다...", Toast.LENGTH_SHORT).show()
+
+                // 분석 중에도 다이얼로그 유지하되 터치 허용
+                buttonStartCollection.isEnabled = false
+                buttonStartCollection.text = "수집 중..."
+
+                // 다이얼로그는 유지하되 취소 가능하도록 설정
+                dialog.setCancelable(true)
+                dialog.setCanceledOnTouchOutside(true)
 
                 // 서버에 채널 수집 요청
                 val success = requestChannelCollection(url, settings)
+
+                // 분석 완료 후 다이얼로그 닫기
+                dialog.dismiss()
 
                 if (success) {
                     Toast.makeText(context, "✅ 채널 수집이 완료되었습니다!", Toast.LENGTH_LONG).show()
@@ -354,6 +373,7 @@ class ChannelCollectionModal(
 
             } catch (e: Exception) {
                 println("❌ 채널 수집 오류: ${e.message}")
+                dialog.dismiss()
                 Toast.makeText(context, "❌ 수집 중 오류가 발생했습니다", Toast.LENGTH_SHORT).show()
                 onCollectionComplete(false)
             }

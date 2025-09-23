@@ -9,6 +9,7 @@ class TagExtractor {
     constructor() {
         this.geminiApiKey = null; // ApiKeyManager에서 동적으로 로드
         this.tagCache = new Map(); // 캐싱으로 API 호출 최적화
+        this.cacheTimers = new Map(); // 캐시 삭제 타이머 추적
 
         ServerLogger.info('🏷️ TagExtractor 초기화');
     }
@@ -63,9 +64,21 @@ class TagExtractor {
 
             const cleanTags = this.cleanAndFilterTags(allTags);
 
-            // 캐싱 (1시간)
+            // 캐싱 (1시간) - 메모리 누수 방지
             this.tagCache.set(cacheKey, cleanTags);
-            setTimeout(() => this.tagCache.delete(cacheKey), 60 * 60 * 1000);
+
+            // 기존 타이머가 있으면 정리
+            if (this.cacheTimers.has(cacheKey)) {
+                clearTimeout(this.cacheTimers.get(cacheKey));
+            }
+
+            // 새 타이머 생성 및 추적
+            const timer = setTimeout(() => {
+                this.tagCache.delete(cacheKey);
+                this.cacheTimers.delete(cacheKey);
+            }, 60 * 60 * 1000);
+
+            this.cacheTimers.set(cacheKey, timer);
 
             ServerLogger.success('✅ 태그 추출 완료', {
                 channel: channel.name,
@@ -299,7 +312,24 @@ class TagExtractor {
             cacheSize: this.tagCache.size,
             cacheHitRate:
                 this.cacheHits / (this.cacheHits + this.cacheMisses) || 0,
+            activeTimers: this.cacheTimers.size,
         };
+    }
+
+    /**
+     * 🧹 메모리 정리
+     */
+    destroy() {
+        // 모든 캐시 타이머 정리
+        this.cacheTimers.forEach(timer => {
+            clearTimeout(timer);
+        });
+        this.cacheTimers.clear();
+
+        // 캐시 정리
+        this.tagCache.clear();
+
+        ServerLogger.info('🧹 TagExtractor 메모리 정리 완료');
     }
 }
 
