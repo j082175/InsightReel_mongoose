@@ -24,9 +24,6 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun setupBasicUI() {
         try {
-            // 제목 설정
-            findViewById<TextView>(R.id.titleText)?.text = "InsightReel 설정"
-
             // 분석 타입 설정
             setupAnalysisTypeSettings()
 
