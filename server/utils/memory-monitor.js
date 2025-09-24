@@ -17,11 +17,11 @@ class MemoryMonitor {
         this.memoryHistory = [];
         this.maxHistorySize = 100;
 
-        // 메모리 임계값 설정 (MB)
+        // 메모리 임계값 설정 (MB) - 널널하게 조정
         this.thresholds = {
-            warning: 500,  // 500MB
-            critical: 1000, // 1GB
-            forceGC: 750   // 750MB에서 강제 GC
+            warning: 2000,  // 2GB
+            critical: 3000, // 3GB
+            forceGC: 2500   // 2.5GB에서 강제 GC
         };
 
         MemoryMonitor.instance = this;
