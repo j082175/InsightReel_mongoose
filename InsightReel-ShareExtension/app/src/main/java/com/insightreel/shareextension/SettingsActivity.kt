@@ -9,6 +9,7 @@ class SettingsActivity : AppCompatActivity() {
 
     private lateinit var preferencesManager: PreferencesManager
     private lateinit var networkManager: NetworkManager
+    private lateinit var autoUpdateManager: AutoUpdateManager
     private val activityScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -17,8 +18,10 @@ class SettingsActivity : AppCompatActivity() {
 
         preferencesManager = PreferencesManager(this)
         networkManager = NetworkManager(this)
+        autoUpdateManager = AutoUpdateManager(this)
 
         setupBasicUI()
+        setupVersionDisplay()
         updateNetworkStatus()
     }
 
@@ -36,6 +39,9 @@ class SettingsActivity : AppCompatActivity() {
             }
             findViewById<Button>(R.id.buttonTest)?.setOnClickListener {
                 testConnection()
+            }
+            findViewById<Button>(R.id.buttonCheckUpdate)?.setOnClickListener {
+                checkForUpdatesManually()
             }
 
             // 현재 설정 로드
@@ -161,6 +167,35 @@ class SettingsActivity : AppCompatActivity() {
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@SettingsActivity, "❌ 네트워크 오류: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun setupVersionDisplay() {
+        try {
+            val packageInfo = packageManager.getPackageInfo(packageName, 0)
+            findViewById<TextView>(R.id.settingsVersionText).text = "v${packageInfo.versionName}"
+        } catch (e: Exception) {
+            println("⚠️ 버전 표시 설정 실패: ${e.message}")
+        }
+    }
+
+    private fun checkForUpdatesManually() {
+        activityScope.launch {
+            try {
+                println("🔍 수동 업데이트 확인 시작!")
+                Toast.makeText(this@SettingsActivity, "🔍 업데이트 확인 중...", Toast.LENGTH_SHORT).show()
+
+                val serverUrl = preferencesManager.getCurrentServerUrl()
+                println("📡 서버 URL: $serverUrl")
+
+                autoUpdateManager.checkForUpdatesManually(serverUrl)
+                println("📊 업데이트 확인 완료")
+
+            } catch (e: Exception) {
+                println("❌ 업데이트 확인 예외: ${e.message}")
+                e.printStackTrace()
+                Toast.makeText(this@SettingsActivity, "❌ 업데이트 확인 실패: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }

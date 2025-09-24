@@ -2,9 +2,8 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { ResponseHandler, API_MESSAGES } = require('../config/api-messages');
 
-console.log('🔧 app-update.js 모듈 로딩 중...');
+console.log('🔧 app-update-fixed.js 모듈 로딩 중...');
 
 const router = express.Router();
 
@@ -19,43 +18,12 @@ console.log('🔧 테스트 라우트 등록됨: /test');
 // 라우트 등록 확인
 console.log('🔧 /check 라우트 등록 중...');
 
-// APK 업로드를 위한 multer 설정
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadDir = path.join(__dirname, '../uploads/apk');
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const version = req.body.version || 'unknown';
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        cb(null, `InsightReel_${version}_${timestamp}.apk`);
-    }
-});
-
-const upload = multer({
-    storage: storage,
-    fileFilter: (req, file, cb) => {
-        if (file.mimetype === 'application/vnd.android.package-archive' ||
-            file.originalname.endsWith('.apk')) {
-            cb(null, true);
-        } else {
-            cb(new Error('APK 파일만 업로드 가능합니다.'), false);
-        }
-    },
-    limits: {
-        fileSize: 50 * 1024 * 1024 // 50MB 제한
-    }
-});
-
 // 현재 앱 정보
 const APP_INFO = {
-    currentVersion: '1.1.0',
+    currentVersion: '1.1.10',
     minSupportedVersion: '1.0.0',
-    latestApkPath: null,
-    releaseNotes: '🚀 새로운 업데이트가 출시되었습니다!\n- 자동 업데이트 시스템 추가\n- 클립보드 URL 감지 개선\n- UI 성능 최적화'
+    latestApkPath: path.join(__dirname, '../uploads/apk/InsightReel_1.1.10.apk'),
+    releaseNotes: '🚀 새로운 업데이트가 출시되었습니다!\n- 버전 1.1.10 자동 배포\n- 시스템 안정성 개선\n- 성능 최적화'
 };
 
 /**
@@ -90,11 +58,7 @@ router.get('/check', (req, res) => {
             console.log(`✅ 최신 버전 사용 중: ${currentVersion}`);
         }
 
-        res.json({
-            success: true,
-            data: updateInfo,
-            message: '업데이트 확인 완료'
-        });
+        res.json(updateInfo);
     } catch (error) {
         console.error('❌ 업데이트 확인 실패:', error);
         res.status(500).json({
@@ -112,8 +76,14 @@ console.log('✅ /check 라우트 등록 완료!');
  */
 router.get('/download', (req, res) => {
     try {
+        console.log(`📥 APK 다운로드 요청: latestApkPath=${APP_INFO.latestApkPath}`);
+
         if (!APP_INFO.latestApkPath || !fs.existsSync(APP_INFO.latestApkPath)) {
-            return ResponseHandler.error(res, 'APK 파일을 찾을 수 없습니다', 404);
+            console.log('❌ APK 파일이 설정되지 않았거나 존재하지 않음');
+            return res.status(404).json({
+                success: false,
+                error: 'APK 파일을 찾을 수 없습니다'
+            });
         }
 
         const fileName = `InsightReel_${APP_INFO.currentVersion}.apk`;
@@ -128,7 +98,10 @@ router.get('/download', (req, res) => {
         fileStream.on('error', (error) => {
             console.error('❌ APK 파일 전송 실패:', error);
             if (!res.headersSent) {
-                ResponseHandler.error(res, 'APK 파일 전송 중 오류가 발생했습니다', 500);
+                res.status(500).json({
+                    success: false,
+                    error: 'APK 파일 전송 중 오류가 발생했습니다'
+                });
             }
         });
 
@@ -138,44 +111,10 @@ router.get('/download', (req, res) => {
 
     } catch (error) {
         console.error('❌ APK 다운로드 실패:', error);
-        ResponseHandler.error(res, 'APK 다운로드 중 오류가 발생했습니다', 500);
-    }
-});
-
-/**
- * POST /api/app-update/upload
- * 새 APK 파일 업로드 (관리자용)
- */
-router.post('/upload', upload.single('file'), (req, res) => {
-    try {
-        if (!req.file) {
-            return ResponseHandler.error(res, 'APK 파일이 업로드되지 않았습니다', 400);
-        }
-
-        const version = req.body.version || APP_INFO.currentVersion;
-        const releaseNotes = req.body.releaseNotes || APP_INFO.releaseNotes;
-
-        // 앱 정보 업데이트
-        APP_INFO.currentVersion = version;
-        APP_INFO.latestApkPath = req.file.path;
-        APP_INFO.releaseNotes = releaseNotes;
-
-        console.log(`📱 새 APK 업로드 완료: ${req.file.filename}`);
-        console.log(`🏷️ 버전: ${version}`);
-        console.log(`📍 경로: ${req.file.path}`);
-
-        const uploadInfo = {
-            fileName: req.file.filename,
-            version: version,
-            fileSize: req.file.size,
-            uploadTime: new Date().toISOString(),
-            releaseNotes: releaseNotes
-        };
-
-        ResponseHandler.success(res, uploadInfo, 'APK 업로드 완료');
-    } catch (error) {
-        console.error('❌ APK 업로드 실패:', error);
-        ResponseHandler.error(res, 'APK 업로드 중 오류가 발생했습니다', 500);
+        res.status(500).json({
+            success: false,
+            error: 'APK 다운로드 중 오류가 발생했습니다'
+        });
     }
 });
 
@@ -194,44 +133,17 @@ router.get('/info', (req, res) => {
             lastUpdateTime: APP_INFO.latestApkPath ? fs.statSync(APP_INFO.latestApkPath).mtime : null
         };
 
-        ResponseHandler.success(res, appInfo, '앱 정보 조회 완료');
+        res.json({
+            success: true,
+            data: appInfo,
+            message: '앱 정보 조회 완료'
+        });
     } catch (error) {
         console.error('❌ 앱 정보 조회 실패:', error);
-        ResponseHandler.error(res, '앱 정보 조회 중 오류가 발생했습니다', 500);
-    }
-});
-
-/**
- * DELETE /api/app-update/clean
- * 오래된 APK 파일 정리 (관리자용)
- */
-router.delete('/clean', (req, res) => {
-    try {
-        const uploadDir = path.join(__dirname, '../uploads/apk');
-
-        if (!fs.existsSync(uploadDir)) {
-            return ResponseHandler.success(res, { cleaned: 0 }, '정리할 파일이 없습니다');
-        }
-
-        const files = fs.readdirSync(uploadDir);
-        const apkFiles = files.filter(file => file.endsWith('.apk'));
-
-        // 현재 사용 중인 APK 제외하고 삭제
-        let cleanedCount = 0;
-        for (const file of apkFiles) {
-            const filePath = path.join(uploadDir, file);
-            if (filePath !== APP_INFO.latestApkPath) {
-                fs.unlinkSync(filePath);
-                cleanedCount++;
-                console.log(`🗑️ 삭제됨: ${file}`);
-            }
-        }
-
-        console.log(`🧹 APK 파일 정리 완료: ${cleanedCount}개 파일 삭제`);
-        ResponseHandler.success(res, { cleaned: cleanedCount }, 'APK 파일 정리 완료');
-    } catch (error) {
-        console.error('❌ APK 파일 정리 실패:', error);
-        ResponseHandler.error(res, 'APK 파일 정리 중 오류가 발생했습니다', 500);
+        res.status(500).json({
+            success: false,
+            error: '앱 정보 조회 중 오류가 발생했습니다'
+        });
     }
 });
 
@@ -277,5 +189,7 @@ function getApkFileSize() {
         return 0;
     }
 }
+
+console.log('✅ app-update-fixed 라우터 로드 완료');
 
 module.exports = router;

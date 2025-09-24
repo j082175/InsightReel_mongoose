@@ -14,6 +14,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var networkManager: NetworkManager
     private lateinit var preferencesManager: PreferencesManager
+    private lateinit var autoUpdateManager: AutoUpdateManager
     private val activityScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var clipboardAnalyzeButton: Button? = null
 
@@ -27,6 +28,7 @@ class MainActivity : AppCompatActivity() {
 
         networkManager = NetworkManager(this)
         preferencesManager = PreferencesManager(this)
+        autoUpdateManager = AutoUpdateManager(this)
 
         setupUI()
 
@@ -35,11 +37,18 @@ class MainActivity : AppCompatActivity() {
             println("🔍 500ms 후 클립보드 체크 시작!")
             checkClipboardOnStart()
         }, 500)
+
+        // 24시간마다 자동 업데이트 확인
+        checkForAppUpdates()
     }
 
     private fun setupUI() {
         findViewById<TextView>(R.id.descriptionText).text =
             "YouTube/Instagram/TikTok에서 '공유' → 'InsightReel Share' 선택하세요!\n\n또는 아래에 링크를 직접 입력할 수도 있습니다."
+
+        // 버전 정보 표시
+        val packageInfo = packageManager.getPackageInfo(packageName, 0)
+        findViewById<TextView>(R.id.versionText).text = "v${packageInfo.versionName}"
 
         // 설정 버튼 추가
         val settingsButton = findViewById<Button>(R.id.settingsButton)
@@ -250,6 +259,19 @@ class MainActivity : AppCompatActivity() {
         findViewById<android.widget.LinearLayout>(R.id.mainLayout).postDelayed({
             checkClipboardOnStart()
         }, 200)
+    }
+
+    private fun checkForAppUpdates() {
+        activityScope.launch {
+            try {
+                if (autoUpdateManager.shouldCheckForUpdates()) {
+                    val serverUrl = preferencesManager.getCurrentServerUrl()
+                    autoUpdateManager.checkForUpdates(serverUrl)
+                }
+            } catch (e: Exception) {
+                println("⚠️ 자동 업데이트 확인 실패: ${e.message}")
+            }
+        }
     }
 
     override fun onDestroy() {

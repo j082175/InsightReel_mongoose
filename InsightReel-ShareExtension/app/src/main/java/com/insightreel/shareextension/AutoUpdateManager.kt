@@ -12,6 +12,8 @@ import android.os.Environment
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import android.os.Handler
+import android.os.Looper
 import okhttp3.*
 import org.json.JSONObject
 import java.io.File
@@ -27,7 +29,7 @@ class AutoUpdateManager(private val context: Context) {
     companion object {
         private const val UPDATE_CHECK_URL = "/api/app-update/check"
         private const val APK_DOWNLOAD_URL = "/api/app-update/download"
-        private const val CURRENT_VERSION = "1.0.0"
+        private const val CURRENT_VERSION = "1.1.10"
         private const val PREFS_LAST_UPDATE_CHECK = "last_update_check"
         private const val CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000L // 24시간
     }
@@ -55,11 +57,15 @@ class AutoUpdateManager(private val context: Context) {
                         val updateInfo = parseUpdateResponse(responseBody)
 
                         if (updateInfo.hasUpdate) {
-                            showUpdateDialog(updateInfo, serverUrl)
+                            Handler(Looper.getMainLooper()).post {
+                                showUpdateDialog(updateInfo, serverUrl)
+                            }
                             true
                         } else {
                             if (showNoUpdateMessage) {
-                                showNoUpdateMessage()
+                                Handler(Looper.getMainLooper()).post {
+                                    showNoUpdateMessage()
+                                }
                             }
                             false
                         }
@@ -107,17 +113,33 @@ class AutoUpdateManager(private val context: Context) {
      */
     private fun parseUpdateResponse(responseBody: String): UpdateInfo {
         return try {
+            println("🔍 서버 응답 원문: $responseBody")
             val json = JSONObject(responseBody)
+            println("🔍 JSON 파싱 완료: ${json.toString()}")
+
+            // 중첩된 구조 체크: data 객체가 있는지 확인
+            val dataObj = if (json.has("data")) {
+                println("🔍 중첩된 JSON 구조 감지, data 객체 사용")
+                json.getJSONObject("data")
+            } else {
+                println("🔍 평면 JSON 구조, 직접 사용")
+                json
+            }
+
+            val hasUpdate = dataObj.getBoolean("hasUpdate")
+            println("🔍 hasUpdate 값: $hasUpdate")
+
             UpdateInfo(
-                hasUpdate = json.getBoolean("hasUpdate"),
-                latestVersion = json.optString("latestVersion", CURRENT_VERSION),
-                downloadUrl = json.optString("downloadUrl", ""),
-                releaseNotes = json.optString("releaseNotes", ""),
-                isForced = json.optBoolean("isForced", false),
-                fileSize = json.optLong("fileSize", 0)
+                hasUpdate = hasUpdate,
+                latestVersion = dataObj.optString("latestVersion", CURRENT_VERSION),
+                downloadUrl = dataObj.optString("downloadUrl", ""),
+                releaseNotes = dataObj.optString("releaseNotes", ""),
+                isForced = dataObj.optBoolean("isForced", false),
+                fileSize = dataObj.optLong("fileSize", 0)
             )
         } catch (e: Exception) {
             println("❌ 업데이트 응답 파싱 실패: ${e.message}")
+            println("❌ 원본 응답: $responseBody")
             UpdateInfo(false, CURRENT_VERSION, "", "", false, 0)
         }
     }
@@ -207,7 +229,9 @@ class AutoUpdateManager(private val context: Context) {
 
         } catch (e: Exception) {
             println("❌ 업데이트 다운로드 실패: ${e.message}")
-            showErrorDialog("다운로드 실패", "업데이트 다운로드 중 오류가 발생했습니다: ${e.message}")
+            Handler(Looper.getMainLooper()).post {
+                showErrorDialog("다운로드 실패", "업데이트 다운로드 중 오류가 발생했습니다: ${e.message}")
+            }
         }
     }
 
@@ -219,7 +243,9 @@ class AutoUpdateManager(private val context: Context) {
             val apkFile = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "InsightReel_$version.apk")
 
             if (!apkFile.exists()) {
-                showErrorDialog("파일 없음", "다운로드된 APK 파일을 찾을 수 없습니다.")
+                Handler(Looper.getMainLooper()).post {
+                    showErrorDialog("파일 없음", "다운로드된 APK 파일을 찾을 수 없습니다.")
+                }
                 return
             }
 
@@ -240,7 +266,9 @@ class AutoUpdateManager(private val context: Context) {
 
         } catch (e: Exception) {
             println("❌ APK 설치 실패: ${e.message}")
-            showErrorDialog("설치 실패", "APK 설치 중 오류가 발생했습니다: ${e.message}")
+            Handler(Looper.getMainLooper()).post {
+                showErrorDialog("설치 실패", "APK 설치 중 오류가 발생했습니다: ${e.message}")
+            }
         }
     }
 

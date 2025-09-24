@@ -11,15 +11,32 @@
         android:orientation="vertical">
 
         <!-- 헤더 -->
-        <TextView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="🎬 InsightReel 설정"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="#333"
-            android:gravity="center"
-            android:layout_marginBottom="24dp" />
+            android:orientation="vertical"
+            android:layout_marginBottom="24dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🎬 InsightReel 설정"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="#333"
+                android:gravity="center"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/settingsVersionText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="v1.0.0"
+                android:textSize="12sp"
+                android:textColor="#666"
+                android:gravity="center" />
+
+        </LinearLayout>
 
         <!-- 분석 타입 설정 -->
         <LinearLayout
@@ -157,29 +174,48 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
+            android:orientation="vertical"
             android:gravity="center">
 
-            <Button
-                android:id="@+id/buttonTest"
-                android:layout_width="0dp"
+            <!-- 첫 번째 줄: 테스트, 저장 -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="🧪 테스트"
-                android:textSize="16sp"
-                android:layout_marginEnd="8dp"
-                android:background="@drawable/button_test_background" />
+                android:orientation="horizontal"
+                android:gravity="center"
+                android:layout_marginBottom="12dp">
 
+                <Button
+                    android:id="@+id/buttonTest"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="🧪 테스트"
+                    android:textSize="16sp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/button_test_background" />
+
+                <Button
+                    android:id="@+id/buttonSave"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="💾 저장"
+                    android:textSize="16sp"
+                    android:textColor="#FFFFFF"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/button_save_background" />
+            </LinearLayout>
+
+            <!-- 두 번째 줄: 업데이트 확인 버튼 -->
             <Button
-                android:id="@+id/buttonSave"
-                android:layout_width="0dp"
+                android:id="@+id/buttonCheckUpdate"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="💾 저장"
+                android:text="🔄 업데이트 확인"
                 android:textSize="16sp"
                 android:textColor="#FFFFFF"
-                android:layout_marginStart="8dp"
-                android:background="@drawable/button_save_background" />
+                android:background="@drawable/button_update_background" />
         </LinearLayout>
 
         <!-- 안내 텍스트 -->
