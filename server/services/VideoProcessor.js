@@ -1,9 +1,12 @@
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, exec } = require('child_process');
+const { promisify } = require('util');
+const execAsync = promisify(exec);
 const ffmpegPath = require('ffmpeg-static');
 const ytdl = require('@distube/ytdl-core');
+const TikTokAPI = require('@tobyg74/tiktok-api-dl');
 const { ServerLogger } = require('../utils/logger');
 const youtubeBatchProcessor = require('./YouTubeBatchProcessor');
 const HybridYouTubeExtractor = require('./HybridYouTubeExtractor');
@@ -118,7 +121,7 @@ class VideoProcessor {
         return this.youtubeApiKey;
     }
 
-    async downloadVideo(videoUrl, platform) {
+    async downloadVideo(videoUrl, platform, metadata = null) {
         const startTime = Date.now();
         try {
             ServerLogger.info(`🔗 다운로드 시작 - Platform: ${platform}`);
@@ -152,11 +155,8 @@ class VideoProcessor {
             ServerLogger.info(`🔍 URL 체크: isInstagramUrl=${this.isInstagramUrl(videoUrl)}`);
 
             if (platform === PLATFORMS.YOUTUBE || this.isYouTubeUrl(videoUrl)) {
-                return await this.downloadYouTubeVideo(
-                    videoUrl,
-                    filePath,
-                    startTime,
-                );
+                ServerLogger.info(`📺 YouTube 플랫폼 감지됨 - yt-dlp로 다운로드`);
+                return await this.downloadWithYtDlp(videoUrl, filePath, startTime);
             } else if (platform === PLATFORMS.INSTAGRAM || this.isInstagramUrl(videoUrl)) {
                 ServerLogger.info(`📸 Instagram 플랫폼 감지됨 - 전용 다운로드 함수 호출`);
                 return await this.downloadInstagramVideo(
@@ -164,6 +164,9 @@ class VideoProcessor {
                     filePath,
                     startTime,
                 );
+            } else if (platform === PLATFORMS.TIKTOK || this.isTikTokUrl(videoUrl)) {
+                ServerLogger.info(`🎵 TikTok 플랫폼 감지됨 - yt-dlp로 다운로드`);
+                return await this.downloadWithYtDlp(videoUrl, filePath, startTime);
             } else {
                 // 다른 플랫폼은 기존 방식 사용
                 ServerLogger.info(`🌐 일반 플랫폼으로 처리: ${platform || 'unknown'}`);
@@ -198,6 +201,14 @@ class VideoProcessor {
         const isInstagram = url.includes('instagram.com');
         ServerLogger.info(`🔍 Instagram URL 체크: "${url}" -> ${isInstagram}`);
         return isInstagram;
+    }
+
+    // TikTok URL 체크 함수
+    isTikTokUrl(url) {
+        if (!url || typeof url !== 'string') return false;
+        const isTikTok = url.includes('tiktok.com') || url.includes('vm.tiktok.com') || url.includes('vt.tiktok.com');
+        ServerLogger.info(`🔍 TikTok URL 체크: "${url}" -> ${isTikTok}`);
+        return isTikTok;
     }
 
     // YouTube 전용 다운로드 함수
@@ -403,6 +414,7 @@ class VideoProcessor {
         }
     }
 
+
     // 일반 플랫폼용 다운로드 함수 (기존 로직)
     async downloadGenericVideo(videoUrl, filePath, startTime) {
         ServerLogger.info(`🌐 일반 비디오 다운로드 시작`);
@@ -459,6 +471,524 @@ class VideoProcessor {
                 reject(error);
             });
         });
+    }
+
+
+    // yt-dlp를 사용한 범용 다운로드 함수
+    async downloadWithYtDlp(videoUrl, filePath, startTime) {
+        ServerLogger.info(`🚀 yt-dlp로 비디오 다운로드 시작: ${videoUrl}`);
+
+        try {
+            // yt-dlp 명령어 구성
+            const command = `yt-dlp -f "best[ext=mp4]/best" -o "${filePath}" --no-playlist --quiet --no-warnings --extractor-args "tiktok:api_hostname=api16-normal-c-useast1a.tiktokv.com" "${videoUrl}"`;
+
+            ServerLogger.info(`📝 실행 명령어: ${command}`);
+
+            // yt-dlp 실행
+            const { stdout, stderr } = await execAsync(command, {
+                timeout: 120000, // 2분 타임아웃
+                maxBuffer: 1024 * 1024 * 10 // 10MB 버퍼
+            });
+
+            if (stderr && !stderr.includes('WARNING')) {
+                ServerLogger.warn(`⚠️ yt-dlp 경고: ${stderr}`);
+            }
+
+            // 파일 다운로드 확인
+            if (fs.existsSync(filePath)) {
+                const endTime = Date.now();
+                const downloadTime = endTime - startTime;
+                const stats = fs.statSync(filePath);
+
+                ServerLogger.info(`✅ yt-dlp 다운로드 완료`);
+                ServerLogger.info(`📊 파일 크기: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+                ServerLogger.info(`⏱️ 소요시간: ${(downloadTime / 1000).toFixed(2)}초`);
+
+                return filePath;
+            } else {
+                throw new Error('다운로드된 파일을 찾을 수 없습니다');
+            }
+        } catch (error) {
+            ServerLogger.error('yt-dlp 다운로드 실패:', error);
+
+            // yt-dlp가 설치되지 않은 경우
+            if (error.message.includes('yt-dlp')) {
+                throw new Error('yt-dlp가 설치되지 않았습니다. pip install yt-dlp 또는 시스템에 맞는 방법으로 설치해주세요.');
+            }
+
+            throw new Error(`비디오 다운로드 실패: ${error.message}`);
+        }
+    }
+
+    // TikTok 비디오 메타데이터 추출 함수 (v1 → v2 → v3 폭포수 방식)
+    async getTikTokVideoInfo(videoUrl) {
+        return await this.getTikTokVideoInfoFallback(videoUrl);
+    }
+
+    // 기존 TikTok API 폴백 함수 (v1 → v2 → v3)
+    async getTikTokVideoInfoFallback(videoUrl) {
+        ServerLogger.info(`🔄 기존 라이브러리 폴백 시작 (폭포수 방식): ${videoUrl}`);
+
+        let apiResult = null;
+        let usedVersion = null;
+        let dataQuality = null;
+
+        // 1차 시도: v1 API (최대 데이터)
+        try {
+            ServerLogger.info('🏆 v1 API 시도 중 (최고 품질 데이터)...');
+            apiResult = await TikTokAPI.Downloader(videoUrl, {
+                version: "v1"
+            });
+            if (apiResult && apiResult.status === "success") {
+                usedVersion = "v1";
+                dataQuality = "완전";
+                ServerLogger.info('✅ v1 API 성공! 완전한 데이터 확보');
+            } else {
+                throw new Error(`v1 API 실패: ${apiResult?.message || 'Unknown error'}`);
+            }
+        } catch (v1Error) {
+            ServerLogger.warn(`⚠️ v1 API 실패: ${v1Error.message}, v2로 시도`);
+
+            // 2차 시도: v2 API (핵심 통계)
+            try {
+                ServerLogger.info('🥈 v2 API 시도 중 (핵심 통계 데이터)...');
+                apiResult = await TikTokAPI.Downloader(videoUrl, {
+                    version: "v2"
+                });
+                if (apiResult && apiResult.status === "success") {
+                    usedVersion = "v2";
+                    dataQuality = "부분";
+                    ServerLogger.info('✅ v2 API 성공! 핵심 통계 확보');
+                } else {
+                    throw new Error(`v2 API 실패: ${apiResult?.message || 'Unknown error'}`);
+                }
+            } catch (v2Error) {
+                ServerLogger.warn(`⚠️ v2 API 실패: ${v2Error.message}, v3로 최종 시도`);
+
+                // 3차 시도: v3 API (기본 정보)
+                try {
+                    ServerLogger.info('🥉 v3 API 최종 시도 중 (기본 정보)...');
+                    apiResult = await TikTokAPI.Downloader(videoUrl, {
+                        version: "v3"
+                    });
+                    if (apiResult && apiResult.status === "success") {
+                        usedVersion = "v3";
+                        dataQuality = "기본";
+                        ServerLogger.info('✅ v3 API 성공! 기본 정보 확보');
+                    } else {
+                        throw new Error(`v3 API도 실패: ${apiResult?.message || 'Unknown error'}`);
+                    }
+                } catch (v3Error) {
+                    ServerLogger.error('❌ 모든 API 버전 실패');
+                    throw new Error(`모든 TikTok API 버전 실패 - v1: ${v1Error.message}, v2: ${v2Error.message}, v3: ${v3Error.message}`);
+                }
+            }
+        }
+
+        const videoData = apiResult.result;
+        if (!videoData) {
+            throw new Error('TikTok 비디오 데이터를 찾을 수 없습니다');
+        }
+
+        ServerLogger.info(`🎯 사용된 API 버전: ${usedVersion} (데이터 품질: ${dataQuality})`);
+
+        // 버전별 데이터 파싱 로직
+        const parsedData = this.parseTikTokDataByVersion(videoData, usedVersion, videoUrl);
+
+        // API 버전과 원본 응답 데이터 추가
+        parsedData.apiVersion = usedVersion;
+        parsedData.rawApiResult = apiResult;
+
+        ServerLogger.info(`✅ TikTok 메타데이터 추출 완료 (${usedVersion})`);
+        ServerLogger.info(`📊 추출된 정보: 제목="${parsedData.title.substring(0, 50)}...", 조회수=${parsedData.views.toLocaleString()}, 좋아요=${parsedData.likes.toLocaleString()}`);
+        if (parsedData.downloadUrl) {
+            const urlString = typeof parsedData.downloadUrl === 'string' ? parsedData.downloadUrl : JSON.stringify(parsedData.downloadUrl);
+            ServerLogger.info(`🔗 다운로드 URL 확보: ${urlString.substring(0, 50)}...`);
+        }
+
+        return parsedData;
+    }
+
+    // TikTok API 버전별 데이터 파싱 함수
+    parseTikTokDataByVersion(videoData, version, videoUrl) {
+        // 공통 기본 정보
+        const desc = videoData.desc || '';
+        const hashtags = this.extractHashtags(desc);
+        const mentions = this.extractMentions(desc);
+
+        // 버전별 특화 파싱
+        switch (version) {
+            case "v1":
+                return this.parseV1TikTokData(videoData, hashtags, mentions, videoUrl);
+            case "v2":
+                return this.parseV2TikTokData(videoData, hashtags, mentions, videoUrl);
+            case "v3":
+                return this.parseV3TikTokData(videoData, hashtags, mentions, videoUrl);
+            default:
+                throw new Error(`지원하지 않는 API 버전: ${version}`);
+        }
+    }
+
+    // v1 API 데이터 파싱 (완전한 데이터)
+    parseV1TikTokData(videoData, hashtags, mentions, videoUrl) {
+        const author = videoData.author || {};
+        const stats = videoData.statistics || {};
+        const music = videoData.music || {};
+
+        // v1에서는 createTime이 Unix timestamp로 제공
+        let uploadDate = new Date().toISOString();
+        if (videoData.createTime) {
+            uploadDate = new Date(videoData.createTime * 1000).toISOString();
+        }
+
+        // v1에서는 정확한 duration 제공 가능성
+        const duration = music.duration || 30;
+        const isShortForm = duration <= 60;
+
+        return {
+            // 기본 비디오 정보
+            videoId: videoData.id || this.extractTikTokId(videoUrl),
+            title: videoData.desc || '제목 없음',
+            description: videoData.desc || '',
+            channelName: author.nickname || author.uniqueId || '알 수 없음',
+            channelId: author.uniqueId || author.uid || '',
+            uploadDate: uploadDate,
+            thumbnailUrl: author.avatarMedium || author.avatarThumb || '',
+            category: '엔터테인먼트',
+            youtubeCategory: '엔터테인먼트',
+
+            // v1 완전 통계 정보
+            views: parseInt(stats.playCount || 0),
+            likes: parseInt(stats.likeCount || 0),
+            dislikes: 0,
+            comments: parseInt(stats.commentCount || 0),
+            shares: parseInt(stats.shareCount || 0),
+
+            // v1 상세 채널 정보
+            subscriberCount: 0, // v1에서도 팔로워 수는 제한적
+            channelDescription: author.signature || '',
+            channelThumbnail: author.avatarMedium || author.avatarThumb || '',
+            channelVerified: false,
+
+            // v1 비디오 메타데이터
+            duration: duration,
+            durationFormatted: this.formatDuration(duration),
+            definition: '표준화질',
+            contentType: isShortForm ? 'shortform' : 'longform',
+            isShortForm: isShortForm,
+            platform: 'TIKTOK',
+
+            // v1 완전 음악 정보
+            musicTitle: music.title || '',
+            musicAuthor: music.author || '',
+            musicDuration: music.duration || 0,
+            originalSound: music.isOriginalSound || false,
+
+            // 태그 및 해시태그 (v1에서는 hashtag 배열 제공)
+            hashtags: videoData.hashtag || hashtags,
+            mentions: mentions,
+            tags: [...(videoData.hashtag || hashtags), ...mentions],
+
+            // v1 추가 메타데이터
+            effectsUsed: [],
+
+            // 다운로드 URL (v1 구조: downloadAddr 또는 playAddr)
+            downloadUrl: videoData.video?.downloadAddr ||
+                        videoData.video?.playAddr ||
+                        videoData.downloadAddr ||
+                        videoData.playAddr ||
+                        null,
+            isCommercial: videoData.isADS || false,
+            region: author.region || '',
+
+            // 기본값들
+            topComments: '',
+            commentSentiment: { positive: 0, negative: 0, neutral: 0 },
+            privacy: 'public',
+            downloadable: true,
+            embeddable: false,
+            ageRestricted: false,
+            language: 'ko',
+            defaultAudioLanguage: '',
+
+            // 처리 메타데이터
+            extractedAt: new Date().toISOString(),
+            apiSource: 'tiktok-api-v1',
+            dataVersion: '1.0.0',
+        };
+    }
+
+    // v2 API 데이터 파싱 (핵심 통계)
+    parseV2TikTokData(videoData, hashtags, mentions, videoUrl) {
+        const author = videoData.author || {};
+        const stats = videoData.statistics || {};
+        const music = videoData.music || {};
+
+        // v2에서 통계는 문자열 형태 ("31.8K" 등)
+        const parseStatString = (str) => {
+            if (!str) return 0;
+            const numStr = str.toString().replace(/[^\d.]/g, '');
+            const num = parseFloat(numStr) || 0;
+            if (str.includes('K')) return Math.round(num * 1000);
+            if (str.includes('M')) return Math.round(num * 1000000);
+            return Math.round(num);
+        };
+
+        return {
+            // 기본 비디오 정보
+            videoId: this.extractTikTokId(videoUrl),
+            title: videoData.desc || '제목 없음',
+            description: videoData.desc || '',
+            channelName: author.nickname || '알 수 없음',
+            channelId: author.nickname || '',
+            uploadDate: new Date().toISOString(),
+            thumbnailUrl: author.avatar || '',
+            category: '엔터테인먼트',
+            youtubeCategory: '엔터테인먼트',
+
+            // v2 부분 통계 정보 (조회수 없음)
+            views: 0, // v2에는 조회수 없음
+            likes: parseStatString(stats.likeCount),
+            dislikes: 0,
+            comments: parseStatString(stats.commentCount),
+            shares: parseStatString(stats.shareCount),
+
+            // 기본 채널 정보
+            subscriberCount: 0,
+            channelDescription: '',
+            channelThumbnail: author.avatar || '',
+            channelVerified: false,
+
+            // 기본 비디오 메타데이터
+            duration: 30,
+            durationFormatted: '0:30',
+            definition: '표준화질',
+            contentType: 'shortform',
+            isShortForm: true,
+            platform: 'TIKTOK',
+
+            // v2 제한적 음악 정보
+            musicTitle: '',
+            musicAuthor: '',
+            musicDuration: 0,
+            originalSound: false,
+
+            // 태그 정보
+            hashtags: hashtags,
+            mentions: mentions,
+            tags: [...hashtags, ...mentions],
+
+            // 기본값들
+            effectsUsed: [],
+
+            // 다운로드 URL (v2 구조)
+            downloadUrl: videoData.video?.watermark ||
+                        videoData.video?.noWatermark ||
+                        videoData.download?.url ||
+                        null,
+            isCommercial: false,
+            region: '',
+            topComments: '',
+            commentSentiment: { positive: 0, negative: 0, neutral: 0 },
+            privacy: 'public',
+            downloadable: true,
+            embeddable: false,
+            ageRestricted: false,
+            language: 'ko',
+            defaultAudioLanguage: '',
+
+            // 처리 메타데이터
+            extractedAt: new Date().toISOString(),
+            apiSource: 'tiktok-api-v2',
+            dataVersion: '1.0.0',
+        };
+    }
+
+    // v3 API 데이터 파싱 (기본 정보)
+    parseV3TikTokData(videoData, hashtags, mentions, videoUrl) {
+        const author = videoData.author || {};
+
+        return {
+            // 기본 비디오 정보만
+            videoId: this.extractTikTokId(videoUrl),
+            title: videoData.desc || '제목 없음',
+            description: videoData.desc || '',
+            channelName: author.nickname || '알 수 없음',
+            channelId: author.nickname || '',
+            uploadDate: new Date().toISOString(),
+            thumbnailUrl: author.avatar || '',
+            category: '엔터테인먼트',
+            youtubeCategory: '엔터테인먼트',
+
+            // v3에는 통계 정보 없음
+            views: 0,
+            likes: 0,
+            dislikes: 0,
+            comments: 0,
+            shares: 0,
+
+            // 기본값들
+            subscriberCount: 0,
+            channelDescription: '',
+            channelThumbnail: author.avatar || '',
+            channelVerified: false,
+            duration: 30,
+            durationFormatted: '0:30',
+            definition: '표준화질',
+            contentType: 'shortform',
+            isShortForm: true,
+            platform: 'TIKTOK',
+            musicTitle: '',
+            musicAuthor: '',
+            musicDuration: 0,
+            originalSound: false,
+            hashtags: hashtags,
+            mentions: mentions,
+            tags: [...hashtags, ...mentions],
+            effectsUsed: [],
+
+            // 다운로드 URL (v3 구조)
+            downloadUrl: videoData.video?.noWatermark ||
+                        videoData.video?.watermark ||
+                        videoData.download?.url ||
+                        null,
+
+            isCommercial: false,
+            region: '',
+            topComments: '',
+            commentSentiment: { positive: 0, negative: 0, neutral: 0 },
+            privacy: 'public',
+            downloadable: true,
+            embeddable: false,
+            ageRestricted: false,
+            language: 'ko',
+            defaultAudioLanguage: '',
+
+            // 처리 메타데이터
+            extractedAt: new Date().toISOString(),
+            apiSource: 'tiktok-api-v3',
+            dataVersion: '1.0.0',
+        };
+    }
+
+    // 새로운 라이브러리 (@mrnima/tiktok-downloader) 데이터 파싱
+    parseNimaTikTokData(videoData, videoUrl) {
+        // 기본 해시태그와 멘션 추출
+        const desc = videoData.title || videoData.description || '';
+        const hashtags = this.extractHashtags(desc);
+        const mentions = this.extractMentions(desc);
+
+        // 업로드 날짜 처리
+        let uploadDate = new Date().toISOString();
+        if (videoData.created_at) {
+            uploadDate = new Date(videoData.created_at).toISOString();
+        }
+
+        return {
+            // 기본 비디오 정보
+            videoId: videoData.id || this.extractTikTokId(videoUrl),
+            title: videoData.title || videoData.description || '제목 없음',
+            description: videoData.description || videoData.title || '',
+            channelName: videoData.author?.nickname || videoData.author?.username || '알 수 없음',
+            channelId: videoData.author?.username || videoData.author?.unique_id || '',
+            uploadDate: uploadDate,
+            thumbnailUrl: videoData.author?.avatar || videoData.cover || '',
+            category: '엔터테인먼트',
+            youtubeCategory: '엔터테인먼트',
+
+            // 새 라이브러리 통계 정보
+            views: parseInt(videoData.stats?.views || videoData.view_count || 0),
+            likes: parseInt(videoData.stats?.likes || videoData.like_count || 0),
+            dislikes: 0,
+            comments: parseInt(videoData.stats?.comments || videoData.comment_count || 0),
+            shares: parseInt(videoData.stats?.shares || videoData.share_count || 0),
+
+            // 채널 정보
+            subscriberCount: parseInt(videoData.author?.followers || 0),
+            channelDescription: videoData.author?.signature || '',
+            channelThumbnail: videoData.author?.avatar || '',
+            channelVerified: videoData.author?.verified || false,
+
+            // 플랫폼별 정보
+            platform: PLATFORMS.TIKTOK,
+            platformVideoId: videoData.id || this.extractTikTokId(videoUrl),
+
+            // 미디어 정보
+            duration: parseInt(videoData.duration || 30),
+            width: parseInt(videoData.width || 0),
+            height: parseInt(videoData.height || 0),
+            fps: 30,
+            quality: 'HD',
+            format: 'mp4',
+
+            // 유형 분류
+            isShortForm: true,
+            contentType: 'shortform',
+
+            // 음악/오디오 정보
+            musicTitle: videoData.music?.title || '',
+            musicAuthor: videoData.music?.author || '',
+            musicDuration: parseInt(videoData.music?.duration || 0),
+            originalSound: videoData.music?.original || false,
+            hashtags: hashtags,
+            mentions: mentions,
+            tags: [...hashtags, ...mentions],
+            effectsUsed: [],
+
+            // 다운로드 URL (새 라이브러리 구조)
+            downloadUrl: videoData.download?.url ||
+                        videoData.video_url ||
+                        videoData.play_url ||
+                        null,
+
+            isCommercial: false,
+            region: '',
+            topComments: '',
+            commentSentiment: { positive: 0, negative: 0, neutral: 0 },
+            privacy: 'public',
+            downloadable: true,
+            embeddable: false,
+            ageRestricted: false,
+            language: 'ko',
+            defaultAudioLanguage: '',
+
+            // 처리 메타데이터
+            extractedAt: new Date().toISOString(),
+            apiSource: 'mrnima-tiktok-downloader',
+            dataVersion: '1.0.0',
+        };
+    }
+
+    // TikTok URL에서 비디오 ID 추출
+    extractTikTokId(url) {
+        try {
+            // TikTok URL 패턴들
+            const patterns = [
+                /tiktok\.com\/.+\/video\/(\d+)/,
+                /vm\.tiktok\.com\/([A-Za-z0-9]+)/,
+                /vt\.tiktok\.com\/([A-Za-z0-9]+)/,
+                /tiktok\.com\/t\/([A-Za-z0-9]+)/
+            ];
+
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match) {
+                    return match[1];
+                }
+            }
+
+            // 패턴 매칭 실패 시 URL에서 숫자만 추출
+            const numbers = url.match(/(\d{10,})/);
+            if (numbers) {
+                return numbers[1];
+            }
+
+            // 최후의 수단: URL 해시 생성
+            return 'tiktok_' + Buffer.from(url).toString('base64').substring(0, 10);
+        } catch (error) {
+            ServerLogger.warn(`TikTok ID 추출 실패, 기본값 사용: ${error.message}`);
+            return 'tiktok_unknown_' + Date.now();
+        }
     }
 
     async generateThumbnail(videoPath, analysisType = 'quick') {
@@ -1604,6 +2134,8 @@ class VideoProcessor {
         this.youtubeApiKey = null;
         ServerLogger.info('🔄 VideoProcessor API 키 캐시 클리어', null, 'VIDEO-PROCESSOR');
     }
+
+
 }
 
 module.exports = VideoProcessor;

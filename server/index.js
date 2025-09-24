@@ -989,6 +989,7 @@ app.post('/api/process-video', async (req, res) => {
 
                 let videoPath;
                 let youtubeInfo = null;
+                let tiktokInfo = null;
 
                 // YouTube인 경우 API로 정보 수집
                 if (platform === PLATFORMS.YOUTUBE) {
@@ -1003,11 +1004,43 @@ app.post('/api/process-video', async (req, res) => {
                         `⏱️ 길이: ${youtubeInfo.durationFormatted}`,
                     );
 
-                    // YouTube는 일단 정보 수집만 (다운로드는 후단계에서)
-                    // 실제 비디오 다운로드 URL이 필요한 경우 여기서 처리
-                    videoPath = null; // 임시로 null 설정
+                    // YouTube 비디오 다운로드 활성화
+                    if (skipVideoDownload) {
+                        ServerLogger.info('⏩ YouTube 비디오 다운로드 건너뛰기 (skipVideoDownload=true)');
+                        videoPath = null;
+                    } else {
+                        ServerLogger.info('1️⃣ YouTube 비디오 다운로드 중...');
+                        videoPath = await videoProcessor.downloadVideo(
+                            videoUrl,
+                            platform,
+                        );
+                    }
+                } else if (platform === PLATFORMS.TIKTOK) {
+                    // TikTok인 경우 API로 정보 수집
+                    ServerLogger.info('0️⃣ TikTok 정보 수집 중...');
+                    tiktokInfo = await videoProcessor.getTikTokVideoInfo(
+                        videoUrl,
+                    );
+                    ServerLogger.info(
+                        `🎵 ${tiktokInfo.contentType} 감지: ${tiktokInfo.title}`,
+                    );
+                    ServerLogger.info(
+                        `⏱️ 길이: ${tiktokInfo.durationFormatted}`,
+                    );
+
+                    // TikTok도 YouTube처럼 다운로드 진행
+                    if (skipVideoDownload) {
+                        ServerLogger.info('⏩ TikTok 비디오 다운로드 건너뛰기 (skipVideoDownload=true)');
+                        videoPath = null;
+                    } else {
+                        ServerLogger.info('1️⃣ TikTok 비디오 다운로드 중...');
+                        videoPath = await videoProcessor.downloadVideo(
+                            videoUrl,
+                            platform,
+                        );
+                    }
                 } else {
-                    // Instagram/TikTok: skipVideoDownload 플래그 확인
+                    // Instagram: skipVideoDownload 플래그 확인
                     if (skipVideoDownload) {
                         ServerLogger.info('⏩ 비디오 다운로드 건너뛰기 (skipVideoDownload=true)');
                         videoPath = null;
@@ -1075,13 +1108,45 @@ app.post('/api/process-video', async (req, res) => {
                         channelId: youtubeInfo?.channelId,
                     };
 
-                    thumbnailPaths = [youtubeInfo.thumbnailUrl]; // 썸네일 URL 저장
+                    // videoPath가 있으면 실제 비디오에서 프레임 추출, 없으면 API 썸네일 사용
+                    if (videoPath) {
+                        if (analysisType === 'multi-frame' || analysisType === 'full') {
+                            ServerLogger.info('2️⃣ YouTube 다중 프레임 추출 중...');
+                            thumbnailPaths = await videoProcessor.generateThumbnail(
+                                videoPath,
+                                analysisType,
+                            );
+                            ServerLogger.info(
+                                `✅ ${thumbnailPaths.length}개 프레임 추출 완료`,
+                            );
+                        } else {
+                            ServerLogger.info('2️⃣ YouTube 단일 썸네일 생성 중...');
+                            var singleThumbnail =
+                                await videoProcessor.generateThumbnail(
+                                    videoPath,
+                                    analysisType,
+                                );
+                            thumbnailPaths = Array.isArray(singleThumbnail)
+                                ? singleThumbnail
+                                : [singleThumbnail];
+                        }
+                    } else {
+                        // 폴백: API 썸네일 사용
+                        ServerLogger.info('⏩ YouTube API 썸네일 사용 (비디오 다운로드 실패 또는 건너뜀)');
+                        thumbnailPaths = [youtubeInfo.thumbnailUrl];
+                    }
 
                     // AI 분석 조건부 실행
                     if (useAI && analysisType !== 'none') {
-                        ServerLogger.info('1️⃣ YouTube 썸네일로 AI 분석 중...');
+                        if (thumbnailPaths.length > 1) {
+                            ServerLogger.info(
+                                `3️⃣ YouTube 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`,
+                            );
+                        } else {
+                            ServerLogger.info('3️⃣ YouTube AI 분석 중...');
+                        }
                         analysis = await aiAnalyzer.analyzeVideo(
-                            youtubeInfo.thumbnailUrl,
+                            thumbnailPaths,
                             enrichedMetadata,
                         );
 
@@ -1136,8 +1201,118 @@ app.post('/api/process-video', async (req, res) => {
                             aiModel: '수동', // AI 비사용 시 '수동'으로 표시
                         };
                     }
+                } else if (platform === PLATFORMS.TIKTOK && tiktokInfo) {
+                    // TikTok 정보를 원본 metadata에 병합 (시트 저장용)
+                    if (!metadata || typeof metadata !== 'object') {
+                        metadata = {};
+                    }
+                    Object.assign(metadata, {
+                        title: tiktokInfo.title,
+                        description: tiktokInfo.description,
+                        channelName: tiktokInfo.channelName,
+                        likes: tiktokInfo.likes,
+                        commentsCount: tiktokInfo.comments,
+                        views: tiktokInfo.views,
+                        shares: tiktokInfo.shares,
+                        duration: tiktokInfo.duration,
+                        durationFormatted: tiktokInfo.durationFormatted,
+                        uploadDate: tiktokInfo.uploadDate,
+                        contentType: tiktokInfo.contentType,
+                        category: tiktokInfo.category,
+                        // TikTok 전용 필드들
+                        channelVerified: tiktokInfo.channelVerified,
+                        musicTitle: tiktokInfo.musicTitle,
+                        musicAuthor: tiktokInfo.musicAuthor,
+                        originalSound: tiktokInfo.originalSound,
+                        effectsUsed: tiktokInfo.effectsUsed,
+                        isCommercial: tiktokInfo.isCommercial,
+                        hashtags: tiktokInfo.hashtags,
+                        mentions: tiktokInfo.mentions,
+                        thumbnailUrl: tiktokInfo.thumbnailUrl,
+                    });
+
+                    enrichedMetadata = {
+                        ...metadata,
+                        platform,
+                        url: videoUrl || postUrl,
+                        videoId: tiktokInfo.videoId,
+                        channelId: tiktokInfo.channelId,
+                    };
+
+                    // videoPath가 있으면 실제 비디오에서 프레임 추출, 없으면 API 썸네일 사용
+                    if (videoPath) {
+                        if (analysisType === 'multi-frame' || analysisType === 'full') {
+                            ServerLogger.info('2️⃣ TikTok 다중 프레임 추출 중...');
+                            thumbnailPaths = await videoProcessor.generateThumbnail(
+                                videoPath,
+                                analysisType,
+                            );
+                            ServerLogger.info(
+                                `✅ ${thumbnailPaths.length}개 프레임 추출 완료`,
+                            );
+                        } else {
+                            ServerLogger.info('2️⃣ TikTok 단일 썸네일 생성 중...');
+                            var singleThumbnail =
+                                await videoProcessor.generateThumbnail(
+                                    videoPath,
+                                    analysisType,
+                                );
+                            thumbnailPaths = Array.isArray(singleThumbnail)
+                                ? singleThumbnail
+                                : [singleThumbnail];
+                        }
+                    } else {
+                        // 폴백: API 썸네일 사용
+                        ServerLogger.info('⏩ TikTok API 썸네일 사용 (비디오 다운로드 실패 또는 건너뜀)');
+                        thumbnailPaths = [tiktokInfo.thumbnailUrl];
+                    }
+
+                    // AI 분석 조건부 실행
+                    if (useAI && analysisType !== 'none') {
+                        if (thumbnailPaths.length > 1) {
+                            ServerLogger.info(
+                                `3️⃣ TikTok 다중 프레임 AI 분석 중... (${thumbnailPaths.length}개 프레임)`,
+                            );
+                        } else {
+                            ServerLogger.info('3️⃣ TikTok AI 분석 중...');
+                        }
+                        analysis = await aiAnalyzer.analyzeVideo(
+                            thumbnailPaths,
+                            enrichedMetadata,
+                        );
+
+                        // TikTok 카테고리와 AI 카테고리 비교
+                        if (tiktokInfo.category && analysis.mainCategory) {
+                            const matchResult = videoProcessor.compareCategories(
+                                tiktokInfo.category,
+                                analysis.mainCategory,
+                                analysis.middleCategory,
+                                analysis.fullCategoryPath,
+                            );
+                            analysis.categoryMatch = matchResult;
+                        }
+                    } else {
+                        ServerLogger.info('1️⃣ AI 분석 건너뜀 (사용자 설정)');
+                        const tiktokMainCategory = tiktokInfo.category || '엔터테인먼트';
+
+                        analysis = {
+                            category: '분석 안함',
+                            mainCategory: tiktokMainCategory,
+                            middleCategory: '기본',
+                            keywords: [],
+                            hashtags: tiktokInfo.hashtags || [],
+                            confidence: 100,
+                            frameCount: 1,
+                            categoryMatch: {
+                                matchScore: 100,
+                                matchType: 'tiktok_default',
+                                matchReason: `TikTok 기본 카테고리: ${tiktokMainCategory}`,
+                            },
+                            aiModel: '수동',
+                        };
+                    }
                 } else {
-                    // Instagram/TikTok: skipVideoDownload 확인
+                    // Instagram: skipVideoDownload 확인
                     if (skipVideoDownload || !videoPath) {
                         ServerLogger.info('⏩ 썸네일 생성 건너뛰기 (비디오 없음)');
                         thumbnailPaths = []; // 빈 배열로 설정
@@ -1582,23 +1757,6 @@ app.get('/api/videos', async (req, res) => {
             .limit(limit)
             .lean(); // 성능 최적화
 
-        // 🔍 DEBUG: 첫 번째 비디오의 모든 필드 로깅
-        if (videos.length > 0) {
-            const firstVideo = videos[0];
-            const allFields = Object.keys(firstVideo);
-            ServerLogger.info(`🔍 [DEBUG] MongoDB에서 조회된 첫 번째 비디오의 필드 (${allFields.length}개):`, 'DEBUG');
-            ServerLogger.info(`🔍 [DEBUG] 필드 목록: ${allFields.join(', ')}`, 'DEBUG');
-
-            // description, analysisContent 같은 중요 필드 확인
-            const importantFields = ['description', 'analysisContent', 'topComments', 'channelUrl', 'subscribers', 'channelVideos'];
-            importantFields.forEach(field => {
-                if (firstVideo[field] !== undefined) {
-                    ServerLogger.info(`🔍 [DEBUG] ${field}: ${typeof firstVideo[field]} (${String(firstVideo[field]).substring(0, 50)}...)`, 'DEBUG');
-                } else {
-                    ServerLogger.info(`❌ [DEBUG] ${field}: MISSING from DB`, 'DEBUG');
-                }
-            });
-        }
 
         // 🚀 필드 접근 직접 사용
         const enhancedVideos = videos.map((video) => {
@@ -3850,6 +4008,16 @@ try {
     ServerLogger.info('🔧 시스템 관리 API 등록 완료');
 } catch (error) {
     ServerLogger.error('❌ 시스템 라우트 등록 실패:', error);
+}
+
+// 📱 앱 업데이트 라우트 등록 (404 핸들러 이전에)
+try {
+    const appUpdateRouter = require('./routes/app-update-fixed');
+    console.log('✅ app-update-fixed router loaded:', typeof appUpdateRouter);
+    app.use('/api/app-update', appUpdateRouter);
+    ServerLogger.info('📱 앱 업데이트 API 라우트 등록 완료');
+} catch (error) {
+    console.error('❌ app-update router 로드 실패:', error);
 }
 
 // 404 핸들러 (모든 라우트 등록 후 마지막에)
