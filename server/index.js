@@ -1576,34 +1576,29 @@ app.get('/api/videos', async (req, res) => {
             }
         }
 
-        // 🚀 MongoDB에서 비디오 조회
-        const selectFields = {
-            platform: 1,
-            channelName: 1,
-            title: 1,
-            likes: 1,
-            views: 1,
-            commentsCount: 1,
-            url: 1,
-            timestamp: 1,
-            uploadDate: 1,
-            processedAt: 1,
-            category: 1,
-            mainCategory: 1,
-            middleCategory: 1,
-            fullCategoryPath: 1,
-            categoryDepth: 1,
-            keywords: 1,
-            hashtags: 1,
-            thumbnailUrl: 1,
-            youtubeHandle: 1,
-        };
-
+        // 🚀 MongoDB에서 비디오 조회 (모든 필드 가져오기)
         const videos = await Video.find(query)
             .sort(sortOptions)
             .limit(limit)
-            .select(selectFields)
             .lean(); // 성능 최적화
+
+        // 🔍 DEBUG: 첫 번째 비디오의 모든 필드 로깅
+        if (videos.length > 0) {
+            const firstVideo = videos[0];
+            const allFields = Object.keys(firstVideo);
+            ServerLogger.info(`🔍 [DEBUG] MongoDB에서 조회된 첫 번째 비디오의 필드 (${allFields.length}개):`, 'DEBUG');
+            ServerLogger.info(`🔍 [DEBUG] 필드 목록: ${allFields.join(', ')}`, 'DEBUG');
+
+            // description, analysisContent 같은 중요 필드 확인
+            const importantFields = ['description', 'analysisContent', 'topComments', 'channelUrl', 'subscribers', 'channelVideos'];
+            importantFields.forEach(field => {
+                if (firstVideo[field] !== undefined) {
+                    ServerLogger.info(`🔍 [DEBUG] ${field}: ${typeof firstVideo[field]} (${String(firstVideo[field]).substring(0, 50)}...)`, 'DEBUG');
+                } else {
+                    ServerLogger.info(`❌ [DEBUG] ${field}: MISSING from DB`, 'DEBUG');
+                }
+            });
+        }
 
         // 🚀 필드 접근 직접 사용
         const enhancedVideos = videos.map((video) => {
@@ -1667,35 +1662,33 @@ app.get('/api/videos', async (req, res) => {
                 }
             }
 
-            // __v만 제거, _id는 유지 (통일된 _id 사용)
+            // __v만 제거, _id는 유지하고 모든 DB 필드 보존
             const { __v, ...cleanVideo } = video;
 
+            // 기존 필드를 모두 보존하면서 필요한 변환만 수행
             return {
-                ...cleanVideo,
-                // 필수 필드 정리
+                ...cleanVideo, // 모든 기존 DB 필드 보존
+                // 필수 필드만 덮어쓰기/정리
                 timestamp: video.uploadDate || video.timestamp,
                 uploadDate: video.uploadDate,
                 thumbnailUrl: thumbnailUrl,
-                // 표준 조회수: views만 사용
                 views: cleanVideo.views || 0,
-                // url이 없고 channelName이 URL인 경우 복구
-                url:
-                    video.url ||
+                // url 복구 (필요한 경우만)
+                url: video.url ||
                     (video.channelName && video.channelName.startsWith('http')
                         ? video.channelName
-                        : ''),
-                // 채널명과 핸들명을 올바르게 구분
-                channelName:
-                    video.channelName &&
+                        : video.url),
+                // 채널명 정리 (필요한 경우만)
+                channelName: video.channelName &&
                     !video.channelName.startsWith('http') &&
                     !video.channelName.startsWith('@')
                         ? video.channelName
-                        : '알 수 없는 채널',
-                // LIKES 필드 명시적 처리
-                likes: video.likes !== undefined ? video.likes : null,
-                // source 정보 추가 (API 레벨에서만)
-                source: 'videos',
-                isFromTrending: false
+                        : (cleanVideo.channelName || '알 수 없는 채널'),
+                // likes 필드 보존
+                likes: video.likes !== undefined ? video.likes : cleanVideo.likes,
+                // 메타데이터 추가 (기존 필드와 충돌하지 않는 경우만)
+                source: cleanVideo.source || 'videos',
+                isFromTrending: cleanVideo.isFromTrending || false
             };
         });
 

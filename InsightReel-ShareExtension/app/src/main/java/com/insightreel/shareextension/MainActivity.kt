@@ -46,13 +46,6 @@ class MainActivity : AppCompatActivity() {
         settingsButton.setOnClickListener {
             openSettings()
         }
-
-        // 테스트 버튼을 연결 테스트 버튼으로 변경
-        val testButton = findViewById<Button>(R.id.testButton)
-        testButton.text = "🧪 연결 테스트"
-        testButton.setOnClickListener {
-            testConnection()
-        }
     }
 
     private fun openSettings() {
@@ -60,30 +53,6 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    private fun testConnection() {
-        findViewById<Button>(R.id.testButton).text = "테스트 중..."
-
-        activityScope.launch {
-            try {
-                val serverUrl = preferencesManager.getCurrentServerUrl()
-                val success = networkManager.sendVideoUrl(
-                    serverUrl,
-                    "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-                )
-
-                val networkType = if (networkManager.isWifiConnected()) "WiFi" else "LTE"
-                if (success) {
-                    Toast.makeText(this@MainActivity, "✅ 서버 연결 성공! ($networkType)", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this@MainActivity, "❌ 서버 연결 실패 ($networkType)", Toast.LENGTH_SHORT).show()
-                }
-            } catch (e: Exception) {
-                Toast.makeText(this@MainActivity, "❌ 네트워크 오류: ${e.message}", Toast.LENGTH_SHORT).show()
-            } finally {
-                findViewById<Button>(R.id.testButton).text = "🧪 연결 테스트"
-            }
-        }
-    }
 
     private fun checkClipboardOnStart() {
         try {

@@ -90,6 +90,19 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
           </a>
         </div>
 
+
+        {/* 🔍 디버깅: 실제 DB 데이터 확인 */}
+        <div className="bg-red-50 border-2 border-red-200 p-4 rounded-lg mb-6">
+          <h4 className="text-sm font-bold text-red-800 mb-3">🔍 DEBUG - 실제 video 객체 데이터</h4>
+          <div className="text-xs bg-white p-3 rounded border max-h-96 overflow-auto">
+            <pre>{JSON.stringify(video, null, 2)}</pre>
+          </div>
+          <div className="mt-3 text-xs text-red-700">
+            <strong>사용 가능한 모든 필드:</strong><br />
+            {Object.keys(video).sort().join(', ')}
+          </div>
+        </div>
+
         {/* 통합 데이터 영역 */}
         <div className="space-y-6">
           {/* 기본 정보 */}
@@ -145,84 +158,96 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
             </div>
           </div>
 
-          {/* YouTube 전용 상세 데이터 (유튜브만 전체 데이터 보유) */}
-          {video.platform === PLATFORMS.YOUTUBE && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* 영상 세부 정보 */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">영상 정보</h4>
-                <div className="space-y-2 text-sm">
-                  {video.duration && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">길이</span>
-                      <span className="font-medium">{video.duration}</span>
-                    </div>
-                  )}
-                  {video.likes && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">좋아요</span>
-                      <span className="font-medium">{formatViews(video.likes)}</span>
-                    </div>
-                  )}
-                  {video.dislikes && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">싫어요</span>
-                      <span className="font-medium">{formatViews(video.dislikes)}</span>
-                    </div>
-                  )}
-                  {video.commentCount && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">댓글 수</span>
-                      <span className="font-medium">{formatViews(video.commentCount)}</span>
-                    </div>
-                  )}
-                  {video.language && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">언어</span>
-                      <span className="font-medium">{video.language}</span>
-                    </div>
-                  )}
-                  {video.defaultAudioLanguage && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">기본 오디오</span>
-                      <span className="font-medium">{video.defaultAudioLanguage}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 채널 정보 */}
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">채널 정보</h4>
-                <div className="space-y-2 text-sm">
-                  {video.subscriberCount && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">구독자</span>
-                      <span className="font-medium">{formatViews(video.subscriberCount)}</span>
-                    </div>
-                  )}
-                  {video.videoCount && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">총 영상 수</span>
-                      <span className="font-medium">{formatViews(video.videoCount)}</span>
-                    </div>
-                  )}
-                  {video.channelCreatedAt && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">채널 생성일</span>
-                      <span className="font-medium">{formatDate(video.channelCreatedAt)}</span>
-                    </div>
-                  )}
-                  {video.country && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">국가</span>
-                      <span className="font-medium">{video.country}</span>
-                    </div>
-                  )}
-                </div>
+          {/* 상세 데이터 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* 영상 세부 정보 */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">영상 정보</h4>
+              <div className="space-y-2 text-sm">
+                {(video.duration !== undefined && video.duration !== null) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">길이</span>
+                    <span className="font-medium">{video.duration ? `${video.duration}초` : '데이터 없음'}</span>
+                  </div>
+                )}
+                {video.likes && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">좋아요</span>
+                    <span className="font-medium">{formatViews(video.likes)}</span>
+                  </div>
+                )}
+                {video.commentsCount && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">댓글 수</span>
+                    <span className="font-medium">{formatViews(video.commentsCount)}</span>
+                  </div>
+                )}
+                {video.language && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">언어</span>
+                    <span className="font-medium">{video.language}</span>
+                  </div>
+                )}
+                {(video.contentType !== undefined && video.contentType !== null) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">콘텐츠 타입</span>
+                    <span className="font-medium">{video.contentType || '정보 없음'}</span>
+                  </div>
+                )}
+                {(video.quality !== undefined && video.quality !== null) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">품질</span>
+                    <span className="font-medium">{video.quality ? video.quality.toUpperCase() : '정보 없음'}</span>
+                  </div>
+                )}
+                {(video.monetized !== undefined && video.monetized !== null) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">수익화</span>
+                    <span className="font-medium">{video.monetized === 'Y' ? '예' : video.monetized === 'N' ? '아니오' : '정보 없음'}</span>
+                  </div>
+                )}
+                {(video.language !== undefined && video.language !== null) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">언어</span>
+                    <span className="font-medium">{video.language || '정보 없음'}</span>
+                  </div>
+                )}
               </div>
             </div>
-          )}
+
+            {/* 채널 정보 */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">채널 정보</h4>
+              <div className="space-y-2 text-sm">
+                {(video.subscribers !== undefined && video.subscribers !== null) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">구독자</span>
+                    <span className="font-medium">{formatViews(video.subscribers)}</span>
+                  </div>
+                )}
+                {(video.channelVideos !== undefined && video.channelVideos !== null) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">총 영상 수</span>
+                    <span className="font-medium">{formatViews(video.channelVideos)}</span>
+                  </div>
+                )}
+                {(video.channelUrl !== undefined && video.channelUrl !== null) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">채널 URL</span>
+                    <a href={video.channelUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:text-blue-700 truncate">
+                      {video.channelUrl || '채널 보기'}
+                    </a>
+                  </div>
+                )}
+                {(video.youtubeHandle !== undefined && video.youtubeHandle !== null) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">핸들</span>
+                    <span className="font-medium">@{video.youtubeHandle || '핸들 없음'}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
 
           {/* 키워드/태그 */}
           {(video.keywords || video.tags) && (
@@ -280,42 +305,118 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
             </div>
           )}
 
-          {/* 기타 세부 정보 (YouTube 전용) */}
-          {video.platform === PLATFORMS.YOUTUBE && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {video.definition && (
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <div className="text-xs text-gray-500 mb-1">해상도</div>
-                  <div className="text-sm font-medium">{video.definition}</div>
+          {/* 추가 정보 */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {video.youtubeCategory && (
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="text-xs text-gray-500 mb-1">YouTube 카테고리</div>
+                <div className="text-sm font-medium">{video.youtubeCategory}</div>
+              </div>
+            )}
+            {video.license && (
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="text-xs text-gray-500 mb-1">라이센스</div>
+                <div className="text-sm font-medium">{video.license}</div>
+              </div>
+            )}
+            {video.monetized && (
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <div className="text-xs text-gray-500 mb-1">수익화</div>
+                <div className="text-sm font-medium">{video.monetized}</div>
+              </div>
+            )}
+          </div>
+
+          {/* AI 분석 정보 */}
+          {(video.mainCategory || video.middleCategory || video.fullCategoryPath) && (
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">AI 카테고리 분석</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 text-sm">
+                  {video.mainCategory && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">주 카테고리</span>
+                      <span className="font-medium">{video.mainCategory}</span>
+                    </div>
+                  )}
+                  {video.middleCategory && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">중간 카테고리</span>
+                      <span className="font-medium">{video.middleCategory}</span>
+                    </div>
+                  )}
+                  {video.fullCategoryPath && (
+                    <div>
+                      <div className="text-gray-500 text-xs mb-1">전체 경로</div>
+                      <div className="font-medium text-xs bg-white p-2 rounded">{video.fullCategoryPath}</div>
+                    </div>
+                  )}
                 </div>
-              )}
-              {video.dimension && (
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <div className="text-xs text-gray-500 mb-1">차원</div>
-                  <div className="text-sm font-medium">{video.dimension}</div>
+                <div className="space-y-2 text-sm">
+                  {video.confidence && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">신뢰도</span>
+                      <span className="font-medium text-green-600">{video.confidence}</span>
+                    </div>
+                  )}
+                  {(video.analysisStatus !== undefined && video.analysisStatus !== null) && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">분석 상태</span>
+                      <span className="font-medium">{video.analysisStatus || '정보 없음'}</span>
+                    </div>
+                  )}
+                  {(video.categoryMatchRate !== undefined && video.categoryMatchRate !== null) && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">매치율</span>
+                      <span className="font-medium">{video.categoryMatchRate || '정보 없음'}</span>
+                    </div>
+                  )}
+                  {(video.matchType !== undefined && video.matchType !== null) && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">매치 타입</span>
+                      <span className={`font-medium ${video.matchType === 'mismatch' ? 'text-red-600' : 'text-green-600'}`}>
+                        {video.matchType || '정보 없음'}
+                      </span>
+                    </div>
+                  )}
                 </div>
-              )}
-              {video.licensedContent !== undefined && (
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <div className="text-xs text-gray-500 mb-1">라이센스 콘텐츠</div>
-                  <div className="text-sm font-medium">{video.licensedContent ? '예' : '아니오'}</div>
-                </div>
-              )}
-              {video.projection && (
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <div className="text-xs text-gray-500 mb-1">프로젝션</div>
-                  <div className="text-sm font-medium">{video.projection}</div>
+              </div>
+              {(video.matchReason !== undefined && video.matchReason !== null) && (
+                <div className="mt-3 pt-3 border-t border-gray-200">
+                  <div className="text-gray-500 text-xs mb-1">불일치 사유</div>
+                  <div className="text-sm bg-white p-2 rounded">{video.matchReason || '사유 없음'}</div>
                 </div>
               )}
             </div>
           )}
 
-          {/* 설명 (있는 경우) */}
-          {video.description && (
+          {/* 설명 & AI 분석 내용 - 강제 표시 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {(video.description !== undefined && video.description !== null) && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">영상 설명</h4>
+                <div className="text-sm text-gray-700 bg-white p-3 rounded max-h-32 overflow-y-auto">
+                  {video.description || '빈 설명'}
+                </div>
+              </div>
+            )}
+
+            {(video.analysisContent !== undefined && video.analysisContent !== null) && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">AI 분석 내용</h4>
+                <div className="text-sm text-gray-700 bg-white p-3 rounded max-h-32 overflow-y-auto">
+                  {video.analysisContent || '빈 분석 내용'}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 인기 댓글 */}
+          {(video.topComments !== undefined && video.topComments !== null) && (
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">설명</h4>
-              <div className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-6">
-                {video.description}
+              <h4 className="text-sm font-medium text-gray-900 mb-3">인기 댓글</h4>
+              <div className="text-sm text-gray-700 bg-white p-3 rounded max-h-40 overflow-y-auto">
+                <div dangerouslySetInnerHTML={{ __html: (video.topComments || '댓글 없음').replace(/&quot;/g, '"') }} />
               </div>
             </div>
           )}

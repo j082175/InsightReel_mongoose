@@ -61,13 +61,17 @@ axiosInstance.interceptors.response.use(
 // ===== Videos API =====
 export const videosApi = {
   getVideos: async (batchId?: string): Promise<Video[]> => {
+    console.log('🚀 [videosApi.getVideos] API 호출 시작:', { batchId });
     const params = batchId && batchId !== 'all' ? { batchId } : {};
     const response = await axiosInstance.get('/api/videos', { params });
+
+    console.log('📨 [videosApi.getVideos] 서버 응답:', response.data);
 
     // 서버 응답 구조: { success: true, data: { videos: [...] } }
     if (response.data.success && response.data.data) {
       if (response.data.data.videos && Array.isArray(response.data.data.videos)) {
         console.log('✅ [videosApi.getVideos] 비디오 데이터 파싱 성공:', response.data.data.videos.length);
+        console.log('📊 [videosApi.getVideos] 첫 번째 비디오 필드:', Object.keys(response.data.data.videos[0] || {}));
         return response.data.data.videos;
       }
     }
