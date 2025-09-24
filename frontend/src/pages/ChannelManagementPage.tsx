@@ -84,10 +84,14 @@ const ChannelManagementPage: React.FC = () => {
   // Event Handlers
   const handleChannelClick = useCallback(
     (channel: Channel) => {
+      console.log('🔍 [ChannelManagementPage] 클릭된 채널:', channel);
+      console.log('📊 [ChannelManagementPage] 클릭된 채널의 키:', Object.keys(channel));
+
       if (isSelectMode) {
         toggleChannelSelection(channel.channelId);
       } else {
         // 채널 상세 분석 모달 열기 (채널 객체 전달)
+        console.log('🚀 [ChannelManagementPage] 모달에 전달할 채널 데이터:', channel);
         setChannelToAnalyze(channel);
       }
     },

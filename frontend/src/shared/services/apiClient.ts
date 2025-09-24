@@ -107,16 +107,22 @@ export const channelsApi = {
       params: filters,
     });
 
+    console.log('🔍 [channelsApi.getChannels] 전체 서버 응답:', JSON.stringify(response.data, null, 2));
+
     // 서버 응답 구조: { success: true, data: { channels: [...], meta: {...} } }
     if (response.data.success && response.data.data) {
       // channels 필드가 있는 경우 (새로운 서버 응답 구조)
       if (response.data.data.channels && Array.isArray(response.data.data.channels)) {
         console.log('✅ [channelsApi.getChannels] 채널 데이터 파싱 성공:', response.data.data.channels.length);
+        console.log('📊 [channelsApi.getChannels] 첫 번째 채널 전체 필드:', Object.keys(response.data.data.channels[0] || {}));
+        console.log('🔍 [channelsApi.getChannels] 첫 번째 채널 상세 데이터:', response.data.data.channels[0]);
         return response.data.data.channels;
       }
       // 직접 배열인 경우 (이전 서버 응답 구조)
       else if (Array.isArray(response.data.data)) {
         console.log('✅ [channelsApi.getChannels] 채널 데이터 파싱 성공 (직접 배열):', response.data.data.length);
+        console.log('📊 [channelsApi.getChannels] 첫 번째 채널 전체 필드 (직접 배열):', Object.keys(response.data.data[0] || {}));
+        console.log('🔍 [channelsApi.getChannels] 첫 번째 채널 상세 데이터 (직접 배열):', response.data.data[0]);
         return response.data.data;
       }
     }

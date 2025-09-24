@@ -18,6 +18,10 @@ export interface ChannelCore {
   thumbnailUrl?: string;
   customUrl?: string;
   contentType?: 'shortform' | 'longform' | 'mixed';
+
+  // 언어 및 지역 정보 (DB에 있지만 타입에 누락된 필드들)
+  defaultLanguage?: string;
+  country?: string;
 }
 
 // ===== AI 분석 결과 (ChannelAIAnalysis) =====
@@ -37,6 +41,12 @@ export interface ChannelAIAnalysis {
     consistencyLevel?: 'high' | 'medium' | 'low';
     consistencyReason?: string;
   };
+
+  // 채널 정체성 정보 (DB에 있지만 UI에 없던 필드들)
+  targetAudience?: string;
+  contentStyle?: string;
+  uniqueFeatures?: string[];
+  channelPersonality?: string;
 }
 
 // ===== 클러스터 정보 (ChannelClusterInfo) =====
