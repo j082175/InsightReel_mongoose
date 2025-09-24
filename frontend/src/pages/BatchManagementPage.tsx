@@ -17,6 +17,16 @@ import toast from 'react-hot-toast';
 const BatchManagementPage: React.FC = () => {
   // BatchStore 사용
   const batchStore = useBatchStore();
+
+  // 디버깅: batchStore 내용 확인
+  React.useEffect(() => {
+    console.log('🔍 BatchStore debug:', {
+      updateSearchTerm: typeof batchStore.updateSearchTerm,
+      updateStatusFilter: typeof batchStore.updateStatusFilter,
+      searchTerm: batchStore.searchTerm
+    });
+  }, [batchStore.updateSearchTerm, batchStore.updateStatusFilter, batchStore.searchTerm]);
+
   const {
     batches,
     loading,
@@ -260,8 +270,8 @@ const BatchManagementPage: React.FC = () => {
         {/* 검색 및 필터 바 */}
         <div className="flex justify-between items-center mb-6">
           <SearchBar
-            searchTerm={searchTerm}
-            onSearchTermChange={updateSearchTerm}
+            searchTerm={searchTerm || ''}
+            onSearchTermChange={updateSearchTerm || ((term: string) => console.warn('updateSearchTerm is not defined'))}
             placeholder="배치명, 설명 검색..."
             showFilters={true}
           >

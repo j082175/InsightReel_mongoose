@@ -14,7 +14,6 @@ interface VideoStoreState {
   filters: FilterState;
   selectedVideos: Set<string>;
   isSelectMode: boolean;
-  deletedVideoIds: Set<string>;
 }
 
 interface VideoStoreActions {
@@ -57,19 +56,13 @@ export const useVideoStore = (
     filters: defaultFilters,
     selectedVideos: new Set<string>(),
     isSelectMode: false,
-    deletedVideoIds: new Set<string>(),
   });
 
   // 필터링된 비디오 목록
   const filteredVideos = useMemo(() => {
     // 방어적 프로그래밍: videos가 배열이 아닌 경우 빈 배열로 처리
     const videosArray = Array.isArray(videos) ? videos : [];
-    let filtered = videosArray.filter(
-      (video) => {
-        const videoId = getDocumentId(video);
-        return videoId ? !state.deletedVideoIds.has(videoId) : false;
-      }
-    );
+    let filtered = videosArray;
 
     if (state.filters.keyword) {
       const keyword = state.filters.keyword.toLowerCase();
@@ -136,16 +129,16 @@ export const useVideoStore = (
     });
 
     return filtered;
-  }, [videos, state.filters, state.deletedVideoIds]);
+  }, [videos, state.filters]);
 
   // React Query 기반 삭제 함수들
   const deleteVideo = useCallback(
     async (videoId: string) => {
       try {
         await deleteVideoMutation.mutateAsync(videoId);
+        // 선택에서만 제거, React Query가 데이터 자동 업데이트 담당
         setState((prev) => ({
           ...prev,
-          deletedVideoIds: new Set([...prev.deletedVideoIds, videoId]),
           selectedVideos: new Set(
             [...prev.selectedVideos].filter((id) => id !== videoId)
           ),
@@ -161,9 +154,9 @@ export const useVideoStore = (
     async (videoIds: string[]) => {
       try {
         await deleteVideosMutation.mutateAsync(videoIds);
+        // 선택 모든 해제, React Query가 데이터 자동 업데이트 담당
         setState((prev) => ({
           ...prev,
-          deletedVideoIds: new Set([...prev.deletedVideoIds, ...videoIds]),
           selectedVideos: new Set(),
         }));
       } catch (error) {
@@ -236,7 +229,6 @@ export const useVideoStore = (
     filters: state.filters,
     selectedVideos: state.selectedVideos,
     isSelectMode: state.isSelectMode,
-    deletedVideoIds: state.deletedVideoIds,
 
     // Actions
     deleteVideo,

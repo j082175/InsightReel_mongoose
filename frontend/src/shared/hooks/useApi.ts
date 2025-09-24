@@ -264,8 +264,18 @@ export const useDeleteVideo = () => {
   return useMutation({
     mutationFn: videosApi.deleteVideo,
     onSuccess: (_, videoId) => {
+      // 모든 비디오 관련 캐시 무효화
       queryClient.invalidateQueries({ queryKey: queryKeys.videos.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.trending.all });
+
+      // 트렌딩 비디오 캐시도 강제 무효화 (모든 필터 조합)
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0] as string;
+          return key === 'trending' || key === 'videos';
+        }
+      });
+
       toast.success('비디오가 삭제되었습니다');
     },
     onError: (error: any) => {
@@ -281,8 +291,18 @@ export const useDeleteVideos = () => {
   return useMutation({
     mutationFn: videosApi.deleteVideos,
     onSuccess: (_, videoIds) => {
+      // 모든 비디오 관련 캐시 무효화
       queryClient.invalidateQueries({ queryKey: queryKeys.videos.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.trending.all });
+
+      // 트렌딩 비디오 캐시도 강제 무효화 (모든 필터 조합)
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0] as string;
+          return key === 'trending' || key === 'videos';
+        }
+      });
+
       toast.success(`${videoIds.length}개 비디오가 삭제되었습니다`);
     },
     onError: (error: any) => {

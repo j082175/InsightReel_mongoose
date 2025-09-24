@@ -243,7 +243,7 @@ export const UniversalGrid = <T extends GridItem>({
       {enableSearch && (
         <SearchBar
           searchTerm={searchTerm}
-          onSearchChange={handleSearchChange}
+          onSearchTermChange={handleSearchChange}
           placeholder={searchPlaceholder}
           className="mb-4"
         />

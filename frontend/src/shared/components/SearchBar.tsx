@@ -1,6 +1,6 @@
 import React from 'react';
 
-export interface SearchFilterBarProps {
+export interface SearchBarProps {
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
   placeholder?: string;
@@ -9,7 +9,7 @@ export interface SearchFilterBarProps {
   children?: React.ReactNode;
 }
 
-const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
+const SearchBar: React.FC<SearchBarProps> = ({
   searchTerm,
   onSearchTermChange,
   placeholder = '제목, 채널명, 태그로 검색...',
@@ -25,7 +25,13 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
             type="text"
             placeholder={placeholder}
             value={searchTerm}
-            onChange={(e) => onSearchTermChange(e.target.value)}
+            onChange={(e) => {
+              if (typeof onSearchTermChange === 'function') {
+                onSearchTermChange(e.target.value);
+              } else {
+                console.error('onSearchTermChange is not a function:', typeof onSearchTermChange);
+              }
+            }}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <svg
@@ -49,4 +55,4 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
   );
 };
 
-export default SearchFilterBar;
+export default SearchBar;

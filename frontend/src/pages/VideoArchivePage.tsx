@@ -73,37 +73,6 @@ const VideoArchivePage: React.FC = () => {
   // API에서 실제 비디오 데이터 가져오기
   const { data: apiVideos = [], isLoading, error } = useVideos();
 
-  // 디버깅: useVideos 상태 로깅
-  useEffect(() => {
-    console.log('🔍 [VideoArchivePage] useVideos 상태:', {
-      isLoading,
-      error: error?.message || error,
-      apiVideosLength: apiVideos?.length || 0,
-      apiVideos: apiVideos
-    });
-
-    // 에러가 있다면 상세 정보 출력
-    if (error) {
-      console.error('❌ [VideoArchivePage] useVideos 에러 상세:', error);
-    }
-  }, [isLoading, error, apiVideos]);
-
-  // 강제 API 테스트
-  useEffect(() => {
-    const testDirectApiCall = async () => {
-      try {
-        console.log('🧪 [VideoArchivePage] 직접 API 호출 테스트 시작...');
-        const response = await fetch('http://localhost:3000/api/videos');
-        const data = await response.json();
-        console.log('🧪 [VideoArchivePage] 직접 API 응답:', data);
-      } catch (err) {
-        console.error('❌ [VideoArchivePage] 직접 API 호출 실패:', err);
-      }
-    };
-
-    // 컴포넌트 마운트 시 한 번만 실행
-    testDirectApiCall();
-  }, []);
 
 
   // Mock 데이터

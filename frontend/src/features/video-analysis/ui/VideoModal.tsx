@@ -91,17 +91,6 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
         </div>
 
 
-        {/* 🔍 디버깅: 실제 DB 데이터 확인 */}
-        <div className="bg-red-50 border-2 border-red-200 p-4 rounded-lg mb-6">
-          <h4 className="text-sm font-bold text-red-800 mb-3">🔍 DEBUG - 실제 video 객체 데이터</h4>
-          <div className="text-xs bg-white p-3 rounded border max-h-96 overflow-auto">
-            <pre>{JSON.stringify(video, null, 2)}</pre>
-          </div>
-          <div className="mt-3 text-xs text-red-700">
-            <strong>사용 가능한 모든 필드:</strong><br />
-            {Object.keys(video).sort().join(', ')}
-          </div>
-        </div>
 
         {/* 통합 데이터 영역 */}
         <div className="space-y-6">
