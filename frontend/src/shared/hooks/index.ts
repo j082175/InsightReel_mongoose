@@ -5,6 +5,7 @@ export { useSearch } from './useSearch';
 export { useFilter } from './useFilter';
 export { useAPIStatus } from './useAPIStatus';
 export { useDelete } from './useDelete';
+export { useEditMode } from './useEditMode';
 
 // API Hooks - Individual exports for direct import
 export {
@@ -42,6 +43,11 @@ export {
 
   // Legacy
   useCollectTrending,
+
+  // Update Mutations
+  useUpdateVideo,
+  useUpdateChannel,
+  useUpdateTrendingVideo,
 
   // Query Keys
   queryKeys,

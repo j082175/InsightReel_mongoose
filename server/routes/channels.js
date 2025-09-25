@@ -561,4 +561,90 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// PUT /api/channels/:id - 채널 정보 수정
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    ServerLogger.info(`📝 채널 수정 요청: ${id}`, { updateData });
+
+    // ID 유효성 검사
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        error: ERROR_CODES.INVALID_ID,
+        message: '유효하지 않은 채널 ID입니다.'
+      });
+    }
+
+    // 채널 존재 여부 확인
+    const existingChannel = await Channel.findById(id);
+    if (!existingChannel) {
+      return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
+        success: false,
+        error: ERROR_CODES.NOT_FOUND,
+        message: '채널을 찾을 수 없습니다.'
+      });
+    }
+
+    // 수정 불가 필드 제거
+    const restrictedFields = ['_id', '__v', 'createdAt', 'updatedAt', 'channelId', 'platform'];
+    restrictedFields.forEach(field => {
+      if (field in updateData) {
+        delete updateData[field];
+      }
+    });
+
+    // 숫자 필드 변환
+    const numberFields = ['subscribers', 'totalViews', 'videoCount'];
+    numberFields.forEach(field => {
+      if (field in updateData && typeof updateData[field] === 'string') {
+        const num = parseInt(updateData[field], 10);
+        updateData[field] = isNaN(num) ? 0 : num;
+      }
+    });
+
+    // 배열 필드 처리 (keywords)
+    if (updateData.keywords && typeof updateData.keywords === 'string') {
+      updateData.keywords = updateData.keywords.split(',').map(k => k.trim()).filter(Boolean);
+    }
+
+    // 채널 업데이트
+    const updatedChannel = await Channel.findByIdAndUpdate(
+      id,
+      { ...updateData, updatedAt: new Date().toISOString() },
+      { new: true, runValidators: true }
+    );
+
+    ServerLogger.info(`✅ 채널 수정 완료: ${id}`);
+
+    res.json({
+      success: true,
+      message: API_MESSAGES.SUCCESS.UPDATE_SUCCESS,
+      data: {
+        _id: updatedChannel._id,
+        name: updatedChannel.name,
+        channelId: updatedChannel.channelId,
+        platform: updatedChannel.platform,
+        subscribers: updatedChannel.subscribers,
+        totalViews: updatedChannel.totalViews,
+        videoCount: updatedChannel.videoCount,
+        description: updatedChannel.description,
+        keywords: updatedChannel.keywords,
+        categoryInfo: updatedChannel.categoryInfo,
+        updatedAt: updatedChannel.updatedAt
+      }
+    });
+
+  } catch (error) {
+    ServerLogger.error('채널 수정 실패:', error);
+    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      error: ERROR_CODES.UPDATE_FAILED,
+      message: '채널 수정에 실패했습니다.'
+    });
+  }
+});
+
 module.exports = router;

@@ -556,3 +556,132 @@ export const useCollectMultipleGroups = () => {
     },
   });
 };
+
+// ===== 범용 업데이트 시스템 =====
+
+export type EntityType = 'video' | 'channel' | 'channelGroup' | 'trendingVideo';
+
+interface UpdateEntityParams {
+  entityType: EntityType;
+  id: string;
+  data: Partial<any>;
+}
+
+// 범용 엔티티 업데이트 API 함수
+const updateEntity = async ({ entityType, id, data }: UpdateEntityParams) => {
+  const endpoints = {
+    video: `/api/videos/${id}`,
+    channel: `/api/channels/${id}`,
+    channelGroup: `/api/channel-groups/${id}`,
+    trendingVideo: `/api/trending/videos/${id}`,
+  };
+
+  const response = await axios.put(endpoints[entityType], data);
+  return response.data;
+};
+
+// 범용 업데이트 뮤테이션 훅
+export const useUpdateEntity = (entityType: EntityType) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<any> }) =>
+      updateEntity({ entityType, id, data }),
+
+    onMutate: async ({ id, data }) => {
+      // 낙관적 업데이트를 위해 기존 쿼리 취소
+      const queryKey = getQueryKeyByEntityType(entityType);
+      await queryClient.cancelQueries({ queryKey });
+
+      // 이전 데이터 백업
+      const previousData = queryClient.getQueryData(queryKey);
+
+      // 낙관적 업데이트 적용
+      queryClient.setQueryData(queryKey, (old: any) => {
+        if (!old) return old;
+
+        if (Array.isArray(old)) {
+          return old.map((item: any) =>
+            (item._id || item.id) === id ? { ...item, ...data } : item
+          );
+        }
+
+        return old;
+      });
+
+      return { previousData };
+    },
+
+    onError: (error, variables, context) => {
+      // 에러 발생 시 이전 데이터로 롤백
+      if (context?.previousData) {
+        const queryKey = getQueryKeyByEntityType(entityType);
+        queryClient.setQueryData(queryKey, context.previousData);
+      }
+
+      const message = (error as any)?.userMessage || `${getEntityDisplayName(entityType)} 업데이트 실패`;
+      toast.error(message);
+    },
+
+    onSuccess: (updatedData, { id }) => {
+      // 관련 캐시 무효화
+      invalidateRelatedQueries(queryClient, entityType);
+
+      toast.success(`${getEntityDisplayName(entityType)}이(가) 업데이트되었습니다`);
+    },
+  });
+};
+
+// 헬퍼 함수들
+const getQueryKeyByEntityType = (entityType: EntityType) => {
+  switch (entityType) {
+    case 'video':
+      return queryKeys.videos.all;
+    case 'channel':
+      return queryKeys.channels.all;
+    case 'channelGroup':
+      return queryKeys.channelGroups.all;
+    case 'trendingVideo':
+      return queryKeys.trending.all;
+    default:
+      return ['entity', entityType];
+  }
+};
+
+const getEntityDisplayName = (entityType: EntityType): string => {
+  switch (entityType) {
+    case 'video':
+      return '비디오';
+    case 'channel':
+      return '채널';
+    case 'channelGroup':
+      return '채널 그룹';
+    case 'trendingVideo':
+      return '트렌딩 비디오';
+    default:
+      return '항목';
+  }
+};
+
+const invalidateRelatedQueries = (queryClient: any, entityType: EntityType) => {
+  // 각 엔티티 타입별 관련 쿼리 무효화
+  switch (entityType) {
+    case 'video':
+      queryClient.invalidateQueries({ queryKey: queryKeys.videos.all });
+      break;
+    case 'channel':
+      queryClient.invalidateQueries({ queryKey: queryKeys.channels.all });
+      break;
+    case 'channelGroup':
+      queryClient.invalidateQueries({ queryKey: queryKeys.channelGroups.all });
+      break;
+    case 'trendingVideo':
+      queryClient.invalidateQueries({ queryKey: queryKeys.trending.all });
+      break;
+  }
+};
+
+// 특화된 업데이트 훅들 (편의성을 위한 래퍼)
+export const useUpdateVideo = () => useUpdateEntity('video');
+export const useUpdateChannel = () => useUpdateEntity('channel');
+export const useUpdateTrendingVideo = () => useUpdateEntity('trendingVideo');

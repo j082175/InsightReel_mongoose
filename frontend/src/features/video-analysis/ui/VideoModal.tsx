@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Video } from '../../../shared/types';
 import { PLATFORMS } from '../../../shared/types';
 import { formatViews, formatDate } from '../../../shared/utils';
 import { getThumbnailUrl, getViewCount } from '../../../shared/utils';
-import { Modal } from '../../../shared/components';
+import { Modal, EditableField } from '../../../shared/components';
+import { useEditMode, useUpdateVideo } from '../../../shared/hooks';
+import { Edit2 } from 'lucide-react';
 
 interface VideoModalProps {
   video: Video | null;
@@ -11,7 +13,39 @@ interface VideoModalProps {
 }
 
 const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
+  // 편집 기능 훅 - 조건부 렌더링 전에 호출해야 함
+  const updateVideoMutation = useUpdateVideo();
+
+  const handleSave = useCallback(async (fieldName: string, value: any) => {
+    if (!video) return;
+    await updateVideoMutation.mutateAsync({
+      id: video._id,
+      data: { [fieldName]: value }
+    });
+  }, [updateVideoMutation, video]);
+
+  const editModeOptions = useMemo(() => ({
+    onSave: handleSave
+  }), [handleSave]);
+
+  const editMode = useEditMode(editModeOptions);
+
+  // 조건부 렌더링은 모든 hooks 호출 후에
   if (!video) return null;
+
+  // 편집 가능한 필드 설정
+  const editableFields = {
+    title: { type: 'text' as const, label: '제목', required: true },
+    description: { type: 'textarea' as const, label: '설명' },
+    views: { type: 'number' as const, label: '조회수', min: 0 },
+    likes: { type: 'number' as const, label: '좋아요', min: 0 },
+    commentsCount: { type: 'number' as const, label: '댓글수', min: 0 },
+    channelName: { type: 'text' as const, label: '채널명', required: true },
+    keywords: { type: 'tags' as const, label: '키워드' },
+    hashtags: { type: 'tags' as const, label: '해시태그' },
+    mainCategory: { type: 'text' as const, label: '주 카테고리' },
+    middleCategory: { type: 'text' as const, label: '중 카테고리' }
+  };
 
   const getYouTubeEmbedUrl = (url: string) => {
     if (!url) return '';
@@ -22,36 +56,52 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
   };
 
   const title = (
-    <div className="flex items-center space-x-3">
-      <img
-        src={video?.channelAvatarUrl || video?.channelAvatar || ''}
-        alt={video?.channelName || ''}
-        className="w-10 h-10 rounded-full"
-      />
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 line-clamp-1">
-          {video?.title || ''}
-        </h2>
-        <span className="text-sm text-gray-600">
-          {video?.channelName || ''}
-        </span>
-        <span
-          className={`ml-2 px-2 py-1 rounded-full text-xs ${
-            video?.platform === PLATFORMS.YOUTUBE
-              ? 'bg-red-100 text-red-700'
-              : video?.platform === 'TIKTOK'
-                ? 'bg-pink-100 text-pink-700'
-                : 'bg-purple-100 text-purple-700'
-          }`}
-        >
-          {video?.platform}
-        </span>
-        {video?.isTrending && (
-          <span className="ml-2 px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
-            🔥 인기급상승
+    <div className="flex items-center justify-between w-full">
+      <div className="flex items-center space-x-3">
+        <img
+          src={video?.channelAvatarUrl || video?.channelAvatar || ''}
+          alt={video?.channelName || ''}
+          className="w-10 h-10 rounded-full"
+        />
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 line-clamp-1">
+            {video?.title || ''}
+          </h2>
+          <span className="text-sm text-gray-600">
+            {video?.channelName || ''}
           </span>
-        )}
+          <span
+            className={`ml-2 px-2 py-1 rounded-full text-xs ${
+              video?.platform === PLATFORMS.YOUTUBE
+                ? 'bg-red-100 text-red-700'
+                : video?.platform === 'TIKTOK'
+                  ? 'bg-pink-100 text-pink-700'
+                  : 'bg-purple-100 text-purple-700'
+            }`}
+          >
+            {video?.platform}
+          </span>
+          {video?.isTrending && (
+            <span className="ml-2 px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
+              🔥 인기급상승
+            </span>
+          )}
+        </div>
       </div>
+
+      {/* 편집 모드 토글 버튼 */}
+      <button
+        onClick={editMode.toggleEditMode}
+        className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+          editMode.isEditMode
+            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+        }`}
+        title={editMode.isEditMode ? '편집 모드 끄기' : '편집 모드 켜기'}
+      >
+        <Edit2 size={16} />
+        <span>{editMode.isEditMode ? '편집 완료' : '편집 모드'}</span>
+      </button>
     </div>
   );
 
@@ -159,18 +209,30 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
                     <span className="font-medium">{video.duration ? `${video.duration}초` : '데이터 없음'}</span>
                   </div>
                 )}
-                {video.likes && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">좋아요</span>
-                    <span className="font-medium">{formatViews(video.likes)}</span>
-                  </div>
-                )}
-                {video.commentsCount && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">댓글 수</span>
-                    <span className="font-medium">{formatViews(video.commentsCount)}</span>
-                  </div>
-                )}
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">좋아요</span>
+                  <EditableField
+                    value={video.likes || 0}
+                    config={editableFields.likes}
+                    isEditing={editMode.isEditing('likes')}
+                    onEdit={() => editMode.startEdit('likes')}
+                    onSave={(value) => editMode.saveEdit('likes', value)}
+                    onCancel={editMode.cancelEdit}
+                    disabled={!editMode.isEditMode}
+                  />
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">댓글 수</span>
+                  <EditableField
+                    value={video.commentsCount || 0}
+                    config={editableFields.commentsCount}
+                    isEditing={editMode.isEditing('commentsCount')}
+                    onEdit={() => editMode.startEdit('commentsCount')}
+                    onSave={(value) => editMode.saveEdit('commentsCount', value)}
+                    onCancel={editMode.cancelEdit}
+                    disabled={!editMode.isEditMode}
+                  />
+                </div>
                 {video.language && (
                   <div className="flex justify-between">
                     <span className="text-gray-500">언어</span>
@@ -238,24 +300,40 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
             </div>
           </div>
 
-          {/* 키워드/태그 */}
-          {(video.keywords || video.tags) && (
-            <div>
-              <h4 className="text-sm font-medium text-gray-900 mb-3">키워드 & 태그</h4>
-              <div className="flex flex-wrap gap-2">
-                {Array.isArray(video.keywords) ? (
-                  video.keywords.map((keyword, index) => (
-                    <span key={index} className="px-3 py-1 bg-indigo-100 text-indigo-700 text-sm rounded-full">
-                      #{keyword}
-                    </span>
-                  ))
-                ) : video.keywords ? (
-                  <span className="px-3 py-1 bg-indigo-100 text-indigo-700 text-sm rounded-full">
-                    #{video.keywords}
-                  </span>
-                ) : null}
+          {/* 키워드 */}
+          <div>
+            <h4 className="text-sm font-medium text-gray-900 mb-3">키워드</h4>
+            <EditableField
+              value={video.keywords || []}
+              config={editableFields.keywords}
+              isEditing={editMode.isEditing('keywords')}
+              onEdit={() => editMode.startEdit('keywords')}
+              onSave={(value) => editMode.saveEdit('keywords', value)}
+              onCancel={editMode.cancelEdit}
+              disabled={!editMode.isEditMode}
+            />
+          </div>
 
-                {Array.isArray(video.tags) && video.tags.map((tag, index) => (
+          {/* 해시태그 */}
+          <div>
+            <h4 className="text-sm font-medium text-gray-900 mb-3">해시태그</h4>
+            <EditableField
+              value={video.hashtags || []}
+              config={editableFields.hashtags}
+              isEditing={editMode.isEditing('hashtags')}
+              onEdit={() => editMode.startEdit('hashtags')}
+              onSave={(value) => editMode.saveEdit('hashtags', value)}
+              onCancel={editMode.cancelEdit}
+              disabled={!editMode.isEditMode}
+            />
+          </div>
+
+          {/* 기존 태그들 (참고용) */}
+          {Array.isArray(video.tags) && video.tags.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 mb-3">기존 태그 (읽기 전용)</h4>
+              <div className="flex flex-wrap gap-2">
+                {video.tags.map((tag, index) => (
                   <span key={`tag-${index}`} className="px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">
                     {tag}
                   </span>
@@ -322,18 +400,30 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
               <h4 className="text-sm font-medium text-gray-900 mb-3">AI 카테고리 분석</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2 text-sm">
-                  {video.mainCategory && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">주 카테고리</span>
-                      <span className="font-medium">{video.mainCategory}</span>
-                    </div>
-                  )}
-                  {video.middleCategory && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">중간 카테고리</span>
-                      <span className="font-medium">{video.middleCategory}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">주 카테고리</span>
+                    <EditableField
+                      value={video.mainCategory || ''}
+                      config={editableFields.mainCategory}
+                      isEditing={editMode.isEditing('mainCategory')}
+                      onEdit={() => editMode.startEdit('mainCategory')}
+                      onSave={(value) => editMode.saveEdit('mainCategory', value)}
+                      onCancel={editMode.cancelEdit}
+                      disabled={!editMode.isEditMode}
+                    />
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-500">중간 카테고리</span>
+                    <EditableField
+                      value={video.middleCategory || ''}
+                      config={editableFields.middleCategory}
+                      isEditing={editMode.isEditing('middleCategory')}
+                      onEdit={() => editMode.startEdit('middleCategory')}
+                      onSave={(value) => editMode.saveEdit('middleCategory', value)}
+                      onCancel={editMode.cancelEdit}
+                      disabled={!editMode.isEditMode}
+                    />
+                  </div>
                   {video.fullCategoryPath && (
                     <div>
                       <div className="text-gray-500 text-xs mb-1">전체 경로</div>
@@ -384,9 +474,16 @@ const VideoModal: React.FC<VideoModalProps> = ({ video, onClose }) => {
             {(video.description !== undefined && video.description !== null) && (
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="text-sm font-medium text-gray-900 mb-3">영상 설명</h4>
-                <div className="text-sm text-gray-700 bg-white p-3 rounded max-h-32 overflow-y-auto">
-                  {video.description || '빈 설명'}
-                </div>
+                <EditableField
+                  value={video.description || ''}
+                  config={editableFields.description}
+                  isEditing={editMode.isEditing('description')}
+                  onEdit={() => editMode.startEdit('description')}
+                  onSave={(value) => editMode.saveEdit('description', value)}
+                  onCancel={editMode.cancelEdit}
+                  disabled={!editMode.isEditMode}
+                  className="text-sm text-gray-700"
+                />
               </div>
             )}
 

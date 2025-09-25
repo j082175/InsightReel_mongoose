@@ -6,6 +6,7 @@ export { OptimizedImage } from './OptimizedImage';
 export { default as SearchBar } from './SearchBar';
 export { default as SimpleAutocomplete } from './SimpleAutocomplete';
 export { default as ActionBar } from './ActionBar';
+export { default as EditableField } from './EditableField';
 
 
 // Layout Components

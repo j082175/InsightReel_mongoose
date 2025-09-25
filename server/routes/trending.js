@@ -272,4 +272,102 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// PUT /api/trending/videos/:id - 트렌딩 비디오 정보 수정
+router.put('/videos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    ServerLogger.info(`📝 트렌딩 비디오 수정 요청: ${id}`, { updateData });
+
+    // ID 유효성 검사
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        error: ERROR_CODES.INVALID_ID,
+        message: '유효하지 않은 비디오 ID입니다.'
+      });
+    }
+
+    // 트렌딩 비디오 존재 여부 확인
+    const existingVideo = await TrendingVideo.findById(id);
+    if (!existingVideo) {
+      return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
+        success: false,
+        error: ERROR_CODES.NOT_FOUND,
+        message: '트렌딩 비디오를 찾을 수 없습니다.'
+      });
+    }
+
+    // 수정 불가 필드 제거
+    const restrictedFields = ['_id', '__v', 'createdAt', 'updatedAt', 'url', 'batchId', 'collectionDate'];
+    restrictedFields.forEach(field => {
+      if (field in updateData) {
+        delete updateData[field];
+      }
+    });
+
+    // 배열 필드 처리 (keywords, hashtags, mentions)
+    if (updateData.keywords && typeof updateData.keywords === 'string') {
+      updateData.keywords = updateData.keywords.split(',').map(k => k.trim()).filter(Boolean);
+    }
+    if (updateData.hashtags && typeof updateData.hashtags === 'string') {
+      updateData.hashtags = updateData.hashtags.split(',').map(h => h.trim()).filter(Boolean);
+    }
+    if (updateData.mentions && typeof updateData.mentions === 'string') {
+      updateData.mentions = updateData.mentions.split(',').map(m => m.trim()).filter(Boolean);
+    }
+
+    // 숫자 필드 변환
+    const numberFields = ['views', 'likes', 'commentsCount', 'subscribers', 'channelVideos'];
+    numberFields.forEach(field => {
+      if (field in updateData && typeof updateData[field] === 'string') {
+        const num = parseInt(updateData[field], 10);
+        updateData[field] = isNaN(num) ? 0 : num;
+      }
+    });
+
+    // 트렌딩 비디오 업데이트
+    const updatedVideo = await TrendingVideo.findByIdAndUpdate(
+      id,
+      { ...updateData, updatedAt: new Date().toISOString() },
+      { new: true, runValidators: true }
+    );
+
+    ServerLogger.info(`✅ 트렌딩 비디오 수정 완료: ${id}`);
+
+    res.json({
+      success: true,
+      message: API_MESSAGES.SUCCESS.UPDATE_SUCCESS,
+      data: {
+        _id: updatedVideo._id,
+        title: updatedVideo.title,
+        channelName: updatedVideo.channelName,
+        views: updatedVideo.views,
+        likes: updatedVideo.likes,
+        uploadDate: updatedVideo.uploadDate,
+        platform: updatedVideo.platform,
+        description: updatedVideo.description,
+        keywords: updatedVideo.keywords,
+        hashtags: updatedVideo.hashtags,
+        mentions: updatedVideo.mentions,
+        mainCategory: updatedVideo.mainCategory,
+        middleCategory: updatedVideo.middleCategory,
+        thumbnailUrl: updatedVideo.thumbnailUrl,
+        batchId: updatedVideo.batchId,
+        collectionDate: updatedVideo.collectionDate,
+        updatedAt: updatedVideo.updatedAt
+      }
+    });
+
+  } catch (error) {
+    ServerLogger.error('트렌딩 비디오 수정 실패:', error);
+    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      error: ERROR_CODES.UPDATE_FAILED,
+      message: '트렌딩 비디오 수정에 실패했습니다.'
+    });
+  }
+});
+
 module.exports = router;
