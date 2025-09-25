@@ -15,6 +15,7 @@ interface ChannelCardProps {
   onDelete: (channel: Channel) => void; // 필수 Props
   onKeywordClick?: (keyword: string) => void;
   showSelection?: boolean;
+  cardWidth?: number;
 }
 
 const ChannelCard: React.FC<ChannelCardProps> = ({
@@ -28,6 +29,7 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
   onDelete,
   onKeywordClick,
   showSelection = false,
+  cardWidth,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -79,6 +81,23 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
   };
 
   const theme = getPlatformTheme(channel.platform);
+
+  // 동적 폰트 크기 계산 (최소 크기 1.0으로 고정)
+  const getDynamicFontSize = (baseSize: number) => {
+    if (!cardWidth) return `${baseSize}px`;
+    const scaleFactor = Math.max(1.0, Math.min(1.2, cardWidth / 300));
+    return `${Math.round(baseSize * scaleFactor)}px`;
+  };
+
+  const getDynamicIconSize = (baseSize: number) => {
+    if (!cardWidth) return `${baseSize}px`;
+    const scaleFactor = Math.max(1.0, Math.min(1.2, cardWidth / 300));
+    return `${Math.round(baseSize * scaleFactor)}px`;
+  };
+
+  // 카드 크기에 따른 레이아웃 조정
+  const isSmallCard = cardWidth && cardWidth < 280;
+  const isMediumCard = cardWidth && cardWidth >= 280 && cardWidth < 400;
   const formatLastChecked = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -172,132 +191,141 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
         </div>
       )}
 
-      <div className="px-3 py-1.5">
-        <div className="flex items-start space-x-3">
+      <div className="px-6 py-2">
+        {/* CSS Grid 레이아웃 - 사용자 요청 구조 */}
+        <div className="grid gap-2" style={{ gridTemplateColumns: '80px 1fr auto' }}>
 
-          {/* 썸네일 */}
-          <div className="flex-shrink-0">
+          {/* 첫 번째 줄: [썸네일] [채널명] [삭제버튼] */}
+          <div className="row-span-2 flex flex-col items-start">
             <img
               src={
                 channel.thumbnailUrl ||
                 `https://placehold.co/64x64/EF4444/FFFFFF?text=${(channel.name || 'C').charAt(0)}`
               }
               alt={channel.name || ''}
-              className={`w-14 h-14 rounded-lg object-cover ring-2 ${theme.ringColor} ring-offset-1`}
+              className={`rounded-lg object-cover ring-2 ${theme.ringColor} ring-offset-1`}
+              style={{
+                width: getDynamicIconSize(isSmallCard ? 48 : 56),
+                height: getDynamicIconSize(isSmallCard ? 48 : 56)
+              }}
             />
           </div>
 
-          {/* 채널 정보 - 메인 콘텐츠 */}
-          <div className="flex-1 min-w-0">
-            {/* 첫 번째 줄: 채널명 + 플랫폼 배지 */}
-            <div className="flex items-center space-x-2 mb-0.5">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onChannelClick?.(channel);
-                }}
-                className="text-lg font-semibold text-gray-900 hover:text-blue-600 truncate"
-              >
-                {channel.name}
-              </button>
-              <span
-                className={`inline-flex px-1.5 py-0.5 text-xs font-medium text-white rounded-full bg-gradient-to-r ${theme.badgeColor} shadow-sm`}
-              >
-                {channel.platform}
-              </span>
-            </div>
-
-            {/* 두 번째 줄: 초컴팩트 정보 표시 */}
-            <div className="flex items-center gap-3 mb-1 text-sm">
-              <span
-                className="flex items-center text-blue-600"
-                title="구독자 수"
-              >
-                👥
-                <span className="ml-1 font-medium">
-                  {formatViews(channel.subscribers || 0)}
-                </span>
-              </span>
-              <span
-                className="flex items-center text-green-600"
-                title="총 영상 수"
-              >
-                📹
-                <span className="ml-1 font-medium">
-                  {channel.totalVideos || 0}
-                </span>
-              </span>
-              <span
-                className="flex items-center text-purple-600"
-                title="총 조회수"
-              >
-                📊
-                <span className="ml-1 font-medium">
-                  {formatViews(channel.totalViews || 0)}
-                </span>
-              </span>
-              <span
-                className="flex items-center text-orange-600"
-                title="채널 생성일"
-              >
-                📅
-                <span className="ml-1 font-medium text-xs">
-                  {channel.publishedAt
-                    ? new Date(channel.publishedAt).toLocaleDateString('ko-KR')
-                    : '미상'}
-                </span>
-              </span>
-            </div>
-
-            {/* 세 번째 줄: 마지막 확인 시간 */}
-            <div className="flex items-center text-xs text-gray-500 mb-1">
-              <span className="flex items-center" title="마지막 확인">
-                ⏰
-                <span className="ml-1">
-                  마지막 확인:{' '}
-                  {channel.updatedAt
-                    ? formatLastChecked(channel.updatedAt)
-                    : '미확인'}
-                </span>
-              </span>
-            </div>
-
-            {/* 키워드 태그들 */}
-            {channel.keywords && channel.keywords.length > 0 && (
-              <div className="flex flex-wrap gap-1">
-                {channel.keywords.slice(0, 3).map((keyword) => (
-                  <button
-                    key={keyword}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onKeywordClick?.(keyword);
-                    }}
-                    className="inline-flex px-1.5 py-0.5 bg-blue-50 text-blue-700 text-xs rounded hover:bg-blue-100 transition-colors"
-                  >
-                    {keyword}
-                  </button>
-                ))}
-                {channel.keywords.length > 3 && (
-                  <span className="inline-flex px-1.5 py-0.5 bg-gray-100 text-gray-500 text-xs rounded">
-                    +{channel.keywords.length - 3}
-                  </span>
-                )}
-              </div>
-            )}
+          <div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onChannelClick?.(channel);
+              }}
+              className="font-semibold text-gray-900 hover:text-blue-600 truncate w-full text-left"
+              style={{ fontSize: getDynamicFontSize(18) }}
+              title={channel.name}
+            >
+              {channel.name}
+            </button>
           </div>
 
-          {/* 삭제 버튼 - 오른쪽 고정 */}
-          <div className="flex-shrink-0">
+          <div className="flex justify-end">
             <button
               onClick={handleDelete}
               className="p-1.5 text-gray-400 hover:text-red-600 rounded-full hover:bg-red-50 transition-colors"
               title="채널 삭제"
             >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <svg
+                style={{ width: getDynamicIconSize(16), height: getDynamicIconSize(16) }}
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
                 <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
               </svg>
             </button>
           </div>
+
+          {/* 두 번째 줄: [플랫폼 배지] (썸네일 아래) */}
+          <div className="col-span-2 flex">
+            <span
+              className={`inline-flex px-1.5 py-0.5 font-medium text-white rounded-full bg-gradient-to-r ${theme.badgeColor} shadow-sm text-center justify-start`}
+              style={{ fontSize: getDynamicFontSize(10) }}
+            >
+              {channel.platform}
+            </span>
+          </div>
+
+          {/* 세 번째 줄: [조회수] [날짜] */}
+          <div className="col-span-3 grid grid-cols-2 gap-3" style={{ fontSize: getDynamicFontSize(14) }}>
+            <div className="flex items-center text-purple-600" title="총 조회수">
+              📊
+              <span className="ml-1 font-medium">
+                {formatViews(channel.totalViews || 0)}
+              </span>
+            </div>
+            <div className="flex items-center text-orange-600" title="채널 생성일">
+              📅
+              <span className="ml-1 font-medium" style={{ fontSize: getDynamicFontSize(12) }}>
+                {channel.publishedAt
+                  ? new Date(channel.publishedAt).toLocaleDateString('ko-KR', {
+                      year: isSmallCard ? '2-digit' : 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    })
+                  : '미상'}
+              </span>
+            </div>
+          </div>
+
+          {/* 네 번째 줄: [구독자수] [영상수] */}
+          <div className="col-span-3 grid grid-cols-2 gap-3" style={{ fontSize: getDynamicFontSize(14) }}>
+            <div className="flex items-center text-blue-600" title="구독자 수">
+              👥
+              <span className="ml-1 font-medium">
+                {formatViews(channel.subscribers || 0)}
+              </span>
+            </div>
+            <div className="flex items-center text-green-600" title="총 영상 수">
+              📹
+              <span className="ml-1 font-medium">
+                {channel.totalVideos || 0}
+              </span>
+            </div>
+          </div>
+
+          {/* 다섯 번째 줄: [확인날] */}
+          <div className="col-span-3 flex items-center text-gray-500" style={{ fontSize: getDynamicFontSize(12) }}>
+            <span className="flex items-center" title="마지막 확인">
+              ⏰
+              <span className="ml-1">
+                마지막 확인:{' '}
+                {channel.updatedAt
+                  ? formatLastChecked(channel.updatedAt)
+                  : '미확인'}
+              </span>
+            </span>
+          </div>
+
+          {/* 여섯 번째 줄: [태그] */}
+          {channel.keywords && channel.keywords.length > 0 && (
+            <div className="col-span-3 flex flex-wrap gap-1">
+              {channel.keywords.slice(0, isSmallCard ? 2 : 3).map((keyword) => (
+                <button
+                  key={keyword}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onKeywordClick?.(keyword);
+                  }}
+                  className="inline-flex px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition-colors truncate max-w-full"
+                  style={{ fontSize: getDynamicFontSize(12) }}
+                  title={keyword}
+                >
+                  {isSmallCard && keyword.length > 8 ? `${keyword.substring(0, 8)}...` : keyword}
+                </button>
+              ))}
+              {channel.keywords.length > (isSmallCard ? 2 : 3) && (
+                <span className="inline-flex px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded" style={{ fontSize: getDynamicFontSize(12) }}>
+                  +{channel.keywords.length - (isSmallCard ? 2 : 3)}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

@@ -352,7 +352,7 @@ const TrendingVideosPage: React.FC = () => {
           }}
           initialItemsPerPage={pagination.limit}
           showVirtualScrolling={true}
-          gridSize={2}
+          gridSize={4}
           className="mb-6"
         />
       ) : null}

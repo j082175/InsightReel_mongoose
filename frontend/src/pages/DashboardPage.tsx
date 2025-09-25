@@ -21,7 +21,7 @@ import { formatViews } from '../shared/utils/formatters';
 const DashboardPage: React.FC = () => {
   const [selectedBatchId, setSelectedBatchId] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [gridSize, setGridSize] = useState(2);
+  const [gridSize, setGridSize] = useState(4);
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
 
 

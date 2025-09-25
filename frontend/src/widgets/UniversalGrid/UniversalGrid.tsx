@@ -117,8 +117,9 @@ function UniversalGrid<T extends GridItem>({
   // 그리드 레이아웃 클래스
   const gridLayoutClasses = {
     1: 'grid-cols-4 sm:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8',
-    2: 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6',
+    2: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3',
     3: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
+    4: 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6',
   };
 
   // 동적 카드 크기 계산

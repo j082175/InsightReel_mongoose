@@ -202,7 +202,7 @@ const ChannelManagementPage: React.FC = () => {
 
   if (isLoading && channels.length === 0) {
     return (
-      <div className="p-6">
+      <div className="max-w-7xl mx-auto p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
           <div className="h-4 bg-gray-200 rounded w-1/2"></div>
@@ -249,7 +249,7 @@ const ChannelManagementPage: React.FC = () => {
         </div>
 
         {/* 탭 네비게이션 */}
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto p-6">
           <div className="border-b border-gray-200">
             <nav className="-mb-px flex space-x-8">
               <button
@@ -283,8 +283,8 @@ const ChannelManagementPage: React.FC = () => {
         </div>
 
         {/* 탭 콘텐츠 */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-6">
+        <div className="max-w-7xl mx-auto p-6">
+          <div className="bg-white rounded-lg shadow p-6">
             {activeTab === 'channels' ? (
               <UniversalGrid<Channel>
                 data={channels}
@@ -296,6 +296,7 @@ const ChannelManagementPage: React.FC = () => {
                     onChannelClick={props.onCardClick}
                     onDelete={() => props.onDelete?.(channel)}
                     showSelection={props.isSelectMode}
+                    cardWidth={props.cardWidth}
                   />
                 )}
                 customActions={channelCustomActions}
@@ -307,7 +308,7 @@ const ChannelManagementPage: React.FC = () => {
                 onBulkDelete={handleDeleteBulk}
                 showVirtualScrolling={true}
                 containerHeight={600}
-                gridSize={3}
+                gridSize={2}
               />
             ) : (
               <UniversalGrid<any>
