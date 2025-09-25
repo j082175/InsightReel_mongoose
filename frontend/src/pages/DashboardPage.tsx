@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import { Video } from '../shared/types';
 import { useAppContext } from '../app/providers';
 import { ChannelAnalysisModal } from '../features/channel-management';
-import { SearchBar, VideoCard } from '../shared/components';
+import { SearchBar, VideoCard, CookieStatusWidget } from '../shared/components';
 import { UniversalGrid } from '../widgets';
 import { VideoManagement } from '../features';
 import { FadeIn } from '../shared/components/animations';
@@ -108,25 +108,32 @@ const DashboardPage: React.FC = () => {
               </p>
             </div>
 
-            {/* 통계 요약 */}
-            <div className="flex gap-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {stats.totalVideos}
+            <div className="flex items-center gap-6">
+              {/* 통계 요약 */}
+              <div className="flex gap-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">
+                    {stats.totalVideos}
+                  </div>
+                  <div className="text-xs text-gray-500">총 영상</div>
                 </div>
-                <div className="text-xs text-gray-500">총 영상</div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">
+                    {formatViews(stats.totalViews)}
+                  </div>
+                  <div className="text-xs text-gray-500">총 조회수</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {formatViews(stats.totalLikes)}
+                  </div>
+                  <div className="text-xs text-gray-500">총 좋아요</div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {formatViews(stats.totalViews)}
-                </div>
-                <div className="text-xs text-gray-500">총 조회수</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">
-                  {formatViews(stats.totalLikes)}
-                </div>
-                <div className="text-xs text-gray-500">총 좋아요</div>
+
+              {/* 쿠키 상태 위젯 */}
+              <div className="border-l border-gray-200 pl-6">
+                <CookieStatusWidget className="min-w-[200px]" />
               </div>
             </div>
           </div>

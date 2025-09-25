@@ -78,6 +78,7 @@ app.use((req, res, next) => {
 
 // 정적 파일 서빙
 app.use('/downloads', express.static(path.join(__dirname, '../downloads')));
+app.use(express.static(path.join(__dirname, '../public')));
 
 // 🎯 클러스터 시스템 초기화
 try {
@@ -4076,6 +4077,10 @@ try {
 } catch (error) {
     ServerLogger.error('❌ Instagram router 로드 실패:', error);
 }
+
+// 쿠키 업로드 페이지 라우트
+const cookieUploadPageRouter = require('./routes/cookie-upload-page');
+app.use('/cookie-upload', cookieUploadPageRouter);
 
 // 404 핸들러 (모든 라우트 등록 후 마지막에)
 app.use((req, res) => {

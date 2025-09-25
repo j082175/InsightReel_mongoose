@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍪 Instagram 쿠키 업로드 - InsightReel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            padding: 40px;
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-loading {
+            color: #666;
+        }
+
+        .status-good {
+            background: #d4edda;
+            border-left-color: #28a745;
+            color: #155724;
+        }
+
+        .status-warning {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+            color: #856404;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 15px;
+            padding: 60px 20px;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #fafbfc;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f0f3ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #e8f0ff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .upload-text {
+            font-size: 1.3em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            margin: 20px 0;
+            display: none;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: 500;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .guide {
+            background: #e9ecef;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+            text-align: left;
+        }
+
+        .guide h3 {
+            color: #495057;
+            margin-bottom: 15px;
+        }
+
+        .guide ol {
+            margin-left: 20px;
+            line-height: 1.8;
+            color: #6c757d;
+        }
+
+        .guide strong {
+            color: #495057;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍪 Instagram 쿠키 업로드</h1>
+        <p class="subtitle">InstagramReels 분석을 위한 쿠키 파일을 업로드하세요</p>
+
+        <!-- 현재 상태 표시 -->
+        <div id="statusCard" class="status-card status-loading">
+            <div class="loading-spinner"></div>
+            쿠키 상태를 확인하는 중...
+        </div>
+
+        <!-- 업로드 영역 -->
+        <div id="uploadArea" class="upload-area">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">쿠키 파일을 여기에 드래그하세요</div>
+            <div class="upload-hint">또는 클릭하여 파일을 선택하세요 (.txt 파일만 지원)</div>
+            <button class="btn-secondary" onclick="document.getElementById('fileInput').click()">
+                파일 선택
+            </button>
+        </div>
+
+        <input type="file" id="fileInput" accept=".txt" />
+
+        <!-- 진행 바 -->
+        <div id="progressBar" class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
+        </div>
+
+        <!-- 메시지 -->
+        <div id="message" class="message"></div>
+
+        <!-- 사용 가이드 -->
+        <div class="guide">
+            <h3>📋 쿠키 파일 추출 방법</h3>
+            <ol>
+                <li><strong>Instagram 로그인:</strong> 브라우저에서 Instagram에 로그인하세요</li>
+                <li><strong>개발자 도구 열기:</strong> F12 키를 누르거나 마우스 우클릭 → "검사"</li>
+                <li><strong>Application 탭:</strong> 개발자 도구에서 "Application" 탭 선택</li>
+                <li><strong>쿠키 찾기:</strong> 좌측 Storage → Cookies → https://www.instagram.com</li>
+                <li><strong>쿠키 내보내기:</strong> 모든 쿠키를 선택하여 텍스트 파일로 저장</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const message = document.getElementById('message');
+        const statusCard = document.getElementById('statusCard');
+
+        // 페이지 로드 시 쿠키 상태 확인
+        checkCookieStatus();
+
+        // 드래그앤드롭 이벤트
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            uploadArea.classList.add('dragover');
+        }
+
+        function unhighlight() {
+            uploadArea.classList.remove('dragover');
+        }
+
+        uploadArea.addEventListener('drop', handleDrop, false);
+        uploadArea.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function handleDrop(e) {
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            if (files.length === 0) return;
+
+            const file = files[0];
+
+            // 파일 검증
+            if (!file.name.endsWith('.txt')) {
+                showMessage('❌ .txt 파일만 업로드할 수 있습니다.', 'error');
+                return;
+            }
+
+            if (file.size > 1024 * 1024) { // 1MB
+                showMessage('❌ 파일 크기가 너무 큽니다. (최대 1MB)', 'error');
+                return;
+            }
+
+            uploadFile(file);
+        }
+
+        async function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('cookieFile', file);
+            formData.append('source', 'drag-drop-upload');
+
+            progressBar.style.display = 'block';
+            progressFill.style.width = '0%';
+
+            try {
+                // 진행률 애니메이션
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += 10;
+                    progressFill.style.width = Math.min(progress, 90) + '%';
+                    if (progress >= 90) clearInterval(progressInterval);
+                }, 100);
+
+                const response = await fetch('/api/system/upload-cookie-file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                clearInterval(progressInterval);
+                progressFill.style.width = '100%';
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('✅ 쿠키 파일이 성공적으로 업로드되었습니다!', 'success');
+                    checkCookieStatus(); // 상태 다시 확인
+                } else {
+                    throw new Error(result.error || '업로드 실패');
+                }
+
+            } catch (error) {
+                showMessage('❌ 업로드 실패: ' + error.message, 'error');
+                progressFill.style.width = '0%';
+            }
+
+            setTimeout(() => {
+                progressBar.style.display = 'none';
+            }, 2000);
+        }
+
+        async function checkCookieStatus() {
+            try {
+                const response = await fetch('/api/system/cookie-status');
+                const result = await response.json();
+
+                if (response.ok) {
+                    updateStatusCard(result);
+                } else {
+                    statusCard.className = 'status-card status-error';
+                    statusCard.innerHTML = '❌ 쿠키 파일이 없습니다';
+                }
+            } catch (error) {
+                statusCard.className = 'status-card status-error';
+                statusCard.innerHTML = '❌ 상태 확인 실패';
+            }
+        }
+
+        function updateStatusCard(status) {
+            if (status.daysRemaining > 15) {
+                statusCard.className = 'status-card status-good';
+                statusCard.innerHTML = `✅ 쿠키 상태 양호 (${status.daysRemaining}일 남음)`;
+            } else if (status.daysRemaining > 0) {
+                statusCard.className = 'status-card status-warning';
+                statusCard.innerHTML = `⚠️ 쿠키 만료 임박 (${status.daysRemaining}일 남음)`;
+            } else {
+                statusCard.className = 'status-card status-error';
+                statusCard.innerHTML = '❌ 쿠키가 만료되었습니다';
+            }
+        }
+
+        function showMessage(text, type) {
+            message.textContent = text;
+            message.className = `message ${type}`;
+            message.style.display = 'block';
+
+            setTimeout(() => {
+                message.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

@@ -6,6 +6,7 @@ export { useFilter } from './useFilter';
 export { useAPIStatus } from './useAPIStatus';
 export { useDelete } from './useDelete';
 export { useEditMode } from './useEditMode';
+export { useCookieStatus } from './useCookieStatus';
 
 // API Hooks - Individual exports for direct import
 export {
