@@ -6,58 +6,49 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { BulkCollectionModal } from '../features/trending-collection';
-import { useTrendingStore } from '../features/trending-collection/model/trendingStore';
+import { useTrendingVideos, useDeleteTrendingVideo, useDeleteTrendingVideos, useChannelGroups, useChannels, useCollectTrending } from '../shared/hooks';
 import { UniversalGrid } from '../widgets';
 import { Video } from '../shared/types';
 import { VideoCard } from '../shared/components';
 import { formatViews, getDocumentId } from '../shared/utils';
 
 const TrendingCollectionPage: React.FC = () => {
-  // TrendingStore 사용
-  const trendingStore = useTrendingStore();
-  const {
-    collectionTarget,
-    filters,
-    isCollecting,
-    collectionProgress,
-    channelGroups,
-    channels,
-    trendingVideos,
-    groupsLoading,
-    channelsLoading,
-    videosLoading,
-    error,
-    groupsError,
-    searchTerm,
-    updateCollectionTarget,
-    updateFilters,
-    resetFilters,
-    startCollection,
-    stopCollection,
-    fetchChannelGroups,
-    fetchChannels,
-    fetchTrendingVideos,
-    handleGroupSelection,
-    handleChannelSelection,
-    handleTargetTypeChange,
-    updateSearchTerm,
-  } = trendingStore;
+  // React Query 훅들 사용
+  const { data: channelGroups = [], isLoading: groupsLoading, error: groupsError } = useChannelGroups({ active: true });
+  const { data: channels = [], isLoading: channelsLoading } = useChannels();
+  const { data: trendingVideos = [], isLoading: videosLoading, error } = useTrendingVideos();
+  const deleteVideoMutation = useDeleteTrendingVideo();
+  const deleteVideosMutation = useDeleteTrendingVideos();
+  const collectTrendingMutation = useCollectTrending();
 
-  // Local State
-  const [showCollectionModal, setShowCollectionModal] = React.useState(false);
+  // Local State for collection configuration
+  const [showCollectionModal, setShowCollectionModal] = useState(false);
+  const [collectionTarget, setCollectionTarget] = useState({
+    type: 'groups' as 'groups' | 'channels',
+    selectedGroups: [] as string[],
+    selectedChannels: [] as string[],
+  });
 
-  // 컴포넌트 마운트 시 데이터 로드
-  useEffect(() => {
-    fetchChannelGroups();
-    fetchChannels();
-    fetchTrendingVideos();
-  }, [fetchChannelGroups, fetchChannels, fetchTrendingVideos]);
+  const [filters, setFilters] = useState({
+    daysBack: 7,
+    minViews: 10000,
+    maxViews: undefined,
+    minDuration: undefined,
+    maxDuration: undefined,
+    includeShorts: true,
+    includeMidform: true,
+    includeLongForm: true,
+    keywords: [] as string[],
+    excludeKeywords: [] as string[],
+  });
+
+  const [isCollecting, setIsCollecting] = useState(false);
+  const [collectionProgress, setCollectionProgress] = useState('');
 
   // Event Handlers
-
   const handleVideoDelete = useCallback(
     async (video: Video) => {
       try {
@@ -66,26 +57,55 @@ const TrendingCollectionPage: React.FC = () => {
           console.error('❌ 비디오 ID가 없습니다:', video);
           return;
         }
-
-        const response = await fetch(`/api/trending/videos/${videoId}`, {
-          method: 'DELETE',
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        // 목록에서 제거 (실제로는 다시 불러오기)
-        await fetchTrendingVideos();
-        toast.success(`트렌딩 비디오 "${video.title}" 삭제 완료`);
+        await deleteVideoMutation.mutateAsync(videoId);
       } catch (error) {
-        toast.error(`트렌딩 비디오 삭제 실패: ${error}`);
+        console.error('삭제 중 오류:', error);
         throw error;
       }
     },
-    [fetchTrendingVideos]
+    [deleteVideoMutation]
   );
+  // Collection state handlers
+  const updateFilters = (newFilters: Partial<typeof filters>) => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+  };
 
+  const resetFilters = () => {
+    setFilters({
+      daysBack: 7,
+      minViews: 10000,
+      maxViews: undefined,
+      minDuration: undefined,
+      maxDuration: undefined,
+      includeShorts: true,
+      includeMidform: true,
+      includeLongForm: true,
+      keywords: [],
+      excludeKeywords: [],
+    });
+  };
+
+  const handleTargetTypeChange = (type: 'groups' | 'channels') => {
+    setCollectionTarget(prev => ({ ...prev, type }));
+  };
+
+  const handleGroupSelection = (groupId: string) => {
+    setCollectionTarget(prev => ({
+      ...prev,
+      selectedGroups: prev.selectedGroups.includes(groupId)
+        ? prev.selectedGroups.filter(id => id !== groupId)
+        : [...prev.selectedGroups, groupId]
+    }));
+  };
+
+  const handleChannelSelection = (channelId: string) => {
+    setCollectionTarget(prev => ({
+      ...prev,
+      selectedChannels: prev.selectedChannels.includes(channelId)
+        ? prev.selectedChannels.filter(id => id !== channelId)
+        : [...prev.selectedChannels, channelId]
+    }));
+  };
 
   const handleStartCollection = useCallback(async () => {
     if (
@@ -103,8 +123,30 @@ const TrendingCollectionPage: React.FC = () => {
       return;
     }
 
-    await startCollection();
-  }, [collectionTarget, startCollection]);
+    setIsCollecting(true);
+    setCollectionProgress('수집 시작 중...');
+
+    try {
+      await collectTrendingMutation.mutateAsync({
+        type: collectionTarget.type,
+        selectedGroups: collectionTarget.selectedGroups,
+        selectedChannels: collectionTarget.selectedChannels,
+        filters
+      });
+      setCollectionProgress('수집 완료');
+    } catch (error) {
+      setCollectionProgress('수집 실패');
+    } finally {
+      setIsCollecting(false);
+      setTimeout(() => setCollectionProgress(''), 3000);
+    }
+  }, [collectionTarget, filters, collectTrendingMutation]);
+
+  const stopCollection = useCallback(() => {
+    setIsCollecting(false);
+    setCollectionProgress('수집 중단됨');
+    setTimeout(() => setCollectionProgress(''), 3000);
+  }, []);
 
   // 통계 계산
   const stats = {
@@ -431,7 +473,9 @@ const TrendingCollectionPage: React.FC = () => {
         {/* 에러 표시 */}
         {(error || groupsError) && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <div className="text-red-800">{error || groupsError}</div>
+            <div className="text-red-800">
+              {error instanceof Error ? error.message : groupsError instanceof Error ? groupsError.message : '데이터를 가져오는 중 오류가 발생했습니다'}
+            </div>
           </div>
         )}
 
@@ -471,20 +515,12 @@ const TrendingCollectionPage: React.FC = () => {
             onDelete={handleVideoDelete}
             onBulkDelete={async (selectedVideos) => {
               try {
-                let successCount = 0;
-                for (const video of selectedVideos) {
-                  try {
-                    await handleVideoDelete(video);
-                    successCount++;
-                  } catch (error) {
-                    // 개별 비디오 삭제 실패는 handleVideoDelete에서 이미 알림 처리됨
-                  }
-                }
-                if (successCount > 0) {
-                  toast.success(`선택된 ${successCount}개 트렌딩 비디오가 삭제되었습니다`);
+                const videoIds = selectedVideos.map(video => getDocumentId(video)).filter(Boolean) as string[];
+                if (videoIds.length > 0) {
+                  await deleteVideosMutation.mutateAsync(videoIds);
                 }
               } catch (error) {
-                toast.error(`일괄 삭제 실패: ${error}`);
+                console.error('일괄 삭제 중 오류:', error);
               }
             }}
             onCardClick={() => {}} // 채널 클릭 기능 없음

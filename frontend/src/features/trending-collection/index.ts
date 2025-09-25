@@ -5,6 +5,3 @@ export { default as BulkCollectionModal } from './ui/BulkCollectionModal';
 
 // API Functions
 export * from './api/collectionApi';
-
-// Store and Hooks
-export * from './model/collectionStore';

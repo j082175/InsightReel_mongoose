@@ -5,6 +5,7 @@ import {
   channelGroupsApi,
   batchesApi,
   healthApi,
+  trendingApi,
 } from '../services/apiClient';
 import {
   Video,
@@ -243,17 +244,12 @@ export const useBatches = (filters?: any) => {
 export const useTrendingVideos = (filters?: any) => {
   return useQuery({
     queryKey: queryKeys.trending.videosList(filters),
-    queryFn: async () => {
-      const response = await axios.get(
-        'http://localhost:3000/api/trending/videos',
-        { params: filters }
-      );
-      return response.data.success ? response.data.data : [];
-    },
-    staleTime: 1 * 60 * 1000, // 1분 (트렌딩은 자주 업데이트)
-    gcTime: 3 * 60 * 1000, // 3분
+    queryFn: () => trendingApi.getTrendingVideos(filters),
+    staleTime: 5 * 60 * 1000, // 5분
+    gcTime: 10 * 60 * 1000, // 10분
   });
 };
+
 
 // 배치별 영상 조회
 export const useBatchVideos = (batchId?: string) => {
@@ -497,6 +493,46 @@ export const useAddChannelUrl = () => {
     },
     onError: (error: any) => {
       const message = error?.userMessage || '채널 추가 실패';
+      toast.error(message);
+    },
+  });
+};
+
+// 트렌딩 비디오 삭제
+export const useDeleteTrendingVideo = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: trendingApi.deleteTrendingVideo,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.trending.all });
+      toast.success('트렌딩 비디오가 삭제되었습니다');
+    },
+    onError: (error: any) => {
+      const message = error?.userMessage || '트렌딩 비디오 삭제 실패';
+      toast.error(message);
+    },
+  });
+};
+
+// 트렌딩 비디오 일괄 삭제
+export const useDeleteTrendingVideos = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (videoIds: string[]) => {
+      // 병렬로 삭제 요청
+      await Promise.all(
+        videoIds.map(id => trendingApi.deleteTrendingVideo(id))
+      );
+      return videoIds;
+    },
+    onSuccess: (videoIds) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.trending.all });
+      toast.success(`${videoIds.length}개 트렌딩 비디오가 삭제되었습니다`);
+    },
+    onError: (error: any) => {
+      const message = error?.userMessage || '트렌딩 비디오 일괄 삭제 실패';
       toast.error(message);
     },
   });

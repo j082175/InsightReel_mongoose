@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { SearchBar, VideoCard } from '../shared/components';
 import { UniversalGrid } from '../widgets';
-import { useTrendingStore } from '../features/trending-collection/model/trendingStore';
+import { useTrendingVideos, useDeleteTrendingVideo, useDeleteTrendingVideos, useChannelGroups } from '../shared/hooks';
 import { formatViews, formatDate, getDurationLabel, getDocumentId } from '../shared/utils';
 import toast from 'react-hot-toast';
 
@@ -45,34 +45,7 @@ interface ApiResponse {
 }
 
 const TrendingVideosPage: React.FC = () => {
-  // TrendingStore 사용
-  const trendingStore = useTrendingStore();
-  const {
-    trendingVideos: videos,
-    videosLoading: loading,
-    error,
-    searchTerm,
-    selectedVideos,
-    isSelectMode,
-    updateSearchTerm,
-    toggleSelectMode,
-    selectVideo,
-    deselectVideo,
-    selectAllVideos,
-    clearSelection,
-    deleteTrendingVideo,
-    deleteTrendingVideos,
-    fetchTrendingVideos,
-  } = trendingStore;
-
-  const [pagination, setPagination] = useState<PaginationInfo>({
-    total: 0,
-    limit: 50,
-    offset: 0,
-    hasMore: false,
-  });
-
-  // 필터 상태
+  // React Query 훅들 사용
   const [filters, setFilters] = useState({
     keyword: '',
     platform: '',
@@ -86,26 +59,27 @@ const TrendingVideosPage: React.FC = () => {
     sortOrder: 'desc',
   });
 
-  const [channelGroups, setChannelGroups] = useState<
-    Array<{ _id: string; name: string }>
-  >([]);
+  // API 데이터 가져오기
+  const { data: videos = [], isLoading: loading, error } = useTrendingVideos(filters);
+  const { data: channelGroups = [] } = useChannelGroups({ active: true });
+  const deleteVideoMutation = useDeleteTrendingVideo();
+  const deleteVideosMutation = useDeleteTrendingVideos();
 
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    total: videos.length,
+    limit: 50,
+    offset: 0,
+    hasMore: false,
+  });
+
+  // 페이지네이션 업데이트
   useEffect(() => {
-    fetchTrendingVideos();
-    fetchChannelGroups();
-  }, [fetchTrendingVideos]);
-
-  const fetchChannelGroups = async () => {
-    try {
-      const response = await fetch('/api/channel-groups?active=true');
-      const result = await response.json();
-      if (result.success) {
-        setChannelGroups(result.data);
-      }
-    } catch (error) {
-      toast.error('채널 그룹 로딩에 실패했습니다.');
-    }
-  };
+    setPagination(prev => ({
+      ...prev,
+      total: videos.length,
+      hasMore: videos.length > prev.offset + prev.limit
+    }));
+  }, [videos.length]);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -116,30 +90,33 @@ const TrendingVideosPage: React.FC = () => {
     setPagination((prev) => ({ ...prev, offset: newOffset }));
   };
 
-  // TrendingStore 기반 핸들러들
+  // React Query 기반 핸들러들
   const handleVideoDelete = async (video: any) => {
     try {
-      await deleteTrendingVideo(video);
-      toast.success(`트렌딩 비디오 "${video.title}" 삭제 완료`);
+      const videoId = getDocumentId(video);
+      if (!videoId) {
+        console.error('❌ 비디오 ID가 없습니다:', video);
+        return;
+      }
+      await deleteVideoMutation.mutateAsync(videoId);
     } catch (error) {
-      toast.error('삭제 중 오류가 발생했습니다.');
+      console.error('삭제 중 오류:', error);
       throw error;
     }
   };
 
   const handleBulkDelete = async (selectedVideos: any[]) => {
     try {
-      const deletedIds = await deleteTrendingVideos(selectedVideos);
-      if (deletedIds && deletedIds.length > 0) {
-        toast.success(`선택된 ${deletedIds.length}개 트렌딩 비디오가 삭제되었습니다`);
+      const videoIds = selectedVideos.map(video => getDocumentId(video)).filter(Boolean) as string[];
+      if (videoIds.length > 0) {
+        await deleteVideosMutation.mutateAsync(videoIds);
       }
     } catch (error) {
-      toast.error(`일괄 삭제 실패: ${error}`);
+      console.error('일괄 삭제 중 오류:', error);
     }
   };
 
   const handleSelectionChange = (selectedIds: string[]) => {
-    // TrendingStore가 내부적으로 selectedVideos를 관리하므로 필요시에만 추가 로직 구현
     console.log('Selected videos changed:', selectedIds);
   };
 
@@ -170,7 +147,7 @@ const TrendingVideosPage: React.FC = () => {
           </h1>
         </div>
         <p className="text-gray-600">
-          총 {pagination.total}개의 트렌딩 영상이 수집되었습니다
+          총 {videos.length}개의 트렌딩 영상이 수집되었습니다
         </p>
       </div>
 
@@ -317,7 +294,7 @@ const TrendingVideosPage: React.FC = () => {
       {/* 에러 표시 */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <div className="text-red-800">{error}</div>
+          <div className="text-red-800">{error instanceof Error ? error.message : '데이터를 가져오는 중 오류가 발생했습니다'}</div>
         </div>
       )}
 

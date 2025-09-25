@@ -22,6 +22,10 @@ export {
   useDeleteVideo,
   useDeleteVideos,
 
+  // Trending Video Mutations
+  useDeleteTrendingVideo,
+  useDeleteTrendingVideos,
+
   // Channel Mutations
   useDeleteChannel,
   useDeleteChannels,
