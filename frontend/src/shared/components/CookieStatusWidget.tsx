@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useCookieStatus } from '../hooks/useCookieStatus';
-import { HeadlessUICookieModal } from './HeadlessUICookieModal';
+import { SimpleCookieModal } from './SimpleCookieModal';
 import { TestModal } from './TestModal';
 
 interface CookieStatusWidgetProps {
@@ -148,7 +148,7 @@ export const CookieStatusWidget: React.FC<CookieStatusWidgetProps> = ({
       </motion.div>
 
       {/* 쿠키 업로드 모달 */}
-      <HeadlessUICookieModal
+      <SimpleCookieModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
       />
