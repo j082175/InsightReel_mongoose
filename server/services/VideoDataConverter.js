@@ -588,6 +588,13 @@ class VideoDataConverter {
         const { platform, postUrl, videoPath, metadata, analysis, timestamp } = videoData;
         const url = videoData.url || postUrl;
 
+        // 디버깅: TikTok 메타데이터 확인
+        ServerLogger.info('🔍 STEP2 - VideoDataConverter 입력 메타데이터:', {
+            thumbnailUrl: metadata.thumbnailUrl,
+            language: metadata.language,
+            description: metadata.description
+        });
+
         // 업로드 날짜 결정
         let uploadDate;
         if (metadata.uploadDate) {
@@ -642,8 +649,47 @@ class VideoDataConverter {
             originalSound: metadata.originalSound || false,
             channelVerified: metadata.channelVerified || false,
             isCommercial: metadata.isCommercial || false,
-            effectsUsed: (metadata.effectsUsed || []).join(', ')
+            effectsUsed: (metadata.effectsUsed || []).join(', '),
+            thumbnailUrl: metadata.thumbnailUrl || '',
+            language: metadata.language || '',
+            description: metadata.description || ''
         };
+
+        // 변환 후 language 값 확인
+        const result = {
+            rowNumber: rowNumber,
+            platform: 'TIKTOK',
+            channelName: metadata.channelName || '알 수 없음',
+            url: url,
+            title: metadata.title || '제목 없음',
+            uploadDate: uploadDate,
+            views: metadata.views || 0,
+            likes: metadata.likes || 0,
+            comments: metadata.commentsCount || metadata.comments || 0,
+            shares: metadata.shares || 0,
+            duration: metadata.durationFormatted || '0:30',
+            contentType: metadata.contentType || 'shortform',
+            category: metadata.category || '엔터테인먼트',
+            mainCategory: analysis.mainCategory || '엔터테인먼트',
+            middleCategory: analysis.middleCategory || '',
+            fullCategoryPath: fullCategoryPath,
+            categoryDepth: categoryDepth,
+            keywords: (analysis.keywords || []).join(', '),
+            hashtags: (metadata.hashtags || []).join(', '),
+            mentions: (metadata.mentions || []).join(', '),
+            musicTitle: metadata.musicTitle || '',
+            musicAuthor: metadata.musicAuthor || '',
+            originalSound: metadata.originalSound || false,
+            channelVerified: metadata.channelVerified || false,
+            isCommercial: metadata.isCommercial || false,
+            effectsUsed: (metadata.effectsUsed || []).join(', '),
+            thumbnailUrl: metadata.thumbnailUrl || '',
+            language: metadata.language || '',
+            description: metadata.description || ''
+        };
+
+        ServerLogger.info(`🔍 STEP2 - VideoDataConverter 출력 language: '${result.language}'`);
+        return result;
     }
 
     /**

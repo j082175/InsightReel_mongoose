@@ -567,8 +567,8 @@ ${videoData.comments.map((comment, i) => `${i + 1}. ${comment}`).join('\n')}
             // 비디오 다운로드
             videoPath = await this.videoProcessor.downloadVideo(videoUrl, 'YOUTUBE');
 
-            // 프레임 추출 (quick 모드로 1-3개 프레임)
-            const frames = await this.videoProcessor.generateThumbnail(videoPath, 'quick');
+            // 프레임 추출 (multi-frame 모드로 다중 프레임)
+            const frames = await this.videoProcessor.generateThumbnail(videoPath, 'multi-frame');
 
             ServerLogger.info(`✅ 프레임 추출 완료: ${Array.isArray(frames) ? frames.length : 1}개`);
 

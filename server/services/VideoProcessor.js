@@ -586,6 +586,15 @@ class VideoProcessor {
         }
     }
 
+    // 썸네일 URL 추출 헬퍼 메서드 (배열이면 첫 번째 선택)
+    extractSingleThumbnailUrl(thumbnailData) {
+        if (!thumbnailData) return '';
+        if (Array.isArray(thumbnailData)) {
+            return thumbnailData[0] || '';
+        }
+        return thumbnailData;
+    }
+
     // TikTok 비디오 메타데이터 추출 함수 (v1 → v2 → v3 폭포수 방식)
     async getTikTokVideoInfo(videoUrl) {
         return await this.getTikTokVideoInfoFallback(videoUrl);
@@ -667,6 +676,7 @@ class VideoProcessor {
 
         ServerLogger.info(`✅ TikTok 메타데이터 추출 완료 (${usedVersion})`);
         ServerLogger.info(`📊 추출된 정보: 제목="${parsedData.title.substring(0, 50)}...", 조회수=${parsedData.views.toLocaleString()}, 좋아요=${parsedData.likes.toLocaleString()}`);
+        ServerLogger.info(`🔍 STEP1 - VideoProcessor 메타데이터 language: '${parsedData.language}'`);
         if (parsedData.downloadUrl) {
             const urlString = typeof parsedData.downloadUrl === 'string' ? parsedData.downloadUrl : JSON.stringify(parsedData.downloadUrl);
             ServerLogger.info(`🔗 다운로드 URL 확보: ${urlString.substring(0, 50)}...`);
@@ -701,6 +711,13 @@ class VideoProcessor {
         const stats = videoData.statistics || {};
         const music = videoData.music || {};
 
+        // 디버깅: author.region 값 확인
+        ServerLogger.info('🔍 TikTok author.region 디버깅:', {
+            region: author.region,
+            nickname: author.nickname,
+            uniqueId: author.uniqueId
+        });
+
         // v1에서는 createTime이 Unix timestamp로 제공
         let uploadDate = new Date().toISOString();
         if (videoData.createTime) {
@@ -719,7 +736,7 @@ class VideoProcessor {
             channelName: author.nickname || author.uniqueId || '알 수 없음',
             channelId: author.uniqueId || author.uid || '',
             uploadDate: uploadDate,
-            thumbnailUrl: author.avatarMedium || author.avatarThumb || '',
+            thumbnailUrl: this.extractSingleThumbnailUrl(videoData.video?.cover || videoData.cover) || author.avatarMedium || author.avatarThumb || '',
             category: '엔터테인먼트',
             youtubeCategory: '엔터테인먼트',
 
@@ -774,7 +791,7 @@ class VideoProcessor {
             downloadable: true,
             embeddable: false,
             ageRestricted: false,
-            language: 'ko',
+            language: author.region || '',
             defaultAudioLanguage: '',
 
             // 처리 메타데이터
@@ -808,7 +825,7 @@ class VideoProcessor {
             channelName: author.nickname || '알 수 없음',
             channelId: author.nickname || '',
             uploadDate: new Date().toISOString(),
-            thumbnailUrl: author.avatar || '',
+            thumbnailUrl: this.extractSingleThumbnailUrl(videoData.video?.cover || videoData.cover) || author.avatar || '',
             category: '엔터테인먼트',
             youtubeCategory: '엔터테인먼트',
 
@@ -860,7 +877,7 @@ class VideoProcessor {
             downloadable: true,
             embeddable: false,
             ageRestricted: false,
-            language: 'ko',
+            language: author.region || '',
             defaultAudioLanguage: '',
 
             // 처리 메타데이터
@@ -882,7 +899,7 @@ class VideoProcessor {
             channelName: author.nickname || '알 수 없음',
             channelId: author.nickname || '',
             uploadDate: new Date().toISOString(),
-            thumbnailUrl: author.avatar || '',
+            thumbnailUrl: this.extractSingleThumbnailUrl(videoData.video?.cover || videoData.cover) || author.avatar || '',
             category: '엔터테인먼트',
             youtubeCategory: '엔터테인먼트',
 
@@ -927,7 +944,7 @@ class VideoProcessor {
             downloadable: true,
             embeddable: false,
             ageRestricted: false,
-            language: 'ko',
+            language: author.region || '',
             defaultAudioLanguage: '',
 
             // 처리 메타데이터
@@ -958,7 +975,7 @@ class VideoProcessor {
             channelName: videoData.author?.nickname || videoData.author?.username || '알 수 없음',
             channelId: videoData.author?.username || videoData.author?.unique_id || '',
             uploadDate: uploadDate,
-            thumbnailUrl: videoData.author?.avatar || videoData.cover || '',
+            thumbnailUrl: this.extractSingleThumbnailUrl(videoData.cover) || videoData.author?.avatar || '',
             category: '엔터테인먼트',
             youtubeCategory: '엔터테인먼트',
 
@@ -1015,7 +1032,7 @@ class VideoProcessor {
             downloadable: true,
             embeddable: false,
             ageRestricted: false,
-            language: 'ko',
+            language: author.region || '',
             defaultAudioLanguage: '',
 
             // 처리 메타데이터
@@ -1740,6 +1757,8 @@ class VideoProcessor {
                 channelId: snippet.channelId,
                 uploadDate: snippet.publishedAt,
                 thumbnailUrl:
+                    snippet.thumbnails.maxres?.url ||
+                    snippet.thumbnails.high?.url ||
                     snippet.thumbnails.medium?.url ||
                     snippet.thumbnails.default.url,
                 category: categoryName,

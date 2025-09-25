@@ -384,6 +384,11 @@ class UnifiedVideoSaver {
             }
 
             // 새 문서 생성
+            ServerLogger.info('🔍 STEP3 - MongoDB 저장 직전 데이터:', {
+                thumbnailUrl: convertedData.thumbnailUrl,
+                language: convertedData.language,
+                description: convertedData.description
+            });
             const newDoc = new Model(convertedData);
             const savedDoc = await newDoc.save();
 

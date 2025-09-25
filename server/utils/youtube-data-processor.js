@@ -270,25 +270,28 @@ class YouTubeDataProcessor {
     }
 
     /**
-     * 썸네일 URL 생성
+     * 썸네일 URL 생성 (최고 화질부터 폴백)
      */
-    static buildThumbnailUrl(videoId, quality = 'maxresdefault') {
+    static buildThumbnailUrl(videoId, quality = null) {
         if (!videoId) {
             return null;
         }
 
-        const qualities = [
-            'maxresdefault',
-            'hqdefault',
-            'mqdefault',
-            'default',
+        // 화질 우선순위 (높은 것부터)
+        const qualityOrder = [
+            'maxresdefault',  // 1280x720
+            'hqdefault',      // 480x360
+            'mqdefault',      // 320x180
+            'default',        // 120x90
         ];
 
-        if (!qualities.includes(quality)) {
-            quality = 'maxresdefault';
+        // 특정 화질이 지정된 경우
+        if (quality && qualityOrder.includes(quality)) {
+            return `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
         }
 
-        return `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
+        // 최고 화질 반환 (실제로는 클라이언트에서 폴백 처리 필요)
+        return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
     }
 
     /**
