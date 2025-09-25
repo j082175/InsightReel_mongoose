@@ -1105,6 +1105,12 @@ class ContentScript {
             environment: environment.NODE_ENV,
         });
 
+        // 쿠키 업로드 페이지에서는 확장 프로그램 실행 안함
+        if (window.location.pathname === '/cookie-upload.html') {
+            Utils.log('info', '🍪 쿠키 업로드 페이지 - 확장 프로그램 기능 비활성화');
+            return;
+        }
+
         if (!this.platform) {
             Utils.log('warn', '지원되지 않는 플랫폼', window.location.hostname);
             return;

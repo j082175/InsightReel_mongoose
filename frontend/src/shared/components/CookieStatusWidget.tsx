@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useCookieStatus } from '../hooks/useCookieStatus';
+import { HeadlessUICookieModal } from './HeadlessUICookieModal';
+import { TestModal } from './TestModal';
 
 interface CookieStatusWidgetProps {
   className?: string;
@@ -10,10 +12,14 @@ export const CookieStatusWidget: React.FC<CookieStatusWidgetProps> = ({
   className = ''
 }) => {
   const { data: cookieStatus, isLoading, isError } = useCookieStatus();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleOpenCookieUpload = () => {
-    // 새 탭에서 쿠키 업로드 페이지 열기
-    window.open('http://localhost:3000/cookie-upload', '_blank');
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
   };
 
   // 로딩 상태
@@ -113,31 +119,39 @@ export const CookieStatusWidget: React.FC<CookieStatusWidgetProps> = ({
   const colors = colorClasses[statusColor];
 
   return (
-    <motion.div
-      initial={{ scale: 0.95, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      className={`${colors.bg} border rounded-lg p-4 cursor-pointer transition-colors ${className}`}
-      onClick={handleOpenCookieUpload}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-    >
-      <div className="flex items-center space-x-3">
-        <div className="text-lg">{statusIcon}</div>
-        <div className="flex-1 min-w-0">
-          <div className={`text-sm font-medium ${colors.text} flex items-center space-x-2`}>
-            <span>Instagram 쿠키</span>
-            <span className="text-xs px-2 py-0.5 bg-white rounded-full">
-              {statusText}
-            </span>
+    <>
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className={`${colors.bg} border rounded-lg p-4 cursor-pointer transition-colors ${className}`}
+        onClick={handleOpenCookieUpload}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        <div className="flex items-center space-x-3">
+          <div className="text-lg">{statusIcon}</div>
+          <div className="flex-1 min-w-0">
+            <div className={`text-sm font-medium ${colors.text} flex items-center space-x-2`}>
+              <span>Instagram 쿠키</span>
+              <span className="text-xs px-2 py-0.5 bg-white rounded-full">
+                {statusText}
+              </span>
+            </div>
+            <div className={`text-xs ${colors.subtext}`}>
+              {daysRemaining > 0 ? `${daysRemaining}일 남음` : '업데이트 필요'}
+            </div>
           </div>
-          <div className={`text-xs ${colors.subtext}`}>
-            {daysRemaining > 0 ? `${daysRemaining}일 남음` : '업데이트 필요'}
+          <div className={`${colors.subtext} text-xs`}>
+            →
           </div>
         </div>
-        <div className={`${colors.subtext} text-xs`}>
-          →
-        </div>
-      </div>
-    </motion.div>
+      </motion.div>
+
+      {/* 쿠키 업로드 모달 */}
+      <HeadlessUICookieModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
+    </>
   );
 };

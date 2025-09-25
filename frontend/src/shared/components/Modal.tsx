@@ -82,7 +82,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
   if (customContainer) {
     return (
       <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ${
+        className={`fixed inset-0 z-[60] flex items-center justify-center p-4 transition-opacity duration-200 ${
           customBackdrop
             ? ''
             : isAnimating
@@ -98,7 +98,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ${
+      className={`fixed inset-0 z-[60] flex items-center justify-center p-4 transition-opacity duration-200 ${
         isAnimating ? 'bg-black bg-opacity-50' : 'bg-black bg-opacity-0'
       }`}
       onClick={handleBackdropClick}

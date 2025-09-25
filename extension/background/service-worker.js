@@ -89,7 +89,7 @@ class BackgroundService {
         case 'saveSettings':
           await this.saveSettings(request.data, sendResponse);
           break;
-          
+
         default:
           sendResponse({ error: '알 수 없는 액션입니다.' });
       }
@@ -269,7 +269,7 @@ class BackgroundService {
       const response = await fetch(`${this.serverUrl}/api/cleanup-old-files`, {
         method: 'POST'
       });
-      
+
       if (response.ok) {
         console.log('오래된 파일 정리 완료');
       }
@@ -277,6 +277,7 @@ class BackgroundService {
       console.log('파일 정리 확인 실패:', error);
     }
   }
+
 
   // 웹 요청 수정 (필요시)
   modifyWebRequests() {

@@ -479,6 +479,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(
         onConfirm={handleConfirmDelete}
         title="비디오 삭제"
         message="이 비디오를 삭제하시겠습니까? 삭제된 비디오는 복구할 수 없습니다."
+        itemName={video?.title || 'Untitled Video'}
         isLoading={isDeleting}
       />
 

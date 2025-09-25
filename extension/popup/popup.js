@@ -7,17 +7,26 @@ class VideoSaverPopup {
 
   async init() {
     console.log('🚀 팝업 초기화 시작');
-    
+
+    // DOM이 로드될 때까지 대기
+    if (document.readyState === 'loading') {
+      await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
+    }
+
+    // Instagram 쿠키 버튼이 있는지 확인
+    const cookieBtn = document.getElementById('syncInstagramCookies');
+    console.log('🍪 Instagram 쿠키 버튼 찾음:', !!cookieBtn);
+
     // 설정을 먼저 로드한 후 이벤트 리스너 설정
     await this.loadSettings();
     this.setupEventListeners();
-    
+
     // 서버 상태와 통계는 병렬로 처리
     await Promise.all([
       this.checkServerStatus(),
       this.loadStats()
     ]);
-    
+
     console.log('📋 팝업 초기화 완료');
   }
 
@@ -55,7 +64,27 @@ class VideoSaverPopup {
   setupEventListeners() {
     // 디바운스 타이머들을 인스턴스 변수로 관리
     this.debounceTimers = {};
-    
+
+    // Instagram 쿠키 동기화 버튼
+    const syncButton = document.getElementById('syncInstagramCookies');
+    console.log('🔍 Instagram 쿠키 버튼 찾기:', !!syncButton);
+
+    if (!syncButton) {
+      console.error('❌ Instagram 쿠키 버튼을 찾을 수 없습니다');
+      return;
+    }
+
+    syncButton.addEventListener('click', async () => {
+      console.log('🍪 Instagram 쿠키 동기화 버튼 클릭됨 - 현재 비활성화됨');
+
+      const button = document.getElementById('syncInstagramCookies');
+      button.textContent = '🚧 준비 중';
+
+      setTimeout(() => {
+        button.textContent = '🍪 Instagram 쿠키 동기화';
+      }, 2000);
+    });
+
     // 스프레드시트 열기
     document.getElementById('openSheets').addEventListener('click', async () => {
       try {

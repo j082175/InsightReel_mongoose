@@ -39,10 +39,101 @@ export class InstagramHandler extends BasePlatformHandler {
             ErrorHandler.safeExecute(async () => {
                 this.processExistingSaveButtons();
                 this.addAnalysisButtons();
+                // 쿠키 동기화는 확장 프로그램 팝업에서만 처리
             }, '저장 버튼 향상').finally(() => {
                 this.endProcessing();
             });
         }, 1000);
+    }
+
+    /**
+     * Instagram 쿠키를 서버로 전송하는 버튼 추가
+     */
+    addCookieSyncButton() {
+        // 기존 버튼이 있으면 제거
+        const existingBtn = document.getElementById('insightreel-cookie-sync');
+        if (existingBtn) return;
+
+        // 쿠키 동기화 버튼 생성
+        const button = document.createElement('button');
+        button.id = 'insightreel-cookie-sync';
+        button.innerHTML = '🍪 InsightReel 쿠키 동기화';
+        button.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            padding: 10px 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        `;
+
+        button.addEventListener('mouseenter', () => {
+            button.style.transform = 'scale(1.05)';
+        });
+
+        button.addEventListener('mouseleave', () => {
+            button.style.transform = 'scale(1)';
+        });
+
+        button.addEventListener('click', async () => {
+            try {
+                button.disabled = true;
+                button.innerHTML = '⏳ 전송 중...';
+
+                // 쿠키 수집 (document.cookie)
+                const cookies = document.cookie.split(';').map(c => c.trim());
+
+                // Netscape 형식으로 변환
+                const netscapeCookies = cookies.map(cookie => {
+                    const [name, value] = cookie.split('=');
+                    return `.instagram.com\tTRUE\t/\tTRUE\t${Math.floor(Date.now() / 1000) + 7776000}\t${name}\t${value}`;
+                }).join('\n');
+
+                // 서버로 전송
+                const response = await fetch('http://localhost:3000/api/system/update-cookies', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        cookies: netscapeCookies,
+                        source: 'chrome-extension'
+                    })
+                });
+
+                if (response.ok) {
+                    button.innerHTML = '✅ 동기화 완료!';
+                    button.style.background = 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)';
+
+                    setTimeout(() => {
+                        button.innerHTML = '🍪 InsightReel 쿠키 동기화';
+                        button.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                    }, 3000);
+                } else {
+                    throw new Error('서버 응답 오류');
+                }
+            } catch (error) {
+                button.innerHTML = '❌ 전송 실패';
+                button.style.background = 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)';
+                console.error('쿠키 전송 실패:', error);
+
+                setTimeout(() => {
+                    button.innerHTML = '🍪 InsightReel 쿠키 동기화';
+                    button.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                }, 3000);
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        document.body.appendChild(button);
+        this.log('info', '✅ Instagram 쿠키 동기화 버튼 추가됨');
     }
 
     /**

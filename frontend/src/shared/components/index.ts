@@ -8,6 +8,9 @@ export { default as SimpleAutocomplete } from './SimpleAutocomplete';
 export { default as ActionBar } from './ActionBar';
 export { default as EditableField } from './EditableField';
 export { CookieStatusWidget } from './CookieStatusWidget';
+export { CookieUploadModal } from './CookieUploadModal';
+export { SimpleCookieModal } from './SimpleCookieModal';
+export { HeadlessUICookieModal } from './HeadlessUICookieModal';
 
 
 // Layout Components

@@ -174,12 +174,127 @@ class InstagramReelsExtractor {
     }
 
     /**
+     * 두 추출기 데이터 병합 (Instaloader + yt-dlp)
+     */
+    mergeExtractorData(instaloaderData, ytDlpData) {
+        const merged = {
+            post: {
+                title: instaloaderData?.post?.title || ytDlpData?.post?.title || 'Instagram Reel',
+                description: instaloaderData?.post?.description || ytDlpData?.post?.description || '',
+                views: instaloaderData?.post?.views || ytDlpData?.post?.views || null,
+                likes: ytDlpData?.post?.likes || instaloaderData?.post?.likes || null, // yt-dlp 우선 (비공개 좋아요 가능)
+                comments: instaloaderData?.post?.comments || ytDlpData?.post?.comments || null,
+                duration: instaloaderData?.post?.duration || ytDlpData?.post?.duration || null,
+                uploadDate: instaloaderData?.post?.uploadDate || ytDlpData?.post?.uploadDate || null,
+                thumbnailUrl: instaloaderData?.post?.thumbnailUrl || ytDlpData?.post?.thumbnailUrl || null
+            },
+            profile: {
+                username: instaloaderData?.profile?.username || ytDlpData?.profile?.username || 'unknown',
+                displayName: instaloaderData?.profile?.displayName || ytDlpData?.profile?.displayName || 'Unknown',
+                subscribers: instaloaderData?.profile?.subscribers || ytDlpData?.profile?.subscribers || null, // Instaloader 우선 (더 정확함)
+                channelVideos: instaloaderData?.profile?.channelVideos || ytDlpData?.profile?.channelVideos || null,
+                isVerified: instaloaderData?.profile?.isVerified || ytDlpData?.profile?.isVerified || false
+            }
+        };
+
+        // 어떤 데이터가 어디서 왔는지 추적
+        const sourceMap = {
+            title: instaloaderData?.post?.title ? 'instaloader' : 'yt-dlp',
+            views: instaloaderData?.post?.views ? 'instaloader' : 'yt-dlp',
+            likes: ytDlpData?.post?.likes ? 'yt-dlp' : 'instaloader',
+            subscribers: instaloaderData?.profile?.subscribers ? 'instaloader' : 'yt-dlp'
+        };
+
+        ServerLogger.info(`📊 데이터 병합 완료:`);
+        ServerLogger.info(`   - 좋아요: ${merged.post.likes} (${sourceMap.likes})`);
+        ServerLogger.info(`   - 조회수: ${merged.post.views} (${sourceMap.views})`);
+        ServerLogger.info(`   - 팔로워: ${merged.profile.subscribers} (${sourceMap.subscribers})`);
+
+        return { merged, sourceMap };
+    }
+
+    /**
+     * Instagram Reels 하이브리드 추출 (Instaloader + yt-dlp 병합)
+     */
+    async extractReelsDataHybrid(reelsUrl) {
+        try {
+            ServerLogger.info(`🎬 Instagram Reels 하이브리드 추출 시작: ${reelsUrl}`);
+
+            const shortcode = this.extractShortcode(reelsUrl);
+            let instaloaderData = null;
+            let ytDlpData = null;
+
+            // 두 추출기를 병렬로 실행
+            ServerLogger.info(`🚀 Instaloader와 yt-dlp 병렬 실행 중...`);
+
+            const [instaloaderResult, ytDlpResult] = await Promise.allSettled([
+                this.runPythonScript(shortcode).catch(e => ({ success: false, error: e.message })),
+                this.runYtDlpFallback(reelsUrl).catch(e => ({ success: false, error: e.message }))
+            ]);
+
+            // Instaloader 결과 처리
+            if (instaloaderResult.status === 'fulfilled' && instaloaderResult.value.success) {
+                instaloaderData = instaloaderResult.value;
+                ServerLogger.info('✅ Instaloader 추출 성공');
+            } else {
+                const error = instaloaderResult.status === 'rejected' ? instaloaderResult.reason.message : instaloaderResult.value.error;
+                ServerLogger.warn(`⚠️ Instaloader 실패: ${error}`);
+            }
+
+            // yt-dlp 결과 처리
+            if (ytDlpResult.status === 'fulfilled' && ytDlpResult.value.success) {
+                ytDlpData = ytDlpResult.value;
+                ServerLogger.info('✅ yt-dlp 추출 성공');
+            } else {
+                const error = ytDlpResult.status === 'rejected' ? ytDlpResult.reason.message : ytDlpResult.value.error;
+                ServerLogger.warn(`⚠️ yt-dlp 실패: ${error}`);
+            }
+
+            // 최소 하나라도 성공했는지 확인
+            if (!instaloaderData && !ytDlpData) {
+                throw new Error('모든 추출기 실패');
+            }
+
+            // 데이터 병합
+            const { merged, sourceMap } = this.mergeExtractorData(instaloaderData, ytDlpData);
+
+            return {
+                success: true,
+                platform: 'INSTAGRAM',
+                url: reelsUrl,
+                post: merged.post,
+                profile: merged.profile,
+                extractedAt: new Date().toISOString(),
+                extractor: 'hybrid',
+                extractorDetails: {
+                    instaloader: !!instaloaderData,
+                    ytDlp: !!ytDlpData,
+                    sourceMap
+                }
+            };
+
+        } catch (error) {
+            ServerLogger.error(`❌ Instagram Reels 하이브리드 추출 실패: ${error.message}`);
+            throw new Error(`Instagram Reels 하이브리드 추출 실패: ${error.message}`);
+        }
+    }
+
+    /**
      * Instagram Reels 데이터 통합 추출 (메인 함수)
      */
     async extractReelsData(reelsUrl) {
         try {
             ServerLogger.info(`🎬 Instagram Reels 데이터 추출 시작: ${reelsUrl}`);
 
+            // 하이브리드 방식 우선 시도
+            try {
+                return await this.extractReelsDataHybrid(reelsUrl);
+            } catch (hybridError) {
+                ServerLogger.warn(`⚠️ 하이브리드 추출 실패: ${hybridError.message}`);
+                ServerLogger.info(`🔄 기존 순차 방식으로 재시도...`);
+            }
+
+            // 기존 순차 방식 (백업)
             // 1차 시도: Python Instaloader 스크립트 실행
             try {
                 // URL에서 shortcode 추출
