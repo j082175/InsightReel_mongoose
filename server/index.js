@@ -842,7 +842,7 @@ app.post('/api/process-video', async (req, res) => {
             postUrl,
             url,
             metadata,
-            analysisType = 'quick',
+            analysisType = 'multi-frame',
             useAI = true,
             mode = 'immediate',
             skipVideoDownload = false, // 새로운 플래그 추가
@@ -1145,16 +1145,8 @@ app.post('/api/process-video', async (req, res) => {
 
                     // videoPath가 있으면 실제 비디오에서 프레임 추출, 없으면 API 썸네일 사용
                     if (videoPath) {
-                        if (analysisType === 'multi-frame' || analysisType === 'full') {
-                            ServerLogger.info('2️⃣ YouTube 다중 프레임 추출 중...');
-                            thumbnailPaths = await videoProcessor.generateThumbnail(
-                                videoPath,
-                                analysisType,
-                            );
-                            ServerLogger.info(
-                                `✅ ${thumbnailPaths.length}개 프레임 추출 완료`,
-                            );
-                        } else {
+                        ServerLogger.info(`🔍 DEBUG: analysisType = '${analysisType}'`);
+                        if (analysisType === 'quick') {
                             ServerLogger.info('2️⃣ YouTube 단일 썸네일 생성 중...');
                             var singleThumbnail =
                                 await videoProcessor.generateThumbnail(
@@ -1164,6 +1156,12 @@ app.post('/api/process-video', async (req, res) => {
                             thumbnailPaths = Array.isArray(singleThumbnail)
                                 ? singleThumbnail
                                 : [singleThumbnail];
+                        } else {
+                            ServerLogger.info('2️⃣ YouTube 다중 프레임 썸네일 생성 중...');
+                            thumbnailPaths = await videoProcessor.generateThumbnail(
+                                videoPath,
+                                'multi-frame'
+                            );
                         }
                     } else {
                         // 폴백: API 썸네일 사용
@@ -1276,16 +1274,8 @@ app.post('/api/process-video', async (req, res) => {
 
                     // videoPath가 있으면 실제 비디오에서 프레임 추출, 없으면 API 썸네일 사용
                     if (videoPath) {
-                        if (analysisType === 'multi-frame' || analysisType === 'full') {
-                            ServerLogger.info('2️⃣ TikTok 다중 프레임 추출 중...');
-                            thumbnailPaths = await videoProcessor.generateThumbnail(
-                                videoPath,
-                                analysisType,
-                            );
-                            ServerLogger.info(
-                                `✅ ${thumbnailPaths.length}개 프레임 추출 완료`,
-                            );
-                        } else {
+                        ServerLogger.info(`🔍 DEBUG: analysisType = '${analysisType}'`);
+                        if (analysisType === 'quick') {
                             ServerLogger.info('2️⃣ TikTok 단일 썸네일 생성 중...');
                             var singleThumbnail =
                                 await videoProcessor.generateThumbnail(
@@ -1295,6 +1285,15 @@ app.post('/api/process-video', async (req, res) => {
                             thumbnailPaths = Array.isArray(singleThumbnail)
                                 ? singleThumbnail
                                 : [singleThumbnail];
+                        } else {
+                            ServerLogger.info('2️⃣ TikTok 다중 프레임 추출 중...');
+                            thumbnailPaths = await videoProcessor.generateThumbnail(
+                                videoPath,
+                                'multi-frame',
+                            );
+                            ServerLogger.info(
+                                `✅ ${thumbnailPaths.length}개 프레임 추출 완료`,
+                            );
                         }
                     } else {
                         // 폴백: API 썸네일 사용
@@ -1353,19 +1352,7 @@ app.post('/api/process-video', async (req, res) => {
                         thumbnailPaths = []; // 빈 배열로 설정
                     } else {
                         // 기존 방식: 2단계: 썸네일/프레임 생성
-                        if (
-                            analysisType === 'multi-frame' ||
-                            analysisType === 'full'
-                        ) {
-                            ServerLogger.info('2️⃣ 다중 프레임 추출 중...');
-                            thumbnailPaths = await videoProcessor.generateThumbnail(
-                                videoPath,
-                                analysisType,
-                            );
-                            ServerLogger.info(
-                                `✅ ${thumbnailPaths.length}개 프레임 추출 완료`,
-                            );
-                        } else {
+                        if (analysisType === 'quick') {
                             ServerLogger.info('2️⃣ 단일 썸네일 생성 중...');
                             var singleThumbnail =
                                 await videoProcessor.generateThumbnail(
@@ -1375,6 +1362,15 @@ app.post('/api/process-video', async (req, res) => {
                             thumbnailPaths = Array.isArray(singleThumbnail)
                                 ? singleThumbnail
                                 : [singleThumbnail];
+                        } else {
+                            ServerLogger.info('2️⃣ 다중 프레임 추출 중...');
+                            thumbnailPaths = await videoProcessor.generateThumbnail(
+                                videoPath,
+                                'multi-frame',
+                            );
+                            ServerLogger.info(
+                                `✅ ${thumbnailPaths.length}개 프레임 추출 완료`,
+                            );
                         }
                     }
 
@@ -2295,7 +2291,7 @@ app.post(
         let postUrl = null; // 에러 핸들링에서 사용하기 위해 상위 스코프에 선언
 
         try {
-            const { platform, analysisType = 'quick', useAI = true } = req.body;
+            const { platform, analysisType = 'multi-frame', useAI = true } = req.body;
             postUrl = req.body.postUrl; // 명시적으로 할당
             // 🚨 중요: FormData로 전송된 metadata는 JSON 문자열이므로 파싱 필요!
             let metadata = {};

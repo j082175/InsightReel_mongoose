@@ -1057,7 +1057,7 @@ class VideoProcessor {
         }
     }
 
-    async generateThumbnail(videoPath, analysisType = 'quick') {
+    async generateThumbnail(videoPath, analysisType = 'multi-frame') {
         const startTime = Date.now();
         try {
             const videoName = path.basename(videoPath, path.extname(videoPath));
