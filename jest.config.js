@@ -1,38 +1,55 @@
 module.exports = {
   // 테스트 환경 설정
   testEnvironment: 'node',
-  
-  // 테스트 파일 패턴
+
+  // 테스트 파일 패턴 (프로젝트 테스트만 포함)
   testMatch: [
-    '**/tests/**/*.test.js',
-    '**/tests/**/*.spec.js'
+    '<rootDir>/tests/**/*.test.js',
+    '<rootDir>/tests/**/*.spec.js'
   ],
-  
-  // 커버리지 설정
-  collectCoverage: true,
+
+  // node_modules 완전 제외
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/frontend/node_modules/',
+    '/extension/',
+    '/downloads/'
+  ],
+
+  // 커버리지 설정 (기본적으로 비활성화)
+  collectCoverage: false,
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
   coveragePathIgnorePatterns: [
     '/node_modules/',
+    '/frontend/node_modules/',
     '/tests/',
     '/extension/',
     '/downloads/'
   ],
-  
+
   // 환경 변수 설정
   setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
-  
+
   // 타임아웃 설정 (AI 분석은 시간이 오래 걸릴 수 있음)
   testTimeout: 30000,
-  
-  // 모듈 경로 매핑 (moduleNameMapping은 잘못된 옵션명입니다)
-  // moduleNameMapping: {
-  //   '^@/(.*)$': '<rootDir>/server/$1'
-  // },
-  
+
   // 테스트 결과 보고
   verbose: true,
-  
-  // 병렬 실행 제한 (AI API 호출 제한 고려)
-  maxWorkers: 2
+
+  // 메모리 사용량 최적화
+  maxWorkers: 1,
+  workerIdleMemoryLimit: '512MB',
+
+  // 캐시 제한
+  cache: true,
+  cacheDirectory: '<rootDir>/node_modules/.cache/jest',
+
+  // 파일 변경 감지 최적화
+  watchPathIgnorePatterns: [
+    '/node_modules/',
+    '/frontend/node_modules/',
+    '/coverage/',
+    '/.git/'
+  ]
 };

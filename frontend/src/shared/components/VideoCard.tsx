@@ -137,14 +137,16 @@ const VideoCard: React.FC<VideoCardProps> = memo(
     };
 
     // 업로드 날짜별 카드 테두리 색상 결정
-    const getCardBorder = (uploadDate: string) => {
+    const getCardBorder = (uploadDate?: string) => {
+      if (!uploadDate) return '';
+
       const now = new Date();
       const uploadTime = new Date(uploadDate);
       const daysDiff = Math.floor((now.getTime() - uploadTime.getTime()) / (1000 * 60 * 60 * 24));
 
-      if (daysDiff <= 1) return 'border-2 border-red-500 shadow-lg shadow-red-500/20';     // 1일 이내 빨강 테두리
-      if (daysDiff <= 3) return 'border-2 border-yellow-500 shadow-lg shadow-yellow-500/20'; // 3일 이내 노랑 테두리
-      return '';                                                                            // 기본 테두리 없음
+      if (daysDiff <= 1) return 'border-2 border-red-500 shadow-xl shadow-red-500/30 ring-1 ring-red-400/50 bg-gradient-to-br from-red-50/20 to-transparent';
+      if (daysDiff <= 3) return 'border-2 border-yellow-500 shadow-xl shadow-yellow-500/30 ring-1 ring-yellow-400/50 bg-gradient-to-br from-yellow-50/20 to-transparent';
+      return '';
     };
 
     // 카드 크기에 따른 배지 크기 계산 (280px 기준으로 정규화)
@@ -162,10 +164,10 @@ const VideoCard: React.FC<VideoCardProps> = memo(
           }
         } else {
           // 재생 로직
-          if (video.platform === PLATFORMS.YOUTUBE) {
+          if (video?.platform === PLATFORMS.YOUTUBE) {
             setSelectedVideoForPlay(video);
           } else {
-            window.open(video.url, '_blank', 'noopener,noreferrer');
+            window.open(video?.url, '_blank', 'noopener,noreferrer');
           }
         }
       },
@@ -196,11 +198,11 @@ const VideoCard: React.FC<VideoCardProps> = memo(
       (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        if (onChannelClick && video.channelName) {
-          onChannelClick(video.channelName);
+        if (onChannelClick && video?.channelName) {
+          onChannelClick(video?.channelName || 'Unknown Channel');
         }
       },
-      [onChannelClick, video.channelName]
+      [onChannelClick, video?.channelName]
     );
 
     const handleDelete = useCallback(
@@ -226,7 +228,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(
           if (!response.ok) {
             throw new Error('삭제 실패');
           }
-          toast.success(`"${video.title}" 삭제 완료`);
+          toast.success(`"${video?.title || '영상'}" 삭제 완료`);
         }
         setShowDeleteModal(false);
       } catch (error) {
@@ -246,9 +248,9 @@ const VideoCard: React.FC<VideoCardProps> = memo(
       <motion.div
         className={`
           relative group bg-white rounded-lg shadow-sm cursor-pointer overflow-hidden will-change-transform
+          ${getCardBorder(video?.uploadDate) || 'border-2 border-black'}
           ${isSelected ? 'ring-2 ring-blue-500' : ''}
           ${isSelectMode ? 'hover:ring-2 hover:ring-blue-300' : ''}
-          ${getCardBorder(video.uploadDate)}
         `}
         style={{
           backfaceVisibility: 'hidden',
@@ -287,7 +289,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(
           <motion.div variants={THUMBNAIL_VARIANTS} className="h-full">
             <img
               src={thumbnailUrl}
-              alt={video.title}
+              alt={video?.title || 'Video thumbnail'}
               className="w-full h-full"
               style={{
                 objectFit: 'cover',
@@ -320,22 +322,49 @@ const VideoCard: React.FC<VideoCardProps> = memo(
             transition={{ delay: 0.2, duration: 0.3 }}
           >
             <span
-              className={`inline-block px-[0.4em] py-[0.2em] rounded-full font-medium text-white ${getPlatformStyle(video.platform)}`}
+              className={`inline-block px-[0.4em] py-[0.2em] rounded-full font-medium text-white ${getPlatformStyle(video?.platform)}`}
               style={{ fontSize: badgeFontSize }}
             >
-              {video.platform}
+              {video?.platform || 'Unknown'}
             </span>
           </motion.div>
 
           {/* 영상 길이 - 상대적 크기 사용 */}
-          {video.duration && (
-            <div className="absolute top-[3%] right-[3%]">
+          {video?.duration && (
+            <div className="absolute top-[3%] right-[3%] flex flex-col gap-1">
               <span
                 className="inline-block px-[0.4em] py-[0.2em] bg-black bg-opacity-70 text-white rounded"
                 style={{ fontSize: badgeFontSize }}
               >
-                {getDurationLabel(video.duration)}
+                {getDurationLabel(video?.duration || 0)}
               </span>
+              {(() => {
+                const now = new Date();
+                const uploadTime = new Date(video?.uploadDate || new Date());
+                const daysDiff = Math.floor((now.getTime() - uploadTime.getTime()) / (1000 * 60 * 60 * 24));
+
+                if (daysDiff <= 1) {
+                  return (
+                    <span
+                      className="inline-block px-[0.4em] py-[0.2em] bg-red-500 text-white rounded font-bold animate-pulse shadow-lg shadow-red-500/50"
+                      style={{ fontSize: `${0.6 * badgeScale}rem` }}
+                    >
+                      🔥 NEW
+                    </span>
+                  );
+                }
+                if (daysDiff <= 3) {
+                  return (
+                    <span
+                      className="inline-block px-[0.4em] py-[0.2em] bg-yellow-500 text-white rounded font-bold shadow-lg shadow-yellow-500/50"
+                      style={{ fontSize: `${0.6 * badgeScale}rem` }}
+                    >
+                      ⭐ HOT
+                    </span>
+                  );
+                }
+                return null;
+              })()}
             </div>
           )}
 
@@ -374,7 +403,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.3 }}
               >
-                {video.title}
+                {video?.title || 'Untitled Video'}
               </motion.h3>
 
               <button
@@ -388,7 +417,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(
                   transform: 'translateZ(0)'
                 }}
               >
-                {video.channelName}
+                {video?.channelName || 'Unknown Channel'}
               </button>
             </div>
 
@@ -427,16 +456,16 @@ const VideoCard: React.FC<VideoCardProps> = memo(
               </div>
 
             <div
-              className={`text-xs text-white px-2 py-1 bg-gradient-to-r ${getDateGradient(video.uploadDate)} rounded-full inline-block transition-all duration-300 hover:scale-105 cursor-pointer will-change-transform`}
+              className={`text-xs text-white px-2 py-1 bg-gradient-to-r ${getDateGradient(video?.uploadDate)} rounded-full inline-block transition-all duration-300 hover:scale-105 cursor-pointer will-change-transform`}
               style={{ backfaceVisibility: 'hidden', perspective: '1000px' }}
-              title={`${getRelativeTime(video.uploadDate)} (${formatDate(video.uploadDate)})`}
+              title={`${getRelativeTime(video?.uploadDate)} (${formatDate(video?.uploadDate)})`}
             >
-              {getRelativeTime(video.uploadDate)}
+              {getRelativeTime(video?.uploadDate)}
             </div>
 
-            {showArchiveInfo && video.collectedAt && (
+            {showArchiveInfo && video?.collectedAt && (
               <div className="mt-2 text-xs text-blue-300">
-                수집: {formatDate(video.collectedAt)}
+                수집: {formatDate(video?.collectedAt)}
               </div>
             )}
           </motion.div>
@@ -468,9 +497,9 @@ const VideoCard: React.FC<VideoCardProps> = memo(
   (prevProps, nextProps) => {
     // true를 반환하면 리렌더링 방지, false를 반환하면 리렌더링 수행
     return (
-      prevProps.video._id === nextProps.video._id &&
-      prevProps.video.views === nextProps.video.views &&
-      prevProps.video.title === nextProps.video.title &&
+      prevProps.video?._id === nextProps.video?._id &&
+      prevProps.video?.views === nextProps.video?.views &&
+      prevProps.video?.title === nextProps.video?.title &&
       prevProps.isSelected === nextProps.isSelected &&
       prevProps.isSelectMode === nextProps.isSelectMode &&
       prevProps.showArchiveInfo === nextProps.showArchiveInfo

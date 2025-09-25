@@ -270,7 +270,7 @@ const ChannelGroupCard: React.FC<ChannelGroupCardProps> = memo(
 
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-500">
-                {group.channels.length}개 채널
+                {group.channels?.length || 0}개 채널
               </span>
               {group.lastCollectedAt && (
                 <span className="text-gray-400">

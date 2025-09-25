@@ -4068,6 +4068,15 @@ try {
     console.error('❌ app-update router 로드 실패:', error);
 }
 
+// 📸 Instagram API 라우터 등록
+try {
+    const instagramRoutes = require('./routes/instagram');
+    app.use('/api/instagram', instagramRoutes);
+    ServerLogger.success('✅ Instagram API 라우터 등록 완료');
+} catch (error) {
+    ServerLogger.error('❌ Instagram router 로드 실패:', error);
+}
+
 // 404 핸들러 (모든 라우트 등록 후 마지막에)
 app.use((req, res) => {
     ResponseHandler.notFound(res, `경로 '${req.path}'를 찾을 수 없습니다.`);

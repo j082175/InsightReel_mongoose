@@ -11,6 +11,7 @@ const { ServerLogger } = require('../utils/logger');
 const youtubeBatchProcessor = require('./YouTubeBatchProcessor');
 const HybridYouTubeExtractor = require('./HybridYouTubeExtractor');
 const HybridDataConverter = require('./HybridDataConverter');
+const InstagramReelsExtractor = require('./InstagramReelsExtractor');
 
 const { PLATFORMS } = require('../config/api-messages');
 
@@ -74,6 +75,7 @@ class VideoProcessor {
         this.thumbnailDir = path.join(this.downloadDir, 'thumbnails');
         this.youtubeApiKey = null; // ApiKeyManager에서 동적으로 로드
         this.hybridExtractor = null; // 비동기 초기화
+        this.instagramExtractor = new InstagramReelsExtractor(); // Instagram Reels 데이터 추출기
         this._initialized = false;
 
         // 서비스 레지스트리에 등록
@@ -162,12 +164,8 @@ class VideoProcessor {
                 ServerLogger.info(`📺 YouTube 플랫폼 감지됨 - yt-dlp로 다운로드`);
                 return await this.downloadWithYtDlp(videoUrl, filePath, startTime);
             } else if (platform === PLATFORMS.INSTAGRAM || this.isInstagramUrl(videoUrl)) {
-                ServerLogger.info(`📸 Instagram 플랫폼 감지됨 - 전용 다운로드 함수 호출`);
-                return await this.downloadInstagramVideo(
-                    videoUrl,
-                    filePath,
-                    startTime,
-                );
+                ServerLogger.info(`📸 Instagram 플랫폼 감지됨 - yt-dlp로 다운로드`);
+                return await this.downloadWithYtDlp(videoUrl, filePath, startTime);
             } else if (platform === PLATFORMS.TIKTOK || this.isTikTokUrl(videoUrl)) {
                 ServerLogger.info(`🎵 TikTok 플랫폼 감지됨 - yt-dlp로 다운로드`);
                 return await this.downloadWithYtDlp(videoUrl, filePath, startTime);
@@ -486,8 +484,57 @@ class VideoProcessor {
             // yt-dlp.exe 경로 (프로젝트 루트)
             const ytdlpExe = path.join(__dirname, '../../yt-dlp.exe');
 
+            // Instagram 쿠키 옵션 추가
+            const isInstagram = videoUrl.includes('instagram.com');
+            let cookieOptions = '';
+            if (isInstagram) {
+                const cookiesPath = path.join(__dirname, '../../data/instagram_cookies.txt');
+
+                // 쿠키 파일 상태 확인
+                let cookiesValid = false;
+                if (fs.existsSync(cookiesPath)) {
+                    try {
+                        const stats = fs.statSync(cookiesPath);
+                        const hoursOld = (Date.now() - stats.mtime.getTime()) / (1000 * 60 * 60);
+
+                        // 쿠키 파일이 24시간 이내에 생성/수정되었으면 유효하다고 간주
+                        if (hoursOld < 24) {
+                            cookiesValid = true;
+                            cookieOptions = `--cookies "${cookiesPath}"`;
+                            ServerLogger.info(`🍪 Instagram 쿠키 파일 사용 (${Math.round(hoursOld)}시간 전)`);
+                        } else {
+                            ServerLogger.warn(`⏰ Instagram 쿠키가 오래됨 (${Math.round(hoursOld)}시간 전)`);
+                        }
+                    } catch (error) {
+                        ServerLogger.warn('⚠️ 쿠키 파일 상태 확인 실패:', error.message);
+                    }
+                }
+
+                if (!cookiesValid) {
+                    cookieOptions = '--username "j082175j082172@gmail.com" --password "!@tkadnjsth3"';
+                    ServerLogger.info('🔐 Instagram 로그인 옵션 사용 (쿠키 없음/만료)');
+
+                    // 백그라운드에서 쿠키 갱신 시도 (비동기)
+                    try {
+                        const { spawn } = require('child_process');
+                        const refreshScript = path.join(__dirname, '../../scripts/instagram/auto_refresh_cookies.js');
+
+                        if (fs.existsSync(refreshScript)) {
+                            ServerLogger.info('🔄 백그라운드에서 Instagram 쿠키 갱신 시도...');
+                            const refreshProcess = spawn('node', [refreshScript], {
+                                detached: true,
+                                stdio: 'ignore'
+                            });
+                            refreshProcess.unref(); // 부모 프로세스와 분리
+                        }
+                    } catch (refreshError) {
+                        ServerLogger.warn('⚠️ 쿠키 자동 갱신 실패:', refreshError.message);
+                    }
+                }
+            }
+
             // yt-dlp 명령어 구성 (exe 버전)
-            const command = `"${ytdlpExe}" -f "best[ext=mp4]/best" -o "${filePath}" --no-playlist --quiet --no-warnings "${videoUrl}"`;
+            const command = `"${ytdlpExe}" -f "best[ext=mp4]/best" -o "${filePath}" --no-playlist --quiet --no-warnings ${cookieOptions} "${videoUrl}"`;
 
             ServerLogger.info(`📝 실행 명령어: ${command}`);
 
@@ -1606,6 +1653,96 @@ class VideoProcessor {
         throw new Error('유효하지 않은 YouTube URL입니다.');
     }
 
+    // Instagram 비디오 메타데이터 추출 함수 (Instaloader 사용)
+    async getInstagramVideoInfo(instagramUrl) {
+        try {
+            ServerLogger.info(`📸 Instagram 메타데이터 추출 시작: ${instagramUrl}`);
+
+            // Instaloader를 통한 데이터 추출
+            const instagramData = await this.instagramExtractor.extractReelsData(instagramUrl);
+
+            if (!instagramData.success) {
+                throw new Error(`Instagram 데이터 추출 실패: ${instagramData.error || 'Unknown error'}`);
+            }
+
+            const { post, profile } = instagramData;
+
+            // VideoProcessor 표준 형식으로 변환
+            const standardizedData = {
+                // 기본 비디오 정보
+                videoId: post.shortcode,
+                title: this.extractInstagramTitle(post.caption),
+                description: post.caption || '',
+                channelName: profile.username,
+                channelId: profile.username,
+                uploadDate: post.date,
+                thumbnailUrl: post.url,
+                category: '라이프스타일',
+                youtubeCategory: '라이프스타일',
+
+                // Instagram 특화 통계 정보
+                views: post.video_view_count || 0,
+                likes: post.likes || 0,
+                dislikes: 0,
+                comments: post.comments || 0,
+                shares: 0,
+
+                // 채널 정보
+                subscriberCount: profile.followers || 0,
+                channelDescription: profile.biography || '',
+                channelThumbnail: profile.profile_pic_url || '',
+                channelVerified: profile.is_verified || false,
+
+                // 비디오 메타데이터
+                duration: post.is_video ? 30 : 0,
+                durationFormatted: post.is_video ? '0:30' : '0:00',
+                quality: 'HD',
+                fps: 30,
+                codec: 'mp4',
+
+                // Instagram 추가 정보
+                platform: 'INSTAGRAM',
+                is_video: post.is_video,
+                typename: post.typename,
+                video_url: post.video_url,
+                profile_data: {
+                    followees: profile.followees,
+                    mediacount: profile.mediacount,
+                    is_private: profile.is_private,
+                    full_name: profile.full_name
+                },
+
+                // 메타데이터
+                extractedAt: new Date().toISOString(),
+                apiSource: 'instaloader',
+                dataVersion: '2.0.0'
+            };
+
+            ServerLogger.info('✅ Instagram 메타데이터 추출 완료');
+            ServerLogger.info(`📊 조회수: ${standardizedData.views}, 좋아요: ${standardizedData.likes}, 댓글: ${standardizedData.comments}`);
+            ServerLogger.info(`👤 채널: ${standardizedData.channelName} (팔로워: ${standardizedData.subscriberCount}명)`);
+
+            return standardizedData;
+
+        } catch (error) {
+            ServerLogger.error(`❌ Instagram 메타데이터 추출 실패: ${error.message}`);
+            throw new Error(`Instagram 메타데이터 추출 실패: ${error.message}`);
+        }
+    }
+
+    // Instagram 캡션에서 제목 추출
+    extractInstagramTitle(caption) {
+        if (!caption) return 'Instagram 포스트';
+
+        // 첫 번째 줄을 제목으로 사용
+        const firstLine = caption.split('\n')[0];
+
+        // 너무 길면 자르기 (50자 제한)
+        return firstLine.length > 50 ?
+            firstLine.substring(0, 50) + '...' :
+            firstLine;
+    }
+
     // YouTube 비디오 정보 수집 (배치 처리)
     async getYouTubeVideoInfoBatch(videoUrl, options = {}) {
         try {
@@ -2218,6 +2355,52 @@ class VideoProcessor {
     clearApiKeyCache() {
         this.youtubeApiKey = null;
         ServerLogger.info('🔄 VideoProcessor API 키 캐시 클리어', null, 'VIDEO-PROCESSOR');
+    }
+
+    /**
+     * 플랫폼별 비디오 메타데이터 처리 (메인 함수)
+     * @param {Object} options - 처리 옵션
+     * @param {string} options.url - 비디오 URL
+     * @param {string} options.platform - 플랫폼 (YOUTUBE, INSTAGRAM, TIKTOK)
+     * @param {Object} options.metadata - 추가 메타데이터
+     * @returns {Object} 처리된 비디오 정보
+     */
+    async processVideo({ url, platform, metadata = {} }) {
+        try {
+            ServerLogger.info(`🎯 비디오 처리 시작: ${platform} - ${url}`);
+
+            // 플랫폼별 메타데이터 추출
+            let videoInfo;
+
+            if (platform === PLATFORMS.YOUTUBE || this.isYouTubeUrl(url)) {
+                ServerLogger.info('📺 YouTube 비디오 메타데이터 추출 중...');
+                videoInfo = await this.getYouTubeVideoInfo(url);
+            } else if (platform === PLATFORMS.INSTAGRAM || this.isInstagramUrl(url)) {
+                ServerLogger.info('📸 Instagram 비디오 메타데이터 추출 중...');
+                videoInfo = await this.getInstagramVideoInfo(url);
+            } else if (platform === PLATFORMS.TIKTOK || this.isTikTokUrl(url)) {
+                ServerLogger.info('🎵 TikTok 비디오 메타데이터 추출 중...');
+                videoInfo = await this.getTikTokVideoInfo(url);
+            } else {
+                throw new Error(`지원하지 않는 플랫폼입니다: ${platform}`);
+            }
+
+            // 추가 메타데이터 병합
+            const enrichedVideoInfo = {
+                ...videoInfo,
+                ...metadata,
+                processedAt: new Date().toISOString(),
+                originalUrl: url,
+                detectedPlatform: platform
+            };
+
+            ServerLogger.info(`✅ 비디오 처리 완료: ${enrichedVideoInfo.title}`);
+            return enrichedVideoInfo;
+
+        } catch (error) {
+            ServerLogger.error(`❌ 비디오 처리 실패 (${platform}):`, error);
+            throw new Error(`비디오 처리 실패: ${error.message}`);
+        }
     }
 
 

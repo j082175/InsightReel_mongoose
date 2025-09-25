@@ -217,12 +217,14 @@ class VideoDataConverter {
 
         // 업로드 날짜 결정 (Instagram은 날짜만)
         let uploadDate;
-        if (metadata.uploadDate) {
+        if (metadata && metadata.uploadDate) {
             uploadDate = new Date(metadata.uploadDate).toLocaleDateString(
                 'ko-KR',
             );
+        } else if (timestamp) {
+            uploadDate = new Date(timestamp).toLocaleDateString('ko-KR');
         } else {
-            uploadDate = new Date(timestamp).toLocaleString('ko-KR');
+            uploadDate = ''; // 없으면 빈 값
         }
 
         // 동적 카테고리 처리 (기존 로직 동일)
@@ -289,40 +291,40 @@ class VideoDataConverter {
             // Instagram 전용 19개 필드
             uploadDate: uploadDate,
             platform: (platform || 'INSTAGRAM').toUpperCase(),
-            channelName: metadata.channelName || 
-                        metadata.channel || 
-                        metadata.channelTitle || 
-                        metadata.author || 
-                        metadata.account || 
+            channelName: (metadata && metadata.channelName) ||
+                        (metadata && metadata.channel) ||
+                        (metadata && metadata.channelTitle) ||
+                        (metadata && metadata.author) ||
+                        (metadata && metadata.account) ||
                         '',
-            channelUrl: metadata.channelUrl || '',
-            mainCategory: analysis.mainCategory || '미분류',
-            middleCategory: analysis.middleCategory || '',
+            channelUrl: (metadata && metadata.channelUrl) || '',
+            mainCategory: (analysis && analysis.mainCategory) || '미분류',
+            middleCategory: (analysis && analysis.middleCategory) || '',
             fullCategoryPath: fullCategoryPath,
             categoryDepth: categoryDepth,
-            keywords: Array.isArray(analysis.keywords)
+            keywords: (analysis && Array.isArray(analysis.keywords))
                 ? analysis.keywords
-                : analysis.keywords
+                : (analysis && analysis.keywords)
                 ? [analysis.keywords]
                 : [],
-            hashtags: Array.isArray(analysis.hashtags)
+            hashtags: (analysis && Array.isArray(analysis.hashtags))
                 ? analysis.hashtags
-                : analysis.hashtags
+                : (analysis && analysis.hashtags)
                 ? [analysis.hashtags]
                 : [],
-            mentions: Array.isArray(analysis.mentions)
+            mentions: (analysis && Array.isArray(analysis.mentions))
                 ? analysis.mentions
-                : analysis.mentions
+                : (analysis && analysis.mentions)
                 ? [analysis.mentions]
                 : [],
-            description: metadata.description || '',
-            analysisContent: analysis.summary || '',
-            likes: this.parseNumber(metadata.likes),
-            commentsCount: this.parseNumber(metadata.commentsCount),
+            description: (metadata && metadata.description) || '',
+            analysisContent: (analysis && analysis.summary) || '',
+            likes: this.parseNumber((metadata && metadata.likes) || 0),
+            commentsCount: this.parseNumber((metadata && metadata.commentsCount) || 0),
             url: url || '',
-            thumbnailUrl: metadata.thumbnailUrl || '',
-            confidence: this.formatConfidence(analysis.confidence),
-            analysisStatus: analysis.aiModel || '수동',
+            thumbnailUrl: (metadata && metadata.thumbnailUrl) || '',
+            confidence: this.formatConfidence((analysis && analysis.confidence) || 0),
+            analysisStatus: (analysis && analysis.aiModel) || '수동',
             collectionTime: new Date(),
         };
     }

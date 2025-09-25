@@ -39,32 +39,17 @@ function UniversalGrid<T extends GridItem>({
 
   // 검색 상태 관리
   const [searchTerm, setSearchTerm] = useState('');
+  const [filteredDataFromSearch, setFilteredDataFromSearch] = useState(data);
 
-  // 검색 필터링된 데이터
-  const filteredData = useMemo(() => {
-    if (!enableSearch || !searchTerm || !searchTerm.trim()) {
-      return data;
+  // 검색으로 필터링된 데이터 사용 (SimpleAutocomplete에서 필터링한 데이터 우선)
+  const filteredData = filteredDataFromSearch;
+
+  // data가 변경되면 filteredDataFromSearch도 초기화
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredDataFromSearch(data);
     }
-
-    const searchLower = searchTerm.toLowerCase();
-
-    return data.filter((item) => {
-      if (searchFields && searchFields.length > 0) {
-        // 지정된 필드에서만 검색
-        return searchFields.some((field) => {
-          const value = item[field];
-          return value && String(value).toLowerCase().includes(searchLower);
-        });
-      } else {
-        // 기본 검색 (모든 문자열 필드 검색)
-        const searchableValues = Object.values(item as Record<string, any>)
-          .filter(value => typeof value === 'string')
-          .join(' ')
-          .toLowerCase();
-        return searchableValues.includes(searchLower);
-      }
-    });
-  }, [data, searchTerm, enableSearch, searchFields]);
+  }, [data, searchTerm]);
 
   // 통합 페이지네이션 훅 사용 (필터링된 데이터로)
   const pagination = useUniversalPagination(filteredData, { initialItemsPerPage });
@@ -294,6 +279,7 @@ function UniversalGrid<T extends GridItem>({
           placeholder={searchPlaceholder}
           onSearchChange={(searchTerm, filteredDataFromAutocomplete) => {
             setSearchTerm(searchTerm);
+            setFilteredDataFromSearch(filteredDataFromAutocomplete);
             onSearchChange?.(searchTerm, filteredDataFromAutocomplete);
           }}
           className="mb-4"

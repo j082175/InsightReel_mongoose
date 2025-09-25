@@ -1,7 +1,9 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import { UniversalGrid } from '../../../widgets/UniversalGrid/UniversalGrid';
 import { VideoCard } from '../../../shared/components';
 import { Video } from '../../../shared/types';
+import { getDocumentId } from '../../../shared/utils';
 
 interface BatchVideoListProps {
   isOpen: boolean;
@@ -37,9 +39,22 @@ const BatchVideoList: React.FC<BatchVideoListProps> = ({
 
   if (!isOpen || !batchId) return null;
 
+  // backdrop 클릭 핸들러
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-7xl max-h-[90vh] overflow-hidden">
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={handleBackdropClick}
+    >
+      <div
+        className="bg-white rounded-lg w-full max-w-7xl max-h-[90vh] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between p-6 border-b">
           <div>
             <h2 className="text-xl font-semibold">배치 영상 목록</h2>
@@ -71,22 +86,29 @@ const BatchVideoList: React.FC<BatchVideoListProps> = ({
               </div>
             </div>
           ) : (
-            <>
-              <div className="mb-4 text-sm text-gray-600">
-                총 {videos.length}개 영상
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {videos.map((video, index) => (
+            <UniversalGrid
+              data={videos}
+              renderCard={(item, cardProps) => {
+                const itemId = getDocumentId(item);
+                const itemTitle = item?.title || item?.name || 'unknown';
+
+                return (
                   <VideoCard
-                    key={`${video.id}-${video.title}-${index}`}
-                    video={video as any}
+                    key={`${itemId}-${itemTitle}`}
+                    video={item as any}
+                    isSelected={cardProps.isSelected}
+                    isSelectMode={cardProps.isSelectMode}
+                    onSelect={cardProps.onSelect}
                     onDelete={(deletedVideo) => {
                       onVideoDelete(deletedVideo);
                     }}
                   />
-                ))}
-              </div>
-            </>
+                );
+              }}
+              onDelete={onVideoDelete}
+              showStats={true}
+              enableSearch={false}
+            />
           )}
         </div>
       </div>

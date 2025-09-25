@@ -10,7 +10,7 @@ import { Video } from '../types';
  */
 export const getVideoId = (video: Video): string => {
   // MongoDB _id 필드 직접 사용 - 변환 불필요
-  return video._id;
+  return video?._id || video?.id || '';
 };
 
 /**
@@ -18,7 +18,7 @@ export const getVideoId = (video: Video): string => {
  * ⚡ 단순화됨: 이제 thumbnailUrl 필드만 사용
  */
 export const getThumbnailUrl = (video: Video): string => {
-  return video.thumbnailUrl || '';
+  return video?.thumbnailUrl || '';
 };
 
 /**
@@ -26,5 +26,5 @@ export const getThumbnailUrl = (video: Video): string => {
  * ⚡ 단순화됨: 이제 views 필드만 사용
  */
 export const getViewCount = (video: Video): number => {
-  return video.views || 0;
+  return video?.views || 0;
 };

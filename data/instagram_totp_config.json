@@ -1,0 +1,13 @@
+{
+  "totp_secret": "",
+  "setup_instructions": [
+    "1. Instagram → Settings → Security → Two-Factor Authentication",
+    "2. Choose 'Authentication App' method",
+    "3. Click 'Set up manually' instead of scanning QR code",
+    "4. Copy the SECRET KEY (not the QR code)",
+    "5. Paste the SECRET KEY into 'totp_secret' field above",
+    "6. Save this file and run the cookie extractor"
+  ],
+  "example_secret": "JBSWY3DPEHPK3PXP (your actual secret will be longer)",
+  "note": "Keep this file secure and never share it. Delete this file if you disable 2FA."
+}
