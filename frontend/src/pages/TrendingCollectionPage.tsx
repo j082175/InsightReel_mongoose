@@ -12,6 +12,7 @@ import { BulkCollectionModal } from '../features/trending-collection';
 import { useTrendingStore } from '../features/trending-collection/model/trendingStore';
 import { UniversalGrid } from '../widgets';
 import { Video } from '../shared/types';
+import { VideoCard } from '../shared/components';
 import { formatViews, getDocumentId } from '../shared/utils';
 
 const TrendingCollectionPage: React.FC = () => {
@@ -445,11 +446,21 @@ const TrendingCollectionPage: React.FC = () => {
             </div>
           </div>
         ) : (trendingVideos?.length || 0) > 0 ? (
-          <UniversalGrid
+          <UniversalGrid<Video>
             data={trendingVideos || []}
-            cardType="video"
+            renderCard={(video, props) => (
+              <VideoCard
+                video={video}
+                isSelected={props.isSelected}
+                onSelect={props.onSelect}
+                onDelete={() => props.onDelete?.(video)}
+                isSelectMode={props.isSelectMode}
+                cardWidth={props.cardWidth}
+              />
+            )}
             enableSearch={true}
             searchPlaceholder="트렌딩 영상 검색..."
+            searchFields={['title', 'keywords'] as (keyof Video)[]}
             onSearchChange={(searchTerm, filteredData) => {
               console.log('TrendingCollection Search:', searchTerm, 'Results:', filteredData.length);
             }}
@@ -479,7 +490,7 @@ const TrendingCollectionPage: React.FC = () => {
             onCardClick={() => {}} // 채널 클릭 기능 없음
             initialItemsPerPage={20}
             showVirtualScrolling={true}
-            gridSize={1}
+            gridSize={2}
             containerWidth={1200}
             containerHeight={600}
             className="bg-white rounded-lg shadow p-6"

@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import { Video } from '../shared/types';
 import { useAppContext } from '../app/providers';
 import { ChannelAnalysisModal } from '../features/channel-management';
-import { SearchBar } from '../shared/components';
+import { SearchBar, VideoCard } from '../shared/components';
 import { UniversalGrid } from '../widgets';
 import { VideoManagement } from '../features';
 import { FadeIn } from '../shared/components/animations';
@@ -21,7 +21,7 @@ import { formatViews } from '../shared/utils/formatters';
 const DashboardPage: React.FC = () => {
   const [selectedBatchId, setSelectedBatchId] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [gridSize, setGridSize] = useState(1);
+  const [gridSize, setGridSize] = useState(2);
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
 
 
@@ -170,9 +170,19 @@ const DashboardPage: React.FC = () => {
         )}
 
         {/* 🚀 UniversalGrid - 간소화된 통합 그리드 */}
-        <UniversalGrid
+        <UniversalGrid<Video>
           data={videos}
-          cardType="video"
+          renderCard={(video, props) => (
+            <VideoCard
+              video={video}
+              isSelected={props.isSelected}
+              onSelect={props.onSelect}
+              onDelete={() => props.onDelete?.(video)}
+              isSelectMode={props.isSelectMode}
+              onChannelClick={() => setChannelToAnalyze(video.channelName)}
+              cardWidth={props.cardWidth}
+            />
+          )}
           onSelectionChange={(selectedIds) => {
             // VideoStore에 동기화 (필요시)
             console.log('Selected items changed:', selectedIds);

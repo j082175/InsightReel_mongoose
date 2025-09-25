@@ -1,9 +1,8 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { UniversalGridProps, GridItem } from './types';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { UniversalGridProps, GridItem, CardRenderProps } from './types';
 import { useUniversalPagination } from './hooks';
-import { getCardRenderer } from './renderers';
 import { VirtualizedVideoGrid } from '../../shared/components/VirtualizedVideoGrid';
-import { SearchBar } from '../../shared/components';
+import { SimpleAutocomplete } from '../../shared/components';
 import { getDocumentId } from '../../shared/utils';
 
 /**
@@ -11,13 +10,14 @@ import { getDocumentId } from '../../shared/utils';
  * 페이지네이션, 가상 스크롤링, 선택/삭제 기능을 모두 포함
  * 선택 상태는 내부에서 관리하고 변경사항은 콜백으로 알림
  */
-export const UniversalGrid = <T extends GridItem>({
+function UniversalGrid<T extends GridItem>({
   data,
-  cardType,
+  renderCard,
   onSelectionChange,
   onDelete,
   onBulkDelete,
   onCardClick,
+  customActions,
   enableSearch = false,
   searchPlaceholder = '검색...',
   searchFields,
@@ -31,7 +31,8 @@ export const UniversalGrid = <T extends GridItem>({
   headerClassName = '',
   gridClassName = '',
   footerClassName = '',
-}: UniversalGridProps<T>) => {
+}: UniversalGridProps<T>) {
+
   // 내부 선택 상태 관리
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
@@ -41,7 +42,7 @@ export const UniversalGrid = <T extends GridItem>({
 
   // 검색 필터링된 데이터
   const filteredData = useMemo(() => {
-    if (!enableSearch || !searchTerm.trim()) {
+    if (!enableSearch || !searchTerm || !searchTerm.trim()) {
       return data;
     }
 
@@ -55,25 +56,15 @@ export const UniversalGrid = <T extends GridItem>({
           return value && String(value).toLowerCase().includes(searchLower);
         });
       } else {
-        // 기본 검색 (타입별로 다른 필드 검색)
-        if (cardType === 'video') {
-          const video = item as any;
-          return (
-            video.title?.toLowerCase().includes(searchLower) ||
-            video.channelName?.toLowerCase().includes(searchLower) ||
-            video.keywords?.some((k: string) => k.toLowerCase().includes(searchLower))
-          );
-        } else if (cardType === 'channel') {
-          const channel = item as any;
-          return (
-            channel.name?.toLowerCase().includes(searchLower) ||
-            channel.description?.toLowerCase().includes(searchLower)
-          );
-        }
-        return false;
+        // 기본 검색 (모든 문자열 필드 검색)
+        const searchableValues = Object.values(item as Record<string, any>)
+          .filter(value => typeof value === 'string')
+          .join(' ')
+          .toLowerCase();
+        return searchableValues.includes(searchLower);
       }
     });
-  }, [data, searchTerm, enableSearch, searchFields, cardType]);
+  }, [data, searchTerm, enableSearch, searchFields]);
 
   // 통합 페이지네이션 훅 사용 (필터링된 데이터로)
   const pagination = useUniversalPagination(filteredData, { initialItemsPerPage });
@@ -95,8 +86,33 @@ export const UniversalGrid = <T extends GridItem>({
     toggleVirtualization,
   } = pagination;
 
-  // 카드 렌더러 가져오기
-  const CardRenderer = getCardRenderer(cardType);
+  // 컨테이너 크기 추적을 위한 ref와 state
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [currentContainerWidth, setCurrentContainerWidth] = useState<number>(containerWidth || 1200);
+
+  // 컨테이너 크기 변화 감지
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setCurrentContainerWidth(containerRef.current.offsetWidth);
+      }
+    };
+
+    // 초기 크기 설정
+    updateWidth();
+
+    // 리사이즈 이벤트 리스너
+    const resizeObserver = new ResizeObserver(updateWidth);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  // 렌더링 함수 준비 (제네릭 방식)
 
   // 그리드 레이아웃 클래스
   const gridLayoutClasses = {
@@ -104,6 +120,25 @@ export const UniversalGrid = <T extends GridItem>({
     2: 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6',
     3: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5',
   };
+
+  // 동적 카드 크기 계산
+  const calculateCardWidth = useMemo(() => {
+    const gap = 24; // gap-6 = 24px
+
+    // 화면 크기에 따른 컬럼 수 계산
+    let columns;
+    if (currentContainerWidth >= 1280) { // xl
+      columns = gridSize === 1 ? 8 : gridSize === 2 ? 6 : 5;
+    } else if (currentContainerWidth >= 1024) { // lg
+      columns = gridSize === 1 ? 6 : gridSize === 2 ? 5 : 4;
+    } else if (currentContainerWidth >= 640) { // sm
+      columns = gridSize === 1 ? 5 : gridSize === 2 ? 4 : 3;
+    } else { // 기본
+      columns = gridSize === 1 ? 4 : gridSize === 2 ? 3 : 2;
+    }
+
+    return Math.floor((currentContainerWidth - gap * (columns - 1)) / columns);
+  }, [currentContainerWidth, gridSize]);
 
   // 표시할 페이지 번호들 계산
   const getVisiblePages = (maxVisible = 5) => {
@@ -208,25 +243,36 @@ export const UniversalGrid = <T extends GridItem>({
     onSelectionChange?.([]);
   }, [onSelectionChange]);
 
-  // 카드 렌더링 함수
-  const renderCard = (item: T, index?: number) => {
-    const itemId = getDocumentId(item);
-    if (!itemId) return null;
+  // 내부 카드 렌더링 함수
+  const renderCardInternal = useCallback(
+    (item: T, index?: number) => {
+      const itemId = getDocumentId(item);
+      if (!itemId) return null;
 
-    const isSelected = selectedItems.has(itemId);
+      if (typeof renderCard !== 'function') {
+        return <div key={itemId}>Missing renderCard function</div>;
+      }
 
-    return (
-      <CardRenderer
-        key={itemId}
-        item={item}
-        isSelected={isSelected}
-        isSelectMode={isSelectMode}
-        onSelect={handleSelect}
-        onDelete={handleDelete}
-        onCardClick={onCardClick}
-      />
-    );
-  };
+      const isSelected = selectedItems.has(itemId);
+
+      const cardProps: CardRenderProps<T> = {
+        item,
+        isSelected,
+        isSelectMode,
+        onSelect: handleSelect,
+        onDelete: handleDelete,
+        onCardClick,
+        cardWidth: calculateCardWidth,
+      };
+
+      return (
+        <div key={itemId}>
+          {renderCard(item, cardProps)}
+        </div>
+      );
+    },
+    [renderCard, selectedItems, isSelectMode, handleSelect, handleDelete, onCardClick, calculateCardWidth]
+  );
 
   if (data.length === 0) {
     return (
@@ -238,13 +284,17 @@ export const UniversalGrid = <T extends GridItem>({
   }
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div ref={containerRef} className={`space-y-4 ${className}`}>
       {/* 검색바 (활성화된 경우만) */}
       {enableSearch && (
-        <SearchBar
-          searchTerm={searchTerm}
-          onSearchTermChange={handleSearchChange}
+        <SimpleAutocomplete
+          data={data}
+          searchFields={searchFields || []}
           placeholder={searchPlaceholder}
+          onSearchChange={(searchTerm, filteredDataFromAutocomplete) => {
+            setSearchTerm(searchTerm);
+            onSearchChange?.(searchTerm, filteredDataFromAutocomplete);
+          }}
           className="mb-4"
         />
       )}
@@ -332,32 +382,14 @@ export const UniversalGrid = <T extends GridItem>({
       {/* 메인: 가상화 or 일반 그리드 */}
       <div className={gridClassName}>
         {useVirtualScrolling ? (
-          // 가상 스크롤링 모드 (비디오만 지원)
-          cardType === 'video' ? (
-            <VirtualizedVideoGrid
-              videos={currentData as any[]} // TODO: 타입 개선
-              selectedVideos={selectedItems}
-              isSelectMode={isSelectMode}
-              onVideoSelect={handleSelect}
-              onVideoDelete={handleDelete as any}
-              onChannelClick={(channelName) => {
-                // channelName으로 해당 비디오 찾아서 onCardClick 호출
-                const video = currentData.find((item: any) => item.channelName === channelName);
-                if (video) onCardClick?.(video);
-              }}
-              containerWidth={containerWidth}
-              containerHeight={containerHeight}
-            />
-          ) : (
-            // 다른 카드 타입은 일반 그리드로 폴백
-            <div className={`grid ${gridLayoutClasses[gridSize]} gap-6`}>
-              {currentData.map(renderCard)}
-            </div>
-          )
+          // 가상 스크롤링은 현재 제네릭 지원 안함 - 일반 그리드로 폴백
+          <div className={`grid ${gridLayoutClasses[gridSize]} gap-6`}>
+            {currentData.map(renderCardInternal)}
+          </div>
         ) : (
           // 일반 그리드 모드
           <div className={`grid ${gridLayoutClasses[gridSize]} gap-6`}>
-            {paginatedData.map(renderCard)}
+            {paginatedData.map(renderCardInternal)}
           </div>
         )}
       </div>
@@ -459,6 +491,28 @@ export const UniversalGrid = <T extends GridItem>({
                   {selectedItems.size === currentData.length ? '전체 해제' : '전체 선택'}
                 </button>
 
+                {/* 커스텀 액션 버튼들 */}
+                {customActions?.map((action, index) => {
+                  const selectedItemsData = currentData.filter(item => {
+                    const itemId = getDocumentId(item);
+                    return itemId && selectedItems.has(itemId);
+                  });
+
+                  const isDisabled = action.disabled?.(selectedItemsData) ?? false;
+
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => action.onClick(selectedItemsData)}
+                      disabled={isDisabled}
+                      className={action.className || "px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"}
+                    >
+                      {action.icon && <span className="mr-1">{action.icon}</span>}
+                      {action.label}
+                    </button>
+                  );
+                })}
+
                 {onBulkDelete && (
                   <button
                     onClick={handleBulkDelete}
@@ -474,6 +528,7 @@ export const UniversalGrid = <T extends GridItem>({
       )}
     </div>
   );
-};
+}
 
+export { UniversalGrid };
 export default UniversalGrid;

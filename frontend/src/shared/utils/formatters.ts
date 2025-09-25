@@ -95,3 +95,68 @@ export const getDurationLabel = (duration: string): string => {
       return duration;
   }
 };
+
+/**
+ * 상대적 시간 표시 (예: "2일 전", "1주일 전")
+ * @param dateString - 날짜 문자열
+ * @returns 상대적 시간 문자열
+ */
+export const getRelativeTime = (dateString: string): string => {
+  if (!dateString) return '알 수 없음';
+
+  try {
+    const now = new Date();
+    const uploadTime = new Date(dateString);
+
+    if (isNaN(uploadTime.getTime())) return '날짜 오류';
+
+    const diffMs = now.getTime() - uploadTime.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffWeeks = Math.floor(diffDays / 7);
+    const diffMonths = Math.floor(diffDays / 30);
+    const diffYears = Math.floor(diffDays / 365);
+
+    if (diffMinutes < 1) return '방금 전';
+    if (diffMinutes < 60) return `${diffMinutes}분 전`;
+    if (diffHours < 24) return `${diffHours}시간 전`;
+
+    // 일 단위일 때 추가 시간 정보 포함
+    if (diffDays < 7) {
+      const remainingHours = diffHours % 24;
+      if (remainingHours > 0) {
+        return `${diffDays}일 ${remainingHours}시간 전`;
+      }
+      return `${diffDays}일 전`;
+    }
+
+    // 주 단위일 때 추가 일 정보 포함
+    if (diffWeeks < 4) {
+      const remainingDays = diffDays % 7;
+      if (remainingDays > 0) {
+        return `${diffWeeks}주일 ${remainingDays}일 전`;
+      }
+      return `${diffWeeks}주일 전`;
+    }
+
+    // 달 단위일 때 추가 일 정보 포함
+    if (diffMonths < 12) {
+      const remainingDays = diffDays % 30;
+      if (remainingDays > 0) {
+        return `${diffMonths}달 ${remainingDays}일 전`;
+      }
+      return `${diffMonths}달 전`;
+    }
+
+    // 년 단위일 때 추가 달 정보 포함
+    const remainingMonths = diffMonths % 12;
+    if (remainingMonths > 0) {
+      return `${diffYears}년 ${remainingMonths}달 전`;
+    }
+    return `${diffYears}년 전`;
+  } catch (e) {
+    console.warn('상대 시간 계산 실패:', dateString);
+    return '시간 오류';
+  }
+};

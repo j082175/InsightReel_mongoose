@@ -1,6 +1,6 @@
-import { Video, Channel } from '../../shared/types';
+import { Video, Channel, ChannelGroup } from '../../shared/types';
 
-export type CardType = 'video' | 'channel' | 'batch';
+export type CardType = 'video' | 'channel' | 'channelGroup' | 'batch';
 
 export type RenderMode = 'virtual' | 'standard';
 
@@ -9,16 +9,29 @@ export interface GridItem {
   id?: string;
 }
 
+export interface CustomAction<T> {
+  label: string;
+  icon?: React.ReactNode;
+  onClick: (selectedItems: T[]) => void;
+  className?: string;
+  disabled?: (selectedItems: T[]) => boolean;
+}
+
 export interface UniversalGridProps<T extends GridItem> {
   // 핵심 데이터
   data: T[];
-  cardType: CardType;
+
+  // 카드 렌더링 함수 (제네릭)
+  renderCard: (item: T, props: CardRenderProps<T>) => React.ReactNode;
 
   // 상호작용 콜백 (간소화)
   onSelectionChange?: (selectedIds: string[]) => void;
   onDelete?: (item: T) => void;
   onBulkDelete?: (selectedItems: T[]) => void;
   onCardClick?: (item: T) => void;
+
+  // 커스텀 액션 버튼들 (선택 모드 하단 바에 표시)
+  customActions?: CustomAction<T>[];
 
   // 검색 기능
   enableSearch?: boolean;
@@ -42,14 +55,18 @@ export interface UniversalGridProps<T extends GridItem> {
   footerClassName?: string;
 }
 
-export interface CardRendererProps<T extends GridItem> {
+export interface CardRenderProps<T extends GridItem> {
   item: T;
   isSelected?: boolean;
   isSelectMode?: boolean;
   onSelect?: (id: string) => void;
   onDelete?: (item: T) => void;
   onCardClick?: (item: T) => void;
+  cardWidth?: number;
 }
+
+// 기존 호환성을 위해 유지
+export interface CardRendererProps<T extends GridItem> extends CardRenderProps<T> {}
 
 export interface GridLayoutHook {
   renderMode: RenderMode;
@@ -97,6 +114,7 @@ export interface UniversalPaginationResult<T> {
 export type CardRendererMap = {
   video: React.FC<CardRendererProps<Video>>;
   channel: React.FC<CardRendererProps<Channel>>;
+  channelGroup: React.FC<CardRendererProps<ChannelGroup>>;
   batch: React.FC<CardRendererProps<any>>; // TODO: Batch 타입 추가 시 업데이트
 };
 

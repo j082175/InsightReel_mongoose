@@ -3,7 +3,7 @@ import {
   Calendar,
   TrendingUp,
 } from 'lucide-react';
-import { SearchBar } from '../shared/components';
+import { SearchBar, VideoCard } from '../shared/components';
 import { UniversalGrid } from '../widgets';
 import { useTrendingStore } from '../features/trending-collection/model/trendingStore';
 import { formatViews, formatDate, getDurationLabel, getDocumentId } from '../shared/utils';
@@ -160,7 +160,7 @@ const TrendingVideosPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
+    <div className="max-w-7xl mx-auto p-6">
       {/* 헤더 */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
@@ -323,17 +323,27 @@ const TrendingVideosPage: React.FC = () => {
 
       {/* 영상 목록 - UniversalGrid 사용 */}
       {!loading && videos.length > 0 ? (
-        <UniversalGrid
-          data={videos as any[]}
-          cardType="video"
+        <UniversalGrid<TrendingVideo>
+          data={videos}
+          renderCard={(video, props) => (
+            <VideoCard
+              video={video}
+              isSelected={props.isSelected}
+              onSelect={props.onSelect}
+              onDelete={() => props.onDelete?.(video)}
+              isSelectMode={props.isSelectMode}
+              cardWidth={props.cardWidth}
+            />
+          )}
           enableSearch={true}
           searchPlaceholder="제목, 채널명, 키워드로 검색..."
+          searchFields={['title', 'keywords'] as (keyof TrendingVideo)[]}
           onSearchChange={(searchTerm, filteredData) => {
             console.log('Search changed:', searchTerm, 'Results:', filteredData.length);
           }}
           onSelectionChange={handleSelectionChange}
-          onDelete={handleVideoDelete as any}
-          onBulkDelete={handleBulkDelete as any}
+          onDelete={handleVideoDelete}
+          onBulkDelete={handleBulkDelete}
           onCardClick={(video) => {
             // 비디오 클릭 시 외부 링크로 이동
             if (video.url) {
@@ -342,7 +352,7 @@ const TrendingVideosPage: React.FC = () => {
           }}
           initialItemsPerPage={pagination.limit}
           showVirtualScrolling={false}
-          gridSize={1}
+          gridSize={2}
           className="mb-6"
         />
       ) : null}
