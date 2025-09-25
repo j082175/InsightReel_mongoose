@@ -1262,6 +1262,7 @@ app.post('/api/process-video', async (req, res) => {
                         hashtags: tiktokInfo.hashtags,
                         mentions: tiktokInfo.mentions,
                         thumbnailUrl: tiktokInfo.thumbnailUrl,
+                        language: tiktokInfo.language,
                     });
 
                     enrichedMetadata = {
@@ -1706,6 +1707,14 @@ app.post('/api/process-video', async (req, res) => {
             result,
             API_MESSAGES.VIDEO.PROCESSING_SUCCESS,
         );
+
+        // 🧹 비디오 처리 완료 후 오래된 파일 정리 (7일 이상)
+        try {
+            videoProcessor.cleanOldFiles();
+            ServerLogger.info('🧹 비디오 처리 후 파일 정리 완료');
+        } catch (cleanupError) {
+            ServerLogger.warn('⚠️ 파일 정리 실패:', cleanupError.message);
+        }
     } catch (error) {
         ServerLogger.error('비디오 처리 실패:', error);
 
@@ -2807,6 +2816,14 @@ app.post(
                 result,
                 API_MESSAGES.VIDEO.PROCESSING_SUCCESS,
             );
+
+            // 🧹 blob 비디오 처리 완료 후 오래된 파일 정리 (7일 이상)
+            try {
+                videoProcessor.cleanOldFiles();
+                ServerLogger.info('🧹 blob 비디오 처리 후 파일 정리 완료');
+            } catch (cleanupError) {
+                ServerLogger.warn('⚠️ 파일 정리 실패:', cleanupError.message);
+            }
         } catch (error) {
             ServerLogger.error('blob 비디오 처리 실패:', error);
 
