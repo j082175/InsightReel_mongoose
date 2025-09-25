@@ -1,36 +1,7 @@
 {
   "keys": {
-    "c7731d04a884fb3e": {
-      "2025-09-16": {
-        "pro": 0,
-        "flash": 0,
-        "flashLite": 0,
-        "proErrors": 0,
-        "flashErrors": 0,
-        "flashLiteErrors": 0,
-        "youtubeVideos": 0,
-        "youtubeSearch": 4,
-        "youtubeChannels": 31,
-        "youtubeComments": 0,
-        "youtubeErrors": 0,
-        "lastUpdated": "2025-09-16T03:00:23.745Z"
-      }
-    },
+    "c7731d04a884fb3e": {},
     "3742b2bda3c5b7f3": {
-      "2025-09-16": {
-        "pro": 0,
-        "flash": 0,
-        "flashLite": 0,
-        "proErrors": 0,
-        "flashErrors": 0,
-        "flashLiteErrors": 0,
-        "youtubeVideos": 0,
-        "youtubeSearch": 2,
-        "youtubeChannels": 13,
-        "youtubeComments": 0,
-        "youtubeErrors": 0,
-        "lastUpdated": "2025-09-16T03:29:27.440Z"
-      },
       "2025-09-22": {
         "pro": 0,
         "flash": 0,
@@ -75,24 +46,24 @@
         "youtubeErrors": 0,
         "lastUpdated": "2025-09-23T15:02:59.819Z",
         "_resetAt16": true
-      }
-    },
-    "5955264c478ac562": {
-      "2025-09-16": {
+      },
+      "2025-09-25": {
         "pro": 0,
         "flash": 0,
         "flashLite": 0,
-        "proErrors": 0,
+        "proErrors": 1,
         "flashErrors": 0,
-        "flashLiteErrors": 0,
+        "flashLiteErrors": 11,
         "youtubeVideos": 0,
         "youtubeSearch": 0,
-        "youtubeChannels": 0,
+        "youtubeChannels": 3,
         "youtubeComments": 0,
         "youtubeErrors": 0,
-        "lastUpdated": "2025-09-16T01:45:00.000Z"
+        "lastUpdated": "2025-09-24T15:09:34.687Z",
+        "_resetAt16": true
       }
     },
+    "5955264c478ac562": {},
     "ee6314f51814e6aa": {
       "2025-09-22": {
         "pro": 0,
@@ -125,18 +96,33 @@
         "_resetAt16": true
       },
       "2025-09-24": {
-        "pro": 6,
+        "pro": 16,
         "flash": 34,
-        "flashLite": 170,
-        "proErrors": 0,
-        "flashErrors": 8,
-        "flashLiteErrors": 27,
-        "youtubeVideos": 0,
-        "youtubeSearch": 7,
-        "youtubeChannels": 606,
-        "youtubeComments": 72,
+        "flashLite": 209,
+        "proErrors": 6,
+        "flashErrors": 14,
+        "flashLiteErrors": 33,
+        "youtubeVideos": 6,
+        "youtubeSearch": 9,
+        "youtubeChannels": 692,
+        "youtubeComments": 87,
         "youtubeErrors": 3,
-        "lastUpdated": "2025-09-23T15:49:34.158Z",
+        "lastUpdated": "2025-09-24T13:04:32.834Z",
+        "_resetAt16": true
+      },
+      "2025-09-25": {
+        "pro": 19,
+        "flash": 34,
+        "flashLite": 231,
+        "proErrors": 7,
+        "flashErrors": 14,
+        "flashLiteErrors": 35,
+        "youtubeVideos": 6,
+        "youtubeSearch": 9,
+        "youtubeChannels": 728,
+        "youtubeComments": 104,
+        "youtubeErrors": 3,
+        "lastUpdated": "2025-09-25T04:52:37.769Z",
         "_resetAt16": true
       }
     }

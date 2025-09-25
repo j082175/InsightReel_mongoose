@@ -22,6 +22,19 @@ const BatchVideoList: React.FC<BatchVideoListProps> = ({
   loading,
   onVideoDelete,
 }) => {
+  // 디버깅: 받은 비디오 데이터 확인
+  React.useEffect(() => {
+    if (isOpen && batchId) {
+      console.log(`🎯 [BatchVideoList] 배치 ${batchId}의 영상 데이터:`, {
+        batchId,
+        batchName,
+        videosCount: videos.length,
+        videos: videos.slice(0, 3), // 처음 3개만 로그
+        loading
+      });
+    }
+  }, [isOpen, batchId, videos.length, batchName, loading]);
+
   if (!isOpen || !batchId) return null;
 
   return (

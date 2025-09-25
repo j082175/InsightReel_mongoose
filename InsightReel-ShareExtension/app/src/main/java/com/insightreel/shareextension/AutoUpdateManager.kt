@@ -29,7 +29,7 @@ class AutoUpdateManager(private val context: Context) {
     companion object {
         private const val UPDATE_CHECK_URL = "/api/app-update/check"
         private const val APK_DOWNLOAD_URL = "/api/app-update/download"
-        private const val CURRENT_VERSION = "1.1.10"
+        private const val CURRENT_VERSION = "1.1.11"
         private const val PREFS_LAST_UPDATE_CHECK = "last_update_check"
         private const val CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000L // 24시간
     }

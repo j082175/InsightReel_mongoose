@@ -3,6 +3,7 @@ const { ServerLogger } = require('../utils/logger');
 const UsageTracker = require('../utils/usage-tracker');
 const AIAnalyzer = require('./AIAnalyzer');
 const UnifiedCategoryManager = require('./UnifiedCategoryManager');
+const VideoProcessor = require('./VideoProcessor');
 
 /**
  * YouTube 채널 상세 분석 서비스
@@ -16,6 +17,7 @@ class YouTubeChannelAnalyzer {
         this.categoryManager = UnifiedCategoryManager.getInstance({
             mode: 'dynamic',
         });
+        this.videoProcessor = new VideoProcessor();
         this.apiKey = null; // ApiKeyManager에서 동적으로 로드
 
         // 서비스 레지스트리에 등록
@@ -554,6 +556,180 @@ ${videoData.comments.map((comment, i) => `${i + 1}. ${comment}`).join('\n')}
     }
 
     /**
+     * 영상 프레임 추출 헬퍼 함수
+     */
+    async extractVideoFrames(videoUrl) {
+        const fs = require('fs');
+        let videoPath = null;
+        try {
+            ServerLogger.info(`🎬 프레임 추출용 비디오 다운로드: ${videoUrl}`);
+
+            // 비디오 다운로드
+            videoPath = await this.videoProcessor.downloadVideo(videoUrl, 'YOUTUBE');
+
+            // 프레임 추출 (quick 모드로 1-3개 프레임)
+            const frames = await this.videoProcessor.generateThumbnail(videoPath, 'quick');
+
+            ServerLogger.info(`✅ 프레임 추출 완료: ${Array.isArray(frames) ? frames.length : 1}개`);
+
+            return Array.isArray(frames) ? frames : [frames];
+        } catch (error) {
+            ServerLogger.warn(`⚠️ 프레임 추출 실패: ${error.message}`);
+            return null; // 프레임 없이 메타데이터만 분석
+        } finally {
+            // 임시 비디오 파일 정리
+            if (videoPath && fs.existsSync(videoPath)) {
+                try {
+                    fs.unlinkSync(videoPath);
+                    ServerLogger.info(`🗑️ 임시 파일 삭제: ${videoPath}`);
+                } catch (cleanupError) {
+                    ServerLogger.warn(`⚠️ 임시 파일 삭제 실패: ${cleanupError.message}`);
+                }
+            }
+        }
+    }
+
+    /**
+     * 하이브리드 영상 콘텐츠 분석 (메타데이터 + 프레임)
+     */
+    async analyzeVideoContentHybrid(video, comments = []) {
+        try {
+            // 1. 기본 메타데이터 구성
+            const videoData = {
+                title: video.title,
+                description: video.description || '',
+                tags: video.tags || [],
+                duration: video.durationSeconds,
+                viewCount: video.viewCount,
+                comments: comments.slice(0, 10).map((c) => c.text),
+            };
+
+            // 2. 비디오 프레임 추출 시도
+            const videoUrl = `https://www.youtube.com/watch?v=${video.videoId}`;
+            const frames = await this.extractVideoFrames(videoUrl);
+
+            // 3. 하이브리드 프롬프트 구성
+            let prompt = `다음 YouTube 영상을 메타데이터와 시각적 내용을 종합하여 분석해주세요.
+
+메타데이터 정보:
+- 제목: ${videoData.title}
+- 설명: ${videoData.description}
+- 태그: ${videoData.tags.join(', ')}
+- 길이: ${videoData.duration}초
+- 조회수: ${videoData.viewCount}회
+
+주요 댓글들:
+${videoData.comments.map((comment, i) => `${i + 1}. ${comment}`).join('\n')}`;
+
+            if (frames) {
+                prompt += `\n\n첨부된 이미지들은 이 영상의 대표 프레임들입니다. 메타데이터와 시각적 내용을 모두 고려하여 더 정확한 분석을 해주세요.`;
+            } else {
+                prompt += `\n\n※ 영상 프레임을 가져올 수 없어 메타데이터만으로 분석합니다.`;
+            }
+
+            prompt += `\n\n반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 포함하지 마세요:
+
+{
+  "contentType": "실제 영상의 주요 주제",
+  "subCategory": "세부 카테고리",
+  "keywords": ["관련", "키워드", "목록"],
+  "audience": "대상 시청자",
+  "tone": "콘텐츠 톤앤매너",
+  "confidence": 85,
+  "analysisMethod": "${frames ? 'hybrid' : 'metadata-only'}"
+}`;
+
+            // 4. AI 분석 실행
+            let analysis;
+            if (frames && frames.length > 0) {
+                // 프레임이 있으면 다중 이미지 방식 사용
+                const imageContents = await this.convertFramesToImageContents(frames);
+                analysis = await this.aiAnalyzer.geminiManager.generateContentWithImages(
+                    prompt,
+                    imageContents,
+                    { modelType: 'flash-lite' },
+                );
+            } else {
+                // 프레임 없으면 텍스트만 분석
+                analysis = await this.aiAnalyzer.geminiManager.generateContent(
+                    prompt,
+                    null,
+                    { modelType: 'flash-lite' },
+                );
+            }
+
+            // 5. 응답 처리 (기존 로직과 동일)
+            let responseText;
+            if (typeof analysis === 'object' && analysis.text) {
+                responseText = analysis.text;
+            } else if (typeof analysis === 'string') {
+                responseText = analysis;
+            } else {
+                throw new Error('Unexpected response format');
+            }
+
+            let cleanedResponse = responseText.trim();
+            if (cleanedResponse.includes('```json')) {
+                cleanedResponse = cleanedResponse
+                    .split('```json')[1]
+                    .split('```')[0]
+                    .trim();
+            } else if (cleanedResponse.includes('```')) {
+                cleanedResponse = cleanedResponse
+                    .split('```')[1]
+                    .split('```')[0]
+                    .trim();
+            }
+
+            const result = JSON.parse(cleanedResponse);
+
+            // 하이브리드 분석 여부 로깅
+            ServerLogger.info(`${frames ? '🎬 하이브리드' : '📝 메타데이터'} 분석 완료: ${result.contentType} (신뢰도: ${result.confidence || 'N/A'}%)`);
+
+            return result;
+        } catch (error) {
+            ServerLogger.warn(`⚠️ 하이브리드 영상 분석 실패, 폴백: ${error.message}`);
+
+            // 폴백: 기존 메타데이터 전용 분석
+            return await this.analyzeVideoContent(video, comments);
+        }
+    }
+
+    /**
+     * 프레임 경로를 이미지 콘텐츠 형식으로 변환
+     */
+    async convertFramesToImageContents(frames) {
+        const fs = require('fs');
+        const imageContents = [];
+
+        for (const framePath of frames) {
+            try {
+                if (fs.existsSync(framePath)) {
+                    const imageBuffer = fs.readFileSync(framePath);
+                    const base64Data = imageBuffer.toString('base64');
+
+                    // Gemini API가 요구하는 형식
+                    imageContents.push({
+                        inlineData: {
+                            data: base64Data,
+                            mimeType: 'image/jpeg'
+                        }
+                    });
+
+                    ServerLogger.info(`🖼️ 프레임 변환 완료: ${framePath} (${base64Data.length} bytes)`);
+                } else {
+                    ServerLogger.warn(`⚠️ 프레임 파일 없음: ${framePath}`);
+                }
+            } catch (error) {
+                ServerLogger.warn(`⚠️ 프레임 변환 실패: ${framePath} - ${error.message}`);
+            }
+        }
+
+        ServerLogger.info(`✅ 총 ${imageContents.length}개 프레임 변환 완료`);
+        return imageContents;
+    }
+
+    /**
      * 채널 종합 분석 (Pro) - 카테고리 시스템 통합
      */
     async synthesizeChannelIdentity(videoAnalyses, channelInfo) {
@@ -822,7 +998,7 @@ ${videoAnalyses
                 ServerLogger.info(`🔍 영상 분석 중: ${video.title}`);
 
                 const comments = await this.getVideoComments(video.videoId, 15);
-                const contentAnalysis = await this.analyzeVideoContent(
+                const contentAnalysis = await this.analyzeVideoContentHybrid(
                     video,
                     comments,
                 );

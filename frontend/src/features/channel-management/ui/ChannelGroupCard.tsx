@@ -19,14 +19,17 @@ interface ChannelGroup {
 
 interface ChannelGroupCardProps {
   group: ChannelGroup;
+  isSelected?: boolean;
+  onSelect?: (groupId: string) => void;
   onClick?: (group: ChannelGroup) => void;
   onEdit?: (group: ChannelGroup) => void;
   onDelete: (group: ChannelGroup) => void; // 필수 Props
   onCollect?: (group: ChannelGroup) => void;
+  showSelection?: boolean;
 }
 
 const ChannelGroupCard: React.FC<ChannelGroupCardProps> = memo(
-  ({ group, onClick, onEdit, onDelete, onCollect }) => {
+  ({ group, isSelected = false, onSelect, onClick, onEdit, onDelete, onCollect, showSelection = false }) => {
     const groupId = getDocumentId(group);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -43,10 +46,17 @@ const ChannelGroupCard: React.FC<ChannelGroupCardProps> = memo(
       message: '',
     });
     const handleClick = useCallback(() => {
-      if (onClick) {
-        onClick(group);
+      // 선택 모드일 때는 선택 토글, 아니면 그룹 클릭
+      if (showSelection) {
+        // MongoDB 문서 ID를 사용 (_id 우선, 그 다음 id)
+        const documentId = group._id || groupId;
+        if (documentId) {
+          onSelect?.(documentId);
+        }
+      } else {
+        onClick?.(group);
       }
-    }, [onClick, group]);
+    }, [showSelection, group, groupId, onSelect, onClick]);
 
     const handleEdit = useCallback(
       async (e: React.MouseEvent) => {
@@ -178,8 +188,29 @@ const ChannelGroupCard: React.FC<ChannelGroupCardProps> = memo(
       <div className="group cursor-pointer">
         <div
           onClick={handleClick}
-          className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 group-hover:scale-[1.02] relative"
+          className={`bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-300 group-hover:scale-[1.02] relative ${
+            isSelected ? 'ring-2 ring-blue-500 border-blue-500' : ''
+          }`}
         >
+          {/* 선택 체크박스 - 오버레이 방식 */}
+          {(showSelection || isSelected) && (
+            <div className="absolute top-2 left-2 z-10">
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  // MongoDB 문서 ID를 사용 (_id 우선, 그 다음 id)
+                  const documentId = group._id || groupId;
+                  if (documentId) {
+                    onSelect?.(documentId);
+                  }
+                }}
+                className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+              />
+            </div>
+          )}
+
           {/* 상단 헤더 */}
           <div className="p-4 border-b border-gray-100 relative">
             <div className="flex items-center justify-between mb-2">

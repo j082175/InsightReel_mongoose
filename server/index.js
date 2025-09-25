@@ -3,6 +3,9 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { promisify } = require('util');
+const { exec } = require('child_process');
+const execAsync = promisify(exec);
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const { PLATFORMS } = require('./config/api-messages');
@@ -133,6 +136,38 @@ const unifiedVideoSaver = new UnifiedVideoSaver(sheetsManager, aiAnalyzer);
         ServerLogger.error('❌ VideoProcessor 초기화 실패:', error);
     }
 })();
+
+// yt-dlp.exe 주기적 자동 업데이트 시스템
+const setupYtDlpAutoUpdater = () => {
+    const ytdlpExe = path.join(__dirname, '../yt-dlp.exe');
+
+    // 서버 시작 시 즉시 업데이트 체크
+    const updateYtDlp = async () => {
+        try {
+            ServerLogger.info('🔄 yt-dlp.exe 자동 업데이트 확인 중...');
+            const { stdout } = await execAsync(`"${ytdlpExe}" --update-to nightly`, { timeout: 30000 });
+
+            if (stdout.includes('Updated yt-dlp to')) {
+                ServerLogger.info('✅ yt-dlp.exe 새 버전으로 업데이트 완료');
+            } else {
+                ServerLogger.info('ℹ️ yt-dlp.exe 이미 최신 버전');
+            }
+        } catch (error) {
+            ServerLogger.warn('⚠️ yt-dlp.exe 자동 업데이트 실패:', error.message);
+        }
+    };
+
+    // 서버 시작 30초 후 첫 업데이트 체크
+    setTimeout(updateYtDlp, 30000);
+
+    // 이후 1시간마다 주기적 업데이트 체크
+    setInterval(updateYtDlp, 60 * 60 * 1000); // 1시간 = 3600000ms
+
+    ServerLogger.info('⚡ yt-dlp.exe 주기적 자동 업데이트 시스템 시작 (1시간 간격)');
+};
+
+// 자동 업데이트 시스템 시작
+setupYtDlpAutoUpdater();
 
 // 서비스 초기화 후 디버그
 app.get('/api/debug-after-services', (req, res) => {

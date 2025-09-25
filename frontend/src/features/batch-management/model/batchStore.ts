@@ -6,7 +6,7 @@ import {
   useCreateBatch,
   useDeleteBatch,
   useDeleteBatches,
-  useVideos,
+  useBatchVideos,
 } from '../../../shared/hooks/useApi';
 
 // Batch Types
@@ -144,7 +144,6 @@ export const useBatchStore = (): BatchStoreState & BatchStoreActions => {
   const createBatchMutation = useCreateBatch();
   const deleteBatchMutation = useDeleteBatch();
   const deleteBatchesMutation = useDeleteBatches();
-  const { data: batchVideos = [], isLoading: videoLoading } = useVideos();
 
   const [state, setState] = useState({
     selectedBatches: new Set<string>(),
@@ -157,6 +156,12 @@ export const useBatchStore = (): BatchStoreState & BatchStoreActions => {
     selectedBatchId: null,
     formData: defaultFormData,
   });
+
+  // 선택된 배치의 영상 가져오기
+  const {
+    data: batchVideos = [],
+    isLoading: videoLoading
+  } = useBatchVideos(state.selectedBatchId || undefined);
 
   // 에러 상태 처리
   const error = queryError

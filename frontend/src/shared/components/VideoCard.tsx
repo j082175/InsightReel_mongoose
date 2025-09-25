@@ -136,6 +136,17 @@ const VideoCard: React.FC<VideoCardProps> = memo(
       return 'from-blue-600/30 to-purple-600/30';                       // 기본 파랑-보라 그라데이션
     };
 
+    // 업로드 날짜별 카드 테두리 색상 결정
+    const getCardBorder = (uploadDate: string) => {
+      const now = new Date();
+      const uploadTime = new Date(uploadDate);
+      const daysDiff = Math.floor((now.getTime() - uploadTime.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (daysDiff <= 1) return 'border-2 border-red-500 shadow-lg shadow-red-500/20';     // 1일 이내 빨강 테두리
+      if (daysDiff <= 3) return 'border-2 border-yellow-500 shadow-lg shadow-yellow-500/20'; // 3일 이내 노랑 테두리
+      return '';                                                                            // 기본 테두리 없음
+    };
+
     // 카드 크기에 따른 배지 크기 계산 (280px 기준으로 정규화)
     const badgeScale = Math.max(0.8, Math.min(1.2, cardWidth / 280));
     const badgeFontSize = `${0.75 * badgeScale}rem`;
@@ -237,6 +248,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(
           relative group bg-white rounded-lg shadow-sm cursor-pointer overflow-hidden will-change-transform
           ${isSelected ? 'ring-2 ring-blue-500' : ''}
           ${isSelectMode ? 'hover:ring-2 hover:ring-blue-300' : ''}
+          ${getCardBorder(video.uploadDate)}
         `}
         style={{
           backfaceVisibility: 'hidden',

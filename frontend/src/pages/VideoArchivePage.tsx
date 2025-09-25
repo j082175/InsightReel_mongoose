@@ -32,7 +32,7 @@ const VideoArchivePage: React.FC = () => {
 
   // Search and filter hooks
   const searchResult = useSearch(archivedVideos, {
-    searchFields: ['title', 'channelName', 'tags'],
+    searchFields: ['title', 'keywords'],
     defaultSearchTerm: '',
   });
 

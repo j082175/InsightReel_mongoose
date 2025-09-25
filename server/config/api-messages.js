@@ -183,9 +183,11 @@ const PLATFORM_MESSAGES = {
   },
   
   TIKTOK: {
-    UNSUPPORTED: '틱톡 비디오 기능은 아직 구현되지 않았습니다.',
+    PROCESSING: 'TikTok 비디오를 처리하고 있습니다.',
     REGION_BLOCKED: '지역 제한으로 인해 접근할 수 없는 비디오입니다.',
-    PRIVATE_VIDEO: '비공개 비디오는 처리할 수 없습니다.'
+    PRIVATE_VIDEO: '비공개 비디오는 처리할 수 없습니다.',
+    API_ERROR: 'TikTok API 응답 오류가 발생했습니다.',
+    DOWNLOAD_FAILED: 'TikTok 비디오 다운로드에 실패했습니다.'
   }
 };
 

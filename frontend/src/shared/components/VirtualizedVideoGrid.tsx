@@ -105,6 +105,7 @@ export const VirtualizedVideoGrid: React.FC<VirtualizedVideoGridProps> = ({
                 isSelected={isItemSelected(selectedVideos, video)}
                 isSelectMode={isSelectMode}
                 onSelect={onVideoSelect}
+                cardWidth={CARD_WIDTH}
               />
             </div>
           );

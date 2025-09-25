@@ -24,6 +24,8 @@ class VideoDataConverter {
                     return this.convertToYouTubeSchema(videoData, rowNumber);
                 case 'INSTAGRAM':
                     return this.convertToInstagramSchema(videoData, rowNumber);
+                case 'TIKTOK':
+                    return this.convertToTikTokSchema(videoData, rowNumber);
                 default:
                     throw new Error(`지원되지 않는 플랫폼: ${platform}`);
             }
@@ -372,6 +374,8 @@ class VideoDataConverter {
                 return this.convertYouTubeRowToDocument(rowData);
             } else if (normalizedPlatform === 'INSTAGRAM') {
                 return this.convertInstagramRowToDocument(rowData);
+            } else if (normalizedPlatform === 'TIKTOK') {
+                return this.convertTikTokRowToDocument(rowData);
             } else {
                 throw new Error(`지원되지 않는 플랫폼: ${platform}`);
             }
@@ -569,9 +573,110 @@ class VideoDataConverter {
                 return 34; // 33개 헤더 + rowNumber
             case 'INSTAGRAM':
                 return 20; // 19개 헤더 + rowNumber
+            case 'TIKTOK':
+                return 25; // 24개 헤더 + rowNumber
             default:
                 throw new Error(`지원되지 않는 플랫폼: ${platform}`);
         }
+    }
+
+    /**
+     * TikTok 스키마로 변환 (24개 필드)
+     * TikTok 전용 필드들을 포함한 스프레드시트 형태
+     */
+    static convertToTikTokSchema(videoData, rowNumber = 1) {
+        const { platform, postUrl, videoPath, metadata, analysis, timestamp } = videoData;
+        const url = videoData.url || postUrl;
+
+        // 업로드 날짜 결정
+        let uploadDate;
+        if (metadata.uploadDate) {
+            uploadDate = new Date(metadata.uploadDate).toLocaleDateString('ko-KR');
+        } else {
+            uploadDate = new Date(timestamp).toLocaleString('ko-KR');
+        }
+
+        // 동적 카테고리 처리
+        const isDynamicMode = process.env.USE_DYNAMIC_CATEGORIES === 'true';
+        let fullCategoryPath = '';
+        let categoryDepth = 0;
+
+        if (isDynamicMode && (analysis.fullCategoryPath || analysis.fullPath)) {
+            fullCategoryPath = analysis.fullCategoryPath || analysis.fullPath;
+            categoryDepth = analysis.categoryDepth || analysis.depth || 0;
+        } else {
+            const mainCat = analysis.mainCategory || '엔터테인먼트';
+            const middleCat = analysis.middleCategory || '';
+            if (middleCat && middleCat !== '미분류') {
+                fullCategoryPath = `${mainCat} > ${middleCat}`;
+                categoryDepth = 2;
+            } else {
+                fullCategoryPath = mainCat;
+                categoryDepth = 1;
+            }
+        }
+
+        return {
+            rowNumber: rowNumber,
+            platform: 'TIKTOK',
+            channelName: metadata.channelName || '알 수 없음',
+            url: url,
+            title: metadata.title || '제목 없음',
+            uploadDate: uploadDate,
+            views: metadata.views || 0,
+            likes: metadata.likes || 0,
+            comments: metadata.commentsCount || metadata.comments || 0,
+            shares: metadata.shares || 0,
+            duration: metadata.durationFormatted || '0:30',
+            contentType: metadata.contentType || 'shortform',
+            category: metadata.category || '엔터테인먼트',
+            mainCategory: analysis.mainCategory || '엔터테인먼트',
+            middleCategory: analysis.middleCategory || '',
+            fullCategoryPath: fullCategoryPath,
+            categoryDepth: categoryDepth,
+            keywords: (analysis.keywords || []).join(', '),
+            hashtags: (metadata.hashtags || []).join(', '),
+            mentions: (metadata.mentions || []).join(', '),
+            musicTitle: metadata.musicTitle || '',
+            musicAuthor: metadata.musicAuthor || '',
+            originalSound: metadata.originalSound || false,
+            channelVerified: metadata.channelVerified || false,
+            isCommercial: metadata.isCommercial || false,
+            effectsUsed: (metadata.effectsUsed || []).join(', ')
+        };
+    }
+
+    /**
+     * TikTok Google Sheets 행을 MongoDB 문서로 변환
+     */
+    static convertTikTokRowToDocument(rowData) {
+        return {
+            title: rowData[4] || '제목 없음',
+            channelName: rowData[2] || '알 수 없음',
+            url: rowData[3] || '',
+            platform: 'TIKTOK',
+            views: parseInt(rowData[6]) || 0,
+            likes: parseInt(rowData[7]) || 0,
+            comments: parseInt(rowData[8]) || 0,
+            shares: parseInt(rowData[9]) || 0,
+            uploadDate: rowData[5] || new Date().toISOString(),
+            duration: rowData[10] || '0:30',
+            contentType: rowData[11] || 'shortform',
+            category: rowData[12] || '엔터테인먼트',
+            mainCategory: rowData[13] || '엔터테인먼트',
+            middleCategory: rowData[14] || '',
+            fullCategoryPath: rowData[15] || '엔터테인먼트',
+            categoryDepth: parseInt(rowData[16]) || 1,
+            keywords: rowData[17] || '',
+            hashtags: rowData[18] || '',
+            mentions: rowData[19] || '',
+            musicTitle: rowData[20] || '',
+            musicAuthor: rowData[21] || '',
+            originalSound: rowData[22] === 'true' || false,
+            channelVerified: rowData[23] === 'true' || false,
+            isCommercial: rowData[24] === 'true' || false,
+            _id: null // MongoDB에서 자동 생성
+        };
     }
 
     /**

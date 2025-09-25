@@ -14,6 +14,10 @@ const HybridDataConverter = require('./HybridDataConverter');
 
 const { PLATFORMS } = require('../config/api-messages');
 
+// yt-dlp 자동 업데이트 쿨다운 (1시간)
+let lastYtDlpUpdate = 0;
+const UPDATE_COOLDOWN = 60 * 60 * 1000; // 1시간
+
 
 // YouTube 카테고리 매핑
 const YOUTUBE_CATEGORIES = {
@@ -479,8 +483,11 @@ class VideoProcessor {
         ServerLogger.info(`🚀 yt-dlp로 비디오 다운로드 시작: ${videoUrl}`);
 
         try {
-            // yt-dlp 명령어 구성
-            const command = `yt-dlp -f "best[ext=mp4]/best" -o "${filePath}" --no-playlist --quiet --no-warnings --extractor-args "tiktok:api_hostname=api16-normal-c-useast1a.tiktokv.com" "${videoUrl}"`;
+            // yt-dlp.exe 경로 (프로젝트 루트)
+            const ytdlpExe = path.join(__dirname, '../../yt-dlp.exe');
+
+            // yt-dlp 명령어 구성 (exe 버전)
+            const command = `"${ytdlpExe}" -f "best[ext=mp4]/best" -o "${filePath}" --no-playlist --quiet --no-warnings "${videoUrl}"`;
 
             ServerLogger.info(`📝 실행 명령어: ${command}`);
 
@@ -511,8 +518,67 @@ class VideoProcessor {
         } catch (error) {
             ServerLogger.error('yt-dlp 다운로드 실패:', error);
 
-            // yt-dlp가 설치되지 않은 경우
-            if (error.message.includes('yt-dlp')) {
+            // TikTok 추출 실패 시 대안 시도
+            if (videoUrl.includes('tiktok.com') && error.message.includes('Unable to extract webpage video data')) {
+                ServerLogger.warn('🔄 TikTok 추출 실패 - 대안 호스트명으로 재시도');
+
+                try {
+                    // 다른 포맷으로 재시도 (exe 버전)
+                    const ytdlpExe = path.join(__dirname, '../../yt-dlp.exe');
+                    const alternativeCommand = `"${ytdlpExe}" -f "best/best[ext=mp4]" -o "${filePath}" --no-playlist --quiet --no-warnings "${videoUrl}"`;
+                    ServerLogger.info(`🔄 대안 명령어: ${alternativeCommand}`);
+
+                    const { stdout, stderr } = await execAsync(alternativeCommand, {
+                        timeout: 120000,
+                        maxBuffer: 1024 * 1024 * 10
+                    });
+
+                    if (fs.existsSync(filePath)) {
+                        const endTime = Date.now();
+                        const downloadTime = endTime - startTime;
+                        ServerLogger.info(`✅ 대안 방법으로 TikTok 다운로드 성공! 소요시간: ${(downloadTime / 1000).toFixed(2)}초`);
+                        return filePath;
+                    }
+                } catch (retryError) {
+                    ServerLogger.warn('🚫 대안 방법도 실패 - yt-dlp 자동 업데이트 시도');
+
+                    try {
+                        // 쿨다운 체크 (1시간 이내 업데이트 시 스킵)
+                        const now = Date.now();
+                        if (now - lastYtDlpUpdate < UPDATE_COOLDOWN) {
+                            ServerLogger.warn(`⏱️ yt-dlp 업데이트 쿨다운 중 (${Math.round((UPDATE_COOLDOWN - (now - lastYtDlpUpdate)) / 60000)}분 남음)`);
+                            throw new Error('업데이트 쿨다운');
+                        }
+
+                        const ytdlpExe = path.join(__dirname, '../../yt-dlp.exe');
+                        ServerLogger.info('🔧 yt-dlp.exe nightly 버전으로 자동 업데이트 중...');
+                        await execAsync(`"${ytdlpExe}" --update-to nightly`, { timeout: 30000 });
+                        lastYtDlpUpdate = now; // 업데이트 시간 기록
+                        ServerLogger.info('✅ yt-dlp.exe 업데이트 완료 - 재시도 중');
+
+                        // 업데이트 후 재시도 (exe 버전)
+                        const updatedCommand = `"${ytdlpExe}" -f "best[ext=mp4]/best" -o "${filePath}" --no-playlist --quiet --no-warnings "${videoUrl}"`;
+                        const { stdout, stderr } = await execAsync(updatedCommand, {
+                            timeout: 120000,
+                            maxBuffer: 1024 * 1024 * 10
+                        });
+
+                        if (fs.existsSync(filePath)) {
+                            const endTime = Date.now();
+                            const downloadTime = endTime - startTime;
+                            ServerLogger.info(`🎉 업데이트 후 TikTok 다운로드 성공! 소요시간: ${(downloadTime / 1000).toFixed(2)}초`);
+                            return filePath;
+                        }
+
+                    } catch (updateError) {
+                        ServerLogger.error('❌ yt-dlp 자동 업데이트 실패:', updateError.message);
+                        ServerLogger.warn('🚫 썸네일 추출로 폴백 권장');
+                    }
+                }
+            }
+
+            // yt-dlp가 설치되지 않은 경우 (명령을 찾을 수 없는 경우만)
+            if (error.message.includes('not found') || error.message.includes('command not found') || error.code === 'ENOENT') {
                 throw new Error('yt-dlp가 설치되지 않았습니다. pip install yt-dlp 또는 시스템에 맞는 방법으로 설치해주세요.');
             }
 

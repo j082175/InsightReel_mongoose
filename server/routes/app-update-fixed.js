@@ -20,10 +20,10 @@ console.log('🔧 /check 라우트 등록 중...');
 
 // 현재 앱 정보
 const APP_INFO = {
-    currentVersion: '1.1.10',
+    currentVersion: '1.1.11',
     minSupportedVersion: '1.0.0',
-    latestApkPath: path.join(__dirname, '../uploads/apk/InsightReel_1.1.10.apk'),
-    releaseNotes: '🚀 새로운 업데이트가 출시되었습니다!\n- 버전 1.1.10 자동 배포\n- 시스템 안정성 개선\n- 성능 최적화'
+    latestApkPath: path.join(__dirname, '../uploads/apk/InsightReel_1.1.11.apk'),
+    releaseNotes: '🚀 새로운 업데이트가 출시되었습니다!\n- 버전 1.1.11 자동 배포\n- 시스템 안정성 개선\n- 성능 최적화'
 };
 
 /**

@@ -255,6 +255,20 @@ export const useTrendingVideos = (filters?: any) => {
   });
 };
 
+// 배치별 영상 조회
+export const useBatchVideos = (batchId?: string) => {
+  return useQuery({
+    queryKey: ['batchVideos', batchId],
+    queryFn: () => {
+      if (!batchId) throw new Error('BatchId is required');
+      return batchesApi.getBatchVideos(batchId);
+    },
+    enabled: !!batchId, // batchId가 있을 때만 쿼리 실행
+    staleTime: 2 * 60 * 1000, // 2분
+    gcTime: 5 * 60 * 1000, // 5분
+  });
+};
+
 // ===== Mutations =====
 
 // Video Mutations

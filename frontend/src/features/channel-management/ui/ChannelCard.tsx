@@ -95,7 +95,17 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
     if ((e.target as HTMLElement).closest('button')) {
       return;
     }
-    onChannelClick?.(channel);
+
+    // 선택 모드일 때는 선택 토글, 아니면 채널 클릭
+    if (showSelection) {
+      // MongoDB 문서 ID를 사용 (_id 우선, 그 다음 id)
+      const documentId = channel._id || channel.id;
+      if (documentId) {
+        onSelect?.(documentId);
+      }
+    } else {
+      onChannelClick?.(channel);
+    }
   };
 
   const handleDelete = useCallback((e: React.MouseEvent) => {
@@ -137,26 +147,33 @@ const ChannelCard: React.FC<ChannelCardProps> = ({
   return (
     <div
       className={`
-        ${theme.bgGradient} border border-gray-200 ${theme.borderColor} border-l-4 rounded-lg 
-        hover:shadow-lg transition-all duration-200 cursor-pointer
+        ${theme.bgGradient} border border-gray-200 ${theme.borderColor} border-l-4 rounded-lg
+        hover:shadow-lg transition-all duration-200 cursor-pointer relative
         ${isSelected ? 'ring-2 ring-blue-500 border-blue-500' : ''}
       `}
       onClick={handleCardClick}
     >
+      {/* 선택 체크박스 - 오버레이 방식 */}
+      {(showSelection || isSelected) && (
+        <div className="absolute top-2 left-2 z-10">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => {
+              e.stopPropagation();
+              // MongoDB 문서 ID를 사용 (_id 우선, 그 다음 id)
+              const documentId = channel._id || channel.id;
+              if (documentId) {
+                onSelect?.(documentId);
+              }
+            }}
+            className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+          />
+        </div>
+      )}
+
       <div className="px-3 py-1.5">
         <div className="flex items-start space-x-3">
-          {/* 선택 체크박스 */}
-          {showSelection && (
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={(e) => {
-                e.stopPropagation();
-                onSelect?.(channel.channelId);
-              }}
-              className="mt-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-          )}
 
           {/* 썸네일 */}
           <div className="flex-shrink-0">

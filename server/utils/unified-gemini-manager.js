@@ -574,7 +574,7 @@ class UnifiedGeminiManager {
 
     // 요청 구성
     const requestData = [];
-    
+
     if (imageBase64) {
       requestData.push({
         text: prompt
@@ -591,18 +591,18 @@ class UnifiedGeminiManager {
 
     // API 호출 (thinking 모드 지원)
     const generationConfig = {};
-    
+
     // thinking budget 설정 (환경변수 또는 옵션에서 가져오기)
-    const thinkingBudget = options.thinkingBudget ?? 
+    const thinkingBudget = options.thinkingBudget ??
                           (process.env.GEMINI_THINKING_BUDGET ? parseInt(process.env.GEMINI_THINKING_BUDGET) : undefined);
-    
+
     if (thinkingBudget !== undefined && modelId.includes('flash')) {
       generationConfig.thinkingBudget = thinkingBudget;
     }
-    
+
     // 타임아웃 설정 - null이면 제외
     const requestOptions = { ...generationConfig };
-    const timeout = UnifiedGeminiManager.getTimeoutForModel(modelId || modelType || 'flash');
+    const timeout = UnifiedGeminiManager.getTimeoutForModel(modelId || 'flash');
     if (timeout !== null) {
       requestOptions.timeout = timeout;
     }
@@ -628,7 +628,7 @@ class UnifiedGeminiManager {
 
     // 요청 구성
     const requestData = [];
-    
+
     if (imageBase64) {
       requestData.push({
         text: prompt
@@ -645,18 +645,18 @@ class UnifiedGeminiManager {
 
     // API 호출 (thinking 모드 지원)
     const generationConfig = {};
-    
+
     // thinking budget 설정 (환경변수 또는 옵션에서 가져오기)
-    const thinkingBudget = options.thinkingBudget ?? 
+    const thinkingBudget = options.thinkingBudget ??
                           (process.env.GEMINI_THINKING_BUDGET ? parseInt(process.env.GEMINI_THINKING_BUDGET) : undefined);
-    
+
     if (thinkingBudget !== undefined && modelType.includes('flash')) {
       generationConfig.thinkingBudget = thinkingBudget;
     }
-    
+
     // 타임아웃 설정 - null이면 제외
     const requestOptions = { ...generationConfig };
-    const timeout = UnifiedGeminiManager.getTimeoutForModel(modelId || modelType || 'flash');
+    const timeout = UnifiedGeminiManager.getTimeoutForModel(modelType || 'flash');
     if (timeout !== null) {
       requestOptions.timeout = timeout;
     }
@@ -1106,10 +1106,10 @@ class UnifiedGeminiManager {
     if (thinkingBudget !== undefined && modelId.includes('flash')) {
       generationConfig.thinkingBudget = thinkingBudget;
     }
-    
+
     // 타임아웃 설정 - null이면 제외
     const requestOptions = { ...generationConfig };
-    const timeout = UnifiedGeminiManager.getTimeoutForModel(modelId || modelType || 'flash');
+    const timeout = UnifiedGeminiManager.getTimeoutForModel(modelId || 'flash');
     if (timeout !== null) {
       requestOptions.timeout = timeout;
     }
@@ -1149,7 +1149,7 @@ class UnifiedGeminiManager {
     
     // 타임아웃 설정 - null이면 제외
     const requestOptions = { ...generationConfig };
-    const timeout = UnifiedGeminiManager.getTimeoutForModel(modelId || modelType || 'flash');
+    const timeout = UnifiedGeminiManager.getTimeoutForModel(modelType || 'flash');
     if (timeout !== null) {
       requestOptions.timeout = timeout;
     }
