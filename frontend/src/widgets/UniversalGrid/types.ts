@@ -46,6 +46,7 @@ export interface UniversalGridProps<T extends GridItem> {
 
   // 그리드 설정
   gridSize?: 1 | 2 | 3;
+  cardLayout?: 'horizontal' | 'square';  // 카드 레이아웃 타입
   containerWidth?: number;
   containerHeight?: number;
 

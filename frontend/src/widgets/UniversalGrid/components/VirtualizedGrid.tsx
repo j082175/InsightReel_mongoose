@@ -9,10 +9,14 @@ interface VirtualizedGridProps<T extends GridItem> {
   selectedItems: Set<string>;
   isSelectMode: boolean;
   onSelect: (itemId: string) => void;
+  onDelete?: (item: T) => void;
+  onCardClick?: (item: T) => void;
   containerHeight?: number;
   useWindowScroll?: boolean;
   className?: string;
   gridSize?: 1 | 2 | 3 | 4;
+  // 카드 레이아웃 타입 (채널카드는 가로형, 비디오카드는 정사각형)
+  cardLayout?: 'horizontal' | 'square';
   // 무한 스크롤링 지원
   hasMore?: boolean;
   onLoadMore?: () => void;
@@ -29,10 +33,13 @@ export function VirtualizedGrid<T extends GridItem>({
   selectedItems,
   isSelectMode,
   onSelect,
+  onDelete,
+  onCardClick,
   containerHeight = 600,
   useWindowScroll = false,
   className = '',
   gridSize = 1,
+  cardLayout = 'square',
   hasMore = false,
   onLoadMore,
   isLoading = false
@@ -54,35 +61,61 @@ export function VirtualizedGrid<T extends GridItem>({
     4: 'grid-cols-1 sm:grid-cols-2'
   };
 
-  // 컨테이너별 아이템 수 계산 (완전 고정값)
+  // 컨테이너별 아이템 수 계산 (카드 레이아웃에 따라 다름)
   const itemsPerRow = useMemo(() => {
     const viewportWidth = window.innerWidth;
 
-    // 화면 크기별 완전 고정값 (breakpoint 기반)
+    // 가로형 카드 (채널카드) - 3열로 수정
+    if (cardLayout === 'horizontal') {
+      let fixedItems;
+      if (viewportWidth >= 1400) {
+        fixedItems = 3; // 큰 화면에서 3열
+      } else if (viewportWidth >= 1200) {
+        fixedItems = 3; // 3열
+      } else if (viewportWidth >= 1024) {
+        fixedItems = 3; // 3열
+      } else if (viewportWidth >= 768) {
+        fixedItems = 2; // 중간 화면에서는 2열
+      } else {
+        fixedItems = 1; // 작은 화면에서는 1열
+      }
+
+      console.log('🔢 VirtualizedGrid 가로형 카드:', {
+        viewportWidth,
+        cardLayout,
+        fixedItems,
+        breakpoint: viewportWidth >= 1400 ? 'xl+' : viewportWidth >= 1200 ? 'xl' : viewportWidth >= 1024 ? 'lg' : viewportWidth >= 768 ? 'md' : 'sm'
+      });
+
+      return fixedItems;
+    }
+
+    // 정사각형 카드 (비디오카드) - 기존 로직 (강제 6열 보장)
     let fixedItems;
     if (viewportWidth >= 1400) {
       fixedItems = gridSize === 1 ? 7 : gridSize === 2 ? 6 : gridSize === 3 ? 4 : 3;
     } else if (viewportWidth >= 1200) {
       fixedItems = gridSize === 1 ? 6 : gridSize === 2 ? 6 : gridSize === 3 ? 4 : 3;
     } else if (viewportWidth >= 1024) {
-      fixedItems = gridSize === 1 ? 5 : gridSize === 2 ? 4 : gridSize === 3 ? 3 : 2;
+      fixedItems = gridSize === 1 ? 5 : gridSize === 2 ? 6 : gridSize === 3 ? 4 : 3; // 6열 보장
     } else if (viewportWidth >= 768) {
-      fixedItems = gridSize === 1 ? 4 : gridSize === 2 ? 3 : 2;
+      fixedItems = gridSize === 1 ? 4 : gridSize === 2 ? 4 : 3; // 4열 보장
     } else if (viewportWidth >= 640) {
       fixedItems = 3;
     } else {
       fixedItems = 2;
     }
 
-    console.log('🔢 VirtualizedGrid 완전고정:', {
+    console.log('🔢 VirtualizedGrid 정사각형 카드:', {
       viewportWidth,
       gridSize,
+      cardLayout,
       fixedItems,
       breakpoint: viewportWidth >= 1400 ? 'xl+' : viewportWidth >= 1200 ? 'xl' : viewportWidth >= 1024 ? 'lg' : viewportWidth >= 768 ? 'md' : viewportWidth >= 640 ? 'sm' : 'xs'
     });
 
     return fixedItems;
-  }, [gridSize]);
+  }, [gridSize, cardLayout]);
 
   // 행별로 데이터를 그룹화
   const rowData = useMemo(() => {
@@ -108,7 +141,9 @@ export function VirtualizedGrid<T extends GridItem>({
             item,
             isSelected,
             isSelectMode,
-            onSelect: () => onSelect(itemId)
+            onSelect: () => onSelect(itemId),
+            onDelete,
+            onCardClick
           };
 
           console.log('📱 VirtualizedGrid.cardProps:', {
@@ -120,7 +155,10 @@ export function VirtualizedGrid<T extends GridItem>({
           });
 
           return (
-            <div key={itemId} className="flex-1 min-w-0">
+            <div
+              key={itemId}
+              className={cardLayout === 'horizontal' ? 'w-full' : 'flex-1 min-w-0'}
+            >
               {renderCard(item, cardProps)}
             </div>
           );
@@ -129,12 +167,15 @@ export function VirtualizedGrid<T extends GridItem>({
         {/* 마지막 행에 빈 공간 추가 (왼쪽 정렬용) */}
         {rowItems.length < itemsPerRow &&
           Array.from({ length: itemsPerRow - rowItems.length }).map((_, i) => (
-            <div key={`empty-${i}`} className="flex-1 min-w-0" />
+            <div
+              key={`empty-${i}`}
+              className={cardLayout === 'horizontal' ? 'w-full' : 'flex-1 min-w-0'}
+            />
           ))
         }
       </div>
     );
-  }, [rowData, gridSize, gridLayoutClasses, selectedItems, isSelectMode, onSelect, renderCard]);
+  }, [rowData, gridSize, gridLayoutClasses, selectedItems, isSelectMode, onSelect, renderCard, cardLayout]);
 
   // 끝에 도달했을 때 실행되는 콜백 (Hook 순서 보장을 위해 early return 전에 선언)
   const handleEndReached = useCallback(() => {

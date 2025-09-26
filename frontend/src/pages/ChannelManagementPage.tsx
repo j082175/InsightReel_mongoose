@@ -306,6 +306,7 @@ const ChannelManagementPage: React.FC = () => {
                 onCardClick={handleChannelClick}
                 onDelete={handleChannelDeleteFromGrid}
                 onBulkDelete={handleDeleteBulk}
+                cardLayout="horizontal"
                 showVirtualScrolling={true}
                 useWindowScroll={true}
                 containerHeight={600}

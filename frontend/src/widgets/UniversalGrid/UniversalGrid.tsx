@@ -27,6 +27,7 @@ function UniversalGrid<T extends GridItem>({
   showVirtualScrolling = true,
   useWindowScroll = false,
   gridSize = GRID_CONFIG.DEFAULT_GRID_SIZE,
+  cardLayout, // 외부에서 명시적으로 지정 가능
   containerWidth = 1200,
   containerHeight = 600,
   className = '',
@@ -463,9 +464,41 @@ function UniversalGrid<T extends GridItem>({
             selectedItems={selectedItems}
             isSelectMode={isSelectMode}
             onSelect={handleSelect}
+            onDelete={handleDelete}
+            onCardClick={onCardClick}
             containerHeight={containerHeight}
             useWindowScroll={useWindowScroll}
             gridSize={gridSize}
+            cardLayout={cardLayout || (() => {
+              if (data.length === 0) return 'square';
+              const firstItem = data[0] as any;
+
+              // 더 정확한 채널 데이터 감지
+              const isChannelData = firstItem && (
+                ('subscribers' in firstItem && typeof firstItem.subscribers === 'number') ||
+                ('totalVideos' in firstItem && typeof firstItem.totalVideos === 'number') ||
+                ('channelId' in firstItem && !('videoId' in firstItem)) ||
+                ('name' in firstItem && !('title' in firstItem))
+              );
+
+              // 비디오 데이터 특성 확인 (채널이 아닌 것 확실히)
+              const isVideoData = firstItem && (
+                'videoId' in firstItem ||
+                'thumbnailUrl' in firstItem ||
+                'duration' in firstItem ||
+                ('title' in firstItem && 'channelName' in firstItem)
+              );
+
+              console.log('🎯 카드 타입 감지:', {
+                cardLayoutProp: cardLayout,
+                firstItem: Object.keys(firstItem || {}),
+                isChannelData,
+                isVideoData,
+                결정: isChannelData && !isVideoData ? 'horizontal' : 'square'
+              });
+
+              return isChannelData && !isVideoData ? 'horizontal' : 'square';
+            })()}
             hasMore={hasMore}
             onLoadMore={onLoadMore}
             isLoading={isLoading}
