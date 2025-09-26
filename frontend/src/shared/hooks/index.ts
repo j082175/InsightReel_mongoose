@@ -53,3 +53,10 @@ export {
   // Query Keys
   queryKeys,
 } from './useApi';
+
+// Infinite Scrolling Hooks
+export {
+  useInfiniteVideos,
+  flattenInfiniteVideos,
+  getTotalVideosCount,
+} from './useInfiniteVideos';

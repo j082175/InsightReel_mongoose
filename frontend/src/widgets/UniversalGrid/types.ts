@@ -54,6 +54,17 @@ export interface UniversalGridProps<T extends GridItem> {
   headerClassName?: string;
   gridClassName?: string;
   footerClassName?: string;
+
+  // 무한 스크롤링 지원
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  isLoading?: boolean;
+
+  // 외부 선택 상태 관리 지원 (선택적)
+  selectedItems?: Set<string>;
+  isSelectMode?: boolean;
+  onSelectToggle?: (itemId: string) => void;
+  onSelectModeToggle?: () => void;
 }
 
 export interface CardRenderProps<T extends GridItem> {

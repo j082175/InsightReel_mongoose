@@ -2,7 +2,9 @@ import { useState, useCallback, useMemo } from 'react';
 import { Video, FilterState } from '../../../shared/types';
 import { getDocumentId } from '../../../shared/utils';
 import {
-  useVideos,
+  useInfiniteVideos,
+  flattenInfiniteVideos,
+  getTotalVideosCount,
   useDeleteVideo,
   useDeleteVideos,
 } from '../../../shared/hooks';
@@ -14,6 +16,9 @@ interface VideoStoreState {
   filters: FilterState;
   selectedVideos: Set<string>;
   isSelectMode: boolean;
+  // 무한 스크롤링 추가
+  hasMore: boolean;
+  isLoadingMore: boolean;
 }
 
 interface VideoStoreActions {
@@ -26,6 +31,8 @@ interface VideoStoreActions {
   deselectVideo: (videoId: string) => void;
   selectAllVideos: () => void;
   clearSelection: () => void;
+  // 무한 스크롤링 추가
+  loadMore: () => void;
 }
 
 const defaultFilters: FilterState = {
@@ -43,12 +50,18 @@ const defaultFilters: FilterState = {
 export const useVideoStore = (
   initialBatchId: string = 'all'
 ): VideoStoreState & VideoStoreActions => {
-  // React Query 훅 사용
+  // React Query 무한 스크롤링 훅 사용
   const {
-    data: videos = [],
+    data: infiniteVideosData,
     isLoading: loading,
+    isFetchingNextPage: isLoadingMore,
+    hasNextPage: hasMore,
+    fetchNextPage,
     error: queryError,
-  } = useVideos(initialBatchId);
+  } = useInfiniteVideos(initialBatchId);
+
+  // 모든 페이지의 비디오를 평탄화
+  const videos = flattenInfiniteVideos(infiniteVideosData);
   const deleteVideoMutation = useDeleteVideo();
   const deleteVideosMutation = useDeleteVideos();
 
@@ -221,6 +234,37 @@ export const useVideoStore = (
     }));
   }, []);
 
+  const loadMore = useCallback(() => {
+    if (hasMore && !isLoadingMore) {
+      console.log('🔄 [VideoStore] 추가 데이터 로딩 중...');
+      fetchNextPage();
+    }
+  }, [hasMore, isLoadingMore, fetchNextPage]);
+
+  // 🚀 DEBUG: VideoStore 상태 로깅
+  console.log('🔧 [DEBUG] VideoStore 상태:', {
+    rawVideosCount: videos.length,
+    filteredVideosCount: filteredVideos.length,
+    loading,
+    isLoadingMore,
+    hasMore,
+    queryError: queryError?.message,
+    infiniteDataPages: infiniteVideosData?.pages?.length,
+    // React Query의 hasNextPage 상세 분석
+    reactQueryState: {
+      hasNextPage: hasMore, // 이미 hasMore로 destructuring됨
+      isFetchingNextPage: isLoadingMore,
+      isLoading: loading,
+      pages: infiniteVideosData?.pages?.map((page, index) => ({
+        pageIndex: index,
+        videosCount: page.videos?.length,
+        pagination: page.pagination
+      }))
+    },
+    firstRawVideo: videos[0]?.title,
+    firstFilteredVideo: filteredVideos[0]?.title
+  });
+
   return {
     // State (React Query + local state 조합)
     videos: filteredVideos,
@@ -229,6 +273,8 @@ export const useVideoStore = (
     filters: state.filters,
     selectedVideos: state.selectedVideos,
     isSelectMode: state.isSelectMode,
+    hasMore: hasMore || false,
+    isLoadingMore: isLoadingMore || false,
 
     // Actions
     deleteVideo,
@@ -240,5 +286,6 @@ export const useVideoStore = (
     deselectVideo,
     selectAllVideos,
     clearSelection,
+    loadMore,
   };
 };

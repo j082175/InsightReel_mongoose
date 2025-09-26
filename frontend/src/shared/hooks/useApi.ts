@@ -163,10 +163,10 @@ export const queryKeys = {
 } as const;
 
 // 영상 목록 조회 (배치 필터링 지원)
-export const useVideos = (batchId?: string) => {
+export const useVideos = (batchId?: string, limit = 50, offset = 0) => {
   return useQuery({
-    queryKey: queryKeys.videos.list(batchId),
-    queryFn: () => videosApi.getVideos(batchId),
+    queryKey: [...queryKeys.videos.list(batchId), { limit, offset }],
+    queryFn: () => videosApi.getVideos(batchId, limit, offset),
     staleTime: 2 * 60 * 1000, // 2분
     gcTime: 5 * 60 * 1000, // 5분
   });

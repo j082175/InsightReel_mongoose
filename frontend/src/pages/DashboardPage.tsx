@@ -33,7 +33,29 @@ const DashboardPage: React.FC = () => {
     filters,
     deleteVideo,
     updateFilters,
+    hasMore,
+    isLoadingMore,
+    loadMore,
   } = videoStore;
+
+  // 🚀 DEBUG: 무한 스크롤링 테스트용 버튼
+  const handleDebugLoadMore = () => {
+    console.log('🔧 [DEBUG] 수동 로드 더 버튼 클릭:', { hasMore, isLoadingMore, videosCount: videos.length });
+    if (hasMore && !isLoadingMore) {
+      loadMore();
+    }
+  };
+
+  // 🚀 DEBUG: 전체 비디오 상태 로그
+  console.log('🔧 [DEBUG] DashboardPage 렌더링 상태:', {
+    videosCount: videos.length,
+    loading,
+    error,
+    hasMore,
+    isLoadingMore,
+    firstVideoTitle: videos[0]?.title,
+    firstVideoId: videos[0]?._id
+  });
 
 
   // 기타 API 훅들
@@ -162,9 +184,24 @@ const DashboardPage: React.FC = () => {
 
         {/* 결과 정보 */}
         <div className="bg-white rounded-lg shadow mb-4 p-4">
-          <div className="text-sm text-gray-500">
-            총 {videos.length}개 영상 (키워드: "{filters.keyword || '없음'}",
-            플랫폼: {filters.platform || '전체'})
+          <div className="flex justify-between items-center">
+            <div className="text-sm text-gray-500">
+              총 {videos.length}개 영상 (키워드: "{filters.keyword || '없음'}",
+              플랫폼: {filters.platform || '전체'})
+            </div>
+            {/* 🚀 DEBUG: 무한 스크롤링 테스트 버튼 */}
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-gray-400">
+                hasMore: {hasMore ? '✅' : '❌'} | loading: {isLoadingMore ? '⏳' : '💤'}
+              </span>
+              <button
+                onClick={handleDebugLoadMore}
+                disabled={!hasMore || isLoadingMore}
+                className="px-3 py-1 bg-blue-500 text-white rounded text-xs disabled:bg-gray-300"
+              >
+                Load More (DEBUG)
+              </button>
+            </div>
           </div>
         </div>
 
@@ -212,6 +249,9 @@ const DashboardPage: React.FC = () => {
           containerWidth={1200}
           containerHeight={600}
           className="bg-white rounded-lg shadow p-6"
+          hasMore={hasMore}
+          onLoadMore={loadMore}
+          isLoading={isLoadingMore}
         />
       </div>
 
