@@ -50,6 +50,14 @@ class UnifiedVideoSaver {
             }
 
             // 2단계: 플랫폼별 데이터 변환
+            ServerLogger.error('🔍 DEBUG - UnifiedVideoSaver 변환 직전 데이터:', {
+                platform,
+                'videoData.metadata': videoData.metadata ? Object.keys(videoData.metadata) : 'null',
+                'videoData.metadata.likes': videoData.metadata?.likes,
+                'videoData.metadata.channelName': videoData.metadata?.channelName,
+                'videoData.metadata.title': videoData.metadata?.title,
+                actualRowNumber
+            });
             const convertedData = VideoDataConverter.convertToSchema(
                 platform,
                 videoData,

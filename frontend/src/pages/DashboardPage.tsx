@@ -21,7 +21,6 @@ import { formatViews } from '../shared/utils/formatters';
 const DashboardPage: React.FC = () => {
   const [selectedBatchId, setSelectedBatchId] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [gridSize, setGridSize] = useState(4);
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
 
 
@@ -209,7 +208,7 @@ const DashboardPage: React.FC = () => {
           onCardClick={(video) => setChannelToAnalyze(video.channelName)}
           initialItemsPerPage={20}
           showVirtualScrolling={true}
-          gridSize={gridSize}
+          useWindowScroll={true}
           containerWidth={1200}
           containerHeight={600}
           className="bg-white rounded-lg shadow p-6"

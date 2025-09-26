@@ -526,7 +526,7 @@ const TrendingCollectionPage: React.FC = () => {
             onCardClick={() => {}} // 채널 클릭 기능 없음
             initialItemsPerPage={20}
             showVirtualScrolling={true}
-            gridSize={4}
+            useWindowScroll={true}
             containerWidth={1200}
             containerHeight={600}
             className="bg-white rounded-lg shadow p-6"

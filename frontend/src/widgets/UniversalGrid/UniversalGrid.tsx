@@ -1,9 +1,10 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { UniversalGridProps, GridItem, CardRenderProps } from './types';
 import { useUniversalPagination } from './hooks';
-import { VirtualizedVideoGrid } from '../../shared/components/VirtualizedVideoGrid';
+import { VirtualizedGrid } from './components/VirtualizedGrid';
 import { SimpleAutocomplete } from '../../shared/components';
 import { getDocumentId } from '../../shared/utils';
+import { GRID_CONFIG } from '../../shared/config/gridConfig';
 
 /**
  * UniversalGrid - 모든 카드 타입을 지원하는 통합 그리드 컴포넌트
@@ -24,7 +25,8 @@ function UniversalGrid<T extends GridItem>({
   onSearchChange,
   initialItemsPerPage = 20,
   showVirtualScrolling = true,
-  gridSize = 1,
+  useWindowScroll = false,
+  gridSize = GRID_CONFIG.DEFAULT_GRID_SIZE,
   containerWidth = 1200,
   containerHeight = 600,
   className = '',
@@ -369,10 +371,17 @@ function UniversalGrid<T extends GridItem>({
       {/* 메인: 가상화 or 일반 그리드 */}
       <div className={gridClassName}>
         {useVirtualScrolling ? (
-          // 가상 스크롤링은 현재 제네릭 지원 안함 - 일반 그리드로 폴백
-          <div className={`grid ${gridLayoutClasses[gridSize]} gap-6`}>
-            {currentData.map(renderCardInternal)}
-          </div>
+          // 진짜 가상 스크롤링 (react-virtuoso 기반)
+          <VirtualizedGrid
+            data={currentData}
+            renderCard={renderCard}
+            selectedItems={selectedItems}
+            isSelectMode={isSelectMode}
+            onSelect={handleSelect}
+            containerHeight={containerHeight}
+            useWindowScroll={useWindowScroll}
+            gridSize={gridSize}
+          />
         ) : (
           // 일반 그리드 모드
           <div className={`grid ${gridLayoutClasses[gridSize]} gap-6`}>

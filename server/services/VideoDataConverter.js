@@ -217,7 +217,9 @@ class VideoDataConverter {
 
         // 업로드 날짜 결정 (Instagram은 날짜만)
         let uploadDate;
-        if (metadata && metadata.uploadDate) {
+        if (videoData.uploadDate) {
+            uploadDate = new Date(videoData.uploadDate).toLocaleDateString('ko-KR');
+        } else if (metadata && metadata.uploadDate) {
             uploadDate = new Date(metadata.uploadDate).toLocaleDateString(
                 'ko-KR',
             );
@@ -267,20 +269,26 @@ class VideoDataConverter {
         }
 
         // 🔍 DEBUG 로깅 - Instagram 데이터 변환 전 확인 (개발 환경에서만)
-        if (process.env.NODE_ENV === 'development') {
-            ServerLogger.debug(`🔍 DEBUG - Instagram 입력 데이터:`, {
-                'metadata keys': Object.keys(metadata),
-                'analysis keys': Object.keys(analysis),
-                'metadata.channelName': metadata.channelName,
-                'metadata.channel': metadata.channel,
-                'metadata.channelTitle': metadata.channelTitle,
-                'metadata.author': metadata.author,
-                'metadata.account': metadata.account,
-                'metadata.title': metadata.title,
-                'analysis.mainCategory': analysis.mainCategory,
-                'analysis.keywords': analysis.keywords
-            }, 'INSTAGRAM_DATA_CONVERTER');
-        }
+        ServerLogger.error(`🔍 DEBUG - Instagram 입력 데이터:`, {
+            'metadata keys': Object.keys(metadata),
+            'analysis keys': Object.keys(analysis),
+            'metadata.channelName': metadata.channelName,
+            'metadata.channel': metadata.channel,
+            'metadata.channelTitle': metadata.channelTitle,
+            'metadata.author': metadata.author,
+            'metadata.account': metadata.account,
+            'metadata.title': metadata.title,
+            'metadata.likes': metadata.likes,
+            'metadata.views': metadata.views,
+            'metadata.comments': metadata.comments,
+            'metadata.commentsCount': metadata.commentsCount,
+            'videoData.likes': videoData.likes,
+            'videoData.views': videoData.views,
+            'videoData.title': videoData.title,
+            'videoData.channelName': videoData.channelName,
+            'analysis.mainCategory': analysis.mainCategory,
+            'analysis.keywords': analysis.keywords
+        }, 'INSTAGRAM_DATA_CONVERTER');
 
         // Instagram 20개 필드 변환
         // video-types.js 인터페이스 표준 데이터 구조
@@ -291,13 +299,15 @@ class VideoDataConverter {
             // Instagram 전용 19개 필드
             uploadDate: uploadDate,
             platform: (platform || 'INSTAGRAM').toUpperCase(),
-            channelName: (metadata && metadata.channelName) ||
+            channelName: videoData.channelName ||
+                        (metadata && metadata.channelName) ||
                         (metadata && metadata.channel) ||
                         (metadata && metadata.channelTitle) ||
                         (metadata && metadata.author) ||
                         (metadata && metadata.account) ||
                         '',
-            channelUrl: (metadata && metadata.channelUrl) || '',
+            title: videoData.title || (metadata && metadata.title) || '',
+            channelUrl: videoData.channelUrl || (metadata && metadata.channelUrl) || '',
             mainCategory: (analysis && analysis.mainCategory) || '미분류',
             middleCategory: (analysis && analysis.middleCategory) || '',
             fullCategoryPath: fullCategoryPath,
@@ -317,12 +327,13 @@ class VideoDataConverter {
                 : (analysis && analysis.mentions)
                 ? [analysis.mentions]
                 : [],
-            description: (metadata && metadata.description) || '',
+            description: videoData.description || (metadata && metadata.description) || '',
             analysisContent: (analysis && analysis.summary) || '',
-            likes: this.parseNumber((metadata && metadata.likes) || 0),
-            commentsCount: this.parseNumber((metadata && metadata.commentsCount) || 0),
+            likes: this.parseNumber(videoData.likes || (metadata && metadata.likes) || 0),
+            views: this.parseNumber(videoData.views || (metadata && metadata.views) || 0),
+            commentsCount: this.parseNumber(videoData.comments || videoData.commentsCount || (metadata && metadata.commentsCount) || 0),
             url: url || '',
-            thumbnailUrl: (metadata && metadata.thumbnailUrl) || '',
+            thumbnailUrl: videoData.thumbnailUrl || (metadata && metadata.thumbnailUrl) || '',
             confidence: this.formatConfidence((analysis && analysis.confidence) || 0),
             analysisStatus: (analysis && analysis.aiModel) || '수동',
             collectionTime: new Date(),

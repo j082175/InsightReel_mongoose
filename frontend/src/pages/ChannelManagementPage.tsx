@@ -307,8 +307,8 @@ const ChannelManagementPage: React.FC = () => {
                 onDelete={handleChannelDeleteFromGrid}
                 onBulkDelete={handleDeleteBulk}
                 showVirtualScrolling={true}
+                useWindowScroll={true}
                 containerHeight={600}
-                gridSize={2}
               />
             ) : (
               <UniversalGrid<any>
@@ -330,8 +330,8 @@ const ChannelManagementPage: React.FC = () => {
                 onDelete={handleGroupDelete}
                 onBulkDelete={handleGroupDeleteBulk}
                 showVirtualScrolling={true}
+                useWindowScroll={true}
                 containerHeight={600}
-                gridSize={2}
               />
             )}
           </div>

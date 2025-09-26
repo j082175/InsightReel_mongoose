@@ -163,6 +163,7 @@ export const HeadlessUICookieModal: React.FC<HeadlessUICookieModalProps> = ({
         className="relative z-50"
         onClose={uploadStatus.type === 'uploading' ? () => {} : onClose}
         static={uploadStatus.type === 'uploading'}
+        __demoMode={false}
       >
         <Transition.Child
           as={Fragment}
@@ -176,16 +177,15 @@ export const HeadlessUICookieModal: React.FC<HeadlessUICookieModalProps> = ({
           <div className="fixed inset-0 bg-black bg-opacity-25" />
         </Transition.Child>
 
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4 text-center">
+        <div className="fixed inset-0 flex items-center justify-center p-4">
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
-              enterFrom="opacity-0 scale-95 translate-y-4"
-              enterTo="opacity-100 scale-100 translate-y-0"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
               leave="ease-in duration-200"
-              leaveFrom="opacity-100 scale-100 translate-y-0"
-              leaveTo="opacity-0 scale-95 translate-y-4"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
             >
               <Dialog.Panel className="w-full max-w-md overflow-hidden rounded-2xl bg-white p-0 shadow-xl">
                 {/* 헤더 */}
@@ -341,7 +341,6 @@ export const HeadlessUICookieModal: React.FC<HeadlessUICookieModalProps> = ({
                 </div>
               </Dialog.Panel>
             </Transition.Child>
-          </div>
         </div>
       </Dialog>
     </Transition>

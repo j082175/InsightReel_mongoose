@@ -14,13 +14,13 @@ import toast from 'react-hot-toast';
 
 // 🚀 성능 최적화: Animation Variants를 컴포넌트 외부로 이동
 const CARD_VARIANTS = {
-  initial: { opacity: 0, y: 20, scale: 0.95 },
+  initial: { opacity: 1, y: 0, scale: 1 },
   animate: {
     opacity: 1,
     y: 0,
     scale: 1,
     transition: {
-      duration: 0.4,
+      duration: 0,
       ease: [0.4, 0, 0.2, 1],
     },
   },

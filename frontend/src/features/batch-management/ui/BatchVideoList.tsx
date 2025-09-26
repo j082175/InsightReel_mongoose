@@ -108,6 +108,9 @@ const BatchVideoList: React.FC<BatchVideoListProps> = ({
               onDelete={onVideoDelete}
               showStats={true}
               enableSearch={false}
+              showVirtualScrolling={true}
+              useWindowScroll={false}
+              containerHeight={400}
             />
           )}
         </div>

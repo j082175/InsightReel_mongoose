@@ -642,6 +642,76 @@ class VideoProcessor {
         return thumbnailData;
     }
 
+    // yt-dlp를 사용한 메타데이터 추출 헬퍼 함수
+    async getMetadataWithYtDlp(videoUrl) {
+        ServerLogger.info(`🔧 yt-dlp로 메타데이터 추출 시도: ${videoUrl}`);
+
+        try {
+            const ytdlpExe = path.join(__dirname, '../../yt-dlp.exe');
+
+            // Instagram 쿠키 옵션 추가
+            const isInstagram = videoUrl.includes('instagram.com');
+            let cookieOptions = '';
+            if (isInstagram) {
+                const cookieFile = path.join(__dirname, '../data/instagram_cookies.txt');
+                if (fs.existsSync(cookieFile)) {
+                    cookieOptions = `--cookies "${cookieFile}"`;
+                }
+            }
+
+            // yt-dlp로 JSON 형식 메타데이터 추출
+            const command = `"${ytdlpExe}" --dump-json --no-playlist ${cookieOptions} "${videoUrl}"`;
+            ServerLogger.info(`📝 메타데이터 추출 명령어: ${command}`);
+
+            const { stdout, stderr } = await execAsync(command, {
+                timeout: 30000, // 30초 타임아웃
+                maxBuffer: 1024 * 1024 * 5 // 5MB 버퍼
+            });
+
+            if (stderr && !stderr.includes('WARNING')) {
+                ServerLogger.warn(`⚠️ yt-dlp 경고: ${stderr}`);
+            }
+
+            const metadata = JSON.parse(stdout);
+
+            // 표준 형식으로 변환
+            const standardizedData = {
+                videoId: metadata.id || metadata.display_id,
+                title: metadata.title || metadata.fulltitle || 'Instagram Video',
+                description: metadata.description || '',
+                channelName: metadata.uploader || metadata.channel || metadata.uploader_id,
+                channelId: metadata.uploader_id || metadata.channel_id,
+                uploadDate: metadata.upload_date || metadata.timestamp,
+                thumbnailUrl: metadata.thumbnail || metadata.thumbnails?.[0]?.url,
+
+                // 통계 정보
+                views: metadata.view_count || 0,
+                likes: metadata.like_count || 0,
+                dislikes: metadata.dislike_count || 0,
+                comments: metadata.comment_count || 0,
+
+                // 비디오 정보
+                duration: metadata.duration || 0,
+                durationFormatted: metadata.duration_string || '0:00',
+                quality: metadata.format_note || metadata.quality || 'HD',
+                fps: metadata.fps || 30,
+
+                // 추가 메타데이터
+                platform: isInstagram ? 'INSTAGRAM' : 'UNKNOWN',
+                extractedAt: new Date().toISOString(),
+                apiSource: 'yt-dlp',
+                rawMetadata: metadata // 원본 데이터 보존
+            };
+
+            ServerLogger.info(`✅ yt-dlp 메타데이터 추출 성공`);
+            return standardizedData;
+
+        } catch (error) {
+            ServerLogger.error(`❌ yt-dlp 메타데이터 추출 실패: ${error.message}`);
+            throw error;
+        }
+    }
+
     // TikTok 비디오 메타데이터 추출 함수 (v1 → v2 → v3 폭포수 방식)
     async getTikTokVideoInfo(videoUrl) {
         return await this.getTikTokVideoInfoFallback(videoUrl);
@@ -1653,79 +1723,136 @@ class VideoProcessor {
         throw new Error('유효하지 않은 YouTube URL입니다.');
     }
 
-    // Instagram 비디오 메타데이터 추출 함수 (Instaloader 사용)
+    // Instagram 비디오 메타데이터 추출 함수 (Instaloader → yt-dlp 폴백)
     async getInstagramVideoInfo(instagramUrl) {
+        let standardizedData = null;
+        let instaloaderError = null;
+
         try {
             ServerLogger.info(`📸 Instagram 메타데이터 추출 시작: ${instagramUrl}`);
 
-            // Instaloader를 통한 데이터 추출
-            const instagramData = await this.instagramExtractor.extractReelsData(instagramUrl);
+            // 1단계: Instaloader를 통한 데이터 추출 시도
+            try {
+                const instagramData = await this.instagramExtractor.extractReelsData(instagramUrl);
 
-            if (!instagramData.success) {
-                throw new Error(`Instagram 데이터 추출 실패: ${instagramData.error || 'Unknown error'}`);
+                if (!instagramData.success) {
+                    throw new Error(`Instagram 데이터 추출 실패: ${instagramData.error || 'Unknown error'}`);
+                }
+
+                const { post, profile } = instagramData;
+
+                // VideoProcessor 표준 형식으로 변환
+                standardizedData = {
+                    // 기본 비디오 정보
+                    videoId: post.shortcode,
+                    title: this.extractInstagramTitle(post.caption),
+                    description: post.caption || '',
+                    channelName: profile.username,
+                    channelId: profile.username,
+                    uploadDate: post.date,
+                    thumbnailUrl: post.url,
+                    category: '라이프스타일',
+                    youtubeCategory: '라이프스타일',
+
+                    // Instagram 특화 통계 정보
+                    views: post.video_view_count || 0,
+                    likes: post.likes || 0,
+                    dislikes: 0,
+                    comments: post.comments || 0,
+                    shares: 0,
+
+                    // 채널 정보
+                    subscriberCount: profile.followers || 0,
+                    channelDescription: profile.biography || '',
+                    channelThumbnail: profile.profile_pic_url || '',
+                    channelVerified: profile.is_verified || false,
+
+                    // 비디오 메타데이터
+                    duration: post.is_video ? 30 : 0,
+                    durationFormatted: post.is_video ? '0:30' : '0:00',
+                    quality: 'HD',
+                    fps: 30,
+                    codec: 'mp4',
+
+                    // Instagram 추가 정보
+                    platform: 'INSTAGRAM',
+                    is_video: post.is_video,
+                    typename: post.typename,
+                    video_url: post.video_url,
+                    profile_data: {
+                        followees: profile.followees,
+                        mediacount: profile.mediacount,
+                        is_private: profile.is_private,
+                        full_name: profile.full_name
+                    },
+
+                    // 메타데이터
+                    extractedAt: new Date().toISOString(),
+                    apiSource: 'instaloader',
+                    dataVersion: '2.0.0'
+                };
+
+                ServerLogger.info('✅ Instaloader로 Instagram 메타데이터 추출 완료');
+                ServerLogger.info(`📊 조회수: ${standardizedData.views}, 좋아요: ${standardizedData.likes}, 댓글: ${standardizedData.comments}`);
+                ServerLogger.info(`👤 채널: ${standardizedData.channelName} (팔로워: ${standardizedData.subscriberCount}명)`);
+
+                // 🔍 DEBUG: Instaloader 추출 원시 데이터 (전체)
+                ServerLogger.info('🔍 DEBUG - Instaloader 전체 post 데이터:', JSON.stringify(post, null, 2));
+                ServerLogger.info('🔍 DEBUG - Instaloader 전체 profile 데이터:', JSON.stringify(profile, null, 2));
+
+            } catch (instaloaderErr) {
+                instaloaderError = instaloaderErr;
+                ServerLogger.warn(`⚠️ Instaloader 실패: ${instaloaderErr.message} - yt-dlp로 폴백 시도`);
             }
 
-            const { post, profile } = instagramData;
+            // 2단계: Instaloader 실패 시 yt-dlp로 폴백
+            if (!standardizedData || instaloaderError) {
+                try {
+                    ServerLogger.info('🔄 yt-dlp로 Instagram 메타데이터 추출 시도');
+                    const ytdlpData = await this.getMetadataWithYtDlp(instagramUrl);
 
-            // VideoProcessor 표준 형식으로 변환
-            const standardizedData = {
-                // 기본 비디오 정보
-                videoId: post.shortcode,
-                title: this.extractInstagramTitle(post.caption),
-                description: post.caption || '',
-                channelName: profile.username,
-                channelId: profile.username,
-                uploadDate: post.date,
-                thumbnailUrl: post.url,
-                category: '라이프스타일',
-                youtubeCategory: '라이프스타일',
+                    // 🔍 DEBUG: yt-dlp 추출 데이터 (전체)
+                    ServerLogger.info('🔍 DEBUG - yt-dlp 전체 추출 데이터:', JSON.stringify(ytdlpData, null, 2));
 
-                // Instagram 특화 통계 정보
-                views: post.video_view_count || 0,
-                likes: post.likes || 0,
-                dislikes: 0,
-                comments: post.comments || 0,
-                shares: 0,
+                    // Instaloader 데이터가 부분적으로 있으면 병합, 없으면 yt-dlp 데이터만 사용
+                    if (standardizedData) {
+                        // 누락된 필드만 yt-dlp 데이터로 보완
+                        standardizedData = {
+                            ...standardizedData,
+                            // 누락 가능성이 높은 필드들 우선 보완
+                            views: standardizedData.views || ytdlpData.views,
+                            duration: standardizedData.duration || ytdlpData.duration,
+                            durationFormatted: standardizedData.durationFormatted || ytdlpData.durationFormatted,
+                            thumbnailUrl: standardizedData.thumbnailUrl || ytdlpData.thumbnailUrl,
+                            title: standardizedData.title === 'Instagram 포스트' ? ytdlpData.title : standardizedData.title,
+                            apiSource: 'hybrid-instaloader-ytdlp'
+                        };
+                        ServerLogger.info('✅ Instaloader + yt-dlp 하이브리드 데이터 병합 완료');
+                    } else {
+                        // Instaloader가 완전히 실패한 경우 yt-dlp 데이터만 사용
+                        standardizedData = {
+                            ...ytdlpData,
+                            platform: 'INSTAGRAM',
+                            category: '라이프스타일',
+                            youtubeCategory: '라이프스타일'
+                        };
+                        ServerLogger.info('✅ yt-dlp로 Instagram 메타데이터 추출 성공');
+                    }
 
-                // 채널 정보
-                subscriberCount: profile.followers || 0,
-                channelDescription: profile.biography || '',
-                channelThumbnail: profile.profile_pic_url || '',
-                channelVerified: profile.is_verified || false,
+                } catch (ytdlpErr) {
+                    ServerLogger.error(`❌ yt-dlp도 실패: ${ytdlpErr.message}`);
 
-                // 비디오 메타데이터
-                duration: post.is_video ? 30 : 0,
-                durationFormatted: post.is_video ? '0:30' : '0:00',
-                quality: 'HD',
-                fps: 30,
-                codec: 'mp4',
-
-                // Instagram 추가 정보
-                platform: 'INSTAGRAM',
-                is_video: post.is_video,
-                typename: post.typename,
-                video_url: post.video_url,
-                profile_data: {
-                    followees: profile.followees,
-                    mediacount: profile.mediacount,
-                    is_private: profile.is_private,
-                    full_name: profile.full_name
-                },
-
-                // 메타데이터
-                extractedAt: new Date().toISOString(),
-                apiSource: 'instaloader',
-                dataVersion: '2.0.0'
-            };
-
-            ServerLogger.info('✅ Instagram 메타데이터 추출 완료');
-            ServerLogger.info(`📊 조회수: ${standardizedData.views}, 좋아요: ${standardizedData.likes}, 댓글: ${standardizedData.comments}`);
-            ServerLogger.info(`👤 채널: ${standardizedData.channelName} (팔로워: ${standardizedData.subscriberCount}명)`);
+                    // 모든 방법이 실패한 경우
+                    if (instaloaderError) {
+                        throw new Error(`Instagram 메타데이터 추출 완전 실패 - Instaloader: ${instaloaderError.message}, yt-dlp: ${ytdlpErr.message}`);
+                    }
+                }
+            }
 
             return standardizedData;
 
         } catch (error) {
-            ServerLogger.error(`❌ Instagram 메타데이터 추출 실패: ${error.message}`);
+            ServerLogger.error(`❌ Instagram 메타데이터 추출 최종 실패: ${error.message}`);
             throw new Error(`Instagram 메타데이터 추출 실패: ${error.message}`);
         }
     }

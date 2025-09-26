@@ -42,6 +42,7 @@ export interface UniversalGridProps<T extends GridItem> {
   // 페이지네이션 설정
   initialItemsPerPage?: number;
   showVirtualScrolling?: boolean;
+  useWindowScroll?: boolean;
 
   // 그리드 설정
   gridSize?: 1 | 2 | 3;

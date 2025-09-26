@@ -1026,6 +1026,8 @@ app.post('/api/process-video', async (req, res) => {
                 let videoPath;
                 let youtubeInfo = null;
                 let tiktokInfo = null;
+                let instagramInfo = null;
+                let enrichedMetadata = { platform }; // 기본값으로 초기화
 
                 // YouTube인 경우 API로 정보 수집
                 if (platform === PLATFORMS.YOUTUBE) {
@@ -1075,8 +1077,55 @@ app.post('/api/process-video', async (req, res) => {
                             platform,
                         );
                     }
-                } else {
+                } else if (platform === PLATFORMS.INSTAGRAM) {
+                    // Instagram인 경우 API로 정보 수집
+                    ServerLogger.info('0️⃣ Instagram 정보 수집 중...');
+                    instagramInfo = await videoProcessor.getInstagramVideoInfo(
+                        videoUrl,
+                    );
+                    ServerLogger.info(
+                        `📸 ${instagramInfo.contentType} 감지: ${instagramInfo.title}`,
+                    );
+
+                    // Instagram 메타데이터를 enrichedMetadata에 포함
+                    ServerLogger.info('🔍 DEBUG - instagramInfo:', JSON.stringify(instagramInfo, null, 2));
+                    enrichedMetadata = { ...enrichedMetadata, ...instagramInfo };
+                    ServerLogger.info('🔍 DEBUG - enrichedMetadata after merge:', JSON.stringify(enrichedMetadata, null, 2));
+
+                    // Instagram 정보를 원본 metadata에도 병합 (YouTube와 동일하게)
+                    if (!metadata || typeof metadata !== 'object') {
+                        metadata = {};
+                    }
+                    Object.assign(metadata, {
+                        title: instagramInfo.title,
+                        description: instagramInfo.description,
+                        channelName: instagramInfo.channelName,
+                        likes: instagramInfo.likes,
+                        views: instagramInfo.views,
+                        comments: instagramInfo.comments,
+                        commentsCount: instagramInfo.comments,
+                        duration: instagramInfo.duration,
+                        durationFormatted: instagramInfo.durationFormatted,
+                        platform: instagramInfo.platform,
+                        channelId: instagramInfo.channelId,
+                        category: instagramInfo.category,
+                        youtubeCategory: instagramInfo.youtubeCategory,
+                        subscriberCount: instagramInfo.subscriberCount
+                    });
+
                     // Instagram: skipVideoDownload 플래그 확인
+                    if (skipVideoDownload) {
+                        ServerLogger.info('⏩ Instagram 비디오 다운로드 건너뛰기 (skipVideoDownload=true)');
+                        videoPath = null;
+                    } else {
+                        ServerLogger.info('1️⃣ Instagram 비디오 다운로드 중...');
+                        videoPath = await videoProcessor.downloadVideo(
+                            videoUrl,
+                            platform,
+                        );
+                    }
+                } else {
+                    // 기타 플랫폼: skipVideoDownload 플래그 확인
                     if (skipVideoDownload) {
                         ServerLogger.info('⏩ 비디오 다운로드 건너뛰기 (skipVideoDownload=true)');
                         videoPath = null;
@@ -1091,7 +1140,6 @@ app.post('/api/process-video', async (req, res) => {
 
                 let thumbnailPaths;
                 let analysis;
-                let enrichedMetadata = { platform }; // 🆕 기본값으로 초기화
 
                 if (platform === PLATFORMS.YOUTUBE) {
                     // YouTube 정보를 원본 metadata에 병합 (시트 저장용)
@@ -1465,7 +1513,7 @@ app.post('/api/process-video', async (req, res) => {
                         ? thumbnailPaths[0]
                         : thumbnailPaths,
                     thumbnailPaths: thumbnailPaths,
-                    metadata,
+                    metadata: enrichedMetadata, // 🔧 Instagram 메타데이터 포함된 enrichedMetadata 사용
                     analysis,
                     timestamp: new Date().toISOString(),
                 });
