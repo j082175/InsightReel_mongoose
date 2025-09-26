@@ -40,7 +40,9 @@
   },
   "include": [
     "server/features/channel-analysis/**/*.ts",
-    "server/types/**/*.ts"
+    "server/types/**/*.ts",
+    "server/schemas/**/*.ts",
+    "server/models/**/*.ts"
   ],
   "exclude": [
     "node_modules",
