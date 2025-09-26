@@ -33,11 +33,23 @@ function UniversalGrid<T extends GridItem>({
   headerClassName = '',
   gridClassName = '',
   footerClassName = '',
+  hasMore = false,
+  onLoadMore,
+  isLoading = false,
+  // 외부 선택 상태 관리 (선택적)
+  selectedItems: externalSelectedItems,
+  isSelectMode: externalIsSelectMode,
+  onSelectToggle,
+  onSelectModeToggle,
 }: UniversalGridProps<T>) {
 
-  // 내부 선택 상태 관리
-  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [isSelectMode, setIsSelectMode] = useState(false);
+  // 외부에서 선택 상태 관리하는 경우와 내부에서 관리하는 경우 모두 지원
+  const [internalSelectedItems, setInternalSelectedItems] = useState<Set<string>>(new Set());
+  const [internalIsSelectMode, setInternalIsSelectMode] = useState(false);
+
+  // props로 받은 상태가 있으면 그것을 사용, 없으면 내부 상태 사용
+  const selectedItems = externalSelectedItems ?? internalSelectedItems;
+  const isSelectMode = externalIsSelectMode ?? internalIsSelectMode;
 
   // 검색 상태 관리
   const [searchTerm, setSearchTerm] = useState('');
@@ -157,57 +169,103 @@ function UniversalGrid<T extends GridItem>({
 
   // 선택 관련 핸들러
   const handleSelect = useCallback((id: string) => {
-    setSelectedItems(prev => {
-      const updated = new Set(prev);
-      if (updated.has(id)) {
-        updated.delete(id);
-      } else {
-        updated.add(id);
-      }
-
-      // 외부에 선택 변경사항 알림
-      onSelectionChange?.(Array.from(updated));
-      return updated;
+    console.log('🟡 UniversalGrid.handleSelect:', {
+      id,
+      hasExternalState: !!externalSelectedItems,
+      hasOnSelectToggle: !!onSelectToggle,
+      currentSelected: Array.from(selectedItems)
     });
-  }, [onSelectionChange]);
+
+    if (externalSelectedItems && onSelectToggle) {
+      // 외부 상태 관리 - 외부 콜백 호출
+      console.log('🔵 외부 상태 관리 - onSelectToggle 호출');
+      onSelectToggle(id);
+    } else {
+      // 내부 상태 관리
+      console.log('🟠 내부 상태 관리');
+      setInternalSelectedItems(prev => {
+        const updated = new Set(prev);
+        if (updated.has(id)) {
+          updated.delete(id);
+        } else {
+          updated.add(id);
+        }
+
+        // 외부에 선택 변경사항 알림
+        onSelectionChange?.(Array.from(updated));
+        return updated;
+      });
+    }
+  }, [externalSelectedItems, onSelectToggle, onSelectionChange, selectedItems]);
 
   const toggleSelectMode = useCallback(() => {
-    setIsSelectMode(prev => !prev);
-    // 선택 모드 해제 시 선택 해제
-    if (isSelectMode) {
-      setSelectedItems(new Set());
-      onSelectionChange?.([]);
+    if (externalIsSelectMode !== undefined && onSelectModeToggle) {
+      // 외부 상태 관리 - 외부 콜백 호출
+      onSelectModeToggle();
+    } else {
+      // 내부 상태 관리
+      setInternalIsSelectMode(prev => !prev);
+      // 선택 모드 해제 시 선택 해제
+      if (isSelectMode) {
+        setInternalSelectedItems(new Set());
+        onSelectionChange?.([]);
+      }
     }
-  }, [isSelectMode, onSelectionChange]);
+  }, [externalIsSelectMode, onSelectModeToggle, isSelectMode, onSelectionChange]);
 
   const handleSelectAll = useCallback(() => {
     if (selectedItems.size === currentData.length) {
       // 전체 선택 해제
-      setSelectedItems(new Set());
-      onSelectionChange?.([]);
+      if (externalSelectedItems && onSelectToggle) {
+        // 외부 상태 관리 - 각 아이템 토글
+        selectedItems.forEach(id => onSelectToggle(id));
+      } else {
+        // 내부 상태 관리
+        setInternalSelectedItems(new Set());
+        onSelectionChange?.([]);
+      }
     } else {
       // 전체 선택
-      const allIds = new Set(currentData.map(item => getDocumentId(item)).filter(Boolean) as string[]);
-      setSelectedItems(allIds);
-      onSelectionChange?.(Array.from(allIds));
+      const allIds = currentData.map(item => getDocumentId(item)).filter(Boolean) as string[];
+      if (externalSelectedItems && onSelectToggle) {
+        // 외부 상태 관리 - 선택되지 않은 아이템들만 토글
+        allIds.forEach(id => {
+          if (!selectedItems.has(id)) {
+            onSelectToggle(id);
+          }
+        });
+      } else {
+        // 내부 상태 관리
+        const allIdsSet = new Set(allIds);
+        setInternalSelectedItems(allIdsSet);
+        onSelectionChange?.(Array.from(allIdsSet));
+      }
     }
-  }, [selectedItems.size, currentData, onSelectionChange]);
+  }, [selectedItems, currentData, externalSelectedItems, onSelectToggle, onSelectionChange]);
 
   const handleDelete = useCallback((item: T) => {
     const itemId = getDocumentId(item);
     if (itemId) {
       // 삭제된 아이템을 선택에서 제거
-      setSelectedItems(prev => {
-        const updated = new Set(prev);
-        updated.delete(itemId);
-        onSelectionChange?.(Array.from(updated));
-        return updated;
-      });
+      if (externalSelectedItems && onSelectToggle) {
+        // 외부 상태 관리 - 선택된 아이템이면 토글하여 해제
+        if (selectedItems.has(itemId)) {
+          onSelectToggle(itemId);
+        }
+      } else {
+        // 내부 상태 관리
+        setInternalSelectedItems(prev => {
+          const updated = new Set(prev);
+          updated.delete(itemId);
+          onSelectionChange?.(Array.from(updated));
+          return updated;
+        });
+      }
     }
 
     // 실제 삭제는 외부에서 처리
     onDelete?.(item);
-  }, [onDelete, onSelectionChange]);
+  }, [externalSelectedItems, onSelectToggle, selectedItems, onDelete, onSelectionChange]);
 
   const handleBulkDelete = useCallback(() => {
     if (selectedItems.size === 0) return;
@@ -219,17 +277,29 @@ function UniversalGrid<T extends GridItem>({
     });
 
     // 선택 해제
-    setSelectedItems(new Set());
-    onSelectionChange?.([]);
+    if (externalSelectedItems && onSelectToggle) {
+      // 외부 상태 관리 - 선택된 모든 아이템 토글하여 해제
+      selectedItems.forEach(id => onSelectToggle(id));
+    } else {
+      // 내부 상태 관리
+      setInternalSelectedItems(new Set());
+      onSelectionChange?.([]);
+    }
 
     // 실제 일괄 삭제는 외부에서 처리
     onBulkDelete?.(selectedItemsData);
-  }, [selectedItems, currentData, onSelectionChange, onBulkDelete]);
+  }, [selectedItems, currentData, externalSelectedItems, onSelectToggle, onSelectionChange, onBulkDelete]);
 
   const clearSelection = useCallback(() => {
-    setSelectedItems(new Set());
-    onSelectionChange?.([]);
-  }, [onSelectionChange]);
+    if (externalSelectedItems && onSelectToggle) {
+      // 외부 상태 관리 - 선택된 모든 아이템 토글하여 해제
+      selectedItems.forEach(id => onSelectToggle(id));
+    } else {
+      // 내부 상태 관리
+      setInternalSelectedItems(new Set());
+      onSelectionChange?.([]);
+    }
+  }, [externalSelectedItems, onSelectToggle, selectedItems, onSelectionChange]);
 
   // 내부 카드 렌더링 함수
   const renderCardInternal = useCallback(
@@ -252,6 +322,14 @@ function UniversalGrid<T extends GridItem>({
         onCardClick,
         cardWidth: calculateCardWidth,
       };
+
+      console.log('📋 UniversalGrid.cardProps:', {
+        itemId,
+        isSelected,
+        isSelectMode,
+        hasOnSelect: !!handleSelect,
+        handleSelectType: typeof handleSelect
+      });
 
       return (
         <div key={itemId}>
@@ -370,7 +448,14 @@ function UniversalGrid<T extends GridItem>({
 
       {/* 메인: 가상화 or 일반 그리드 */}
       <div className={gridClassName}>
-        {useVirtualScrolling ? (
+        {(() => {
+          console.log('🔀 UniversalGrid 렌더링 분기:', {
+            useVirtualScrolling,
+            dataLength: currentData.length,
+            showVirtualScrolling
+          });
+          return useVirtualScrolling;
+        })() ? (
           // 진짜 가상 스크롤링 (react-virtuoso 기반)
           <VirtualizedGrid
             data={currentData}
@@ -381,12 +466,24 @@ function UniversalGrid<T extends GridItem>({
             containerHeight={containerHeight}
             useWindowScroll={useWindowScroll}
             gridSize={gridSize}
+            hasMore={hasMore}
+            onLoadMore={onLoadMore}
+            isLoading={isLoading}
           />
         ) : (
           // 일반 그리드 모드
-          <div className={`grid ${gridLayoutClasses[gridSize]} gap-6`}>
-            {paginatedData.map(renderCardInternal)}
-          </div>
+          (() => {
+            console.log('📋 일반 그리드 모드 사용:', {
+              paginatedDataLength: paginatedData.length,
+              gridSize,
+              gridLayoutClass: gridLayoutClasses[gridSize]
+            });
+            return (
+              <div className={`grid ${gridLayoutClasses[gridSize]} gap-6`}>
+                {paginatedData.map(renderCardInternal)}
+              </div>
+            );
+          })()
         )}
       </div>
 

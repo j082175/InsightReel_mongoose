@@ -67,6 +67,7 @@ interface VideoCardProps {
   video: Video;
   onChannelClick?: (channelName: string) => void;
   onDelete?: (video: Video) => void;
+  onVideoPlay?: (video: Video) => void; // 영상 재생 콜백
   showArchiveInfo?: boolean;
   // 선택 시스템 (페이지에서 제어)
   isSelected?: boolean;
@@ -81,6 +82,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(
     video,
     onChannelClick,
     onDelete,
+    onVideoPlay,
     showArchiveInfo,
     isSelected = false,
     isSelectMode = false,
@@ -156,22 +158,38 @@ const VideoCard: React.FC<VideoCardProps> = memo(
     // 내장 이벤트 핸들러들
     const handleClick = useCallback(
       (e: React.MouseEvent) => {
+        console.log('🎯 VideoCard.handleClick:', {
+          isSelectMode,
+          onSelect: !!onSelect,
+          videoId: getDocumentId(video),
+          platform: video?.platform,
+          stack: new Error().stack?.split('\n')[2]?.trim() // 호출 위치 추적
+        });
+
         if (isSelectMode) {
           e.preventDefault();
           e.stopPropagation();
+          console.log('🔵 선택 모드 - onSelect 호출');
           if (onSelect) {
             onSelect(getDocumentId(video));
+          } else {
+            console.log('❌ onSelect 함수가 없음');
           }
         } else {
+          console.log('🎬 일반 모드 - 재생 로직');
           // 재생 로직
           if (video?.platform === PLATFORMS.YOUTUBE) {
-            setSelectedVideoForPlay(video);
+            if (onVideoPlay) {
+              onVideoPlay(video);
+            } else {
+              setSelectedVideoForPlay(video);
+            }
           } else {
             window.open(video?.url, '_blank', 'noopener,noreferrer');
           }
         }
       },
-      [isSelectMode, onSelect, video]
+      [isSelectMode, onSelect, onVideoPlay, video]
     );
 
     const handleSelectToggle = useCallback(

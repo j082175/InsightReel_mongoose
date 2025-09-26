@@ -1,24 +1,43 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Video, ExtendedVideo } from '../shared/types';
-import { useVideos } from '../shared/hooks';
+import { useVideoStore } from '../features/video-management/model/videoStore';
 import { VideoModal, VideoOnlyModal } from '../features/video-analysis';
 import { DeleteConfirmationModal } from '../shared/ui';
 import { VideoListItem } from '../features/video-analysis';
 import { ChannelAnalysisModal } from '../features/channel-management';
 import { VideoCard, SearchBar } from '../shared/components';
+import { UniversalGrid } from '../widgets/UniversalGrid';
 
 import { PLATFORMS } from '../shared/types/api';
 import { formatViews } from '../shared/utils';
 import { getViewCount } from '../shared/utils/videoUtils';
-import { useSelection, useSearch, useFilter } from '../shared/hooks';
+import { getDocumentId } from '../shared/utils';
+import { useSearch, useFilter } from '../shared/hooks';
 import { ActionBar } from '../shared/components';
 
 const VideoArchivePage: React.FC = () => {
-  const [archivedVideos, setArchivedVideos] = useState<ExtendedVideo[]>([]);
+  // VideoStore를 사용한 통합 상태 관리 (무한 스크롤링 지원)
+  const videoStore = useVideoStore('all');
+  const {
+    videos,
+    loading: isLoading,
+    error,
+    hasMore,
+    isLoadingMore,
+    loadMore,
+    isSelectMode,
+    selectedVideos,
+    toggleSelectMode,
+    selectVideo,
+    deselectVideo,
+    selectAllVideos,
+    clearSelection,
+    deleteVideo,
+    deleteVideos
+  } = videoStore;
+
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [gridSize, setGridSize] = useState(2);
-  const [isSelectMode, setIsSelectMode] = useState(false);
-  const videoSelection = useSelection<string>();
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
   const [selectedVideoForPlay, setSelectedVideoForPlay] =
     useState<Video | null>(null);
@@ -29,6 +48,23 @@ const VideoArchivePage: React.FC = () => {
   } | null>(null);
   const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
   const [showTagModal, setShowTagModal] = useState(false);
+
+  // ExtendedVideo로 변환된 데이터
+  const archivedVideos = useMemo(() => {
+    return videos.map((video: Video) => {
+      // ExtendedVideo 형식으로 변환
+      const extendedVideo: ExtendedVideo = {
+        ...video,
+        aspectRatio: video.platform === PLATFORMS.YOUTUBE ? '16:9' : '9:16',
+        archivedAt: video.collectionTime || video.processedAt || new Date().toISOString(),
+        tags: video.keywords || [],
+        category: video.mainCategory || '미분류',
+        notes: video.analysisContent || '',
+        daysAgo: Math.floor((Date.now() - new Date(video.uploadDate).getTime()) / (1000 * 60 * 60 * 24))
+      };
+      return extendedVideo;
+    });
+  }, [videos]);
 
   // Search and filter hooks
   const searchResult = useSearch(archivedVideos, {
@@ -70,60 +106,7 @@ const VideoArchivePage: React.FC = () => {
   // Final filtered videos combining search and filter results
   const filteredVideos = filterResult.filteredData;
 
-  // API에서 실제 비디오 데이터 가져오기
-  const { data: apiVideos = [], isLoading, error } = useVideos();
 
-
-
-  // Mock 데이터
-  const mockArchivedVideos: ExtendedVideo[] = [
-    {
-      uploadDate: '2024-01-01T10:00:00',
-      platform: 'YOUTUBE',
-      channelName: '개발왕 김코딩',
-      mainCategory: '개발/기술',
-      keywords: ['React', 'JavaScript', '웹개발'],
-      likes: 5200,
-      commentsCount: 120,
-      url: 'https://www.youtube.com/watch?v=react18',
-      thumbnailUrl: 'https://placehold.co/600x400/3B82F6/FFFFFF?text=React18',
-      _id: '101',
-      title: 'React 18의 새로운 기능들 완벽 정리',
-      views: 350000,
-      daysAgo: 15,
-      channelAvatarUrl: 'https://placehold.co/100x100/3B82F6/FFFFFF?text=K',
-      isTrending: false,
-      aspectRatio: '16:9',
-      createdAt: '2024-01-01T10:00:00',
-      archivedAt: '2024-01-10T14:30:00',
-      tags: ['개발', '프론트엔드', '튜토리얼'],
-      category: '개발/기술',
-      notes: 'React 18 업데이트 내용 정리용',
-    },
-    {
-      uploadDate: '2024-01-08T09:00:00',
-      platform: 'TIKTOK',
-      channelName: '요리하는 남자',
-      mainCategory: '라이프스타일',
-      keywords: ['요리', '브런치', '레시피'],
-      likes: 18500,
-      commentsCount: 340,
-      url: 'https://www.tiktok.com/@brunch',
-      thumbnailUrl: 'https://placehold.co/400x600/F43F5E/FFFFFF?text=Brunch',
-      _id: '102',
-      title: '10분 만에 만드는 감동 브런치',
-      views: 1200000,
-      daysAgo: 7,
-      channelAvatarUrl: 'https://placehold.co/100x100/F43F5E/FFFFFF?text=C',
-      isTrending: false,
-      aspectRatio: '9:16',
-      createdAt: '2024-01-08T09:00:00',
-      archivedAt: '2024-01-12T16:45:00',
-      tags: ['요리', '레시피', '간편식'],
-      category: '라이프스타일',
-      notes: '주말 브런치 아이디어',
-    },
-  ];
 
   // URL 유효성 검증 함수
   const isValidUrl = (urlString: string) => {
@@ -156,168 +139,26 @@ const VideoArchivePage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    // API 데이터가 있으면 무조건 사용, 로딩 중이 아닐 때만
-    if (!isLoading) {
-      if (apiVideos.length > 0) {
-        console.log('✅ [VideoArchivePage] API 데이터 사용:', apiVideos.length, '개 비디오');
-        // DB 데이터를 ExtendedVideo 형식으로 변환
-        const convertedVideos: ExtendedVideo[] = apiVideos.map((video: Video) => {
-        const uploadDate =
-          video.uploadDate || video.timestamp || video.createdAt;
-        let daysAgo = 0;
-        let normalizedUploadDate = uploadDate; // VideoCard에 전달할 정규화된 날짜
-
-        if (uploadDate) {
-          try {
-            // 한국어 날짜 형식 처리 ('2025. 9. 9. 오전 5:37:21' 등)
-            if (
-              uploadDate.includes &&
-              (uploadDate.includes('오전') || uploadDate.includes('오후'))
-            ) {
-              const timeMatch = uploadDate.match(
-                /(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})\.\s*(오전|오후)\s*(\d{1,2}):(\d{1,2})/
-              );
-              if (timeMatch) {
-                const [, year, month, day, ampm, hour, minute] = timeMatch;
-                let hour24 = parseInt(hour);
-
-                // 오전/오후를 24시간 형식으로 변환
-                if (ampm === '오후' && hour24 !== 12) {
-                  hour24 += 12;
-                } else if (ampm === '오전' && hour24 === 12) {
-                  hour24 = 0;
-                }
-
-                // 한국시간으로 Date 객체 생성 (UTC가 아닌 로컬시간으로)
-                const parsedDate = new Date(
-                  parseInt(year),
-                  parseInt(month) - 1,
-                  parseInt(day),
-                  hour24,
-                  parseInt(minute),
-                  0
-                );
-                if (!isNaN(parsedDate.getTime())) {
-                  daysAgo = Math.floor(
-                    (Date.now() - parsedDate.getTime()) / (1000 * 60 * 60 * 24)
-                  );
-                  normalizedUploadDate = parsedDate.toISOString(); // ISO 형식으로 변환
-                }
-              } else {
-                // 시간 정보가 없는 경우 날짜만 파싱
-                const dateMatch = uploadDate.match(
-                  /(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/
-                );
-                if (dateMatch) {
-                  const [, year, month, day] = dateMatch;
-                  const parsedDate = new Date(
-                    `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
-                  );
-                  if (!isNaN(parsedDate.getTime())) {
-                    daysAgo = Math.floor(
-                      (Date.now() - parsedDate.getTime()) /
-                        (1000 * 60 * 60 * 24)
-                    );
-                    normalizedUploadDate = parsedDate.toISOString(); // ISO 형식으로 변환
-                  }
-                }
-              }
-            } else {
-              const parsedDate = new Date(uploadDate);
-              if (!isNaN(parsedDate.getTime())) {
-                daysAgo = Math.floor(
-                  (Date.now() - parsedDate.getTime()) / (1000 * 60 * 60 * 24)
-                );
-                normalizedUploadDate = parsedDate.toISOString(); // ISO 형식으로 변환
-              }
-            }
-          } catch (error) {
-            console.warn('날짜 파싱 실패:', uploadDate, error);
-            daysAgo = 0;
-          }
-        }
-
-        // URL 검증 및 fallback 처리
-        let url = video.url;
-        if (!url || !isValidUrl(url)) {
-          url = generateFallbackUrl(
-            video.platform || '',
-            video.channelName || video.youtubeHandle
-          );
-        }
-
-        // 키워드 처리 - 문자열이면 배열로 변환
-        let keywordsArray: string[] = [];
-        if (video.keywords) {
-          if (typeof video.keywords === 'string') {
-            keywordsArray = (video.keywords as string)
-              .split(',')
-              .map((k) => k.trim())
-              .filter((k) => k.length > 0);
-          } else if (Array.isArray(video.keywords)) {
-            keywordsArray = video.keywords;
-          }
-        }
-
-        // 해시태그 처리 - 배열 형태로 통일
-        let hashtagsArray: string[] = [];
-        if (video.hashtags) {
-          if (typeof video.hashtags === 'string') {
-            hashtagsArray = (video.hashtags as string)
-              .split(',')
-              .map((h) => h.trim())
-              .filter((h) => h.length > 0);
-          } else if (Array.isArray(video.hashtags)) {
-            hashtagsArray = video.hashtags;
-          }
-        }
-
-        const extendedVideo: ExtendedVideo = {
-          ...video,
-          id: video._id, // MongoDB _id is always present
-          platform:
-            video.platform?.toUpperCase() === 'YOUTUBE' ||
-            video.platform === PLATFORMS.YOUTUBE
-              ? 'YOUTUBE'
-              : video.platform?.toUpperCase() === 'TIKTOK' ||
-                  video.platform === 'TIKTOK'
-                ? 'TIKTOK'
-                : video.platform?.toUpperCase() === 'INSTAGRAM' ||
-                    video.platform === 'INSTAGRAM'
-                  ? 'INSTAGRAM'
-                  : 'YOUTUBE',
-          url: url,
-          uploadDate: normalizedUploadDate, // 정규화된 날짜 사용
-          keywords: keywordsArray,
-          hashtags: hashtagsArray,
-          daysAgo: daysAgo,
-          aspectRatio: video.platform === PLATFORMS.YOUTUBE ? '16:9' : '9:16',
-          archivedAt:
-            video.collectionTime ||
-            video.processedAt ||
-            new Date().toISOString(),
-          tags: [...hashtagsArray, ...keywordsArray].filter(Boolean),
-          category: video.mainCategory || '미분류',
-          notes: video.analysisContent || '',
-        };
-        return extendedVideo;
-      });
-      setArchivedVideos(convertedVideos);
-      } else {
-        console.log('⚠️ [VideoArchivePage] API에서 비디오 없음, Mock 데이터 사용');
-        // API 데이터가 없으면 mock 데이터 사용
-        setArchivedVideos(mockArchivedVideos);
-      }
-    }
-  }, [apiVideos, isLoading]);
 
   const handleSelectToggle = (videoId: string) => {
-    videoSelection.toggle(videoId);
+    console.log('🟢 VideoArchivePage.handleSelectToggle:', {
+      videoId,
+      currentlySelected: selectedVideos.has(videoId),
+      selectedCount: selectedVideos.size,
+      allSelected: Array.from(selectedVideos)
+    });
+
+    if (selectedVideos.has(videoId)) {
+      console.log('🔴 선택 해제:', videoId);
+      deselectVideo(videoId);
+    } else {
+      console.log('🟢 선택 추가:', videoId);
+      selectVideo(videoId);
+    }
   };
 
   const handleSelectAll = () => {
-    videoSelection.selectAll(filteredVideos.map((v) => v._id));
+    selectAllVideos();
   };
 
   const handleDeleteClick = (item: {
@@ -332,17 +173,14 @@ const VideoArchivePage: React.FC = () => {
     setItemToDelete({ type: 'single', data: video });
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (itemToDelete?.type === 'single' && itemToDelete.data) {
-      setArchivedVideos(
-        archivedVideos.filter((v) => v._id !== itemToDelete.data?._id)
-      );
+      await deleteVideo(itemToDelete.data._id);
     } else if (itemToDelete?.type === 'bulk') {
-      setArchivedVideos(
-        archivedVideos.filter((v) => !videoSelection.selected.has(v._id))
-      );
-      videoSelection.clear();
-      setIsSelectMode(false);
+      const selectedIds = Array.from(selectedVideos);
+      await deleteVideos(selectedIds);
+      clearSelection();
+      toggleSelectMode();
     }
     setItemToDelete(null);
   };
@@ -394,10 +232,7 @@ const VideoArchivePage: React.FC = () => {
       )}
 
       <button
-        onClick={() => {
-          setIsSelectMode(!isSelectMode);
-          videoSelection.clear();
-        }}
+        onClick={toggleSelectMode}
         className={`px-3 py-1 text-sm rounded ${isSelectMode ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
       >
         {isSelectMode ? '선택 취소' : '선택 모드'}
@@ -565,6 +400,16 @@ const VideoArchivePage: React.FC = () => {
 
         {/* 영상 그리드/리스트 */}
         <div className="p-6">
+          {(() => {
+            console.log('🚦 VideoArchivePage 렌더링 조건:', {
+              isLoading,
+              error: !!error,
+              videosLength: videos.length,
+              filteredVideosLength: filteredVideos.length,
+              isSelectMode,
+              selectedVideos: selectedVideos.size
+            });
+          })()}
           {isLoading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
@@ -579,58 +424,44 @@ const VideoArchivePage: React.FC = () => {
               </p>
             </div>
           ) : filteredVideos.length > 0 ? (
-            viewMode === 'grid' ? (
-              <div
-                className={`grid ${gridLayouts[gridSize] || gridLayouts[2]} gap-6`}
-              >
-                {filteredVideos.map((video, index) => (
-                  <VideoCard
-                    key={video._id || video._id || `video-${index}`}
-                    video={video}
-                    onClick={(video) => {
-                      if (!isSelectMode) {
-                        if (video.platform === PLATFORMS.YOUTUBE) {
-                          setSelectedVideoForPlay(video);
-                        } else if (video.url && video.url !== '#') {
-                          window.open(
-                            video.url,
-                            '_blank',
-                            'noopener,noreferrer'
-                          );
-                        } else {
-                          alert(
-                            '죄송합니다. 이 영상의 링크를 찾을 수 없습니다.'
-                          );
-                        }
-                      }
-                    }}
-                    onInfoClick={(video) =>
-                      !isSelectMode && setSelectedVideo(video)
-                    }
-                    onChannelClick={setChannelToAnalyze}
-                    isSelectMode={isSelectMode}
-                    isSelected={videoSelection.isSelected(video._id)}
-                    onSelectToggle={handleSelectToggle}
-                    onDelete={handleVideoDelete}
-                    showArchiveInfo={true}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {filteredVideos.map((video) => (
-                  <VideoListItem
-                    key={video._id}
-                    video={video}
-                    onCardClick={setSelectedVideo}
-                    onDeleteClick={handleDeleteClick}
-                    isSelectMode={isSelectMode}
-                    isSelected={videoSelection.isSelected(video._id)}
-                    onSelectToggle={handleSelectToggle}
-                  />
-                ))}
-              </div>
-            )
+            <UniversalGrid
+              data={filteredVideos}
+              renderCard={(video, cardProps) => (
+                <VideoCard
+                  video={video}
+                  onVideoPlay={(video) => setSelectedVideoForPlay(video)}
+                  onInfoClick={(video) =>
+                    !cardProps.isSelectMode && setSelectedVideo(video)
+                  }
+                  onChannelClick={setChannelToAnalyze}
+                  isSelectMode={cardProps.isSelectMode}
+                  isSelected={cardProps.isSelected}
+                  onSelect={cardProps.onSelect}
+                  onDelete={handleVideoDelete}
+                  showArchiveInfo={true}
+                />
+              )}
+              gridSize={gridSize}
+              hasMore={hasMore}
+              onLoadMore={loadMore}
+              isLoading={isLoadingMore}
+              showVirtualScrolling={true}
+              useWindowScroll={true}
+              // 🎯 VideoStore의 선택 상태를 UniversalGrid에 전달
+              selectedItems={selectedVideos}
+              isSelectMode={isSelectMode}
+              onSelectToggle={handleSelectToggle}
+              onSelectModeToggle={toggleSelectMode}
+              onSelectionChange={(selectedIds) => {
+                console.log('Selection changed:', selectedIds);
+              }}
+              onDelete={async (video) => {
+                await deleteVideo(video._id);
+              }}
+              onBulkDelete={async (videos) => {
+                await deleteVideos(videos.map(v => v._id));
+              }}
+            />
           ) : (
             <div className="text-center py-12 text-gray-500">
               <p className="text-lg">📂</p>
@@ -643,16 +474,15 @@ const VideoArchivePage: React.FC = () => {
       {/* 선택 모드 액션 바 */}
       <ActionBar
         isVisible={isSelectMode}
-        selectedCount={videoSelection.count}
+        selectedCount={selectedVideos.size}
         totalCount={filteredVideos.length}
         itemType="개"
         onSelectAll={handleSelectAll}
         onClearSelection={() => {
-          setIsSelectMode(false);
-          videoSelection.clear();
+          toggleSelectMode();
         }}
         onDelete={() =>
-          handleDeleteClick({ type: 'bulk', count: videoSelection.count })
+          handleDeleteClick({ type: 'bulk', count: selectedVideos.size })
         }
         additionalActions={
           <>

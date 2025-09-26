@@ -13,6 +13,10 @@ interface VirtualizedGridProps<T extends GridItem> {
   useWindowScroll?: boolean;
   className?: string;
   gridSize?: 1 | 2 | 3 | 4;
+  // 무한 스크롤링 지원
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  isLoading?: boolean;
 }
 
 /**
@@ -28,8 +32,19 @@ export function VirtualizedGrid<T extends GridItem>({
   containerHeight = 600,
   useWindowScroll = false,
   className = '',
-  gridSize = 1
+  gridSize = 1,
+  hasMore = false,
+  onLoadMore,
+  isLoading = false
 }: VirtualizedGridProps<T>) {
+
+  console.log('🚀 VirtualizedGrid props:', {
+    dataLength: data.length,
+    isSelectMode,
+    hasOnSelect: !!onSelect,
+    onSelectType: typeof onSelect,
+    selectedItemsSize: selectedItems.size
+  });
 
   // 그리드 레이아웃 클래스 매핑
   const gridLayoutClasses = {
@@ -89,11 +104,20 @@ export function VirtualizedGrid<T extends GridItem>({
           const itemId = item._id || item.id || String(item);
           const isSelected = selectedItems.has(itemId);
 
-          const cardProps: CardRenderProps = {
+          const cardProps: CardRenderProps<T> = {
+            item,
             isSelected,
             isSelectMode,
             onSelect: () => onSelect(itemId)
           };
+
+          console.log('📱 VirtualizedGrid.cardProps:', {
+            itemId,
+            isSelected,
+            isSelectMode,
+            hasOnSelect: !!onSelect,
+            onSelectType: typeof onSelect
+          });
 
           return (
             <div key={itemId} className="flex-1 min-w-0">
@@ -111,6 +135,14 @@ export function VirtualizedGrid<T extends GridItem>({
       </div>
     );
   }, [rowData, gridSize, gridLayoutClasses, selectedItems, isSelectMode, onSelect, renderCard]);
+
+  // 끝에 도달했을 때 실행되는 콜백 (Hook 순서 보장을 위해 early return 전에 선언)
+  const handleEndReached = useCallback(() => {
+    if (hasMore && onLoadMore && !isLoading) {
+      console.log('🔄 [VirtualizedGrid] 스크롤 끝 도달, 추가 로딩 시작');
+      onLoadMore();
+    }
+  }, [hasMore, onLoadMore, isLoading]);
 
   if (data.length === 0) {
     return (
@@ -134,6 +166,14 @@ export function VirtualizedGrid<T extends GridItem>({
         itemContent={renderRow}
         overscan={GRID_CONFIG.VIRTUAL_SCROLLING.OVERSCAN}
         increaseViewportBy={GRID_CONFIG.VIRTUAL_SCROLLING.INCREASE_VIEWPORT_BY}
+        endReached={handleEndReached}
+        components={{
+          Footer: () => isLoading ? (
+            <div className="flex justify-center py-4">
+              <div className="text-gray-500">데이터 로딩 중...</div>
+            </div>
+          ) : null
+        }}
       />
     </div>
   );
