@@ -3,7 +3,7 @@ import { ServerLogger } from "../utils/logger";
 
 // 임시로 require 사용 (YouTubeDataProcessor는 아직 JS 파일)
 // 컴파일 후 dist에서 실행되므로 경로 조정
-const YouTubeDataProcessor = require("../../../server/utils/youtube-data-processor");
+import YouTubeDataProcessor from "../utils/youtube-data-processor";
 
 /**
  * 🔄 하이브리드 YouTube 데이터를 기존 VideoProcessor 포맷으로 변환

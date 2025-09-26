@@ -1,7 +1,7 @@
 const HighViewCollector = require('./HighViewCollector');
 const ChannelGroup = require('../models/ChannelGroup');
 const TrendingVideo = require('../models/TrendingVideo');
-const DurationClassifier = require('../utils/duration-classifier');
+const DurationClassifier = require('../utils/duration-classifier').default;
 const { ServerLogger } = require('../utils/logger');
 const { PLATFORMS } = require('../config/api-messages');
 const { CONTENT_LIMITS } = require('../config/constants');

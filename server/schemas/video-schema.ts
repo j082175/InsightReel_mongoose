@@ -4,14 +4,14 @@
  */
 
 import { Schema } from 'mongoose';
-import type { StandardVideoMetadata } from '../types/video-types';
+import type { FinalVideoData } from '../types/video-types';
 
 /**
  * 🎯 진짜 실무 1위 패턴: Interface를 Schema 제네릭에 전달
  * 컴파일 타임에 타입과 스키마 일치성 검증
  */
-export const createVideoSchema = (): Schema<StandardVideoMetadata> => {
-  return new Schema<StandardVideoMetadata>({
+export const createVideoSchema = (): Schema<FinalVideoData> => {
+  return new Schema<FinalVideoData>({
     // ===== 핵심 성과 지표 =====
     views: { type: Number, default: 0, index: true },
     likes: { type: Number, default: 0, index: true },
@@ -98,7 +98,7 @@ export const createVideoSchema = (): Schema<StandardVideoMetadata> => {
  * 기존 호환성을 위한 함수 (deprecated)
  * @deprecated createVideoSchema() 사용 권장
  */
-export const createBasicVideoSchema = (): Schema<StandardVideoMetadata> => {
+export const createBasicVideoSchema = (): Schema<FinalVideoData> => {
   return createVideoSchema();
 };
 

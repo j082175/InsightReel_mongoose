@@ -1,35 +1,38 @@
 /**
- * 🎯 InsightReel Video Types - 필드명 완전 통일
+ * 🎯 InsightReel Video Types - 최종 데이터 흐름 정의
  *
- * 목표: 모든 플랫폼에서 동일한 필드명 사용으로 변환 오류 방지
- * - YouTube: statistics.viewCount → views
- * - Instagram: post.video_view_count → views
- * - TikTok: viewCount → views
+ * [데이터 흐름]
+ * 1. RawData (플랫폼별 원시 데이터)
+ * 2. StandardVideoMetadata (1차 가공된 표준 데이터)
+ * 3. AIAnalysisResult (AI 분석 결과)
+ * 4. FinalVideoData (2 + 3, DB 저장 직전 최종 데이터)
  */
 
-// ===== 플랫폼 정의 =====
+// =================================================================
+// 🌊 0. 기본 및 공통 타입
+// =================================================================
 export type Platform = 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK';
-
 export type ContentType = 'shortform' | 'longform' | 'mixed';
-
 export type AnalysisStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type ISODateString = string; // ISO 8601 형식 (YYYY-MM-DDTHH:mm:ss.sssZ)
 
-// ===== 플랫폼별 원시 데이터 인터페이스 (실제 사용중) =====
+// =================================================================
+// 🌊 1. RawData: 플랫폼별 원시 데이터
+// =================================================================
 export interface YouTubeRawData {
   snippet: {
     title: string;
     channelTitle: string;
+    channelId: string;
     publishedAt: string;
-    thumbnails: {
-      high: { url: string };
-    };
+    thumbnails: { high: { url: string } };
     description: string;
     categoryId: string;
   };
   statistics: {
-    viewCount: string;      // → views로 변환
-    likeCount: string;      // → likes로 변환
-    commentCount: string;   // → commentsCount로 변환
+    viewCount: string;
+    likeCount: string;
+    commentCount: string;
   };
   contentDetails: {
     duration: string;
@@ -37,68 +40,69 @@ export interface YouTubeRawData {
 }
 
 export interface InstagramRawData {
-  // Instaloader 구조 (실제 사용중)
   post: {
-    video_view_count: number;     // → views로 변환
-    likes: number;                // → likes 그대로
-    comments: number;             // → commentsCount로 변환
+    video_view_count: number;
+    likes: number;
+    comments: number;
     title?: string;
-    owner_username: string;       // → channelName으로 변환
-    date: string;                 // → uploadDate로 변환
+    owner_username: string;
+    date: string;
     video_url?: string;
-    display_url: string;          // → thumbnailUrl로 변환
-    caption?: string;             // → description으로 변환
+    display_url: string;
+    caption?: string;
   };
 }
 
 export interface TikTokRawData {
-  // TikTok API 응답 구조 (실제 사용중)
   stats: {
-    viewCount: number;            // → views로 변환
-    likeCount: number;            // → likes로 변환
-    commentCount: number;         // → commentsCount로 변환
-    shareCount: number;           // → shares로 변환
+    viewCount: number;
+    likeCount: number;
+    commentCount: number;
+    shareCount: number;
     playCount?: number;
   };
   author: {
-    nickname: string;             // → channelName으로 변환
+    nickname: string;
     uniqueId: string;
-    followerCount?: number;       // → subscribers로 변환
+    followerCount?: number;
   };
-  desc?: string;                  // → description으로 변환
-  createTime: number;             // → uploadDate로 변환
+  desc?: string;
+  createTime: number;
   video: {
-    cover: string;                // → thumbnailUrl로 변환
+    cover: string;
     playAddr?: string;
     duration?: number;
   };
 }
 
-// ===== 표준화된 메타데이터 (변환 후) =====
+// =================================================================
+// 🌊 2. StandardVideoMetadata: 1차 가공된 표준 데이터
+// (AI 분석 전, 플랫폼간 공통 필드 위주)
+// =================================================================
 export interface StandardVideoMetadata {
-  // 🎯 핵심 성과 지표 (완전 통일된 필드명)
-  views: number;                  // 조회수 (모든 플랫폼 통일)
-  likes: number;                  // 좋아요 (모든 플랫폼 통일)
-  commentsCount: number;          // 댓글수 (comments 아닌 commentsCount 통일)
-  shares?: number;                // 공유수 (TikTok 전용, Instagram일부)
+  // 🎯 핵심 성과 지표
+  views: number;
+  likes: number;
+  commentsCount: number;
+  shares?: number;
 
-  // 기본 정보
+  // 🎯 기본 정보
   title: string;
-  channelName: string;            // 채널/계정명 (모든 플랫폼 통일)
-  uploadDate: string;             // ISO 문자열 또는 로케일 문자열
-  thumbnailUrl: string;           // 썸네일 URL (모든 플랫폼 통일)
+  channelName: string;
+  uploadDate: ISODateString;
+  thumbnailUrl: string;
   description: string;
 
-  // 플랫폼 정보
+  // 🎯 플랫폼 정보
   platform: Platform;
-  url: string;                    // 원본 URL
+  url: string; // 원본 URL
 
-  // 채널 정보
+  // 🎯 채널 정보
   channelUrl?: string;
-  subscribers?: number;           // 구독자/팔로워 수
+  subscribers?: number;
   channelVideos?: number;
 
-  // YouTube 전용 필드
+  // 🎯 비디오 상세 (플랫폼 종속적)
   youtubeHandle?: string;
   duration?: string;
   monetized?: string;
@@ -108,46 +112,58 @@ export interface StandardVideoMetadata {
   language?: string;
   contentType?: ContentType;
 
-  // AI 분석 결과
-  mainCategory?: string;
-  middleCategory?: string;
-  fullCategoryPath?: string;
-  categoryDepth?: number;
-  keywords?: string[];            // 배열 타입
-  hashtags?: string[];            // 배열 타입
-  mentions?: string[];            // 배열 타입
-  analysisContent?: string;       // AI 분석 내용
-  confidence?: string;
-  analysisStatus?: AnalysisStatus;
+  // 🎯 시스템 메타데이터
+  collectionTime?: ISODateString;
+  rowNumber?: number;
+  topComments?: string;
+  comments?: string; // (Deprecated 권장)
+}
+
+// =================================================================
+// 🌊 3. AIAnalysisResult: AI 분석 결과 데이터
+// =================================================================
+export interface AIAnalysisResult {
+  mainCategory: string;
+  middleCategory: string;
+  fullCategoryPath: string;
+  categoryDepth: number;
+  keywords: string[];
+  hashtags: string[];
+  mentions: string[];
+  analysisContent: string; // AI 분석 요약
+  confidence: string;
+  analysisStatus: AnalysisStatus;
+  processedAt: ISODateString; // AI 분석 완료 시점
+
+  // 카테고리 비교 결과
   categoryMatchRate?: string;
   matchType?: string;
   matchReason?: string;
-
-  // 시스템 메타데이터 (비즈니스 로직용)
-  collectionTime?: string;        // 데이터 수집 시점 (ISO string)
-  processedAt?: string;           // AI 분석 완료 시점 (ISO string)
-  rowNumber?: number;             // 시트 행 번호
-
-  // 레거시 호환성 필드 (명확한 네이밍)
-  topComments?: string;           // 인기 댓글 텍스트 (주로 YouTube)
-  comments?: string;              // 전체 댓글 텍스트 (YouTube 전용, deprecated 권장)
 }
 
-// ===== MongoDB Video 문서 (최종 저장 형태) =====
-export interface VideoDocument extends StandardVideoMetadata {
-  _id: string;                    // MongoDB ObjectId 문자열
+// =================================================================
+// 🌊 4. FinalVideoData: DB 저장을 위한 최종 통합 데이터
+// (StandardVideoMetadata + Partial<AIAnalysisResult>)
+// =================================================================
+export type FinalVideoData = StandardVideoMetadata & Partial<AIAnalysisResult>;
 
-  // Mongoose 자동 타임스탬프 (DB 관리용)
-  createdAt?: Date;               // 문서 생성 시점
-  updatedAt?: Date;               // 문서 최종 수정 시점
+
+// =================================================================
+// ⚙️ MongoDB & API 관련 타입들
+// =================================================================
+export interface VideoDocument extends FinalVideoData {
+  _id: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-// ===== API 응답 타입 (Transform 적용 후) =====
 export interface VideoApiResponse extends Omit<VideoDocument, '_id'> {
-  id: string;                     // _id가 id로 변환됨 (toJSON transform)
+  id: string;
 }
 
-// ===== 타입 가드 함수들 (데이터 변환시 필요) =====
+// =================================================================
+// 🛡️ 타입 가드 및 유틸리티 타입
+// =================================================================
 export function isYouTubeData(data: any): data is YouTubeRawData {
   return data?.snippet && data?.statistics;
 }
@@ -167,39 +183,32 @@ export function isValidVideoDocument(data: any): data is VideoDocument {
          ['YOUTUBE', 'INSTAGRAM', 'TIKTOK'].includes(data.platform);
 }
 
-// ===== 유틸리티 타입 =====
 export type PartialVideoMetadata = Partial<StandardVideoMetadata>;
-
 export type RequiredVideoFields = Pick<StandardVideoMetadata, 'platform' | 'url' | 'title' | 'channelName'>;
-
 export type OptionalVideoFields = Omit<StandardVideoMetadata, keyof RequiredVideoFields>;
 
-// ===== HybridDataConverter 관련 타입 =====
+
+// =================================================================
+// 📜 레거시 및 변환기 관련 타입 (하위 호환성)
+// =================================================================
 export interface HybridYouTubeData {
-  // 기본 정보
   title?: string;
   description?: string;
   duration?: number;
   uploadDate?: string;
   publishedAt?: string;
-
-  // 채널 정보
   channelName?: string;
   channelTitle?: string;
   channelId?: string;
   channelUrl?: string;
   channelCustomUrl?: string;
   youtubeHandle?: string;
-
-  // 통계
   viewCount?: number | string;
   views?: number | string;
   likeCount?: number | string;
   likes?: number | string;
   commentCount?: number | string;
   commentsCount?: number | string;
-
-  // 채널 통계
   subscribers?: number | string;
   subscriberCount?: number | string;
   channelVideos?: number | string;
@@ -208,21 +217,26 @@ export interface HybridYouTubeData {
   channelViewCount?: number | string;
   channelCountry?: string;
   channelDescription?: string;
-
-  // 메타데이터
   category?: string;
   youtubeCategoryId?: string | number;
   categoryId?: string | number;
   tags?: string[];
   keywords?: string[];
-
-  // 댓글
   topComments?: any;
-
-  // 하이브리드 메타데이터
   dataSources?: { primary?: string; [key: string]: any };
   isLiveContent?: boolean;
   isLive?: boolean;
+}
+
+export class VideoDataConversionError extends Error {
+  constructor(
+    public platform: Platform,
+    public originalError: Error,
+    message?: string
+  ) {
+    super(message || `${platform} 데이터 변환 실패: ${originalError.message}`);
+    this.name = 'VideoDataConversionError';
+  }
 }
 
 export interface LegacyFormatData {
@@ -232,7 +246,7 @@ export interface LegacyFormatData {
   channel: string;
   channelId: string;
   publishedAt: string;
-  thumbnailUrl: string;
+  thumbnailUrl: string | null;
   category: string;
   categoryId: string;
   duration: number;
@@ -263,18 +277,3 @@ export interface LegacyFormatData {
   isLive: boolean;
   error?: string;
 }
-
-// ===== 에러 타입 =====
-export class VideoDataConversionError extends Error {
-  constructor(
-    public platform: Platform,
-    public originalError: Error,
-    message?: string
-  ) {
-    super(message || `${platform} 데이터 변환 실패: ${originalError.message}`);
-    this.name = 'VideoDataConversionError';
-  }
-}
-
-// ===== 검증 관련 타입 (필요시 추가) =====
-// 현재 프로젝트에서는 Mongoose 스키마 검증만 사용하므로 별도 검증 타입 제거

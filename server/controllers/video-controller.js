@@ -1,6 +1,6 @@
 const path = require('path');
 const VideoProcessor = require('../services/VideoProcessor');
-const AIAnalyzer = require('../services/AIAnalyzer');
+const AIAnalyzer = require('../services/AIAnalyzerWrapper');
 const SheetsManager = require('../services/SheetsManager');
 const ErrorHandler = require('../middleware/error-handler');
 const { ServerLogger } = require('../utils/logger');

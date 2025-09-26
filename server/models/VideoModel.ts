@@ -1,5 +1,5 @@
 import mongoose, { Model, HydratedDocument, SortOrder } from 'mongoose';
-import type { StandardVideoMetadata } from '../types/video-types';
+import type { FinalVideoData } from '../types/video-types';
 import { createVideoSchema } from '../schemas/video-schema';
 
 /**
@@ -16,7 +16,7 @@ type VideoUrlData = {
 };
 
 // 🎯 Mongoose HydratedDocument 타입 (인스턴스 메서드 포함)
-type VideoDocumentType = HydratedDocument<StandardVideoMetadata, {}> & {
+type VideoDocumentType = HydratedDocument<FinalVideoData, {}> & {
   updateStats(likes?: number, views?: number, commentsCount?: number): Promise<VideoDocumentType>;
   getDisplayData(): {
     rowNumber: number;
@@ -49,23 +49,23 @@ type VideoDocumentType = HydratedDocument<StandardVideoMetadata, {}> & {
 };
 
 // 🎯 모델 타입 (정적 메서드 포함)
-type VideoModelType = Model<StandardVideoMetadata> & {
+type VideoModelType = Model<FinalVideoData> & {
   findByPlatform(
     platform: 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK',
-    sortBy?: keyof StandardVideoMetadata,
+    sortBy?: keyof FinalVideoData,
     order?: 'desc' | 'asc',
     limit?: number,
   ): mongoose.Query<VideoDocumentType[], VideoDocumentType>;
 
   getRecentVideos(
     limit?: number,
-    sortBy?: keyof StandardVideoMetadata,
+    sortBy?: keyof FinalVideoData,
     order?: 'desc' | 'asc',
   ): mongoose.Query<VideoDocumentType[], VideoDocumentType>;
 
   createOrUpdateFromVideoUrl(
     videoUrlData: VideoUrlData,
-    metadata?: Partial<StandardVideoMetadata>,
+    metadata?: Partial<FinalVideoData>,
   ): Promise<VideoDocumentType>;
 };
 
@@ -91,7 +91,7 @@ videoSchema.index({ channelName: 1, uploadDate: -1 }); // 채널별 최신순
 // 정적 메서드들 (완전한 타입 안전성)
 videoSchema.statics.findByPlatform = function (
   platform: 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK',
-  sortBy: keyof StandardVideoMetadata = 'uploadDate',
+  sortBy: keyof FinalVideoData = 'uploadDate',
   order: 'desc' | 'asc' = 'desc',
   limit = 15,
 ) {
@@ -104,7 +104,7 @@ videoSchema.statics.findByPlatform = function (
 
 videoSchema.statics.getRecentVideos = function (
   limit = 15,
-  sortBy: keyof StandardVideoMetadata = 'uploadDate',
+  sortBy: keyof FinalVideoData = 'uploadDate',
   order: 'desc' | 'asc' = 'desc',
 ) {
   const sortOrder: SortOrder = order === 'desc' ? -1 : 1;
@@ -117,7 +117,7 @@ videoSchema.statics.getRecentVideos = function (
 // VideoUrl 데이터와 동기화하여 Video 레코드 생성/업데이트 (완전한 타입 안전성)
 videoSchema.statics.createOrUpdateFromVideoUrl = async function (
   videoUrlData: VideoUrlData,
-  metadata: Partial<StandardVideoMetadata> = {},
+  metadata: Partial<FinalVideoData> = {},
 ) {
   const { originalUrl, platform, originalPublishDate, processedAt } = videoUrlData;
 
@@ -146,7 +146,7 @@ videoSchema.statics.createOrUpdateFromVideoUrl = async function (
   }
 
   // 완전히 타입 안전한 비디오 데이터 구조
-  const videoData: Partial<StandardVideoMetadata> = {
+  const videoData: Partial<FinalVideoData> = {
     platform,
     channelName: channelName || '알 수 없는 채널',
     url: originalUrl,
@@ -272,7 +272,7 @@ videoSchema.methods.getAnalysisResult = function (this: VideoDocumentType) {
 };
 
 // 🎯 완전한 타입 안전성을 가진 모델 생성 (중복 방지)
-const VideoModel = mongoose.model<StandardVideoMetadata>('Video', videoSchema) as VideoModelType;
+const VideoModel = mongoose.model<FinalVideoData>('Video', videoSchema) as VideoModelType;
 
 export default VideoModel;
 export type { VideoDocumentType, VideoUrlData };
