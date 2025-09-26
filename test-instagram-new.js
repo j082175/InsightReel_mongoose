@@ -5,8 +5,8 @@ async function testNewInstagramUrl() {
     try {
         console.log('🧪 새로운 Instagram URL로 메타데이터 추출 테스트 중...');
 
-        // 쿠키 업데이트 후 테스트 URL
-        const testUrl = 'https://www.instagram.com/reels/DNqdfTLt-PS/';
+        // 새로운 테스트 URL
+        const testUrl = 'https://www.instagram.com/reel/DCvyOh3tPnL/';
 
         console.log(`📸 테스트 URL: ${testUrl}`);
 

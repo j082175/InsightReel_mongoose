@@ -174,6 +174,96 @@ export type RequiredVideoFields = Pick<StandardVideoMetadata, 'platform' | 'url'
 
 export type OptionalVideoFields = Omit<StandardVideoMetadata, keyof RequiredVideoFields>;
 
+// ===== HybridDataConverter 관련 타입 =====
+export interface HybridYouTubeData {
+  // 기본 정보
+  title?: string;
+  description?: string;
+  duration?: number;
+  uploadDate?: string;
+  publishedAt?: string;
+
+  // 채널 정보
+  channelName?: string;
+  channelTitle?: string;
+  channelId?: string;
+  channelUrl?: string;
+  channelCustomUrl?: string;
+  youtubeHandle?: string;
+
+  // 통계
+  viewCount?: number | string;
+  views?: number | string;
+  likeCount?: number | string;
+  likes?: number | string;
+  commentCount?: number | string;
+  commentsCount?: number | string;
+
+  // 채널 통계
+  subscribers?: number | string;
+  subscriberCount?: number | string;
+  channelVideos?: number | string;
+  channelVideoCount?: number | string;
+  channelViews?: number | string;
+  channelViewCount?: number | string;
+  channelCountry?: string;
+  channelDescription?: string;
+
+  // 메타데이터
+  category?: string;
+  youtubeCategoryId?: string | number;
+  categoryId?: string | number;
+  tags?: string[];
+  keywords?: string[];
+
+  // 댓글
+  topComments?: any;
+
+  // 하이브리드 메타데이터
+  dataSources?: { primary?: string; [key: string]: any };
+  isLiveContent?: boolean;
+  isLive?: boolean;
+}
+
+export interface LegacyFormatData {
+  videoId: string;
+  title: string;
+  description: string;
+  channel: string;
+  channelId: string;
+  publishedAt: string;
+  thumbnailUrl: string;
+  category: string;
+  categoryId: string;
+  duration: number;
+  durationFormatted: string;
+  contentType: 'shortform' | 'longform';
+  isShortForm: boolean;
+  tags: string[];
+  views: string;
+  likes: string;
+  commentsCount: string;
+  subscribers: string;
+  channelVideos: string;
+  channelViews: string;
+  channelCountry: string;
+  channelDescription: string;
+  hashtags: string[];
+  mentions: string[];
+  topComments: string;
+  youtubeHandle: string;
+  channelUrl: string;
+  extractionMethod: string;
+  dataSources: { primary: string; [key: string]: any };
+  youtubeCategory: string;
+  license: string;
+  definition: string;
+  privacy: string;
+  isLiveContent: boolean;
+  isLive: boolean;
+  error?: string;
+}
+
 // ===== 에러 타입 =====
 export class VideoDataConversionError extends Error {
   constructor(

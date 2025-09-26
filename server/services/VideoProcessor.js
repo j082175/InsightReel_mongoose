@@ -10,7 +10,8 @@ const TikTokAPI = require('@tobyg74/tiktok-api-dl');
 const { ServerLogger } = require('../utils/logger');
 const youtubeBatchProcessor = require('./YouTubeBatchProcessor');
 const HybridYouTubeExtractor = require('./HybridYouTubeExtractor');
-const HybridDataConverter = require('./HybridDataConverter');
+// TypeScript 컴파일된 버전 사용
+const HybridDataConverter = require('../../dist/server/services/HybridDataConverter').default || require('./HybridDataConverter.js.backup');
 const InstagramReelsExtractor = require('./InstagramReelsExtractor');
 
 const { PLATFORMS } = require('../config/api-messages');

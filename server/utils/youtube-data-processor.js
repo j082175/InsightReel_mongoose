@@ -1,4 +1,4 @@
-const { ServerLogger } = require('./logger');
+const { ServerLogger } = require("./logger");
 
 /**
  * YouTube 데이터 처리 유틸리티 클래스
@@ -11,28 +11,28 @@ const { ServerLogger } = require('./logger');
 class YouTubeDataProcessor {
     // YouTube 카테고리 매핑 (통합된 상수)
     static YOUTUBE_CATEGORIES = {
-        1: '영화/애니메이션',
-        2: '자동차/교통',
-        10: '음악',
-        15: '애완동물/동물',
-        17: '스포츠',
-        19: '여행/이벤트',
-        20: '게임',
-        22: '인물/블로그',
-        23: '코미디',
-        24: '엔터테인먼트',
-        25: '뉴스/정치',
-        26: '노하우/스타일',
-        27: '교육',
-        28: '과학기술',
-        29: '비영리/사회운동',
+        1: "영화/애니메이션",
+        2: "자동차/교통",
+        10: "음악",
+        15: "애완동물/동물",
+        17: "스포츠",
+        19: "여행/이벤트",
+        20: "게임",
+        22: "인물/블로그",
+        23: "코미디",
+        24: "엔터테인먼트",
+        25: "뉴스/정치",
+        26: "노하우/스타일",
+        27: "교육",
+        28: "과학기술",
+        29: "비영리/사회운동",
     };
 
     /**
      * YouTube URL에서 비디오 ID 추출 (통합된 로직)
      */
     static extractYouTubeId(url) {
-        if (!url || typeof url !== 'string') {
+        if (!url || typeof url !== "string") {
             return null;
         }
 
@@ -59,11 +59,7 @@ class YouTubeDataProcessor {
 
             return null;
         } catch (error) {
-            ServerLogger.error(
-                'YouTube ID 추출 실패',
-                error,
-                'YOUTUBE_PROCESSOR',
-            );
+            ServerLogger.error("YouTube ID 추출 실패", error, "YOUTUBE_PROCESSOR");
             return null;
         }
     }
@@ -72,13 +68,13 @@ class YouTubeDataProcessor {
      * YouTube 동영상 시간 파싱 (PT4M13S → 초)
      */
     static parseYouTubeDuration(duration) {
-        if (!duration || typeof duration !== 'string') {
+        if (!duration || typeof duration !== "string") {
             return 0;
         }
 
         try {
             // PT 제거
-            let time = duration.replace('PT', '');
+            let time = duration.replace("PT", "");
             let totalSeconds = 0;
 
             // 시간 파싱
@@ -92,11 +88,7 @@ class YouTubeDataProcessor {
 
             return totalSeconds;
         } catch (error) {
-            ServerLogger.error(
-                'YouTube 시간 파싱 실패',
-                error,
-                'YOUTUBE_PROCESSOR',
-            );
+            ServerLogger.error("YouTube 시간 파싱 실패", error, "YOUTUBE_PROCESSOR");
             return 0;
         }
     }
@@ -106,7 +98,7 @@ class YouTubeDataProcessor {
      */
     static formatDuration(seconds) {
         if (!seconds || seconds < 0) {
-            return '0:00';
+            return "0:00";
         }
 
         try {
@@ -115,19 +107,15 @@ class YouTubeDataProcessor {
             const remainingSeconds = seconds % 60;
 
             if (hours > 0) {
-                return `${hours}:${minutes
+                return `${hours}:${minutes.toString().padStart(2, "0")}:${remainingSeconds
                     .toString()
-                    .padStart(2, '0')}:${remainingSeconds
-                    .toString()
-                    .padStart(2, '0')}`;
+                    .padStart(2, "0")}`;
             } else {
-                return `${minutes}:${remainingSeconds
-                    .toString()
-                    .padStart(2, '0')}`;
+                return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
             }
         } catch (error) {
-            ServerLogger.error('시간 포맷팅 실패', error, 'YOUTUBE_PROCESSOR');
-            return '0:00';
+            ServerLogger.error("시간 포맷팅 실패", error, "YOUTUBE_PROCESSOR");
+            return "0:00";
         }
     }
 
@@ -136,17 +124,17 @@ class YouTubeDataProcessor {
      */
     static getCategoryName(categoryId) {
         if (!categoryId) {
-            return '미분류';
+            return "미분류";
         }
 
-        return this.YOUTUBE_CATEGORIES[categoryId.toString()] || '미분류';
+        return this.YOUTUBE_CATEGORIES[categoryId.toString()] || "미분류";
     }
 
     /**
      * 설명에서 해시태그 추출 (#태그 형태)
      */
     static extractHashtags(description) {
-        if (!description || typeof description !== 'string') {
+        if (!description || typeof description !== "string") {
             return [];
         }
 
@@ -160,11 +148,7 @@ class YouTubeDataProcessor {
                 .filter((tag) => tag.length > 1)
                 .slice(0, 10); // 최대 10개까지만
         } catch (error) {
-            ServerLogger.error(
-                '해시태그 추출 실패',
-                error,
-                'YOUTUBE_PROCESSOR',
-            );
+            ServerLogger.error("해시태그 추출 실패", error, "YOUTUBE_PROCESSOR");
             return [];
         }
     }
@@ -173,7 +157,7 @@ class YouTubeDataProcessor {
      * 설명에서 멘션 추출 (@사용자명 형태)
      */
     static extractMentions(description) {
-        if (!description || typeof description !== 'string') {
+        if (!description || typeof description !== "string") {
             return [];
         }
 
@@ -187,7 +171,7 @@ class YouTubeDataProcessor {
                 .filter((mention) => mention.length > 1)
                 .slice(0, 10); // 최대 10개까지만
         } catch (error) {
-            ServerLogger.error('멘션 추출 실패', error, 'YOUTUBE_PROCESSOR');
+            ServerLogger.error("멘션 추출 실패", error, "YOUTUBE_PROCESSOR");
             return [];
         }
     }
@@ -196,13 +180,13 @@ class YouTubeDataProcessor {
      * customUrl에서 YouTube 핸들명 추출
      */
     static extractYouTubeHandle(customUrl) {
-        if (!customUrl || typeof customUrl !== 'string') {
+        if (!customUrl || typeof customUrl !== "string") {
             return null;
         }
 
         try {
             // @핸들명 형태인지 확인
-            if (customUrl.startsWith('@')) {
+            if (customUrl.startsWith("@")) {
                 return customUrl;
             }
 
@@ -218,11 +202,7 @@ class YouTubeDataProcessor {
 
             return null;
         } catch (error) {
-            ServerLogger.error(
-                'YouTube 핸들 추출 실패',
-                error,
-                'YOUTUBE_PROCESSOR',
-            );
+            ServerLogger.error("YouTube 핸들 추출 실패", error, "YOUTUBE_PROCESSOR");
             return null;
         }
     }
@@ -235,17 +215,17 @@ class YouTubeDataProcessor {
             // customUrl이 있으면 우선 사용
             if (customUrl) {
                 // 이미 전체 URL인 경우
-                if (customUrl.startsWith('http')) {
+                if (customUrl.startsWith("http")) {
                     return customUrl;
                 }
 
                 // @핸들명 형태인 경우
-                if (customUrl.startsWith('@')) {
+                if (customUrl.startsWith("@")) {
                     return `https://www.youtube.com/${customUrl}`;
                 }
 
                 // /c/ 또는 /user/ 형태인 경우
-                if (customUrl.startsWith('/')) {
+                if (customUrl.startsWith("/")) {
                     return `https://www.youtube.com${customUrl}`;
                 }
 
@@ -260,11 +240,7 @@ class YouTubeDataProcessor {
 
             return null;
         } catch (error) {
-            ServerLogger.error(
-                '채널 URL 생성 실패',
-                error,
-                'YOUTUBE_PROCESSOR',
-            );
+            ServerLogger.error("채널 URL 생성 실패", error, "YOUTUBE_PROCESSOR");
             return null;
         }
     }
@@ -279,10 +255,10 @@ class YouTubeDataProcessor {
 
         // 화질 우선순위 (높은 것부터)
         const qualityOrder = [
-            'maxresdefault',  // 1280x720
-            'hqdefault',      // 480x360
-            'mqdefault',      // 320x180
-            'default',        // 120x90
+            "maxresdefault", // 1280x720
+            "hqdefault", // 480x360
+            "mqdefault", // 320x180
+            "default", // 120x90
         ];
 
         // 특정 화질이 지정된 경우
@@ -298,7 +274,7 @@ class YouTubeDataProcessor {
      * YouTube URL 유효성 검사
      */
     static isValidYouTubeUrl(url) {
-        if (!url || typeof url !== 'string') {
+        if (!url || typeof url !== "string") {
             return false;
         }
 
@@ -311,20 +287,20 @@ class YouTubeDataProcessor {
      */
     static getContentType(url, duration = null) {
         if (!url) {
-            return 'video';
+            return "video";
         }
 
         // URL에 shorts가 포함되어 있으면 Shorts
-        if (url.includes('/shorts/')) {
-            return 'shorts';
+        if (url.includes("/shorts/")) {
+            return "shorts";
         }
 
         // 60초 이하이고 세로형 비율이면 Shorts일 가능성 높음
         if (duration && duration <= 60) {
-            return 'shorts';
+            return "shorts";
         }
 
-        return 'video';
+        return "video";
     }
 
     /**
@@ -332,7 +308,7 @@ class YouTubeDataProcessor {
      */
     static formatNumber(number) {
         if (!number || isNaN(number)) {
-            return '0';
+            return "0";
         }
 
         const num = parseInt(number);
@@ -355,7 +331,7 @@ class YouTubeDataProcessor {
     /**
      * 메타데이터에서 키워드 추출
      */
-    static extractKeywords(title = '', description = '', tags = []) {
+    static extractKeywords(title = "", description = "", tags = []) {
         const keywords = [];
 
         try {
@@ -363,7 +339,7 @@ class YouTubeDataProcessor {
             if (title) {
                 const titleWords = title
                     .toLowerCase()
-                    .replace(/[^\w가-힣\s]/g, ' ')
+                    .replace(/[^\w가-힣\s]/g, " ")
                     .split(/\s+/)
                     .filter((word) => word.length > 1)
                     .slice(0, 5);
@@ -375,7 +351,7 @@ class YouTubeDataProcessor {
                 const descWords = description
                     .substring(0, 100)
                     .toLowerCase()
-                    .replace(/[^\w가-힣\s]/g, ' ')
+                    .replace(/[^\w가-힣\s]/g, " ")
                     .split(/\s+/)
                     .filter((word) => word.length > 2)
                     .slice(0, 3);
@@ -385,7 +361,7 @@ class YouTubeDataProcessor {
             // 태그 추가
             if (Array.isArray(tags)) {
                 const cleanTags = tags
-                    .map((tag) => tag.toLowerCase().replace(/[^\w가-힣]/g, ''))
+                    .map((tag) => tag.toLowerCase().replace(/[^\w가-힣]/g, ""))
                     .filter((tag) => tag.length > 1)
                     .slice(0, 5);
                 keywords.push(...cleanTags);
@@ -396,7 +372,7 @@ class YouTubeDataProcessor {
                 .filter((keyword) => keyword && keyword.length > 1)
                 .slice(0, 10);
         } catch (error) {
-            ServerLogger.error('키워드 추출 실패', error, 'YOUTUBE_PROCESSOR');
+            ServerLogger.error("키워드 추출 실패", error, "YOUTUBE_PROCESSOR");
             return [];
         }
     }
@@ -419,18 +395,15 @@ class YouTubeDataProcessor {
             return {
                 // 기본 정보
                 videoId: videoId,
-                title: snippet.title || '제목 없음',
-                description: snippet.description || '',
+                title: snippet.title || "제목 없음",
+                description: snippet.description || "",
                 thumbnailUrl: this.buildThumbnailUrl(videoId),
                 url: rawData.url,
 
                 // 채널 정보
                 channelId: snippet.channelId,
                 channelName: snippet.channelTitle,
-                channelUrl: this.buildChannelUrl(
-                    snippet.customUrl,
-                    snippet.channelId,
-                ),
+                channelUrl: this.buildChannelUrl(snippet.customUrl, snippet.channelId),
                 youtubeHandle: this.extractYouTubeHandle(snippet.customUrl),
 
                 // 통계
@@ -452,11 +425,7 @@ class YouTubeDataProcessor {
                 contentType: this.getContentType(rawData.url, duration),
                 hashtags: this.extractHashtags(snippet.description),
                 mentions: this.extractMentions(snippet.description),
-                keywords: this.extractKeywords(
-                    snippet.title,
-                    snippet.description,
-                    snippet.tags,
-                ),
+                keywords: this.extractKeywords(snippet.title, snippet.description, snippet.tags),
 
                 // 기타
                 language: snippet.defaultLanguage,
@@ -468,18 +437,14 @@ class YouTubeDataProcessor {
                 commentsFormatted: this.formatNumber(statistics.commentCount),
 
                 // 플랫폼 정보
-                platform: 'YOUTUBE',
+                platform: "YOUTUBE",
             };
         } catch (error) {
-            ServerLogger.error(
-                '메타데이터 처리 실패',
-                error,
-                'YOUTUBE_PROCESSOR',
-            );
+            ServerLogger.error("메타데이터 처리 실패", error, "YOUTUBE_PROCESSOR");
             // 표준화된 오류 응답
             return {
                 videoId: null,
-                title: '처리 실패',
+                title: "처리 실패",
                 error: error.message,
             };
         }
@@ -500,11 +465,7 @@ class YouTubeDataProcessor {
                 processed.processingTime = new Date().toISOString();
                 return processed;
             } catch (error) {
-                ServerLogger.error(
-                    `배치 처리 실패 (인덱스: ${index})`,
-                    error,
-                    'YOUTUBE_PROCESSOR',
-                );
+                ServerLogger.error(`배치 처리 실패 (인덱스: ${index})`, error, "YOUTUBE_PROCESSOR");
                 // 표준화된 배치 오류 응답
                 return {
                     batchIndex: index,

@@ -453,7 +453,7 @@ class AIAnalyzer {
       confidence: result.confidence,
       source: result.source,
       isDynamicCategory: true,
-      aiModel: this.lastUsedModel || 'unknown'
+      aiModel: this.lastUsedModel || 'failed'
     };
     
     ServerLogger.info(`🔍 AIAnalyzer 반환 데이터:`, {
@@ -1538,7 +1538,7 @@ JSON 형식으로 답변:
         hashtags: aiData.hashtags.length > 0 ? aiData.hashtags : this.generateHashtagsFromKeywords(aiData.keywords.length > 0 ? aiData.keywords : this.extractKeywordsFromMetadata(metadata)),
         confidence: aiData.main_category ? 0.9 : 0.6, // AI 카테고리 성공시 높은 신뢰도
         source: aiResponse ? 'gemini' : 'intelligent-fallback',
-        aiModel: this.lastUsedModel || 'unknown'
+        aiModel: this.lastUsedModel || 'failed'
       };
 
       // Gemini 오류 정보가 있으면 추가

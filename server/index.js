@@ -1799,46 +1799,48 @@ app.post('/api/process-video', async (req, res) => {
 });
 
 // 저장된 비디오 목록 조회 (최적화: 단일 Video 모델 쿼리)
+// ❌ DISABLED: 이 라우트는 routes/videos.js와 충돌합니다. 무한 스크롤링을 위해 라우터를 사용합니다.
+/* ENTIRE ROUTE DISABLED - Using routes/videos.js instead
 app.get('/api/videos', async (req, res) => {
-    try {
-        const limit = Math.min(
-            parseInt(req.query.limit) || SERVER_CONSTANTS.PAGINATION.DEFAULT_LIMIT,
-            SERVER_CONSTANTS.PAGINATION.MAX_LIMIT
-        );
-        const sortBy = req.query.sortBy || 'timestamp'; // timestamp는 이제 원본 게시일
-        const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
-        const platform = req.query.platform; // 플랫폼 필터 (선택적)
-
-        ServerLogger.info(
-            `📡 MongoDB API 요청: /api/videos (limit=${limit}, sortBy=${sortBy}, platform=${platform})`,
-            'DEBUG',
-        );
-
-        // MongoDB 연결 확인
-        if (!DatabaseManager.isConnectedStatus().connected) {
-            await DatabaseManager.connect();
-        }
-
-        // 🚀 쿼리 조건 구성
-        const query = {};
-        if (platform) {
-            query.platform = platform;
-        }
-
-        // 🚀 정렬 조건 구성
-        const sortOptions = {};
-        if (sortBy === 'timestamp') {
-            // uploadDate가 있으면 우선, 없으면 timestamp 사용
-            sortOptions.uploadDate = sortOrder;
-            sortOptions.timestamp = sortOrder;
-        } else {
-            // sortBy를 직접 사용
-            try {
-                sortOptions[sortBy] = sortOrder;
-            } catch {
-                sortOptions[sortBy] = sortOrder; // 레거시 호환
-            }
-        }
+//     try {
+//         const limit = Math.min(
+//             parseInt(req.query.limit) || SERVER_CONSTANTS.PAGINATION.DEFAULT_LIMIT,
+//             SERVER_CONSTANTS.PAGINATION.MAX_LIMIT
+//         );
+//         const sortBy = req.query.sortBy || 'timestamp'; // timestamp는 이제 원본 게시일
+//         const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+//         const platform = req.query.platform; // 플랫폼 필터 (선택적)
+//
+//         ServerLogger.info(
+//             `📡 MongoDB API 요청: /api/videos (limit=${limit}, sortBy=${sortBy}, platform=${platform})`,
+//             'DEBUG',
+//         );
+//
+//         // MongoDB 연결 확인
+//         if (!DatabaseManager.isConnectedStatus().connected) {
+//             await DatabaseManager.connect();
+//         }
+//
+//         // 🚀 쿼리 조건 구성
+//         const query = {};
+//         if (platform) {
+//             query.platform = platform;
+//         }
+//
+//         // 🚀 정렬 조건 구성
+//         const sortOptions = {};
+//         if (sortBy === 'timestamp') {
+//             // uploadDate가 있으면 우선, 없으면 timestamp 사용
+//             sortOptions.uploadDate = sortOrder;
+//             sortOptions.timestamp = sortOrder;
+//         } else {
+//             // sortBy를 직접 사용
+//             try {
+//                 sortOptions[sortBy] = sortOrder;
+//             } catch {
+//                 sortOptions[sortBy] = sortOrder; // 레거시 호환
+//             }
+//         }
 
         // 🚀 MongoDB에서 비디오 조회 (모든 필드 가져오기)
         const videos = await Video.find(query)
@@ -1950,42 +1952,42 @@ app.get('/api/videos', async (req, res) => {
             `📊 MongoDB API 응답: 총 ${enhancedVideos.length}개 비디오 (단일 쿼리 최적화)`,
             'DEBUG',
         );
-        ServerLogger.info(
-            `📊 플랫폼별 비디오 수: ${JSON.stringify(platformCounts)}`,
-            'DEBUG',
-        );
-
-        ResponseHandler.success(
-            res,
-            {
-                videos: enhancedVideos,
-                total: enhancedVideos.length,
-                query: {
-                    limit,
-                    sortBy,
-                    sortOrder: sortOrder === 1 ? 'asc' : 'desc',
-                    platform,
-                },
-                platform_stats: platformCounts,
-            },
-            API_MESSAGES.DATA.FETCH_SUCCESS,
-        );
-    } catch (error) {
-        ServerLogger.error(
-            `❌ MongoDB /api/videos API 실패`,
-            error.message,
-            'DEBUG',
-        );
-        ResponseHandler.serverError(
-            res,
-            {
-                ...error,
-                code: ERROR_CODES.DATA_FETCH_FAILED,
-            },
-            API_MESSAGES.DATA.FETCH_FAILED,
-        );
-    }
-});
+//         ServerLogger.info(
+//             `📊 플랫폼별 비디오 수: ${JSON.stringify(platformCounts)}`,
+//             'DEBUG',
+//         );
+//
+//         ResponseHandler.success(
+//             res,
+//             {
+//                 videos: enhancedVideos,
+//                 total: enhancedVideos.length,
+//                 query: {
+//                     limit,
+//                     sortBy,
+//                     sortOrder: sortOrder === 1 ? 'asc' : 'desc',
+//                     platform,
+//                 },
+//                 platform_stats: platformCounts,
+//             },
+//             API_MESSAGES.DATA.FETCH_SUCCESS,
+//         );
+//     } catch (error) {
+//         ServerLogger.error(
+//             `❌ MongoDB /api/videos API 실패`,
+//             error.message,
+//             'DEBUG',
+//         );
+//         ResponseHandler.serverError(
+//             res,
+//             {
+//                 ...error,
+//                 code: ERROR_CODES.DATA_FETCH_FAILED,
+//             },
+//             API_MESSAGES.DATA.FETCH_FAILED,
+//         );
+//     }
+}); */
 
 // 📊 채널 목록 조회 API (MongoDB + JSON 하이브리드)
 app.get('/api/channels', async (req, res) => {

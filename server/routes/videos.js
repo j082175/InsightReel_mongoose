@@ -298,7 +298,7 @@ router.delete('/:id', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const { 
-      limit = 20, 
+      limit = 50, 
       offset = 0, 
       platform, 
       fromTrending = 'both', // 🎯 기본적으로 모든 컬렉션에서 가져오기
@@ -406,16 +406,37 @@ router.get('/', async (req, res) => {
       totalCount = allVideos.length;
     }
     
-    res.status(HTTP_STATUS_CODES.OK).json({
+    const hasMoreCalculation = (parseInt(offset) + videos.length) < totalCount;
+    const responseData = {
       success: true,
       data: videos,
       pagination: {
         total: totalCount,
         limit: parseInt(limit),
         offset: parseInt(offset),
-        hasMore: (parseInt(offset) + videos.length) < totalCount
+        hasMore: hasMoreCalculation
       }
+    };
+
+    // hasMore 계산 상세 로깅
+    ServerLogger.info('🔍 [videos] hasMore 계산 상세:', {
+      offset: parseInt(offset),
+      videosLength: videos.length,
+      totalCount,
+      계산식: `(${parseInt(offset)} + ${videos.length}) < ${totalCount}`,
+      계산결과: `${parseInt(offset) + videos.length} < ${totalCount}`,
+      hasMore: hasMoreCalculation
     });
+
+    ServerLogger.info('📤 [videos] API 응답 구조 DEBUG:', {
+      success: responseData.success,
+      dataType: Array.isArray(responseData.data) ? 'array' : typeof responseData.data,
+      dataLength: responseData.data?.length,
+      pagination: responseData.pagination,
+      firstVideoTitle: responseData.data?.[0]?.title
+    });
+
+    res.status(HTTP_STATUS_CODES.OK).json(responseData);
     
   } catch (error) {
     ServerLogger.error('영상 목록 조회 실패:', error);

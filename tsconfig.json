@@ -42,7 +42,8 @@
     "server/features/channel-analysis/**/*.ts",
     "server/types/**/*.ts",
     "server/schemas/**/*.ts",
-    "server/models/**/*.ts"
+    "server/models/**/*.ts",
+    "server/services/**/*.ts"
   ],
   "exclude": [
     "node_modules",

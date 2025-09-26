@@ -1,29 +1,42 @@
-const mongoose = require('mongoose');
-const { createBasicVideoSchema } = require('../schemas/video-schema');
-
 /**
- * 🚀 Video 모델 (새 인터페이스 기반)
- * video-types.js의 인터페이스 조합을 사용하여 스키마 생성
+ * 🚨 DEPRECATED: 이 JS 파일은 더 이상 사용하지 마세요!
+ * 대신 VideoModel.ts를 사용하세요 (완전한 타입 안전성 제공)
  *
- * 구성:
- * - VideoCore: 기본 비디오 정보
- * - ChannelInfo: 채널 정보 (최소한)
- * - AIAnalysis: AI 분석 결과
- * - YouTubeSpecific: YouTube 전용 필드
- * - SystemMetadata: 시스템 메타데이터
+ * 하위 호환성을 위해서만 유지됨
  */
 
-const videoSchema = new mongoose.Schema(createBasicVideoSchema(), {
-    timestamps: true,
-    collection: 'videos',
-    toJSON: {
-        transform: function (doc, ret) {
-            // Transform _id to id as per project field naming conventions
-            ret.id = ret._id ? ret._id.toString() : undefined;
-            delete ret._id;
-            delete ret.__v;
-            return ret;
-        },
+// TypeScript 컴파일된 파일 시도
+try {
+    module.exports = require('../../dist/server/models/VideoModel').default;
+} catch (e) {
+    // 컴파일된 파일이 없으면 기존 방식으로 fallback
+    console.warn('⚠️ VideoModel.ts 컴파일된 파일을 찾을 수 없습니다. 레거시 모드로 실행됩니다.');
+
+    const mongoose = require('mongoose');
+    let videoSchemaModule;
+    try {
+        videoSchemaModule = require('../../dist/server/schemas/video-schema');
+    } catch (e) {
+        videoSchemaModule = require('../schemas/video-schema');
+    }
+    const { createVideoSchema } = videoSchemaModule;
+
+    /**
+     * 🚀 Video 모델 (레거시 버전)
+     * 가능하면 VideoModel.ts 사용 권장
+     */
+
+// 실무 표준 패턴: createVideoSchema()가 이미 스키마 옵션까지 포함하여 반환
+const videoSchema = createVideoSchema();
+
+// toJSON transform 추가 (기존 호환성 유지)
+videoSchema.set('toJSON', {
+    transform: function (doc, ret) {
+        // Transform _id to id as per project field naming conventions
+        ret.id = ret._id ? ret._id.toString() : undefined;
+        delete ret._id;
+        delete ret.__v;
+        return ret;
     },
 });
 
@@ -216,4 +229,5 @@ videoSchema.statics.createOrUpdateFromVideoUrl = async function (
     );
 };
 
-module.exports = mongoose.model('Video', videoSchema);
+    module.exports = mongoose.model('Video', videoSchema);
+}
