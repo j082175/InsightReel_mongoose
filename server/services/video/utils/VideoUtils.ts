@@ -3,7 +3,7 @@ import * as path from 'path';
 import { ServerLogger } from '../../../utils/logger';
 import { Platform } from '../../../types/video-types';
 
-export interface VideoMetadata {
+export interface VideoFileMetadata {
     duration: number;
     width: number;
     height: number;
@@ -60,7 +60,7 @@ export class VideoUtils {
     /**
      * 비디오 메타데이터 추출
      */
-    static async getVideoMetadata(videoPath: string): Promise<VideoMetadata | null> {
+    static async getVideoMetadata(videoPath: string): Promise<VideoFileMetadata | null> {
         return new Promise((resolve) => {
             const { spawn } = require('child_process');
 

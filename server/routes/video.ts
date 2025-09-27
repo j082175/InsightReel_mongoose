@@ -4,8 +4,8 @@ import ResponseHandler from '../utils/response-handler';
 import { HTTP_STATUS_CODES, API_MESSAGES } from '../config/api-messages';
 import { IVideo } from '../types/models';
 
-// Import existing JavaScript VideoController
-const VideoController = require('../controllers/video-controller');
+// Import TypeScript VideoController
+import { VideoController } from '../controllers/video-controller';
 const videoController = new VideoController();
 
 const router = Router();

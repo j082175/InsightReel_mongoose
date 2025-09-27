@@ -10,8 +10,8 @@ import {
 } from '../../../types/channel.types';
 import { ServerLogger } from '../../../utils/logger';
 
-const YouTubeChannelService = require('../../../services/YouTubeChannelService');
-const YouTubeChannelAnalyzer = require('../../../services/YouTubeChannelAnalyzer');
+const YouTubeChannelService = require('../../../services/YouTubeChannelDataCollector');
+const YouTubeChannelAnalyzer = require('../../../services/youtube/YouTubeChannelAnalyzer');
 
 export class ChannelAnalyzer {
     private youtubeService: any;
@@ -128,7 +128,7 @@ export class ChannelAnalyzer {
     ): Promise<YouTubeChannelData | null> {
         try {
             ServerLogger.info(`🎥 영상 URL에서 채널 정보 추출: ${videoUrl}`);
-            const VideoProcessor = require('../../../services/VideoProcessor');
+            const VideoProcessor = require('../../../../dist/server/services/video/VideoProcessor');
             const videoProcessor = new VideoProcessor();
 
             const videoInfo = await videoProcessor.getYouTubeVideoInfo(

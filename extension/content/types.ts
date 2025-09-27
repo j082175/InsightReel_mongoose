@@ -1,5 +1,5 @@
 // TypeScript 인터페이스 정의
-export interface VideoData {
+export interface ExtensionVideoData {
   platform: 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK';
   url: string;
   timestamp: string;

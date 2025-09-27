@@ -61,7 +61,7 @@ class ChannelAnalysisQueue extends EventEmitter {
             if (decodedChannelIdentifier.includes('/watch') || decodedChannelIdentifier.includes('/shorts/')) {
                 // 영상 URL에서 채널 정보 추출
                 ServerLogger.info(`🎥 영상 URL에서 채널 정보 추출: ${decodedChannelIdentifier}`);
-                const VideoProcessor = require('./VideoProcessor');
+                const VideoProcessor = require('../../dist/server/services/video/VideoProcessor');
                 const videoProcessor = new VideoProcessor();
 
                 try {

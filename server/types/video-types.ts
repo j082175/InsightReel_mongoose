@@ -55,10 +55,10 @@ export interface InstagramRawData {
 
 export interface TikTokRawData {
   stats: {
-    viewCount: number;
-    likeCount: number;
-    commentCount: number;
-    shareCount: number;
+    views: number;
+    likes: number;
+    commentsCount: number;
+    shares: number;
     playCount?: number;
   };
   author: {
@@ -209,11 +209,8 @@ export interface HybridYouTubeData {
   channelUrl?: string;
   channelCustomUrl?: string;
   youtubeHandle?: string;
-  viewCount?: number | string;
   views?: number | string;
-  likeCount?: number | string;
   likes?: number | string;
-  commentCount?: number | string;
   commentsCount?: number | string;
   subscribers?: number | string;
   subscriberCount?: number | string;

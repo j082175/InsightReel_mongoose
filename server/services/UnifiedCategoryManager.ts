@@ -240,15 +240,24 @@ export class UnifiedCategoryManager {
         try {
             if (fs.existsSync(this.verifiedCategoriesPath)) {
                 const data = fs.readFileSync(this.verifiedCategoriesPath, 'utf8');
-                const verifiedArray: VerifiedCategory[] = JSON.parse(data);
+                const parsedData = JSON.parse(data);
 
-                // 배열을 객체로 변환 (URL을 키로 사용)
-                this.verifiedCategories = {};
-                verifiedArray.forEach(item => {
-                    this.verifiedCategories[item.url] = item;
-                });
+                // 파싱된 데이터가 배열인지 확인
+                if (Array.isArray(parsedData)) {
+                    const verifiedArray: VerifiedCategory[] = parsedData;
 
-                ServerLogger.success('검증된 카테고리 로드 완료', null, 'UNIFIED_CATEGORY');
+                    // 배열을 객체로 변환 (URL을 키로 사용)
+                    this.verifiedCategories = {};
+                    verifiedArray.forEach(item => {
+                        this.verifiedCategories[item.url] = item;
+                    });
+
+                    ServerLogger.success('검증된 카테고리 로드 완료', null, 'UNIFIED_CATEGORY');
+                } else {
+                    // 배열이 아닌 경우 빈 객체로 초기화
+                    this.verifiedCategories = {};
+                    ServerLogger.warn('검증된 카테고리 파일이 배열 형식이 아닙니다. 빈 객체로 초기화', null, 'UNIFIED_CATEGORY');
+                }
             } else {
                 this.verifiedCategories = {};
                 ServerLogger.info('검증된 카테고리 파일이 없습니다. 빈 객체로 초기화', null, 'UNIFIED_CATEGORY');

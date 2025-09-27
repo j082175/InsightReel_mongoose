@@ -5,9 +5,9 @@ const TrendingVideo = require('../../dist/server/models/TrendingVideo');
 const VideoUrl = require('../../dist/server/models/VideoUrl');
 const { HTTP_STATUS_CODES, ERROR_CODES, API_MESSAGES, PLATFORMS } = require('../config/api-messages');
 const { ServerLogger } = require('../utils/logger');
-const VideoProcessor = require('../services/VideoProcessor');
-const AIAnalyzer = require('../services/AIAnalyzer');
-const SheetsManager = require('../services/SheetsManager');
+const VideoProcessor = require('../../dist/server/services/video/VideoProcessor');
+const AIAnalyzer = require('../../dist/server/services/ai/AIAnalyzer');
+const SheetsManager = require('../../dist/server/services/sheets/SheetsManager');
 const UnifiedVideoSaver = require('../services/UnifiedVideoSaver');
 
 /**

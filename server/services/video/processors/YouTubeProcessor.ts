@@ -3,7 +3,7 @@ import { ServerLogger } from '../../../utils/logger';
 import { Platform } from '../../../types/video-types';
 
 interface YouTubeVideoInfo {
-    videoId: string;
+    id: string;
     title: string;
     description: string;
     channelId: string;
@@ -32,7 +32,7 @@ export class YouTubeProcessor {
 
     private async initializeExtractor() {
         try {
-            const HybridYouTubeExtractor = require('../../HybridYouTubeExtractor');
+            const HybridYouTubeExtractor = require('../../youtube/HybridYouTubeExtractor');
             this.hybridExtractor = new HybridYouTubeExtractor();
             await this.hybridExtractor.initialize();
         } catch (error) {
@@ -141,7 +141,7 @@ export class YouTubeProcessor {
         const contentDetails = item.contentDetails || {};
 
         return {
-            videoId: item.id,
+            id: item.id,
             title: snippet.title || '',
             description: snippet.description || '',
             channelId: snippet.channelId || '',
@@ -158,7 +158,7 @@ export class YouTubeProcessor {
 
     private normalizeVideoInfo(data: any): YouTubeVideoInfo {
         return {
-            videoId: data.videoId || '',
+            id: data.id || data.videoId || '',
             title: data.title || '',
             description: data.description || '',
             channelId: data.channelId || '',

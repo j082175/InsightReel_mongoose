@@ -4,8 +4,8 @@
  * video-types.js 인터페이스 표준 준수
  */
 
-const SheetsManager = require('./SheetsManager');
-const VideoDataConverter = require('./VideoDataConverter');
+const { SheetsManager } = require('./sheets/SheetsManager');
+const { VideoDataConverter } = require('../../dist/server/services/VideoDataConverter');
 const Video = require('../../dist/server/models/Video').default;
 const { ServerLogger } = require('../utils/logger');
 const mongoose = require('mongoose');

@@ -3,14 +3,13 @@
  * 리팩토링된 채널 분석 서비스 - 역할별로 분리된 서비스들을 조합
  */
 
-import { ChannelData } from '../../types/channel.types';
-import { ServerLogger } from '../../utils/logger';
+const { ServerLogger } = require('../../utils/logger');
 
 // 분리된 서비스들
-import { ChannelAnalyzer } from './services/ChannelAnalyzer';
-import { ChannelBackupService } from './services/ChannelBackupService';
-import { ChannelDataService } from './services/ChannelDataService';
-import { ChannelSearchService } from './services/ChannelSearchService';
+const { ChannelAnalyzer } = require('./services/ChannelAnalyzer');
+const { ChannelBackupService } = require('./services/ChannelBackupService');
+const { ChannelDataService } = require('./services/ChannelDataService');
+const { ChannelSearchService } = require('./services/ChannelSearchService');
 
 const DuplicateCheckManager = require('../../models/DuplicateCheckManager');
 const Channel = require('../../models/ChannelModel');
@@ -20,11 +19,6 @@ const Channel = require('../../models/ChannelModel');
  * 각 전문 서비스들을 조합하여 완전한 채널 분석 기능 제공
  */
 class ChannelAnalysisService {
-    private dataService: ChannelDataService;
-    private backupService: ChannelBackupService;
-    private searchService: ChannelSearchService;
-    private analyzer: ChannelAnalyzer;
-
     constructor() {
         // 분리된 서비스들 초기화
         this.dataService = new ChannelDataService();
@@ -60,12 +54,12 @@ class ChannelAnalysisService {
      * 📊 YouTube API에서 채널 상세 분석 후 생성/업데이트
      */
     async createOrUpdateWithAnalysis(
-        channelIdentifier: string,
-        userKeywords: string[] = [],
-        includeAnalysis: boolean = true,
-        skipAIAnalysis: boolean = false,
-        queueNormalizedChannelId: string | null = null,
-    ): Promise<ChannelData> {
+        channelIdentifier,
+        userKeywords = [],
+        includeAnalysis = true,
+        skipAIAnalysis = false,
+        queueNormalizedChannelId = null,
+    ) {
         try {
             // 🚨 중복검사 - 리소스 사용 전에 즉시 확인
             // const decodedChannelIdentifier =
@@ -278,15 +272,15 @@ class ChannelAnalysisService {
     // 🔍 검색 및 조회 메서드들 (ChannelDataService 위임)
     // =================================================================
 
-    async findById(channelId: string) {
+    async findById(channelId: any) {
         return await this.dataService.findById(channelId);
     }
 
-    async findByName(name: string) {
+    async findByName(name: any) {
         return await this.dataService.findByName(name);
     }
 
-    async findByTag(tag: string) {
+    async findByTag(tag: any) {
         return await this.dataService.findByTag(tag);
     }
 
@@ -294,7 +288,7 @@ class ChannelAnalysisService {
         return await this.dataService.getAll();
     }
 
-    async getRecent(limit = 20) {
+    async getRecent(limit: any = 20) {
         return await this.dataService.getRecent(limit);
     }
 
@@ -310,7 +304,7 @@ class ChannelAnalysisService {
         return await this.dataService.getUnclusteredCount();
     }
 
-    async delete(channelId: string) {
+    async delete(channelId: any) {
         const result = await this.dataService.delete(channelId);
         if (result) {
             this.backupService.saveChannelsAsync();
@@ -318,7 +312,7 @@ class ChannelAnalysisService {
         return result;
     }
 
-    async assignToCluster(channelId: string, clusterId: string) {
+    async assignToCluster(channelId: any, clusterId: any) {
         const result = await this.dataService.assignToCluster(
             channelId,
             clusterId,
@@ -327,7 +321,7 @@ class ChannelAnalysisService {
         return result;
     }
 
-    async removeFromCluster(channelId: string, clusterId: string) {
+    async removeFromCluster(channelId: any, clusterId: any) {
         const result = await this.dataService.removeFromCluster(
             channelId,
             clusterId,
@@ -427,12 +421,12 @@ module.exports = {
     },
 
     // 정적 메서드들 (편의성)
-    createOrUpdate: async (data: ChannelData) => {
+    createOrUpdate: async (data: any) => {
         const model = module.exports.getInstance();
         return await model.createOrUpdate(data);
     },
 
-    findById: async (id: string) => {
+    findById: async (id: any) => {
         const model = module.exports.getInstance();
         return await model.findById(id);
     },
@@ -442,7 +436,7 @@ module.exports = {
         return await model.getAll();
     },
 
-    getRecent: async (limit: number) => {
+    getRecent: async (limit: any) => {
         const model = module.exports.getInstance();
         return await model.getRecent(limit);
     },

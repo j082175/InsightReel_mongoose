@@ -12,7 +12,8 @@ const youtubeBatchProcessor = require('./YouTubeBatchProcessor');
 const HybridYouTubeExtractor = require('./HybridYouTubeExtractor');
 // TypeScript 컴파일된 버전 사용
 const HybridDataConverter = require('../../dist/server/services/HybridDataConverter').default || require('./HybridDataConverter.js.backup');
-const InstagramReelsExtractor = require('./InstagramReelsExtractor');
+// Instagram 처리는 새로운 TypeScript 구조 사용
+// const InstagramReelsExtractor = require('./InstagramReelsExtractor');
 
 const { PLATFORMS } = require('../config/api-messages');
 
@@ -78,7 +79,7 @@ class VideoProcessor {
         this.framesDir = path.join(this.downloadDir, 'frames'); // 영상 분석 프레임 추출용
         this.youtubeApiKey = null; // ApiKeyManager에서 동적으로 로드
         this.hybridExtractor = null; // 비동기 초기화
-        this.instagramExtractor = new InstagramReelsExtractor(); // Instagram Reels 데이터 추출기
+        // this.instagramExtractor = new InstagramReelsExtractor(); // Instagram Reels 데이터 추출기 - TypeScript로 이전됨
         this._initialized = false;
 
         // 서비스 레지스트리에 등록
@@ -1885,7 +1886,9 @@ class VideoProcessor {
 
             // 1단계: Instaloader를 통한 데이터 추출 시도
             try {
-                const instagramData = await this.instagramExtractor.extractReelsData(instagramUrl);
+                // const instagramData = await this.instagramExtractor.extractReelsData(instagramUrl);
+                // Instagram 기능 임시 비활성화 - TypeScript 마이그레이션 완료 후 재활성화
+                throw new Error('Instagram 기능 임시 비활성화됨 - TypeScript 마이그레이션 중');
 
                 if (!instagramData.success) {
                     throw new Error(`Instagram 데이터 추출 실패: ${instagramData.error || 'Unknown error'}`);

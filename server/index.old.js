@@ -8,6 +8,7 @@ require('dotenv').config();
 const ErrorHandler = require('./middleware/error-handler');
 const SecurityMiddleware = require('./middleware/security');
 const ValidationMiddleware = require('./middleware/validation');
+// 기존 JavaScript 컨트롤러 사용 (TypeScript 마이그레이션 중)
 const VideoController = require('./controllers/video-controller');
 const DatabaseManager = require('./config/database');
 

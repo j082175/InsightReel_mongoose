@@ -17,7 +17,7 @@ router.get('/test', (req, res) => {
 // 큐 매니저를 동적으로 로드하여 의존성 오류 방지
 function getQueueManager() {
     try {
-        const ChannelAnalysisQueueManager = require('../services/ChannelAnalysisQueue');
+        const ChannelAnalysisQueueManager = require('../services/trending/ChannelAnalysisQueue');
         return ChannelAnalysisQueueManager.getInstance();
     } catch (error) {
         throw new Error(`큐 매니저 초기화 실패: ${error.message}`);
@@ -391,7 +391,7 @@ router.post('/extract-channel-name', async (req, res) => {
         ServerLogger.info(`🎥 영상 URL에서 채널명 추출 요청: ${videoUrl}`);
 
         // VideoProcessor로 채널 정보 추출
-        const VideoProcessor = require('../services/VideoProcessor');
+        const VideoProcessor = require('../../dist/server/services/video/VideoProcessor');
         const videoProcessor = new VideoProcessor();
 
         const videoInfo = await videoProcessor.getYouTubeVideoInfo(videoUrl);

@@ -45,9 +45,9 @@ export class HybridDataConverter {
                 tags: hybridData.tags || hybridData.keywords || [],
 
                 // 통계 (하이브리드의 핵심 장점) - 문자열로 변환
-                views: String(hybridData.viewCount || hybridData.views || "0"),
-                likes: String(hybridData.likeCount || hybridData.likes || "0"),
-                commentsCount: String(hybridData.commentCount || hybridData.commentsCount || "0"),
+                views: String(hybridData.views || "0"),
+                likes: String(hybridData.likes || "0"),
+                commentsCount: String(hybridData.commentsCount || "0"),
 
                 // 채널 정보 (하이브리드 데이터에서 매핑) - 문자열로 변환
                 subscribers: String(hybridData.subscribers || hybridData.subscriberCount || "0"),

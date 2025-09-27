@@ -1,4 +1,5 @@
 const path = require('path');
+// 기존 JavaScript 서비스들 사용 (TypeScript 마이그레이션 진행 중)
 const VideoProcessor = require('../services/VideoProcessor');
 const AIAnalyzer = require('../services/AIAnalyzer');
 const SheetsManager = require('../services/SheetsManager');

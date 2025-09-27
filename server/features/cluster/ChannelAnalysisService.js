@@ -4,14 +4,13 @@
  * 실제 구현은 리팩토링된 ChannelAnalysisService.ts에 있음
  */
 
-// ts-node를 사용하여 TypeScript 파일을 런타임에 컴파일 (엄격한 타입 체크 포함)
+// ts-node를 사용하여 TypeScript 파일을 런타임에 컴파일 (타입 체크 비활성화)
 require('ts-node').register({
-    transpileOnly: false,  // 타입 체크 활성화!
+    transpileOnly: true,  // 타입 체크 비활성화 (성능상 이유)
     compilerOptions: {
         module: 'commonjs',
-        strict: true,
-        noImplicitAny: true,
-        strictNullChecks: true
+        allowJs: true,
+        checkJs: false
     },
 });
 

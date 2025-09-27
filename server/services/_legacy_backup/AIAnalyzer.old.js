@@ -2,7 +2,8 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const { ServerLogger } = require('../utils/logger');
-const UnifiedCategoryManager = require('./UnifiedCategoryManager');
+// const UnifiedCategoryManager = require('./UnifiedCategoryManager');
+// UnifiedCategoryManager TypeScript 마이그레이션 완료 후 재활성화
 const UnifiedGeminiManager = require('../utils/unified-gemini-manager');
 const { AI } = require('../config/constants');
 // GoogleGenerativeAI는 UnifiedGeminiManager에서 처리하므로 제거
@@ -14,7 +15,9 @@ class AIAnalyzer {
     const categoryMode = process.env.USE_DYNAMIC_CATEGORIES === 'true' ? 'dynamic' : 
                         process.env.USE_FLEXIBLE_CATEGORIES === 'true' ? 'flexible' : 'basic';
     
-    this.categoryManager = UnifiedCategoryManager.getInstance({ mode: categoryMode });
+    // this.categoryManager = UnifiedCategoryManager.getInstance({ mode: categoryMode });
+    // TypeScript 마이그레이션 중 임시 비활성화
+    this.categoryManager = null;
     this.useDynamicCategories = categoryMode !== 'basic';
     
     // AI 시스템 설정 (상호 배타적)
@@ -205,19 +208,30 @@ class AIAnalyzer {
     ServerLogger.info('🚀 동적 카테고리 분석 시작', null, 'AI');
     
     try {
-      // 자가 학습 시스템 활성화 여부 확인
-      if (this.categoryManager.isSelfLearningEnabled()) {
+      // UnifiedCategoryManager가 비활성화되어 있으므로 기본 동적 카테고리 분석 사용
+      if (this.categoryManager && this.categoryManager.isSelfLearningEnabled()) {
         ServerLogger.info('🧠 자가 학습 카테고리 시스템 활성화됨', null, 'SelfLearning');
         return await this.analyzeWithSelfLearning(thumbnailPaths, metadata);
       }
-      
+
       // 기존 동적 카테고리 분석 로직
       return await this.analyzeWithBasicDynamic(thumbnailPaths, metadata);
-      
+
     } catch (error) {
       ServerLogger.error('동적 카테고리 분석 실패:', error);
-      // 폴백: 기본 카테고리 사용
-      return this.categoryManager.getFallbackCategory(metadata);
+      // 폴백: 기본 카테고리 사용 (categoryManager가 null일 경우 대비)
+      if (this.categoryManager && this.categoryManager.getFallbackCategory) {
+        return this.categoryManager.getFallbackCategory(metadata);
+      }
+      // categoryManager가 없는 경우 기본 응답 반환
+      return {
+        mainCategory: '기타',
+        middleCategory: '기타',
+        fullCategoryPath: '기타 > 기타',
+        categoryDepth: 2,
+        confidence: 0.5,
+        source: 'fallback'
+      };
     }
   }
 

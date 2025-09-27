@@ -2,6 +2,7 @@ import { ServerLogger } from '../../utils/logger';
 import { GeminiAnalyzer } from './analyzers/GeminiAnalyzer';
 import { FrameAnalyzer } from './analyzers/FrameAnalyzer';
 import { ResponseParser } from './managers/ResponseParser';
+import { UnifiedCategoryManager } from '../UnifiedCategoryManager';
 
 interface AnalysisOptions {
     analysisType?: 'single' | 'multi-frame' | 'dynamic';
@@ -35,8 +36,6 @@ export class AIAnalyzer {
 
     private initializeCategoryManager(): void {
         try {
-            const UnifiedCategoryManager = require('../UnifiedCategoryManager');
-
             const categoryMode = process.env.USE_DYNAMIC_CATEGORIES === 'true' ? 'dynamic' :
                 process.env.USE_FLEXIBLE_CATEGORIES === 'true' ? 'flexible' : 'basic';
 

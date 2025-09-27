@@ -6,7 +6,7 @@ import { YouTubeProcessor } from './processors/YouTubeProcessor';
 import { InstagramProcessor } from './processors/InstagramProcessor';
 import { TikTokProcessor } from './processors/TikTokProcessor';
 import { ThumbnailExtractor } from './extractors/ThumbnailExtractor';
-import VideoUtils from './utils/VideoUtils';
+import VideoUtils, { VideoFileMetadata } from './utils/VideoUtils';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -31,6 +31,7 @@ export class VideoProcessor {
     private tikTokProcessor: TikTokProcessor;
     private thumbnailExtractor: ThumbnailExtractor;
     private downloadDir: string;
+    private _initialized: boolean = false;
 
     constructor() {
         this.youtubeProcessor = new YouTubeProcessor();
@@ -40,6 +41,27 @@ export class VideoProcessor {
 
         this.downloadDir = path.join(__dirname, '../../../downloads');
         this.ensureDirectories();
+    }
+
+    /**
+     * VideoProcessor 초기화
+     */
+    async initialize(): Promise<void> {
+        if (this._initialized) return;
+
+        try {
+            // YouTube 처리기 초기화 (내부적으로 HybridYouTubeExtractor 초기화)
+            // YouTubeProcessor가 초기화를 필요로 하는 경우에만 호출
+            if (this.youtubeProcessor && typeof this.youtubeProcessor.initialize === 'function') {
+                await this.youtubeProcessor.initialize();
+            }
+
+            this._initialized = true;
+            ServerLogger.info('✅ VideoProcessor 초기화 완료');
+        } catch (error) {
+            ServerLogger.error('❌ VideoProcessor 초기화 실패:', error);
+            throw error;
+        }
     }
 
     private ensureDirectories(): void {
@@ -298,7 +320,7 @@ export class VideoProcessor {
     }
 
     // 비디오 파일 메타데이터 추출
-    async extractVideoMetadata(videoPath: string): Promise<any> {
+    async extractVideoMetadata(videoPath: string): Promise<VideoFileMetadata | null> {
         return await VideoUtils.getVideoMetadata(videoPath);
     }
 

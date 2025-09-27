@@ -39,7 +39,7 @@ router.post('/collect-channel', async (req, res) => {
         // 영상 URL에서 채널 정보 추출 처리
         if (channelData?.extractFromVideo && channelData?.url) {
             try {
-                const VideoProcessor = require('../../services/VideoProcessor');
+                const VideoProcessor = require('../../../dist/server/services/video/VideoProcessor');
                 const videoProcessor = new VideoProcessor();
                 const youtubeInfo = await videoProcessor.getYouTubeVideoInfo(channelData.url);
 

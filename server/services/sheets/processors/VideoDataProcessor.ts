@@ -1,7 +1,7 @@
 import { ServerLogger } from '../../../utils/logger';
 import { PLATFORMS } from '../../../config/api-messages';
 
-interface VideoData {
+interface SheetsVideoData {
     _id?: string;
     title: string;
     views: number;
@@ -43,7 +43,7 @@ export class VideoDataProcessor {
     /**
      * 단일 비디오 데이터 처리
      */
-    static processVideoData(videoData: VideoData, platform: string = 'YOUTUBE'): ProcessedVideoData {
+    static processVideoData(videoData: SheetsVideoData, platform: string = 'YOUTUBE'): ProcessedVideoData {
         try {
             if (!videoData || typeof videoData !== 'object') {
                 return {
@@ -74,7 +74,7 @@ export class VideoDataProcessor {
      * 다중 비디오 데이터 배치 처리
      */
     static processBatchVideoData(
-        videoDataArray: VideoData[],
+        videoDataArray: SheetsVideoData[],
         platform: string = 'YOUTUBE'
     ): ProcessedVideoData {
         try {
@@ -129,7 +129,7 @@ export class VideoDataProcessor {
     /**
      * 비디오 데이터를 시트 행으로 변환
      */
-    private static convertVideoToRow(videoData: VideoData, platform: string): any[] {
+    private static convertVideoToRow(videoData: SheetsVideoData, platform: string): any[] {
         // 기본값 설정
         const defaults = {
             title: videoData.title || '제목 없음',
@@ -349,7 +349,7 @@ export class VideoDataProcessor {
     /**
      * 데이터 유효성 검사
      */
-    static validateVideoData(videoData: VideoData): { isValid: boolean; errors: string[] } {
+    static validateVideoData(videoData: SheetsVideoData): { isValid: boolean; errors: string[] } {
         const errors: string[] = [];
 
         if (!videoData.title || typeof videoData.title !== 'string') {
@@ -398,7 +398,7 @@ export class VideoDataProcessor {
     /**
      * 데이터 통계 생성
      */
-    static generateDataStats(videoDataArray: VideoData[]): {
+    static generateDataStats(videoDataArray: SheetsVideoData[]): {
         totalVideos: number;
         totalViews: number;
         averageViews: number;

@@ -3,7 +3,7 @@ const { ServerLogger } = require('../utils/logger');
 const UsageTracker = require('../utils/usage-tracker');
 const AIAnalyzer = require('./AIAnalyzer');
 const UnifiedCategoryManager = require('./UnifiedCategoryManager');
-const VideoProcessor = require('./VideoProcessor');
+const VideoProcessor = require('../../dist/server/services/video/VideoProcessor');
 
 /**
  * YouTube 채널 상세 분석 서비스

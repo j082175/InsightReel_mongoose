@@ -7,8 +7,8 @@
 export type Platform = 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK';
 export type ContentType = 'shortform' | 'longform' | 'mixed';
 
-// ===== 기본 비디오 정보 (VideoCore) =====
-export interface VideoCore {
+// ===== 레거시 비디오 정보 (LegacyVideoCore) =====
+export interface LegacyVideoCore {
   // 자동 생성 필드
   rowNumber?: number;
 
@@ -99,7 +99,7 @@ export interface SystemMetadata {
 
 // ===== 전체 Video 인터페이스 조합 =====
 export interface Video
-  extends VideoCore,
+  extends LegacyVideoCore,
     ChannelInfo,
     AIAnalysis,
     YouTubeSpecific,

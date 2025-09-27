@@ -11,7 +11,7 @@ export class InstagramProcessor {
 
     private initializeExtractor() {
         try {
-            const InstagramReelsExtractor = require('../../InstagramReelsExtractor');
+            const InstagramReelsExtractor = require('../../../../dist/server/services/InstagramReelsExtractor');
             this.instagramExtractor = new InstagramReelsExtractor();
         } catch (error) {
             ServerLogger.error('Instagram Reels 추출기 초기화 실패:', error);

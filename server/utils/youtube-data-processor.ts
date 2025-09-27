@@ -3,7 +3,7 @@ import type { YouTubeRawData } from "../types/video-types";
 
 // 이 클래스가 반환하는 표준화된 데이터의 형태를 인터페이스로 명확히 정의합니다.
 export interface ProcessedYouTubeData {
-    videoId: string | null;
+    id: string | null;
     title: string;
     description: string;
     thumbnailUrl: string | null;
@@ -216,7 +216,7 @@ class YouTubeDataProcessor {
             const duration = contentDetails.duration ? YouTubeDataProcessor.parseYouTubeDuration(contentDetails.duration) : 0;
 
             return {
-                videoId: videoId,
+                id: videoId,
                 title: snippet.title || "제목 없음",
                 description: snippet.description || "",
                 thumbnailUrl: YouTubeDataProcessor.buildThumbnailUrl(videoId),
@@ -249,7 +249,7 @@ class YouTubeDataProcessor {
             ServerLogger.error("메타데이터 처리 실패", error, "YOUTUBE_PROCESSOR");
             const videoId = rawData.id || YouTubeDataProcessor.extractYouTubeId(rawData.url);
             return {
-                videoId: videoId, title: "처리 실패", error: error.message,
+                id: videoId, title: "처리 실패", error: error.message,
                 description: "", thumbnailUrl: YouTubeDataProcessor.buildThumbnailUrl(videoId), url: rawData.url || "", channelId: "", channelName: "", channelUrl: null, youtubeHandle: null,
                 views: 0, likes: 0, commentsCount: 0, duration: 0, durationFormatted: "0:00", uploadDate: "", categoryId: "",
                 youtubeCategory: "미분류", category: "미분류", contentType: "video", hashtags: [], mentions: [], keywords: [],
@@ -269,7 +269,7 @@ class YouTubeDataProcessor {
             } catch (error: any) {
                 ServerLogger.error(`배치 처리 실패 (인덱스: ${index})`, error, "YOUTUBE_PROCESSOR");
                 return {
-                    videoId: null, title: "처리 실패", error: error.message, batchIndex: index,
+                    id: null, title: "처리 실패", error: error.message, batchIndex: index,
                     description: "", thumbnailUrl: null, url: "", channelId: "", channelName: "", channelUrl: null, youtubeHandle: null,
                     views: 0, likes: 0, commentsCount: 0, duration: 0, durationFormatted: "0:00", uploadDate: "", categoryId: "",
                     youtubeCategory: "미분류", category: "미분류", contentType: "video", hashtags: [], mentions: [], keywords: [],

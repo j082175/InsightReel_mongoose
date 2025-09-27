@@ -3,7 +3,7 @@ const router = express.Router();
 const ChannelGroup = require('../models/ChannelGroup');
 const TrendingVideo = require('../models/TrendingVideo');
 const CollectionBatch = require('../models/CollectionBatch');
-const GroupTrendingCollector = require('../services/GroupTrendingCollector');
+const GroupTrendingCollector = require('../services/trending/GroupTrendingCollector');
 const { HTTP_STATUS_CODES, ERROR_CODES, API_MESSAGES } = require('../config/api-messages');
 const { ServerLogger } = require('../utils/logger');
 // response-normalizer 제거 - _id 통일

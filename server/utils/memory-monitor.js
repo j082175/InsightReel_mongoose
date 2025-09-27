@@ -164,7 +164,7 @@ class MemoryMonitor {
             }
 
             // 2. ChannelAnalysisQueue 작업 정리
-            const ChannelAnalysisQueueManager = require('../services/ChannelAnalysisQueue');
+            const ChannelAnalysisQueueManager = require('../services/trending/ChannelAnalysisQueue');
             const queueInstance = ChannelAnalysisQueueManager.getInstance();
             if (queueInstance && typeof queueInstance.cleanupCompletedJobs === 'function') {
                 const cleaned = queueInstance.cleanupCompletedJobs(0.5); // 30분 이상 된 작업 정리
