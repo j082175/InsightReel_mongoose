@@ -1,11 +1,15 @@
-const mongoose = require('mongoose');
+import mongoose, { Schema, model, Model } from 'mongoose';
+import { ITrendingVideo } from '../types/models';
 
-/**
- * 📊 TrendingVideo 모델 - 트렌딩 수집 영상
- * 그룹별 트렌딩 수집으로 얻은 영상들을 개별 분석 영상과 분리 저장
- */
-const trendingVideoSchema = new mongoose.Schema({
-  // 기본 비디오 정보
+// 🎯 정적 메서드 타입 정의
+interface TrendingVideoModelType extends Model<ITrendingVideo> {
+  findByGroup(groupId: string, limit?: number): Promise<ITrendingVideo[]>;
+  findByDuration(duration: 'SHORT' | 'MID' | 'LONG', limit?: number): Promise<ITrendingVideo[]>;
+  getTodayCollection(): Promise<ITrendingVideo[]>;
+  getGroupStats(groupId: string): Promise<any[]>;
+}
+
+const trendingVideoSchema = new Schema<ITrendingVideo, TrendingVideoModelType>({
   videoId: {
     type: String,
     required: true,
@@ -27,8 +31,6 @@ const trendingVideoSchema = new mongoose.Schema({
     required: true,
     enum: ['YOUTUBE', 'INSTAGRAM', 'TIKTOK']
   },
-  
-  // 채널 정보
   channelName: {
     type: String,
     required: true,
@@ -43,22 +45,20 @@ const trendingVideoSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  
-  // 수집 정보
   groupId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'ChannelGroup',
-    required: false  // 개별 채널 수집 시에는 null 가능
+    required: false
   },
   groupName: {
     type: String,
-    required: false,  // 개별 채널 수집 시에는 기본값 사용
+    required: false,
     default: '개별 채널 수집'
   },
   batchId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'CollectionBatch',
-    required: false  // 기존 데이터 호환성을 위해
+    required: false
   },
   collectionDate: {
     type: Date,
@@ -69,8 +69,6 @@ const trendingVideoSchema = new mongoose.Schema({
     default: 'trending',
     enum: ['trending', 'individual']
   },
-  
-  // 비디오 통계
   views: {
     type: Number,
     default: 0
@@ -87,8 +85,6 @@ const trendingVideoSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  
-  // 비디오 메타데이터
   uploadDate: {
     type: Date
   },
@@ -107,8 +103,6 @@ const trendingVideoSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  
-  // 키워드 및 태그
   keywords: [{
     type: String,
     trim: true
@@ -122,7 +116,6 @@ const trendingVideoSchema = new mongoose.Schema({
   collection: 'trendingvideos'
 });
 
-// 복합 인덱스
 trendingVideoSchema.index({ groupId: 1, collectionDate: -1 });
 trendingVideoSchema.index({ batchId: 1, collectionDate: -1 });
 trendingVideoSchema.index({ platform: 1, views: -1 });
@@ -130,15 +123,14 @@ trendingVideoSchema.index({ duration: 1, views: -1 });
 trendingVideoSchema.index({ channelId: 1, collectionDate: -1 });
 trendingVideoSchema.index({ videoId: 1 }, { unique: true });
 
-// 정적 메서드
-trendingVideoSchema.statics.findByGroup = function(groupId, limit = 20) {
+trendingVideoSchema.statics.findByGroup = function(groupId: string, limit: number = 20) {
   return this.find({ groupId })
     .sort({ collectionDate: -1, views: -1 })
     .limit(limit)
     .populate('groupId', 'name color');
 };
 
-trendingVideoSchema.statics.findByDuration = function(duration, limit = 20) {
+trendingVideoSchema.statics.findByDuration = function(duration: 'SHORT' | 'MID' | 'LONG', limit: number = 20) {
   return this.find({ duration })
     .sort({ views: -1 })
     .limit(limit);
@@ -153,9 +145,9 @@ trendingVideoSchema.statics.getTodayCollection = function() {
   }).sort({ collectionDate: -1 });
 };
 
-trendingVideoSchema.statics.getGroupStats = function(groupId) {
+trendingVideoSchema.statics.getGroupStats = function(groupId: string) {
   return this.aggregate([
-    { $match: { groupId: mongoose.Types.ObjectId(groupId) } },
+    { $match: { groupId: new mongoose.Types.ObjectId(groupId) } },
     {
       $group: {
         _id: '$duration',
@@ -167,6 +159,6 @@ trendingVideoSchema.statics.getGroupStats = function(groupId) {
   ]);
 };
 
-const TrendingVideo = mongoose.model('TrendingVideo', trendingVideoSchema);
+const TrendingVideo = model<ITrendingVideo, TrendingVideoModelType>('TrendingVideo', trendingVideoSchema);
 
-module.exports = TrendingVideo;
+export default TrendingVideo;

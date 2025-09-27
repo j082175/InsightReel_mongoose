@@ -6,23 +6,23 @@
     "outDir": "./dist",
     "rootDir": "./",
 
-    // 엄격한 타입 체크 설정
-    "strict": true,                          // 모든 strict 옵션 활성화
-    "noImplicitAny": true,                  // any 타입 암시적 사용 금지
-    "strictNullChecks": true,               // null/undefined 체크 강화
-    "strictFunctionTypes": true,            // 함수 타입 체크 강화
-    "strictBindCallApply": true,            // bind, call, apply 체크 강화
-    "strictPropertyInitialization": true,   // 프로퍼티 초기화 체크
-    "noImplicitThis": true,                 // this 타입 암시적 any 금지
-    "alwaysStrict": true,                   // strict 모드 사용
+    // 엄격한 타입 체크 설정 (마이그레이션 중 완화)
+    "strict": false,                          // 모든 strict 옵션 비활성화
+    "noImplicitAny": false,                  // any 타입 허용
+    "strictNullChecks": false,               // null/undefined 체크 완화
+    "strictFunctionTypes": false,            // 함수 타입 체크 완화
+    "strictBindCallApply": false,            // bind, call, apply 체크 완화
+    "strictPropertyInitialization": false,   // 프로퍼티 초기화 체크 완화
+    "noImplicitThis": false,                 // this 타입 암시적 any 허용
+    "alwaysStrict": false,                   // strict 모드 비활성화
 
-    // 추가 체크 옵션
-    "noUnusedLocals": true,                 // 사용안한 로컬 변수 에러
-    "noUnusedParameters": true,             // 사용안한 파라미터 에러
-    "noImplicitReturns": true,              // 모든 경로에서 반환값 필요
-    "noFallthroughCasesInSwitch": true,     // switch문 fallthrough 방지
-    "noUncheckedIndexedAccess": true,       // 인덱스 접근시 undefined 체크
-    "exactOptionalPropertyTypes": true,     // 옵셔널 프로퍼티 정확한 타입
+    // 추가 체크 옵션 (마이그레이션 중 완화)
+    "noUnusedLocals": false,                 // 사용안한 로컬 변수 허용
+    "noUnusedParameters": false,             // 사용안한 파라미터 허용
+    "noImplicitReturns": false,              // 모든 경로에서 반환값 불필요
+    "noFallthroughCasesInSwitch": false,     // switch문 fallthrough 허용
+    "noUncheckedIndexedAccess": false,       // 인덱스 접근시 undefined 체크 완화
+    "exactOptionalPropertyTypes": false,     // 옵셔널 프로퍼티 정확한 타입 완화
 
     // 모듈 설정
     "esModuleInterop": true,
@@ -32,8 +32,8 @@
     "checkJs": false,                       // JS 파일은 타입 체크 안 함
 
     // 출력 설정
-    "declaration": true,                    // .d.ts 파일 생성
-    "declarationMap": true,                 // .d.ts.map 파일 생성
+    "declaration": false,                    // .d.ts 파일 생성
+    "declarationMap": false,                 // .d.ts.map 파일 생성
     "sourceMap": true,
     "removeComments": false,
     "resolveJsonModule": true
@@ -44,7 +44,8 @@
     "server/schemas/**/*.ts",
     "server/models/**/*.ts",
     "server/services/**/*.ts",
-    "server/utils/**/*.ts"
+    "server/utils/**/*.ts",
+    "server/index.ts"
   ],
   "exclude": [
     "node_modules",

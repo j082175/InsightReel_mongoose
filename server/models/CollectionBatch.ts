@@ -1,11 +1,23 @@
-const mongoose = require('mongoose');
+import mongoose, { Schema, model, Model, HydratedDocument } from 'mongoose';
+import { ICollectionBatch } from '../types/models';
 
-/**
- * 🎯 수집 배치 모델
- * 트렌딩 영상 수집 작업의 메타데이터를 관리
- */
-const collectionBatchSchema = new mongoose.Schema({
-  // 배치 기본 정보
+// 🎯 인스턴스 메서드 타입 정의
+interface ICollectionBatchMethods {
+  start(): Promise<HydratedCollectionBatchDocument>;
+  complete(results: any): Promise<HydratedCollectionBatchDocument>;
+  fail(error: any, failedChannels?: any[]): Promise<HydratedCollectionBatchDocument>;
+}
+
+// 🎯 정적 메서드 타입 정의
+interface CollectionBatchModelType extends Model<ICollectionBatch, {}, ICollectionBatchMethods> {
+  findActive(): Promise<HydratedCollectionBatchDocument[]>;
+  findRecent(limit?: number): Promise<HydratedCollectionBatchDocument[]>;
+}
+
+// 🎯 HydratedDocument 타입
+type HydratedCollectionBatchDocument = HydratedDocument<ICollectionBatch, ICollectionBatchMethods>;
+
+const collectionBatchSchema = new Schema<ICollectionBatch, CollectionBatchModelType, ICollectionBatchMethods>({
   name: {
     type: String,
     required: true,
@@ -17,8 +29,6 @@ const collectionBatchSchema = new mongoose.Schema({
     trim: true,
     maxlength: 500
   },
-  
-  // 수집 설정
   collectionType: {
     type: String,
     enum: ['group', 'channels'],
@@ -29,8 +39,6 @@ const collectionBatchSchema = new mongoose.Schema({
     ref: 'ChannelGroup'
   }],
   targetChannels: [String],
-  
-  // 수집 조건
   criteria: {
     daysBack: {
       type: Number,
@@ -62,8 +70,6 @@ const collectionBatchSchema = new mongoose.Schema({
     keywords: [String],
     excludeKeywords: [String]
   },
-  
-  // 수집 결과
   status: {
     type: String,
     enum: ['pending', 'running', 'completed', 'failed'],
@@ -71,7 +77,6 @@ const collectionBatchSchema = new mongoose.Schema({
   },
   startedAt: Date,
   completedAt: Date,
-  
   totalVideosFound: {
     type: Number,
     default: 0
@@ -84,14 +89,10 @@ const collectionBatchSchema = new mongoose.Schema({
     channelName: String,
     error: String
   }],
-  
-  // API 사용량
   quotaUsed: {
     type: Number,
     default: 0
   },
-  
-  // 수집 통계
   stats: {
     byPlatform: {
       YOUTUBE: { type: Number, default: 0 },
@@ -112,58 +113,48 @@ const collectionBatchSchema = new mongoose.Schema({
       default: 0
     }
   },
-  
-  // 에러 정보
   errorMessage: String,
   errorDetails: String
-
 }, {
   timestamps: true,
   collection: 'collectionbatches'
 });
 
-// 인덱스
 collectionBatchSchema.index({ status: 1 });
 collectionBatchSchema.index({ createdAt: -1 });
 collectionBatchSchema.index({ collectionType: 1 });
 
-// 가상 필드 설정 (JSON 직렬화 시 포함)
 collectionBatchSchema.set('toJSON', { virtuals: true });
 collectionBatchSchema.set('toObject', { virtuals: true });
 
-// 가상 필드 - 수집 소요 시간 (분)
-collectionBatchSchema.virtual('durationMinutes').get(function() {
+collectionBatchSchema.virtual('durationMinutes').get(function(this: ICollectionBatch) {
   if (this.startedAt && this.completedAt) {
-    const duration = Math.round((new Date(this.completedAt) - new Date(this.startedAt)) / (1000 * 60));
-    return Math.max(duration, 1); // 최소 1분
+    const duration = Math.round((new Date(this.completedAt).getTime() - new Date(this.startedAt).getTime()) / (1000 * 60));
+    return Math.max(duration, 1);
   }
   return 0;
 });
 
-// 가상 필드 - 성공률
-collectionBatchSchema.virtual('successRate').get(function() {
+collectionBatchSchema.virtual('successRate').get(function(this: ICollectionBatch) {
   if (this.totalVideosFound && this.totalVideosFound > 0) {
     return Math.round((this.totalVideosSaved / this.totalVideosFound) * 100);
   }
-  return this.totalVideosSaved > 0 ? 100 : 0; // 수집된 영상이 있으면 100%, 없으면 0%
+  return this.totalVideosSaved > 0 ? 100 : 0;
 });
 
-// 메서드 - 배치 시작
 collectionBatchSchema.methods.start = function() {
   this.status = 'running';
   this.startedAt = new Date();
   return this.save();
 };
 
-// 메서드 - 배치 완료
-collectionBatchSchema.methods.complete = function(results) {
+collectionBatchSchema.methods.complete = function(results: any) {
   this.status = 'completed';
   this.completedAt = new Date();
   this.totalVideosFound = results.totalVideosFound || 0;
   this.totalVideosSaved = results.totalVideosSaved || 0;
   this.quotaUsed = results.quotaUsed || 0;
   
-  // 기본 통계 생성 (stats가 없는 경우)
   if (!results.stats) {
     this.stats = {
       byPlatform: {
@@ -199,8 +190,7 @@ collectionBatchSchema.methods.complete = function(results) {
   return this.save();
 };
 
-// 메서드 - 배치 실패
-collectionBatchSchema.methods.fail = function(error, failedChannels = []) {
+collectionBatchSchema.methods.fail = function(error: any, failedChannels: any[] = []) {
   this.status = 'failed';
   this.completedAt = new Date();
   this.errorMessage = error.message || error;
@@ -209,17 +199,17 @@ collectionBatchSchema.methods.fail = function(error, failedChannels = []) {
   return this.save();
 };
 
-// 정적 메서드 - 활성 배치 조회
 collectionBatchSchema.statics.findActive = function() {
   return this.find({ status: { $in: ['pending', 'running'] } });
 };
 
-// 정적 메서드 - 최근 배치 조회
-collectionBatchSchema.statics.findRecent = function(limit = 10) {
+collectionBatchSchema.statics.findRecent = function(limit: number = 10) {
   return this.find({})
     .sort({ createdAt: -1 })
     .limit(limit)
     .populate('targetGroups', 'name');
 };
 
-module.exports = mongoose.model('CollectionBatch', collectionBatchSchema);
+const CollectionBatch = model<ICollectionBatch, CollectionBatchModelType>('CollectionBatch', collectionBatchSchema);
+
+export default CollectionBatch;

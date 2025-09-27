@@ -15,8 +15,8 @@ class ValidationMiddleware {
         // 필수 필드 검증
         if (!platform) {
             errors.push('platform은 필수입니다');
-        } else if (!['INSTAGRAM', 'TIKTOK'].includes(platform)) {
-            errors.push('platform은 instagram 또는 tiktok이어야 합니다');
+        } else if (!['INSTAGRAM', 'TIKTOK', 'YOUTUBE'].includes(platform)) {
+            errors.push('platform은 instagram, tiktok 또는 youtube이어야 합니다');
         }
 
         if (!videoUrl) {
@@ -77,8 +77,8 @@ class ValidationMiddleware {
         // 필수 필드 검증
         if (!platform) {
             errors.push('platform은 필수입니다');
-        } else if (!['INSTAGRAM', 'TIKTOK'].includes(platform)) {
-            errors.push('platform은 instagram 또는 tiktok이어야 합니다');
+        } else if (!['INSTAGRAM', 'TIKTOK', 'YOUTUBE'].includes(platform)) {
+            errors.push('platform은 instagram, tiktok 또는 youtube이어야 합니다');
         }
 
         if (!postUrl) {

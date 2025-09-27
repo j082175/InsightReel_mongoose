@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const Video = require('../models/VideoModel');
-const TrendingVideo = require('../models/TrendingVideo');
-const VideoUrl = require('../models/VideoUrl');
+const Video = require('../../dist/server/models/Video');
+const TrendingVideo = require('../../dist/server/models/TrendingVideo');
+const VideoUrl = require('../../dist/server/models/VideoUrl');
 const { HTTP_STATUS_CODES, ERROR_CODES, API_MESSAGES, PLATFORMS } = require('../config/api-messages');
 const { ServerLogger } = require('../utils/logger');
 const VideoProcessor = require('../services/VideoProcessor');

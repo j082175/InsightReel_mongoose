@@ -118,6 +118,9 @@ class ErrorHandler {
     switch (error.type) {
       case 'VALIDATION_ERROR':
         response.error.suggestion = '요청 데이터를 확인해주세요';
+        if (error.details) {
+          response.error.details = error.details;
+        }
         break;
       case 'FILE_NOT_FOUND':
         response.error.suggestion = '파일 경로를 확인해주세요';
