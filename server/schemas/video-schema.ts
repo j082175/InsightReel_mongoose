@@ -41,7 +41,7 @@ export const createVideoSchema = (): Schema<FinalVideoData> => {
 
     // ===== YouTube 전용 필드 =====
     youtubeHandle: { type: String, default: '' },
-    duration: { type: String, default: '' },
+    duration: { type: Number, default: 0 },
     monetized: { type: String, default: '' },
     youtubeCategory: { type: String, default: '' },
     license: { type: String, default: '' },

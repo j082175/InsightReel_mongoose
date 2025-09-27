@@ -442,6 +442,13 @@ class AIAnalyzer {
     
     ServerLogger.info(`⏱️ 기본 동적 분석 총 소요시간: ${dynamicTotalDuration}ms (${(dynamicTotalDuration / 1000).toFixed(2)}초)`);
     
+    // 카테고리 매칭 정보 생성
+    const categoryMatch = {
+      matchScore: Math.round((result.confidence || 0.9) * 100), // 동적 분석 신뢰도 기반
+      matchType: 'dynamic_ai',
+      matchReason: `동적 AI 분석: ${result.mainCategory} > ${result.middleCategory} (신뢰도: ${Math.round((result.confidence || 0.9) * 100)}%)`
+    };
+
     const returnData = {
       summary: result.summary || '영상 분석 내용',
       mainCategory: result.mainCategory,
@@ -453,7 +460,8 @@ class AIAnalyzer {
       confidence: result.confidence,
       source: result.source,
       isDynamicCategory: true,
-      aiModel: this.lastUsedModel || 'failed'
+      aiModel: this.lastUsedModel || 'failed',
+      categoryMatch: categoryMatch
     };
     
     ServerLogger.info(`🔍 AIAnalyzer 반환 데이터:`, {
@@ -738,6 +746,13 @@ class AIAnalyzer {
         const categoryResult = await this.validateAndInferCategories(parsed, metadata, imagePaths);
         ServerLogger.info('🔍 카테고리 검증 결과:', categoryResult);
         
+        // 카테고리 매칭 정보 생성
+        const categoryMatch = {
+          matchScore: 85, // Gemini JSON 분석 신뢰도
+          matchType: 'gemini_json',
+          matchReason: `Gemini JSON 분석: ${categoryResult.mainCategory} > ${categoryResult.middleCategory}`
+        };
+
         return {
           summary: parsed.summary || '내용 분석 실패',
           mainCategory: categoryResult.mainCategory,
@@ -745,7 +760,8 @@ class AIAnalyzer {
           keywords: Array.isArray(parsed.keywords) ? parsed.keywords.slice(0, 5) : [],
           hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags.slice(0, 5) : [],
           confidence: parsed.confidence || 0.7,
-          source: 'gemini'
+          source: 'gemini',
+          categoryMatch: categoryMatch
         };
       }
       
@@ -1565,6 +1581,13 @@ JSON 형식으로 답변:
 
   // URL 기반 분석 생성
   createAnalysisFromUrl(urlBasedCategory, metadata) {
+    // 카테고리 매칭 정보 생성
+    const categoryMatch = {
+      matchScore: 30, // URL 기반 분석은 낮은 신뢰도
+      matchType: 'url_based',
+      matchReason: `URL 기반 분석: ${urlBasedCategory.mainCategory} > ${urlBasedCategory.middleCategory}`
+    };
+
     return {
       summary: '영상 분석',
       mainCategory: urlBasedCategory.mainCategory, // "없음"이 그대로 저장됨
@@ -1572,7 +1595,8 @@ JSON 형식으로 답변:
       keywords: ['영상', '소셜미디어', '콘텐츠'],
       hashtags: ['#영상', '#소셜미디어', '#콘텐츠'],
       confidence: 0.3,
-      source: 'url-based-analysis'
+      source: 'url-based-analysis',
+      categoryMatch: categoryMatch
     };
   }
 
@@ -1856,6 +1880,13 @@ ${comments}
     
     const categoryResult = this.determineFinalCategory(mainCategory, middleCategory, urlBasedCategory, metadata);
     
+    // 카테고리 매칭 정보 생성
+    const categoryMatch = {
+      matchScore: 85, // AI 분석 기본 신뢰도
+      matchType: 'ai_analysis',
+      matchReason: `AI 분석 결과: ${categoryResult.mainCategory} > ${categoryResult.middleCategory}`
+    };
+
     return {
       category: categoryResult.fullCategory,
       mainCategory: categoryResult.mainCategory,
@@ -1864,7 +1895,8 @@ ${comments}
       hashtags: hashtags.length > 0 ? hashtags : this.generateHashtagsFromMetadata(metadata.hashtags || [], categoryResult),
       summary: content,
       confidence: 0.7,
-      source: 'gemini-text-parsed'
+      source: 'gemini-text-parsed',
+      categoryMatch: categoryMatch
     };
   }
 

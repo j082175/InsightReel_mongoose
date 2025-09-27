@@ -6,7 +6,7 @@
 
 const SheetsManager = require('./SheetsManager');
 const VideoDataConverter = require('./VideoDataConverter');
-const Video = require('../models/VideoModel');
+const Video = require('../../dist/server/models/Video').default;
 const { ServerLogger } = require('../utils/logger');
 const mongoose = require('mongoose');
 

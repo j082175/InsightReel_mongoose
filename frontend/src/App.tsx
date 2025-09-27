@@ -1,4 +1,4 @@
-import React from 'react';
+// React 17+ JSX Transform 사용으로 React import 불필요
 import { AppProvider, SettingsProvider } from './app/providers';
 import { PageRouter } from './app/routing';
 import { Header } from './shared/components/layout';

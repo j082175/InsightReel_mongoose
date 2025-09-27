@@ -191,7 +191,7 @@ videoSchema.statics.createOrUpdateFromVideoUrl = async function (
     // YouTube 전용 필드
     youtubeHandle: metadata.youtubeHandle || '',
     comments: metadata.comments || '',
-    duration: metadata.duration || '',
+    duration: typeof metadata.duration === 'number' ? metadata.duration : (metadata.duration ? parseInt(String(metadata.duration)) : 0) || 0,
     subscribers: metadata.subscribers || 0,
     channelVideos: metadata.channelVideos || 0,
     monetized: metadata.monetized || '',

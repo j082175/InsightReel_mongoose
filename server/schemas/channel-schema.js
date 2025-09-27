@@ -205,20 +205,22 @@ const ChannelStats = {
   }
 };
 
+const dateFieldOptions = { type: Date, default: () => new Date() };
+
 // ===== 메타데이터 =====
 const ChannelMetadata = {
   lastAnalyzedAt: {
-    type: String,
+    type: Date,
     required: false,
     index: true,
-    default: () => new Date().toISOString()
+    default: () => new Date()
   },
   
   analysisVersion: commonFieldOptions,
-  collectedAt: { type: String, required: false, default: () => new Date().toISOString() },
-  publishedAt: { type: Date, required: false },  // 채널 실제 생성일 (YouTube API에서)
-  createdAt: { type: String, required: false, default: () => new Date().toISOString() },
-  updatedAt: { type: String, required: false, default: () => new Date().toISOString() },
+  collectedAt: { type: Date, required: false, default: () => new Date() },
+  publishedAt: { type: Date, required: false },
+  createdAt: { type: Date, required: false, default: () => new Date() },
+  updatedAt: { type: Date, required: false, default: () => new Date() },
   version: numberFieldOptions
 };
 

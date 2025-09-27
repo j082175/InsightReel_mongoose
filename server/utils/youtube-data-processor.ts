@@ -210,9 +210,9 @@ class YouTubeDataProcessor {
     static processVideoMetadata(rawData: YouTubeRawData & { url?: string, id?: string }): ProcessedYouTubeData {
         try {
             const videoId = rawData.id || YouTubeDataProcessor.extractYouTubeId(rawData.url);
-            const snippet = rawData.snippet || {};
-            const statistics = rawData.statistics || {};
-            const contentDetails = rawData.contentDetails || {};
+            const snippet = rawData.snippet || {} as any;
+            const statistics = rawData.statistics || {} as any;
+            const contentDetails = rawData.contentDetails || {} as any;
             const duration = contentDetails.duration ? YouTubeDataProcessor.parseYouTubeDuration(contentDetails.duration) : 0;
 
             return {

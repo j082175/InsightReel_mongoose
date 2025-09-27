@@ -104,13 +104,19 @@ export interface StandardVideoMetadata {
 
   // 🎯 비디오 상세 (플랫폼 종속적)
   youtubeHandle?: string;
-  duration?: string;
+  duration?: number;
   monetized?: string;
   youtubeCategory?: string;
+  categoryId?: string;
   license?: string;
   quality?: string;
   language?: string;
   contentType?: ContentType;
+  channelId?: string;
+
+  // 🎯 소셜 메타데이터
+  hashtags?: string[];
+  mentions?: string[];
 
   // 🎯 시스템 메타데이터
   collectionTime?: ISODateString;

@@ -1,7 +1,8 @@
 const path = require('path');
 const VideoProcessor = require('../services/VideoProcessor');
-const AIAnalyzer = require('../services/AIAnalyzerWrapper');
+const AIAnalyzer = require('../services/AIAnalyzer');
 const SheetsManager = require('../services/SheetsManager');
+const UnifiedVideoSaver = require('../services/UnifiedVideoSaver');
 const ErrorHandler = require('../middleware/error-handler');
 const { ServerLogger } = require('../utils/logger');
 
@@ -15,6 +16,7 @@ class VideoController {
         this.videoProcessor = new VideoProcessor();
         this.aiAnalyzer = new AIAnalyzer();
         this.sheetsManager = new SheetsManager();
+        this.unifiedVideoSaver = new UnifiedVideoSaver();
         this._initialized = false;
         this.stats = {
             total: 0,
@@ -186,6 +188,12 @@ class VideoController {
             'VIDEO',
         );
 
+        // Debug: 메타데이터 상태 확인
+        ServerLogger.info(`🐛 메타데이터 디버그: ${metadata ? 'defined' : 'undefined'}`);
+        if (metadata) {
+            ServerLogger.info(`🐛 메타데이터 타입: ${typeof metadata}, keys: ${Object.keys(metadata)}`);
+        }
+
         return ErrorHandler.safeApiResponse(
             async () => {
                 const result = await this.executeVideoProcessingPipeline({
@@ -285,17 +293,22 @@ class VideoController {
         };
 
         try {
-            // 1단계: 비디오 준비 및 메타데이터 수집
-            let enrichedMetadata = { ...metadata };
+            // Debug: 파이프라인 시작점에서 메타데이터 상태 확인
+            ServerLogger.info(`🐛 파이프라인 시작 - metadata: ${metadata ? 'defined' : 'undefined'}`);
 
-            // Instagram 메타데이터 보존
-            ServerLogger.info('📱 Instagram 메타데이터 수신:', {
-                channelName: metadata.channelName,
-                channelUrl: metadata.channelUrl,
-                description: metadata.description?.substring(0, 50),
-                likes: metadata.likes,
-                commentsCount: metadata.commentsCount,
-            });
+            // 1단계: 비디오 준비 및 메타데이터 수집
+            let enrichedMetadata = { ...(metadata || {}) };
+
+            // Instagram 메타데이터 보존 (메타데이터가 있을 때만)
+            if (metadata) {
+                ServerLogger.info('📱 메타데이터 수신:', {
+                    channelName: metadata.channelName,
+                    channelUrl: metadata.channelUrl,
+                    description: metadata.description?.substring(0, 50),
+                    likes: metadata.likes,
+                    commentsCount: metadata.commentsCount,
+                });
+            }
 
             if (isBlob && videoPath) {
                 ServerLogger.info('1️⃣ 업로드된 비디오 사용');
@@ -317,13 +330,29 @@ class VideoController {
                             );
                         enrichedMetadata = {
                             ...enrichedMetadata,
+                            // 기본 비디오 정보
+                            title: youtubeInfo.title,
+                            description: youtubeInfo.description,
+                            thumbnailUrl: youtubeInfo.thumbnailUrl,
+                            // 채널 정보
                             channelName: youtubeInfo.channelName,
+                            channelUrl: youtubeInfo.channelUrl,
+                            youtubeHandle: youtubeInfo.youtubeHandle,
+                            subscribers: youtubeInfo.subscribers,
+                            channelVideos: youtubeInfo.channelVideos,
+                            // 통계 정보
                             likes: youtubeInfo.likes,
                             commentsCount: youtubeInfo.commentsCount,
                             views: youtubeInfo.views,
+                            // 기타 정보
                             uploadDate: youtubeInfo.uploadDate,
                             duration: youtubeInfo.duration,
                             contentType: youtubeInfo.contentType,
+                            topComments: youtubeInfo.topComments,
+                            youtubeCategory: youtubeInfo.youtubeCategory,
+                            monetized: youtubeInfo.monetized,
+                            quality: youtubeInfo.quality,
+                            license: youtubeInfo.license,
                         };
                         ServerLogger.info(`✅ YouTube 메타데이터 수집 완료:`);
                         ServerLogger.info(
@@ -404,6 +433,49 @@ class VideoController {
                 };
             }
 
+            // AI 분석 결과를 enrichedMetadata에 병합
+            if (pipeline.analysis) {
+                ServerLogger.info('🔍 AI 분석 객체 구조 확인:', {
+                    hasAnalysis: !!pipeline.analysis,
+                    categoryMatch: pipeline.analysis.categoryMatch,
+                    analysisKeys: Object.keys(pipeline.analysis),
+                    analysisSource: pipeline.analysis.source
+                });
+
+                enrichedMetadata = {
+                    ...enrichedMetadata,
+                    // AI 분석 카테고리 결과
+                    mainCategory: pipeline.analysis.mainCategory,
+                    middleCategory: pipeline.analysis.middleCategory,
+                    fullCategoryPath: pipeline.analysis.fullCategoryPath,
+                    categoryDepth: pipeline.analysis.categoryDepth,
+                    keywords: pipeline.analysis.keywords,
+                    hashtags: pipeline.analysis.hashtags,
+                    mentions: pipeline.analysis.mentions,
+                    analysisContent: pipeline.analysis.analysisContent,
+                    confidence: pipeline.analysis.confidence,
+                    analysisStatus: pipeline.analysis.analysisStatus,
+                    processedAt: pipeline.analysis.processedAt,
+                    // 카테고리 매칭 결과 (누락되었던 필드들)
+                    categoryMatchRate: pipeline.analysis.categoryMatch
+                        ? `${pipeline.analysis.categoryMatch.matchScore}%`
+                        : "",
+                    matchType: pipeline.analysis.categoryMatch
+                        ? pipeline.analysis.categoryMatch.matchType
+                        : "",
+                    matchReason: pipeline.analysis.categoryMatch
+                        ? pipeline.analysis.categoryMatch.matchReason
+                        : ""
+                };
+                ServerLogger.info('🔄 AI 분석 결과가 enrichedMetadata에 병합됨', {
+                    categoryMatchRate: enrichedMetadata.categoryMatchRate,
+                    matchType: enrichedMetadata.matchType,
+                    matchReason: enrichedMetadata.matchReason
+                });
+            } else {
+                ServerLogger.warn('⚠️ pipeline.analysis가 없음 - AI 분석 병합 건너뜀');
+            }
+
             // 4단계: 구글 시트 저장 (선택사항)
             ServerLogger.info('4️⃣ 구글 시트 저장 중...');
             try {
@@ -433,7 +505,7 @@ class VideoController {
                         ? pipeline.thumbnailPaths[0]
                         : pipeline.thumbnailPaths,
                     thumbnailPaths: pipeline.thumbnailPaths, // 모든 프레임 경로도 저장
-                    metadata: processedMetadata,
+                    metadata: enrichedMetadata,
                     analysis: pipeline.analysis,
                     timestamp: new Date().toISOString(),
                 });
@@ -458,6 +530,33 @@ class VideoController {
                     'VIDEO',
                 );
                 // 구글 시트 저장 실패는 전체 처리를 중단시키지 않음
+            }
+
+            // 5️⃣ MongoDB 저장
+            try {
+                ServerLogger.info('5️⃣ MongoDB 저장 중...');
+                const mongoResult = await this.unifiedVideoSaver.saveVideoData(platform, {
+                    postUrl,
+                    videoPath: pipeline.videoPath,
+                    thumbnailPath: Array.isArray(pipeline.thumbnailPaths)
+                        ? pipeline.thumbnailPaths[0]
+                        : pipeline.thumbnailPaths,
+                    metadata: enrichedMetadata,
+                    analysis: pipeline.analysis,
+                    timestamp: new Date().toISOString(),
+                });
+
+                if (mongoResult.success) {
+                    ServerLogger.info('✅ MongoDB 저장 완료');
+                } else {
+                    ServerLogger.warn('⚠️ MongoDB 저장 실패:', mongoResult.error);
+                }
+            } catch (error) {
+                ServerLogger.warn(
+                    '⚠️ MongoDB 저장 실패 (무시하고 계속):',
+                    error.message,
+                    'VIDEO',
+                );
             }
 
             ServerLogger.info('✅ 비디오 처리 파이프라인 완료');

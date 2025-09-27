@@ -2,7 +2,7 @@ const { google } = require('googleapis');
 const fs = require('fs');
 const path = require('path');
 const { ServerLogger } = require('../utils/logger');
-const VideoUrl = require('../models/VideoUrl');
+const VideoUrl = require('../../dist/server/models/VideoUrl');
 
 const { PLATFORMS } = require('../config/api-messages');
 
@@ -975,7 +975,7 @@ class SheetsManager {
                     );
 
                     // 🆕 Video 모델도 함께 업데이트 (원본 게시일 동기화)
-                    const Video = require('../models/VideoModel');
+                    const Video = require('../../dist/server/models/Video').default;
                     await Video.createOrUpdateFromVideoUrl(
                         {
                             originalUrl: normalizedUrl,
