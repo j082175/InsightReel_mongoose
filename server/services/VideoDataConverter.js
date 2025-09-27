@@ -189,7 +189,7 @@ class VideoDataConverter {
             })(),
             thumbnailUrl: metadata.thumbnailUrl || '',
             confidence: this.formatConfidence(analysis.confidence),
-            analysisStatus: analysis.aiModel || '수동',
+            analysisStatus: analysis.aiModel || 'completed',
             categoryMatchRate: analysis.categoryMatch
                 ? `${analysis.categoryMatch.matchScore}%`
                 : '',
@@ -217,12 +217,10 @@ class VideoDataConverter {
 
         // 업로드 날짜 결정 (Instagram은 날짜만)
         let uploadDate;
-        if (videoData.uploadDate) {
+        if (metadata && metadata.uploadDate) {
+            uploadDate = new Date(metadata.uploadDate).toLocaleDateString('ko-KR');
+        } else if (videoData.uploadDate) {
             uploadDate = new Date(videoData.uploadDate).toLocaleDateString('ko-KR');
-        } else if (metadata && metadata.uploadDate) {
-            uploadDate = new Date(metadata.uploadDate).toLocaleDateString(
-                'ko-KR',
-            );
         } else if (timestamp) {
             uploadDate = new Date(timestamp).toLocaleDateString('ko-KR');
         } else {
@@ -307,7 +305,34 @@ class VideoDataConverter {
                         (metadata && metadata.account) ||
                         '',
             title: videoData.title || (metadata && metadata.title) || '',
-            channelUrl: videoData.channelUrl || (metadata && metadata.channelUrl) || '',
+            channelUrl: (() => {
+                // 기존 channelUrl이 있으면 사용
+                let result = videoData.channelUrl || (metadata && metadata.channelUrl) || (videoData.metadata && videoData.metadata.channelUrl) || '';
+
+                // channelUrl이 없으면 channelName으로 생성
+                if (!result) {
+                    const channelName = videoData.channelName ||
+                                      (metadata && metadata.channelName) ||
+                                      (metadata && metadata.channel) ||
+                                      (metadata && metadata.channelTitle) ||
+                                      (metadata && metadata.author) ||
+                                      (metadata && metadata.account) ||
+                                      '';
+                    if (channelName) {
+                        // Instagram URL 생성: https://www.instagram.com/{username}/
+                        const username = channelName.startsWith('@') ? channelName.slice(1) : channelName;
+                        result = `https://www.instagram.com/${username}/`;
+                    }
+                }
+
+                console.log(`🔍 [Instagram VideoDataConverter] channelUrl 디버그:`, {
+                    'videoData.channelUrl': videoData.channelUrl,
+                    'metadata?.channelUrl': metadata?.channelUrl,
+                    'channelName': videoData.channelName || metadata?.channelName,
+                    'final result': result
+                });
+                return result;
+            })(),
             mainCategory: (analysis && analysis.mainCategory) || '미분류',
             middleCategory: (analysis && analysis.middleCategory) || '',
             fullCategoryPath: fullCategoryPath,
@@ -333,9 +358,9 @@ class VideoDataConverter {
             views: this.parseNumber(videoData.views || (metadata && metadata.views) || 0),
             commentsCount: this.parseNumber(videoData.comments || videoData.commentsCount || (metadata && metadata.commentsCount) || 0),
             url: url || '',
-            thumbnailUrl: videoData.thumbnailUrl || (metadata && metadata.thumbnailUrl) || '',
+            thumbnailUrl: (metadata && metadata.thumbnailUrl) || videoData.thumbnailUrl || '',
             confidence: this.formatConfidence((analysis && analysis.confidence) || 0),
-            analysisStatus: (analysis && analysis.aiModel) || '수동',
+            analysisStatus: (analysis && analysis.aiModel) || 'completed',
             collectionTime: new Date(),
         };
     }
@@ -438,7 +463,7 @@ class VideoDataConverter {
             url: rowData[27] || '',
             thumbnailUrl: rowData[28] || '',
             confidence: rowData[29] || '0%',
-            analysisStatus: rowData[30] || '수동',
+            analysisStatus: rowData[30] || 'completed',
             categoryMatchRate: rowData[31] || '',
             matchType: rowData[32] || '',
             matchReason: rowData[33] || '',
@@ -471,7 +496,7 @@ class VideoDataConverter {
             url: rowData[16] || '',
             thumbnailUrl: rowData[17] || '',
             confidence: rowData[18] || '0%',
-            analysisStatus: rowData[19] || '수동',
+            analysisStatus: rowData[19] || 'completed',
             collectionTime: new Date(),
         };
     }
@@ -539,7 +564,7 @@ class VideoDataConverter {
             document.url || '',
             document.thumbnailUrl || '',
             document.confidence || '0%',
-            document.analysisStatus || '수동',
+            document.analysisStatus || 'completed',
             document.categoryMatchRate || '',
             document.matchType || '',
             document.matchReason || '',
@@ -571,7 +596,7 @@ class VideoDataConverter {
             document.url || '',
             document.thumbnailUrl || '',
             document.confidence || '0%',
-            document.analysisStatus || '수동',
+            document.analysisStatus || 'completed',
         ];
     }
 
@@ -640,6 +665,33 @@ class VideoDataConverter {
             rowNumber: rowNumber,
             platform: 'TIKTOK',
             channelName: metadata.channelName || '알 수 없음',
+            channelUrl: (() => {
+                // 기존 channelUrl이 있으면 사용
+                let result = videoData.channelUrl || (metadata && metadata.channelUrl) || (videoData.metadata && videoData.metadata.channelUrl) || '';
+
+                // channelUrl이 없으면 channelName으로 생성
+                if (!result) {
+                    const channelName = metadata.channelName ||
+                                      metadata.channel ||
+                                      metadata.channelTitle ||
+                                      metadata.author ||
+                                      metadata.account ||
+                                      '';
+                    if (channelName) {
+                        // TikTok URL 생성: https://www.tiktok.com/@{username}
+                        const username = channelName.startsWith('@') ? channelName : `@${channelName}`;
+                        result = `https://www.tiktok.com/${username}`;
+                    }
+                }
+
+                console.log(`🔍 [TikTok VideoDataConverter] channelUrl 디버그:`, {
+                    'videoData.channelUrl': videoData.channelUrl,
+                    'metadata?.channelUrl': metadata?.channelUrl,
+                    'channelName': metadata?.channelName,
+                    'final result': result
+                });
+                return result;
+            })(),
             url: url,
             title: metadata.title || '제목 없음',
             uploadDate: uploadDate,
