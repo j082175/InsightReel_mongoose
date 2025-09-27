@@ -52,7 +52,7 @@ const BatchVideoList: React.FC<BatchVideoListProps> = ({
       onClick={handleBackdropClick}
     >
       <div
-        className="bg-white rounded-lg w-full max-w-7xl max-h-[90vh] overflow-hidden"
+        className="bg-white rounded-lg w-full max-w-7xl h-[95vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-6 border-b">
@@ -69,7 +69,7 @@ const BatchVideoList: React.FC<BatchVideoListProps> = ({
 
         <div
           className="p-6 overflow-y-auto"
-          style={{ maxHeight: 'calc(90vh - 80px)' }}
+          style={{ height: 'calc(95vh - 80px)' }}
         >
           {loading ? (
             <div className="text-center py-12">
@@ -109,8 +109,8 @@ const BatchVideoList: React.FC<BatchVideoListProps> = ({
               showStats={true}
               enableSearch={false}
               showVirtualScrolling={true}
-              useWindowScroll={false}
-              containerHeight={400}
+              useWindowScroll={true}
+              containerHeight={800}
             />
           )}
         </div>

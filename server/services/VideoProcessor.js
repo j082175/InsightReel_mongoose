@@ -73,7 +73,9 @@ try {
 class VideoProcessor {
     constructor() {
         this.downloadDir = path.join(__dirname, '../../downloads');
-        this.thumbnailDir = path.join(this.downloadDir, 'thumbnails');
+        this.mediaDir = path.join(__dirname, '../../media');
+        this.thumbnailDir = path.join(this.mediaDir, 'thumbnails');
+        this.framesDir = path.join(this.downloadDir, 'frames'); // 영상 분석 프레임 추출용
         this.youtubeApiKey = null; // ApiKeyManager에서 동적으로 로드
         this.hybridExtractor = null; // 비동기 초기화
         this.instagramExtractor = new InstagramReelsExtractor(); // Instagram Reels 데이터 추출기
@@ -110,8 +112,132 @@ class VideoProcessor {
         if (!fs.existsSync(this.downloadDir)) {
             fs.mkdirSync(this.downloadDir, { recursive: true });
         }
+        if (!fs.existsSync(this.mediaDir)) {
+            fs.mkdirSync(this.mediaDir, { recursive: true });
+        }
         if (!fs.existsSync(this.thumbnailDir)) {
             fs.mkdirSync(this.thumbnailDir, { recursive: true });
+        }
+        if (!fs.existsSync(this.framesDir)) {
+            fs.mkdirSync(this.framesDir, { recursive: true });
+        }
+    }
+
+    /**
+     * 썸네일 다운로드 및 로컬 저장
+     * @param {string} thumbnailUrl - 다운로드할 썸네일 URL
+     * @param {string} videoId - 비디오 ID (파일명 생성용)
+     * @param {string} platform - 플랫폼 (youtube, instagram, tiktok)
+     * @returns {Promise<string>} 로컬 썸네일 파일 경로
+     */
+    async downloadThumbnail(thumbnailUrl, videoId, platform = 'unknown') {
+        try {
+            if (!thumbnailUrl || !videoId) {
+                throw new Error('썸네일 URL과 비디오 ID가 필요합니다');
+            }
+
+            // 파일 확장자 추출 (인스타그램 URL 쿼리 파라미터 고려)
+            let extension = 'jpg'; // 기본값
+            try {
+                const url = new URL(thumbnailUrl);
+                const pathname = url.pathname;
+                const pathParts = pathname.split('.');
+                if (pathParts.length > 1) {
+                    const ext = pathParts[pathParts.length - 1].toLowerCase();
+                    // 유효한 이미지 확장자만 허용
+                    if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext)) {
+                        extension = ext;
+                    }
+                }
+            } catch (urlError) {
+                ServerLogger.warn(`⚠️ URL 파싱 실패, 기본 확장자 사용: ${urlError.message}`);
+            }
+
+            // 로컬 파일명 생성: platform_videoId_timestamp.extension
+            const timestamp = Date.now();
+            const fileName = `${platform}_${videoId}_${timestamp}.${extension}`;
+            const localPath = path.join(this.thumbnailDir, fileName);
+
+            ServerLogger.info(`📸 썸네일 다운로드 시작: ${thumbnailUrl.substring(0, 100)}...`);
+
+            // HTTP 요청으로 썸네일 다운로드
+            const response = await axios({
+                method: 'GET',
+                url: thumbnailUrl,
+                responseType: 'stream',
+                timeout: 30000, // 30초 타임아웃
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                    'Referer': this.getRefererForPlatform(platform, thumbnailUrl),
+                    'Accept': 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+                }
+            });
+
+            // 파일 스트림으로 저장
+            const writeStream = fs.createWriteStream(localPath);
+            response.data.pipe(writeStream);
+
+            return new Promise((resolve, reject) => {
+                writeStream.on('finish', () => {
+                    // 파일 크기 확인
+                    const stats = fs.statSync(localPath);
+                    if (stats.size === 0) {
+                        fs.unlinkSync(localPath); // 빈 파일 삭제
+                        reject(new Error('다운로드된 썸네일 파일이 비어있습니다'));
+                        return;
+                    }
+
+                    ServerLogger.info(`✅ 썸네일 다운로드 완료: ${fileName} (${stats.size} bytes)`);
+
+                    // 상대 경로로 반환 (웹 접근용)
+                    const relativePath = path.relative(path.join(__dirname, '../../'), localPath);
+                    resolve(relativePath.replace(/\\/g, '/')); // Windows 경로 구분자 변환
+                });
+
+                writeStream.on('error', (error) => {
+                    ServerLogger.error(`❌ 썸네일 저장 실패: ${error.message}`);
+                    // 실패한 파일 정리
+                    if (fs.existsSync(localPath)) {
+                        fs.unlinkSync(localPath);
+                    }
+                    reject(error);
+                });
+
+                response.data.on('error', (error) => {
+                    ServerLogger.error(`❌ 썸네일 다운로드 실패: ${error.message}`);
+                    writeStream.destroy();
+                    reject(error);
+                });
+            });
+
+        } catch (error) {
+            ServerLogger.error(`❌ 썸네일 다운로드 오류: ${error.message}`);
+            throw error;
+        }
+    }
+
+    /**
+     * 플랫폼별 Referer 헤더 생성
+     * @param {string} platform - 플랫폼명
+     * @param {string} thumbnailUrl - 썸네일 URL
+     * @returns {string} Referer 헤더 값
+     */
+    getRefererForPlatform(platform, thumbnailUrl) {
+        switch (platform.toLowerCase()) {
+            case 'tiktok':
+                return 'https://www.tiktok.com/';
+            case 'instagram':
+                return 'https://www.instagram.com/';
+            case 'youtube':
+                return 'https://www.youtube.com/';
+            default:
+                // URL의 도메인에서 추출
+                try {
+                    const url = new URL(thumbnailUrl);
+                    return `${url.protocol}//${url.hostname}/`;
+                } catch {
+                    return 'https://www.google.com/';
+                }
         }
     }
 
@@ -800,6 +926,27 @@ class VideoProcessor {
             ServerLogger.info(`🔗 다운로드 URL 확보: ${urlString.substring(0, 50)}...`);
         }
 
+        // 썸네일 다운로드 및 로컬 저장 처리
+        if (parsedData.thumbnailUrl) {
+            try {
+                ServerLogger.info(`📸 TikTok 썸네일 다운로드 시작: ${parsedData.thumbnailUrl.substring(0, 100)}...`);
+                const localThumbnailPath = await this.downloadThumbnail(
+                    parsedData.thumbnailUrl,
+                    parsedData.videoId || parsedData.platformVideoId || 'unknown',
+                    'tiktok'
+                );
+
+                // 원본 URL을 백업하고 로컬 경로로 교체
+                parsedData.originalThumbnailUrl = parsedData.thumbnailUrl;
+                parsedData.thumbnailUrl = `/${localThumbnailPath}`;
+
+                ServerLogger.info(`✅ TikTok 썸네일 로컬 저장 완료: ${localThumbnailPath}`);
+            } catch (thumbnailError) {
+                ServerLogger.warn(`⚠️ TikTok 썸네일 다운로드 실패, 원본 URL 유지: ${thumbnailError.message}`);
+                // 다운로드 실패 시 원본 URL 유지
+            }
+        }
+
         return parsedData;
     }
 
@@ -870,6 +1017,7 @@ class VideoProcessor {
             channelDescription: author.signature || '',
             channelThumbnail: author.avatarMedium || author.avatarThumb || '',
             channelVerified: false,
+            channelUrl: this.buildChannelUrlByPlatform('TIKTOK', author.uniqueId || author.uid),
 
             // v1 비디오 메타데이터
             duration: duration,
@@ -959,6 +1107,7 @@ class VideoProcessor {
             channelDescription: '',
             channelThumbnail: author.avatar || '',
             channelVerified: false,
+            channelUrl: this.buildChannelUrlByPlatform('TIKTOK', author.nickname),
 
             // 기본 비디오 메타데이터
             duration: 30,
@@ -1033,6 +1182,7 @@ class VideoProcessor {
             channelDescription: '',
             channelThumbnail: author.avatar || '',
             channelVerified: false,
+            channelUrl: this.buildChannelUrlByPlatform('TIKTOK', author.nickname),
             duration: 30,
             durationFormatted: '0:30',
             definition: '표준화질',
@@ -1109,6 +1259,7 @@ class VideoProcessor {
             channelDescription: videoData.author?.signature || '',
             channelThumbnail: videoData.author?.avatar || '',
             channelVerified: videoData.author?.verified || false,
+            channelUrl: this.buildChannelUrlByPlatform('TIKTOK', videoData.author?.username || videoData.author?.unique_id),
 
             // 플랫폼별 정보
             platform: PLATFORMS.TIKTOK,
@@ -1344,7 +1495,7 @@ class VideoProcessor {
             for (let i = 0; i < intervals.length; i++) {
                 const time = intervals[i];
                 const framePath = path.join(
-                    this.thumbnailDir,
+                    this.framesDir,
                     `${videoName}_frame_${i + 1}_${time}s_${timestamp}.jpg`,
                 );
 
@@ -1746,17 +1897,17 @@ class VideoProcessor {
                 standardizedData = {
                     // 기본 비디오 정보
                     videoId: post.shortcode,
-                    title: this.extractInstagramTitle(post.caption),
+                    title: post.title || this.extractInstagramTitle(post.caption),
                     description: post.caption || '',
                     channelName: profile.username,
                     channelId: profile.username,
-                    uploadDate: post.date,
-                    thumbnailUrl: post.url,
+                    uploadDate: post.uploadDate || post.date,
+                    thumbnailUrl: post.thumbnailUrl || post.url,
                     category: '라이프스타일',
                     youtubeCategory: '라이프스타일',
 
                     // Instagram 특화 통계 정보
-                    views: post.video_view_count || 0,
+                    views: post.views || post.video_view_count || 0,
                     likes: post.likes || 0,
                     dislikes: 0,
                     comments: post.comments || 0,
@@ -1767,6 +1918,12 @@ class VideoProcessor {
                     channelDescription: profile.biography || '',
                     channelThumbnail: profile.profile_pic_url || '',
                     channelVerified: profile.is_verified || false,
+                    channelUrl: (() => {
+                        ServerLogger.info(`📊 Instagram profile.username: "${profile.username}"`);
+                        const channelUrl = this.buildChannelUrlByPlatform('INSTAGRAM', profile.username);
+                        ServerLogger.info(`🔗 생성된 Instagram channelUrl: "${channelUrl}"`);
+                        return channelUrl;
+                    })(),
 
                     // 비디오 메타데이터
                     duration: post.is_video ? 30 : 0,
@@ -1787,6 +1944,11 @@ class VideoProcessor {
                         full_name: profile.full_name
                     },
 
+                    // 언어/지역 정보
+                    language: profile.language || '',  // Instagram Profile에서 언어 정보 시도 (대부분 빈값)
+                    region: post.location?.name || profile.country || profile.region || '',  // 위치 이름을 지역 정보로 활용
+                    isCommercial: profile.is_business_account || false,
+
                     // 메타데이터
                     extractedAt: new Date().toISOString(),
                     apiSource: 'instaloader',
@@ -1796,6 +1958,7 @@ class VideoProcessor {
                 ServerLogger.info('✅ Instaloader로 Instagram 메타데이터 추출 완료');
                 ServerLogger.info(`📊 조회수: ${standardizedData.views}, 좋아요: ${standardizedData.likes}, 댓글: ${standardizedData.comments}`);
                 ServerLogger.info(`👤 채널: ${standardizedData.channelName} (팔로워: ${standardizedData.subscriberCount}명)`);
+                ServerLogger.info(`📍 위치: "${standardizedData.region}" (언어: "${standardizedData.language}")`);
 
                 // 🔍 DEBUG: Instaloader 추출 원시 데이터 (전체)
                 ServerLogger.info('🔍 DEBUG - Instaloader 전체 post 데이터:', JSON.stringify(post, null, 2));
@@ -1835,7 +1998,10 @@ class VideoProcessor {
                             ...ytdlpData,
                             platform: 'INSTAGRAM',
                             category: '라이프스타일',
-                            youtubeCategory: '라이프스타일'
+                            youtubeCategory: '라이프스타일',
+                            // yt-dlp에서 언어/지역 정보 시도
+                            language: ytdlpData.language || '',
+                            region: ytdlpData.location || ytdlpData.region || ytdlpData.country || ''
                         };
                         ServerLogger.info('✅ yt-dlp로 Instagram 메타데이터 추출 성공');
                     }
@@ -1847,6 +2013,25 @@ class VideoProcessor {
                     if (instaloaderError) {
                         throw new Error(`Instagram 메타데이터 추출 완전 실패 - Instaloader: ${instaloaderError.message}, yt-dlp: ${ytdlpErr.message}`);
                     }
+                }
+            }
+
+            // 🆕 Instagram 썸네일 로컬 다운로드 처리 (TikTok과 동일)
+            if (standardizedData && standardizedData.thumbnailUrl) {
+                try {
+                    ServerLogger.info(`📸 Instagram 썸네일 다운로드 시작: ${standardizedData.thumbnailUrl.substring(0, 100)}...`);
+                    const localThumbnailPath = await this.downloadThumbnail(
+                        standardizedData.thumbnailUrl,
+                        standardizedData.videoId || 'unknown',
+                        'instagram'
+                    );
+                    // 원본 URL을 백업하고 로컬 경로로 교체
+                    standardizedData.originalThumbnailUrl = standardizedData.thumbnailUrl;
+                    standardizedData.thumbnailUrl = `/${localThumbnailPath}`;
+                    ServerLogger.info(`✅ Instagram 썸네일 로컬 저장 완료: ${localThumbnailPath}`);
+                } catch (thumbnailError) {
+                    ServerLogger.warn(`⚠️ Instagram 썸네일 다운로드 실패, 원본 URL 유지: ${thumbnailError.message}`);
+                    // 다운로드 실패 시 원본 URL 유지
                 }
             }
 
@@ -2194,6 +2379,9 @@ class VideoProcessor {
             // 썸네일 폴더 정리
             this.cleanDirectory(this.thumbnailDir, weekAgo, now);
 
+            // 프레임 폴더 정리
+            this.cleanDirectory(this.framesDir, weekAgo, now);
+
             ServerLogger.info('✅ 오래된 파일 정리 완료');
         } catch (error) {
             ServerLogger.error('파일 정리 실패:', error);
@@ -2476,6 +2664,46 @@ class VideoProcessor {
             return channelId
                 ? `https://www.youtube.com/channel/${channelId}`
                 : '';
+        }
+    }
+
+    /**
+     * 플랫폼별 채널 URL 생성
+     * @param {string} platform - 플랫폼 (YOUTUBE, INSTAGRAM, TIKTOK)
+     * @param {string} channelId - 채널 ID 또는 username
+     * @param {string} customUrl - YouTube용 customUrl (선택)
+     * @returns {string} 채널 URL
+     */
+    buildChannelUrlByPlatform(platform, channelId, customUrl = null) {
+        try {
+            ServerLogger.info(`🔗 buildChannelUrlByPlatform 호출됨: platform=${platform}, channelId="${channelId}", customUrl="${customUrl}"`);
+
+            if (!channelId) {
+                ServerLogger.warn(`❌ channelId가 비어있음: platform=${platform}`);
+                return '';
+            }
+
+            switch (platform) {
+                case PLATFORMS.YOUTUBE:
+                    return this.buildChannelUrl(customUrl, channelId);
+
+                case PLATFORMS.INSTAGRAM:
+                    // Instagram: @username 제거 후 URL 생성
+                    const instagramUsername = channelId.startsWith('@') ? channelId.slice(1) : channelId;
+                    return `https://www.instagram.com/${instagramUsername}/`;
+
+                case PLATFORMS.TIKTOK:
+                    // TikTok: @username 형태로 URL 생성
+                    const tiktokUsername = channelId.startsWith('@') ? channelId : `@${channelId}`;
+                    return `https://www.tiktok.com/${tiktokUsername}`;
+
+                default:
+                    ServerLogger.warn(`지원하지 않는 플랫폼: ${platform}`);
+                    return '';
+            }
+        } catch (error) {
+            ServerLogger.warn(`채널 URL 생성 실패 (${platform}):`, error.message);
+            return '';
         }
     }
 

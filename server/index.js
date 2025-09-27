@@ -78,6 +78,7 @@ app.use((req, res, next) => {
 
 // 정적 파일 서빙
 app.use('/downloads', express.static(path.join(__dirname, '../downloads')));
+app.use('/media', express.static(path.join(__dirname, '../media')));
 app.use(express.static(path.join(__dirname, '../public')));
 
 // 🎯 클러스터 시스템 초기화
@@ -1047,11 +1048,16 @@ app.post('/api/process-video', async (req, res) => {
                         ServerLogger.info('⏩ YouTube 비디오 다운로드 건너뛰기 (skipVideoDownload=true)');
                         videoPath = null;
                     } else {
-                        ServerLogger.info('1️⃣ YouTube 비디오 다운로드 중...');
-                        videoPath = await videoProcessor.downloadVideo(
-                            videoUrl,
-                            platform,
-                        );
+                        try {
+                            ServerLogger.info('1️⃣ YouTube 비디오 다운로드 중...');
+                            videoPath = await videoProcessor.downloadVideo(
+                                videoUrl,
+                                platform,
+                            );
+                        } catch (downloadError) {
+                            ServerLogger.warn(`⚠️ YouTube 비디오 다운로드 실패, 메타데이터만 저장: ${downloadError.message}`);
+                            videoPath = null; // 다운로드 실패해도 메타데이터는 계속 처리
+                        }
                     }
                 } else if (platform === PLATFORMS.TIKTOK) {
                     // TikTok인 경우 API로 정보 수집
@@ -1071,11 +1077,16 @@ app.post('/api/process-video', async (req, res) => {
                         ServerLogger.info('⏩ TikTok 비디오 다운로드 건너뛰기 (skipVideoDownload=true)');
                         videoPath = null;
                     } else {
-                        ServerLogger.info('1️⃣ TikTok 비디오 다운로드 중...');
-                        videoPath = await videoProcessor.downloadVideo(
-                            videoUrl,
-                            platform,
-                        );
+                        try {
+                            ServerLogger.info('1️⃣ TikTok 비디오 다운로드 중...');
+                            videoPath = await videoProcessor.downloadVideo(
+                                videoUrl,
+                                platform,
+                            );
+                        } catch (downloadError) {
+                            ServerLogger.warn(`⚠️ TikTok 비디오 다운로드 실패, 메타데이터만 저장: ${downloadError.message}`);
+                            videoPath = null; // 다운로드 실패해도 메타데이터는 계속 처리
+                        }
                     }
                 } else if (platform === PLATFORMS.INSTAGRAM) {
                     // Instagram인 경우 API로 정보 수집
@@ -1110,7 +1121,9 @@ app.post('/api/process-video', async (req, res) => {
                         channelId: instagramInfo.channelId,
                         category: instagramInfo.category,
                         youtubeCategory: instagramInfo.youtubeCategory,
-                        subscriberCount: instagramInfo.subscriberCount
+                        subscriberCount: instagramInfo.subscriberCount,
+                        uploadDate: instagramInfo.uploadDate,
+                        thumbnailUrl: instagramInfo.thumbnailUrl
                     });
 
                     // Instagram: skipVideoDownload 플래그 확인
@@ -1118,11 +1131,16 @@ app.post('/api/process-video', async (req, res) => {
                         ServerLogger.info('⏩ Instagram 비디오 다운로드 건너뛰기 (skipVideoDownload=true)');
                         videoPath = null;
                     } else {
-                        ServerLogger.info('1️⃣ Instagram 비디오 다운로드 중...');
-                        videoPath = await videoProcessor.downloadVideo(
-                            videoUrl,
-                            platform,
-                        );
+                        try {
+                            ServerLogger.info('1️⃣ Instagram 비디오 다운로드 중...');
+                            videoPath = await videoProcessor.downloadVideo(
+                                videoUrl,
+                                platform,
+                            );
+                        } catch (downloadError) {
+                            ServerLogger.warn(`⚠️ Instagram 비디오 다운로드 실패, 메타데이터만 저장: ${downloadError.message}`);
+                            videoPath = null; // 다운로드 실패해도 메타데이터는 계속 처리
+                        }
                     }
                 } else {
                     // 기타 플랫폼: skipVideoDownload 플래그 확인
@@ -1130,11 +1148,16 @@ app.post('/api/process-video', async (req, res) => {
                         ServerLogger.info('⏩ 비디오 다운로드 건너뛰기 (skipVideoDownload=true)');
                         videoPath = null;
                     } else {
-                        ServerLogger.info('1️⃣ 비디오 다운로드 중...');
-                        videoPath = await videoProcessor.downloadVideo(
-                            videoUrl,
-                            platform,
-                        );
+                        try {
+                            ServerLogger.info('1️⃣ 비디오 다운로드 중...');
+                            videoPath = await videoProcessor.downloadVideo(
+                                videoUrl,
+                                platform,
+                            );
+                        } catch (downloadError) {
+                            ServerLogger.warn(`⚠️ 비디오 다운로드 실패, 메타데이터만 저장: ${downloadError.message}`);
+                            videoPath = null; // 다운로드 실패해도 메타데이터는 계속 처리
+                        }
                     }
                 }
 
@@ -1280,7 +1303,7 @@ app.post('/api/process-video', async (req, res) => {
                                 matchType: 'youtube_official',
                                 matchReason: `YouTube 공식 카테고리: ${youtubeMainCategory}`,
                             },
-                            aiModel: '수동', // AI 비사용 시 '수동'으로 표시
+                            aiModel: 'completed', // AI 비사용 시 '수동'으로 표시
                         };
                     }
                 } else if (platform === PLATFORMS.TIKTOK && tiktokInfo) {
@@ -1392,7 +1415,7 @@ app.post('/api/process-video', async (req, res) => {
                                 matchType: 'tiktok_default',
                                 matchReason: `TikTok 기본 카테고리: ${tiktokMainCategory}`,
                             },
-                            aiModel: '수동',
+                            aiModel: 'completed',
                         };
                     }
                 } else {
@@ -1457,7 +1480,7 @@ app.post('/api/process-video', async (req, res) => {
                             hashtags: [],
                             confidence: 0,
                             frameCount: thumbnailPaths.length,
-                            aiModel: '수동', // AI 비사용 시 '수동'으로 표시
+                            aiModel: 'completed', // AI 비사용 시 '수동'으로 표시
                         };
                     }
                 }
@@ -1867,7 +1890,7 @@ app.get('/api/videos', async (req, res) => {
                 );
                 try {
                     if (fs.existsSync(fullPath)) {
-                        thumbnailUrl = `http://localhost:3000/downloads/${relativePath}`;
+                        thumbnailUrl = `/downloads/${relativePath}`;
                     } else {
                         // 파일이 없으면 플랫폼별 placeholder
                         const platform = video.platform;
@@ -3158,20 +3181,79 @@ app.post('/api/collect-trending', async (req, res) => {
             }
         );
 
+        // 🔥 수집된 비디오를 MongoDB에 저장
+        let savedVideosCount = 0;
+        const allSavedVideos = [];
+
+        if (results.videos && results.videos.length > 0) {
+            ServerLogger.info(`💾 수집된 ${results.videos.length}개 채널의 영상을 MongoDB에 저장 시작`);
+
+            for (const channelResult of results.videos) {
+                if (channelResult.videos && channelResult.videos.length > 0) {
+                    for (const video of channelResult.videos) {
+                        try {
+                            // YouTube API 데이터를 UnifiedVideoSaver 형식으로 변환
+                            const videoData = {
+                                platform: 'YOUTUBE',
+                                url: `https://www.youtube.com/watch?v=${video.id}`,
+                                postUrl: `https://www.youtube.com/watch?v=${video.id}`,
+                                metadata: {
+                                    title: video.snippet?.title || 'Unknown Title',
+                                    channelName: video.snippet?.channelTitle || 'Unknown Channel',
+                                    channelId: video.snippet?.channelId,
+                                    views: parseInt(video.statistics?.viewCount || 0),
+                                    likes: parseInt(video.statistics?.likeCount || 0),
+                                    thumbnailUrl: video.snippet?.thumbnails?.high?.url || video.snippet?.thumbnails?.default?.url,
+                                    uploadDate: video.snippet?.publishedAt,
+                                    duration: video.contentDetails?.duration,
+                                    description: video.snippet?.description
+                                },
+                                analysis: {
+                                    mainCategory: '트렌딩',
+                                    middleCategory: '수집',
+                                    fullCategoryPath: '트렌딩 > 수집',
+                                    categoryDepth: 2,
+                                    keywords: ['trending', 'collected'],
+                                    aiError: null
+                                },
+                                timestamp: new Date().toISOString(),
+                                batchId: batch._id
+                            };
+
+                            const saveResult = await unifiedVideoSaver.saveVideoData('YOUTUBE', videoData);
+
+                            if (saveResult.success) {
+                                savedVideosCount++;
+                                allSavedVideos.push(saveResult.mongodb);
+                                ServerLogger.info(`✅ 비디오 저장 성공: ${video.snippet?.title} (${savedVideosCount})`);
+                            } else {
+                                ServerLogger.error(`❌ 비디오 저장 실패: ${video.snippet?.title}`);
+                            }
+
+                        } catch (saveError) {
+                            ServerLogger.error(`❌ 비디오 저장 중 오류: ${video.snippet?.title || 'Unknown'}`, saveError);
+                        }
+                    }
+                }
+            }
+
+            ServerLogger.info(`🎉 MongoDB 저장 완료: ${savedVideosCount}개 영상이 성공적으로 저장됨`);
+        }
+
         // 🔥 배치 완료 처리
         await batch.complete({
             totalVideosFound: results.totalVideos || 0,
-            totalVideosSaved: results.videos?.length || 0,
+            totalVideosSaved: savedVideosCount,
             quotaUsed: results.quotaUsed || 0,
             stats: {
-                byPlatform: { YOUTUBE: results.videos?.length || 0 },
+                byPlatform: { YOUTUBE: savedVideosCount },
                 byDuration: { SHORT: 0, MID: 0, LONG: 0 },
                 avgViews: 0,
                 totalViews: 0
             }
         });
 
-        ServerLogger.info(`✅ 개별 채널 트렌딩 수집 완료: ${results.videos?.length || 0}개 영상 (배치: ${batch._id})`);
+        ServerLogger.info(`✅ 개별 채널 트렌딩 수집 완료: ${savedVideosCount}개 영상 MongoDB 저장 (배치: ${batch._id})`);
 
         ResponseHandler.success(
             res,

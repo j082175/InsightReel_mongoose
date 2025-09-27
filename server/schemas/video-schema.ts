@@ -66,7 +66,7 @@ export const createVideoSchema = (): Schema<FinalVideoData> => {
     confidence: { type: String, default: '' },
     analysisStatus: {
       type: String,
-      enum: ['pending', 'processing', 'completed', 'failed'],
+      enum: ['pending', 'processing', 'completed', 'failed', 'unified-gemini'],
       default: 'pending'
     },
     categoryMatchRate: { type: String, default: '' },

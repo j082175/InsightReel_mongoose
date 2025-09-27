@@ -319,13 +319,13 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
       onClose={onClose}
       title={title}
       size="xl"
-      className="max-h-[90vh]"
+      className="max-h-[98vh]"
       showFooter={true}
       footer={footer}
     >
       <div
         className="p-6 overflow-y-auto"
-        style={{ maxHeight: 'calc(90vh - 180px)' }}
+        style={{ maxHeight: 'calc(98vh - 120px)' }}
       >
         <form
           id="bulk-collection-form"

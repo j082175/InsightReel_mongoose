@@ -462,9 +462,72 @@ export const useCollectTrending = () => {
 
   return useMutation({
     mutationFn: async (collectionData: any) => {
+      // 데이터 형식을 서버가 기대하는 형식으로 변환
+      let channelIds: string[] = [];
+
+      if (collectionData.type === 'channels') {
+        channelIds = collectionData.selectedChannels || [];
+      } else if (collectionData.type === 'groups') {
+        // 그룹에서 채널 ID 추출 로직
+        const selectedGroupIds = collectionData.selectedGroups || [];
+
+        console.log('🎯 그룹 모드 디버깅:', {
+          type: collectionData.type,
+          selectedGroupIds,
+          selectedGroupIdsLength: selectedGroupIds.length
+        });
+
+        if (selectedGroupIds.length > 0) {
+          // 선택된 그룹들에서 채널 목록 추출
+          try {
+            const groupChannelIds: string[] = [];
+
+            for (const groupId of selectedGroupIds) {
+              console.log(`📞 그룹 API 호출: /api/channel-groups/${groupId}`);
+
+              const response = await fetch(`/api/channel-groups/${groupId}`);
+              console.log(`📡 그룹 API 응답 상태: ${response.status} ${response.statusText}`);
+
+              if (response.ok) {
+                const response_data = await response.json();
+                console.log(`📋 그룹 응답 데이터:`, response_data);
+
+                // API 응답이 {success: true, data: {...}} 형태인 경우 처리
+                const group = response_data.data || response_data;
+                console.log(`📋 실제 그룹 데이터:`, group);
+
+                if (group.channels && Array.isArray(group.channels)) {
+                  // 채널 배열에서 channelId 추출
+                  const channelIdsFromGroup = group.channels.map((ch: any) => ch.channelId || ch.id).filter(Boolean);
+                  console.log(`🔗 그룹 ${groupId}에서 추출한 채널 IDs:`, channelIdsFromGroup);
+                  groupChannelIds.push(...channelIdsFromGroup);
+                } else {
+                  console.warn(`⚠️ 그룹 ${groupId}에 channels 배열이 없거나 비어있음:`, group);
+                }
+              } else {
+                console.error(`❌ 그룹 API 호출 실패: ${response.status} ${response.statusText}`);
+              }
+            }
+
+            // 중복 제거
+            channelIds = [...new Set(groupChannelIds)];
+          } catch (error) {
+            console.error('그룹에서 채널 목록 추출 실패:', error);
+            throw new Error('그룹 정보를 가져오는데 실패했습니다.');
+          }
+        }
+      }
+
+      const requestData = {
+        channelIds,
+        options: collectionData.filters || {}
+      };
+
+      console.log('🚀 트렌딩 수집 요청 데이터:', requestData);
+
       const response = await axios.post(
         'http://localhost:3000/api/collect-trending',
-        collectionData
+        requestData
       );
       return response.data;
     },

@@ -146,13 +146,6 @@ export function VirtualizedGrid<T extends GridItem>({
             onCardClick
           };
 
-          console.log('📱 VirtualizedGrid.cardProps:', {
-            itemId,
-            isSelected,
-            isSelectMode,
-            hasOnSelect: !!onSelect,
-            onSelectType: typeof onSelect
-          });
 
           return (
             <div

@@ -63,12 +63,17 @@ export const collectTrendingBulk = async (
   onProgress?: (result: CollectionResult) => void
 ): Promise<BatchCollectionResult> => {
   try {
-    const response = await fetch('/api/channel-groups/collect-multiple', {
+    const response = await fetch('/api/collect-trending', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(request),
+      body: JSON.stringify({
+        channelIds: request.channels,
+        options: request.filters,
+        batchName: request.batchName,
+        color: request.color
+      }),
     });
 
     if (!response.ok) {
@@ -111,7 +116,7 @@ export const collectTrendingChannel = async (
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ channelId, filters }),
+      body: JSON.stringify({ channelIds: [channelId], options: filters }),
     });
 
     if (!response.ok) {

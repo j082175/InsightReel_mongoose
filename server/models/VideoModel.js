@@ -165,4 +165,5 @@ videoSchema.methods.getAnalysisResult = function () {
 // 🎯 완전한 타입 안전성을 가진 모델 생성 (중복 방지)
 const VideoModel = mongoose_1.default.model('Video', videoSchema);
 exports.default = VideoModel;
+module.exports = VideoModel;  // CommonJS 호환성 추가
 //# sourceMappingURL=VideoModel.js.map

@@ -818,16 +818,19 @@ ${videoAnalyses
 }`;
 
             // 병렬로 두 분석 수행
+            const identityModelType = process.env.CHANNEL_FINAL_ANALYSIS_MODEL || 'pro';
+            const categoryModelType = process.env.CHANNEL_REINTERPRETATION_MODEL || 'flash-lite';
+
             const [identityAnalysis, categoryAnalysis] = await Promise.all([
                 this.aiAnalyzer.geminiManager.generateContent(
                     identityPrompt,
                     null, // 이미지 없음 (텍스트만)
-                    { modelType: 'pro' },
+                    { modelType: identityModelType },
                 ),
                 this.aiAnalyzer.geminiManager.generateContent(
                     categoryPrompt,
                     null, // 이미지 없음 (텍스트만)
-                    { modelType: 'flash-lite' },
+                    { modelType: categoryModelType },
                 ),
             ]);
 
@@ -1270,16 +1273,19 @@ ${metadata.tags.top20
 }`;
 
         // 병렬로 두 분석 수행
+        const identityModelType = process.env.CHANNEL_FINAL_ANALYSIS_MODEL || 'pro';
+        const categoryModelType = process.env.CHANNEL_REINTERPRETATION_MODEL || 'flash-lite';
+
         const [identityAnalysis, categoryAnalysis] = await Promise.all([
             this.aiAnalyzer.geminiManager.generateContent(
                 identityPrompt,
                 null, // 이미지 없음 (텍스트만)
-                { modelType: 'pro' },
+                { modelType: identityModelType },
             ),
             this.aiAnalyzer.geminiManager.generateContent(
                 categoryPrompt,
                 null, // 이미지 없음 (텍스트만)
-                { modelType: 'flash-lite' },
+                { modelType: categoryModelType },
             ),
         ]);
 

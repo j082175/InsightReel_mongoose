@@ -1,81 +1,5 @@
 [
   {
-    "timestamp": "2025-09-13T10:52:09.235Z",
-    "date": "2025. 9. 13.",
-    "totalChannels": 1,
-    "processedChannels": 0,
-    "totalVideos": 0,
-    "trendingVideos": 0,
-    "quotaUsed": 0,
-    "errors": [
-      {
-        "channelId": "영화미슐랭",
-        "error": "잘못된 채널 ID 형식: 영화미슐랭"
-      }
-    ],
-    "processingTimeMs": 114,
-    "processingTimeSeconds": "0.1",
-    "avgTimePerChannel": 0,
-    "trendingRate": 0,
-    "quotaEfficiency": 0
-  },
-  {
-    "timestamp": "2025-09-13T10:55:49.500Z",
-    "date": "2025. 9. 13.",
-    "totalChannels": 1,
-    "processedChannels": 1,
-    "totalVideos": 0,
-    "trendingVideos": 0,
-    "errors": [],
-    "processingTimeMs": 684,
-    "processingTimeSeconds": "0.7",
-    "avgTimePerChannel": "684",
-    "trendingRate": 0,
-    "quotaEfficiency": 0
-  },
-  {
-    "timestamp": "2025-09-13T10:57:06.730Z",
-    "date": "2025. 9. 13.",
-    "totalChannels": 1,
-    "processedChannels": 1,
-    "totalVideos": 0,
-    "trendingVideos": 0,
-    "errors": [],
-    "processingTimeMs": 674,
-    "processingTimeSeconds": "0.7",
-    "avgTimePerChannel": "674",
-    "trendingRate": 0,
-    "quotaEfficiency": 0
-  },
-  {
-    "timestamp": "2025-09-13T15:26:15.370Z",
-    "date": "2025. 9. 14.",
-    "totalChannels": 1,
-    "processedChannels": 1,
-    "totalVideos": 0,
-    "trendingVideos": 0,
-    "errors": [],
-    "processingTimeMs": 639,
-    "processingTimeSeconds": "0.6",
-    "avgTimePerChannel": "639",
-    "trendingRate": 0,
-    "quotaEfficiency": 0
-  },
-  {
-    "timestamp": "2025-09-13T15:26:37.642Z",
-    "date": "2025. 9. 14.",
-    "totalChannels": 1,
-    "processedChannels": 1,
-    "totalVideos": 0,
-    "trendingVideos": 0,
-    "errors": [],
-    "processingTimeMs": 623,
-    "processingTimeSeconds": "0.6",
-    "avgTimePerChannel": "623",
-    "trendingRate": 0,
-    "quotaEfficiency": 0
-  },
-  {
     "timestamp": "2025-09-13T15:30:22.813Z",
     "date": "2025. 9. 14.",
     "totalChannels": 1,
@@ -2619,5 +2543,3791 @@
     "avgTimePerChannel": "650",
     "trendingRate": "96.2",
     "quotaEfficiency": 0
+  },
+  {
+    "timestamp": "2025-09-27T01:32:52.071Z",
+    "date": "2025. 9. 27.",
+    "totalChannels": 1,
+    "processedChannels": 1,
+    "totalVideos": 2,
+    "trendingVideos": 2,
+    "quotaUsed": 3,
+    "errors": [],
+    "videos": [
+      {
+        "channelId": "UCX6OQ3DkcsbYNE6H8uQQuVA",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "VbH6xYc7vBa1crQ7SY592wjzVks",
+            "id": "NfhuGUyWYfQ",
+            "snippet": {
+              "publishedAt": "2025-09-26T18:00:07Z",
+              "channelId": "UCX6OQ3DkcsbYNE6H8uQQuVA",
+              "title": "Would Your Grandma Go Skydiving?",
+              "description": "",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/NfhuGUyWYfQ/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/NfhuGUyWYfQ/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/NfhuGUyWYfQ/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/NfhuGUyWYfQ/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/NfhuGUyWYfQ/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "MrBeast",
+              "categoryId": "24",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "en",
+              "localized": {
+                "title": "Would Your Grandma Go Skydiving?",
+                "description": ""
+              },
+              "defaultAudioLanguage": "en"
+            },
+            "contentDetails": {
+              "duration": "PT42S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "13204174",
+              "likeCount": "595960",
+              "favoriteCount": "0",
+              "commentCount": "1980"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "fVvUHn8jKCrW3eAHPTg8VvhpC8M",
+            "id": "wIpWCJKfRXs",
+            "snippet": {
+              "publishedAt": "2025-09-23T16:00:07Z",
+              "channelId": "UCX6OQ3DkcsbYNE6H8uQQuVA",
+              "title": "I Cooked A Pizza With Power Tools",
+              "description": "",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/wIpWCJKfRXs/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/wIpWCJKfRXs/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/wIpWCJKfRXs/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/wIpWCJKfRXs/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/wIpWCJKfRXs/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "MrBeast",
+              "categoryId": "24",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "en",
+              "localized": {
+                "title": "I Cooked A Pizza With Power Tools",
+                "description": ""
+              },
+              "defaultAudioLanguage": "en"
+            },
+            "contentDetails": {
+              "duration": "PT40S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "128445428",
+              "likeCount": "3263498",
+              "favoriteCount": "0",
+              "commentCount": "11849"
+            }
+          }
+        ],
+        "totalVideos": 2,
+        "trendingVideos": 2
+      }
+    ],
+    "processingTimeMs": 751,
+    "processingTimeSeconds": "0.8",
+    "avgTimePerChannel": "751",
+    "trendingRate": "100.0",
+    "quotaEfficiency": "0.67"
+  },
+  {
+    "timestamp": "2025-09-27T01:33:52.366Z",
+    "date": "2025. 9. 27.",
+    "totalChannels": 1,
+    "processedChannels": 1,
+    "totalVideos": 1,
+    "trendingVideos": 1,
+    "quotaUsed": 3,
+    "errors": [],
+    "videos": [
+      {
+        "channelId": "UC_aEa8K-EOJ3D6gOs7HcyNg",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "0MAgF0ycA55FObXBfkzlflzJGo8",
+            "id": "5IPHB8rMmn0",
+            "snippet": {
+              "publishedAt": "2025-09-25T14:09:00Z",
+              "channelId": "UC_aEa8K-EOJ3D6gOs7HcyNg",
+              "title": "Janji - Shadow Glow | House | NCS - Copyright Free Music",
+              "description": "NoCopyrightSounds (NCS): Copyright free music for creators.\nDownload & use this track for free in your next video → http://ncs.io/shadowglow\n\nStream here → http://ncs.lnk.to/shadowglow\n\nDownload other NCS music for free to use in your next video → https://ncs.io\nFollow NCS on Spotify → http://ncs.lnk.to/Spotify\n\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n\n[NCS]\nhttps://ncs.io\nhttps://ncs.lnk.to/Spotify\nhttps://instagram.com/nocopyrightsounds\nhttps://tiktok.com/@nocopyrightsounds\n\n[Janji]\n• https://www.instagram.com/janji/\n• https://soundcloud.com/janjimusic\n• https://www.tiktok.com/@janjimusic\n\n\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n\nMessage to all creators\n\nAll NCS music is copyright free and safe for you to use on platforms like YouTube, TikTok and Twitch. You may not use any track for the purpose of creating a listening experience (i.e., a music video) where the music is the primary focus of the video.\n\nPlease refer to our usage policy for our terms of use and how to use NCS music in your videos → http://ncs.io/UsagePolicy.\n\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n\nHow to credit this track & artist(s)\n\nWhen you are using this track, please add this in your description:\n\nTrack: Janji - Shadow Glow\nMusic provided by NoCopyrightSounds.\nWatch more NCS on YouTube: https://NCS.lnk.to/YouTubeAT\nFree Download / Stream: http://ncs.io/shadowglow\n\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n\nRec-ID: recJUL0jFigTCgtyZ\n\n#nocopyrightsounds #copyrightfree #royaltyfree",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/5IPHB8rMmn0/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/5IPHB8rMmn0/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/5IPHB8rMmn0/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/5IPHB8rMmn0/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/5IPHB8rMmn0/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "NoCopyrightSounds",
+              "tags": [
+                "music",
+                "songs",
+                "ncs",
+                "no copyright music",
+                "edm",
+                "dance music",
+                "electronic music",
+                "royalty free music",
+                "free music",
+                "club music",
+                "new music",
+                "best music",
+                "top music",
+                "copyright free music",
+                "nocopyrightsounds",
+                "gaming music"
+              ],
+              "categoryId": "10",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "en",
+              "localized": {
+                "title": "Janji - Shadow Glow | House | NCS - Copyright Free Music",
+                "description": "NoCopyrightSounds (NCS): Copyright free music for creators.\nDownload & use this track for free in your next video → http://ncs.io/shadowglow\n\nStream here → http://ncs.lnk.to/shadowglow\n\nDownload other NCS music for free to use in your next video → https://ncs.io\nFollow NCS on Spotify → http://ncs.lnk.to/Spotify\n\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n\n[NCS]\nhttps://ncs.io\nhttps://ncs.lnk.to/Spotify\nhttps://instagram.com/nocopyrightsounds\nhttps://tiktok.com/@nocopyrightsounds\n\n[Janji]\n• https://www.instagram.com/janji/\n• https://soundcloud.com/janjimusic\n• https://www.tiktok.com/@janjimusic\n\n\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n\nMessage to all creators\n\nAll NCS music is copyright free and safe for you to use on platforms like YouTube, TikTok and Twitch. You may not use any track for the purpose of creating a listening experience (i.e., a music video) where the music is the primary focus of the video.\n\nPlease refer to our usage policy for our terms of use and how to use NCS music in your videos → http://ncs.io/UsagePolicy.\n\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n\nHow to credit this track & artist(s)\n\nWhen you are using this track, please add this in your description:\n\nTrack: Janji - Shadow Glow\nMusic provided by NoCopyrightSounds.\nWatch more NCS on YouTube: https://NCS.lnk.to/YouTubeAT\nFree Download / Stream: http://ncs.io/shadowglow\n\n- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -\n\nRec-ID: recJUL0jFigTCgtyZ\n\n#nocopyrightsounds #copyrightfree #royaltyfree"
+              },
+              "defaultAudioLanguage": "en-US"
+            },
+            "contentDetails": {
+              "duration": "PT2M40S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "49090",
+              "likeCount": "3189",
+              "favoriteCount": "0",
+              "commentCount": "476"
+            }
+          }
+        ],
+        "totalVideos": 1,
+        "trendingVideos": 1
+      }
+    ],
+    "processingTimeMs": 1071,
+    "processingTimeSeconds": "1.1",
+    "avgTimePerChannel": "1071",
+    "trendingRate": "100.0",
+    "quotaEfficiency": "0.33"
+  },
+  {
+    "timestamp": "2025-09-27T01:40:56.313Z",
+    "date": "2025. 9. 27.",
+    "totalChannels": 5,
+    "processedChannels": 5,
+    "totalVideos": 56,
+    "trendingVideos": 27,
+    "quotaUsed": 3,
+    "errors": [],
+    "videos": [
+      {
+        "channelId": "UCgCwj2FQ6TPIK-D7a1NajbA",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "tTFbvnTphvS-q8QPkjzreLnAbgI",
+            "id": "qM1yKz3UwMs",
+            "snippet": {
+              "publishedAt": "2025-09-26T22:01:09Z",
+              "channelId": "UCgCwj2FQ6TPIK-D7a1NajbA",
+              "title": "호날두 주니어의 여자친구들(?)💀",
+              "description": "호날두 주니어의 여자친구들(?)💀\n#shorts #호날두",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/qM1yKz3UwMs/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/qM1yKz3UwMs/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/qM1yKz3UwMs/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/qM1yKz3UwMs/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/qM1yKz3UwMs/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "호날두7",
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "호날두 주니어의 여자친구들(?)💀",
+                "description": "호날두 주니어의 여자친구들(?)💀\n#shorts #호날두"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT25S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "151226",
+              "likeCount": "3549",
+              "favoriteCount": "0",
+              "commentCount": "22"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "6Ob8-pvW4o_6ol_CFn7UNrSx31k",
+            "id": "cq8ikmeO4Jk",
+            "snippet": {
+              "publishedAt": "2025-09-25T22:00:48Z",
+              "channelId": "UCgCwj2FQ6TPIK-D7a1NajbA",
+              "title": "호날두 만들기 프로젝트 (둘째 아들)❣️",
+              "description": "호날두 만들기 프로젝트 (둘째 아들)❣️\n#shorts #호날두",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/cq8ikmeO4Jk/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/cq8ikmeO4Jk/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/cq8ikmeO4Jk/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/cq8ikmeO4Jk/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/cq8ikmeO4Jk/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "호날두7",
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "호날두 만들기 프로젝트 (둘째 아들)❣️",
+                "description": "호날두 만들기 프로젝트 (둘째 아들)❣️\n#shorts #호날두"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT31S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "433065",
+              "likeCount": "5753",
+              "favoriteCount": "0",
+              "commentCount": "50"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "tW0Nv9srEwABsVt4FmSYU_BXlU0",
+            "id": "Mye2ngP6qnM",
+            "snippet": {
+              "publishedAt": "2025-09-24T22:00:28Z",
+              "channelId": "UCgCwj2FQ6TPIK-D7a1NajbA",
+              "title": "호날두 주니어의 슬리퍼 선물을 신은 조지나❣️",
+              "description": "호날두 주니어의 슬리퍼 선물을 신은 조지나❣️\n#shorts #호날두",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/Mye2ngP6qnM/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/Mye2ngP6qnM/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/Mye2ngP6qnM/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/Mye2ngP6qnM/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/Mye2ngP6qnM/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "호날두7",
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "호날두 주니어의 슬리퍼 선물을 신은 조지나❣️",
+                "description": "호날두 주니어의 슬리퍼 선물을 신은 조지나❣️\n#shorts #호날두"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT24S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "2489159",
+              "likeCount": "28530",
+              "favoriteCount": "0",
+              "commentCount": "144"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "TyhpxG3Ob-_tPJrORur6K6JKvgc",
+            "id": "XIEOmx6BzW8",
+            "snippet": {
+              "publishedAt": "2025-09-23T22:00:41Z",
+              "channelId": "UCgCwj2FQ6TPIK-D7a1NajbA",
+              "title": "호날두 뒤를 이을 호날두 주니어💀",
+              "description": "호날두 뒤를 이을 호날두 주니어💀\n#shorts #호날두",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/XIEOmx6BzW8/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/XIEOmx6BzW8/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/XIEOmx6BzW8/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/XIEOmx6BzW8/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/XIEOmx6BzW8/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "호날두7",
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "호날두 뒤를 이을 호날두 주니어💀",
+                "description": "호날두 뒤를 이을 호날두 주니어💀\n#shorts #호날두"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT22S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "1777382",
+              "likeCount": "24250",
+              "favoriteCount": "0",
+              "commentCount": "281"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "rg5ki9IxqfyBnMhVz-yCdPGbIek",
+            "id": "iI5fvwZXxiA",
+            "snippet": {
+              "publishedAt": "2025-09-22T22:00:58Z",
+              "channelId": "UCgCwj2FQ6TPIK-D7a1NajbA",
+              "title": "호날두가 아들을 놀아주는법❣️",
+              "description": "호날두가 아들을 놀아주는법❣️\n#shorts #호날두",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/iI5fvwZXxiA/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/iI5fvwZXxiA/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/iI5fvwZXxiA/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/iI5fvwZXxiA/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/iI5fvwZXxiA/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "호날두7",
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "호날두가 아들을 놀아주는법❣️",
+                "description": "호날두가 아들을 놀아주는법❣️\n#shorts #호날두"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT16S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "8643087",
+              "likeCount": "99458",
+              "favoriteCount": "0",
+              "commentCount": "635"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "ob3LhJA0jnfAE5N49Nv07bKYmhc",
+            "id": "aQix0cUnk50",
+            "snippet": {
+              "publishedAt": "2025-09-21T22:00:01Z",
+              "channelId": "UCgCwj2FQ6TPIK-D7a1NajbA",
+              "title": "호날두 주니어의 엄청난 성장속도💀",
+              "description": "호날두 주니어의 엄청난 성장속도💀\n#shorts #호날두",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/aQix0cUnk50/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/aQix0cUnk50/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/aQix0cUnk50/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/aQix0cUnk50/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/aQix0cUnk50/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "호날두7",
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "호날두 주니어의 엄청난 성장속도💀",
+                "description": "호날두 주니어의 엄청난 성장속도💀\n#shorts #호날두"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT22S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "2591065",
+              "likeCount": "24917",
+              "favoriteCount": "0",
+              "commentCount": "433"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "2BgvBMqk7e3BWlwBhkDwVEHKAGg",
+            "id": "N47O-NZv6SI",
+            "snippet": {
+              "publishedAt": "2025-09-20T22:00:33Z",
+              "channelId": "UCgCwj2FQ6TPIK-D7a1NajbA",
+              "title": "호날두가 조지나를 위해 준비한 생일선물❣️",
+              "description": "호날두가 조지나를 위해 준비한 생일선물❣️\n#shorts #호날두",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/N47O-NZv6SI/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/N47O-NZv6SI/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/N47O-NZv6SI/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/N47O-NZv6SI/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/N47O-NZv6SI/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "호날두7",
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "호날두가 조지나를 위해 준비한 생일선물❣️",
+                "description": "호날두가 조지나를 위해 준비한 생일선물❣️\n#shorts #호날두"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT28S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "5374683",
+              "likeCount": "73100",
+              "favoriteCount": "0",
+              "commentCount": "601"
+            }
+          }
+        ],
+        "totalVideos": 7,
+        "trendingVideos": 7
+      },
+      {
+        "channelId": "UCekCucFs7NYg7fBKhty8fNA",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "jq3m21AKuheGBsz8Co2kCxdT6W8",
+            "id": "QwemKyWiqtU",
+            "snippet": {
+              "publishedAt": "2025-09-26T13:15:04Z",
+              "channelId": "UCekCucFs7NYg7fBKhty8fNA",
+              "title": "트럼펫 연주가의 은밀한 트레이닝",
+              "description": "운동과 음악이 만나는 순간, 💪🎺\n트럼펫 연주가의 은밀한 트레이닝,\n한 턱걸이마다 울려 퍼지는 단 하나의 음입니다.\n\n웃음과 놀라움이 동시에 터져나오는\n유쾌한 퍼포먼스를 지금 확인해보세요.\n\nWhen music meets muscle. 💪🎺\nThe trumpeter’s secret training:\none pull-up, one note.\nA playful performance that’s as funny as it is impressive.\n\n출처(Source): Instagram @brass.ers\n\n#연주 #트럼펫 #악기 #music #trumpet",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/QwemKyWiqtU/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/QwemKyWiqtU/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/QwemKyWiqtU/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/QwemKyWiqtU/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/QwemKyWiqtU/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "메타클럽타운",
+              "tags": [
+                "실제상황",
+                "웃긴영상",
+                "흥미로운영상",
+                "신기한영상",
+                "트럼펫",
+                "턱걸이",
+                "피트니스",
+                "trumpet",
+                "pullup",
+                "workout",
+                "gym",
+                "funnyvideo",
+                "meme",
+                "viralshorts",
+                "viralvideo",
+                "shorts",
+                "brass",
+                "strength",
+                "음악쇼츠",
+                "fitnessmeme"
+              ],
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "localized": {
+                "title": "트럼펫 연주가의 은밀한 트레이닝",
+                "description": "운동과 음악이 만나는 순간, 💪🎺\n트럼펫 연주가의 은밀한 트레이닝,\n한 턱걸이마다 울려 퍼지는 단 하나의 음입니다.\n\n웃음과 놀라움이 동시에 터져나오는\n유쾌한 퍼포먼스를 지금 확인해보세요.\n\nWhen music meets muscle. 💪🎺\nThe trumpeter’s secret training:\none pull-up, one note.\nA playful performance that’s as funny as it is impressive.\n\n출처(Source): Instagram @brass.ers\n\n#연주 #트럼펫 #악기 #music #trumpet"
+              }
+            },
+            "contentDetails": {
+              "duration": "PT10S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "22984",
+              "likeCount": "100",
+              "favoriteCount": "0",
+              "commentCount": "2"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "05BcyU49zt2eqhrpDNznTI6NC-Q",
+            "id": "zzfo57zbL00",
+            "snippet": {
+              "publishedAt": "2025-09-25T13:15:11Z",
+              "channelId": "UCekCucFs7NYg7fBKhty8fNA",
+              "title": "청소하다 만들어버린 클럽 DJ 무대",
+              "description": "청소하다가 이런 클럽 DJ 무대가 만들어질 줄은 몰랐습니다. 🧽🎶\n손끝의 움직임과 소리가 우연히 맞아떨어져,\n일상이 공연으로 바뀌는 순간이었습니다.\n\nNever thought cleaning could create a club DJ stage.\nThe sync of sound and hand movements turned chores\ninto a surprising live performance.\n\n#연주 #음악 #리듬 #music #rhythm",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/zzfo57zbL00/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/zzfo57zbL00/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/zzfo57zbL00/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/zzfo57zbL00/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/zzfo57zbL00/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "메타클럽타운",
+              "tags": [
+                "실제상황",
+                "흥미로운영상",
+                "신기한영상",
+                "club",
+                "DJ",
+                "EDM",
+                "music",
+                "rhythm",
+                "beat",
+                "viralshorts",
+                "satisfying",
+                "perfect timing",
+                "meme",
+                "연주",
+                "음악",
+                "리듬",
+                "소리",
+                "밈",
+                "중독성",
+                "쇼츠추천"
+              ],
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "청소하다 만들어버린 클럽 DJ 무대",
+                "description": "청소하다가 이런 클럽 DJ 무대가 만들어질 줄은 몰랐습니다. 🧽🎶\n손끝의 움직임과 소리가 우연히 맞아떨어져,\n일상이 공연으로 바뀌는 순간이었습니다.\n\nNever thought cleaning could create a club DJ stage.\nThe sync of sound and hand movements turned chores\ninto a surprising live performance.\n\n#연주 #음악 #리듬 #music #rhythm"
+              },
+              "defaultAudioLanguage": "en"
+            },
+            "contentDetails": {
+              "duration": "PT15S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "19385",
+              "likeCount": "235",
+              "favoriteCount": "0",
+              "commentCount": "5"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "IvkkM9qv6famxAbFpCn5zBd9nOA",
+            "id": "pxdrsfz4oDU",
+            "snippet": {
+              "publishedAt": "2025-09-24T13:15:14Z",
+              "channelId": "UCekCucFs7NYg7fBKhty8fNA",
+              "title": "프랑스 아빠의 특별한 교육",
+              "description": "프랑스 공원에서 만난 아빠와 아들 🚴‍♂️  \n진짜 오르막길에서, 아빠의 손길이 아이의 날개가 됩니다.  \n프랑스 아빠의 특별한 교육이 바로 이런 순간 아닐까요?  \n\nA touching scene from a park in France 🇫🇷  \nOn an uphill road, a father’s hand becomes the wings for his child.  \nThis is a special lesson only a French dad could give.  \n\nBGM: 윤종신 – 오르막길 (2012 월간 윤종신 6월호 [뜬금LIVE]) \n\n#감성쇼츠 #가족사랑 #힐링영상 #emotionalshorts #familylove",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/pxdrsfz4oDU/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/pxdrsfz4oDU/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/pxdrsfz4oDU/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/pxdrsfz4oDU/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/pxdrsfz4oDU/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "메타클럽타운",
+              "tags": [
+                "프랑스",
+                "프랑스아빠",
+                "아빠와아들",
+                "부자사랑",
+                "가족사랑",
+                "육아일상",
+                "아이성장",
+                "힐링영상",
+                "감성쇼츠",
+                "짧은영상",
+                "명장면",
+                "France",
+                "FrenchDad",
+                "FatherAndSon",
+                "Parenting",
+                "FamilyLove",
+                "EmotionalShorts",
+                "Heartwarming",
+                "ViralShorts",
+                "힐링쇼츠"
+              ],
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "프랑스 아빠의 특별한 교육",
+                "description": "프랑스 공원에서 만난 아빠와 아들 🚴‍♂️  \n진짜 오르막길에서, 아빠의 손길이 아이의 날개가 됩니다.  \n프랑스 아빠의 특별한 교육이 바로 이런 순간 아닐까요?  \n\nA touching scene from a park in France 🇫🇷  \nOn an uphill road, a father’s hand becomes the wings for his child.  \nThis is a special lesson only a French dad could give.  \n\nBGM: 윤종신 – 오르막길 (2012 월간 윤종신 6월호 [뜬금LIVE]) \n\n#감성쇼츠 #가족사랑 #힐링영상 #emotionalshorts #familylove"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT18S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "11376",
+              "likeCount": "92",
+              "favoriteCount": "0",
+              "commentCount": "4"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "n8zDZpnPLoWEtif8MNb749InLkw",
+            "id": "iPmytrSdTvU",
+            "snippet": {
+              "publishedAt": "2025-09-21T08:15:11Z",
+              "channelId": "UCekCucFs7NYg7fBKhty8fNA",
+              "title": "유람선 티켓을 다시 사야 하는 이유",
+              "description": "에펠탑 앞에서 완벽한 인생샷을 남기려던 순간,  \n망컷 때문에 유람선 티켓을 다시 사야만 했습니다 😂  \n\nTried to take the perfect Eiffel Tower shot,  \nbut ended up needing another boat ticket 😂\n\nBGM: Karoline Krüger – You Call It Love\n\n#여행 #파리 #에펠탑 #funny #meme",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/iPmytrSdTvU/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/iPmytrSdTvU/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/iPmytrSdTvU/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/iPmytrSdTvU/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/iPmytrSdTvU/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "메타클럽타운",
+              "tags": [
+                "여행",
+                "파리",
+                "에펠탑",
+                "망컷",
+                "유람선",
+                "인생샷",
+                "웃긴순간",
+                "유머",
+                "짤영상",
+                "일상",
+                "Paris",
+                "EiffelTower",
+                "TravelFail",
+                "FunnyVideo",
+                "Meme",
+                "Comedy",
+                "EpicFail",
+                "ShortVideo",
+                "TravelVlog",
+                "Viral"
+              ],
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "유람선 티켓을 다시 사야 하는 이유",
+                "description": "에펠탑 앞에서 완벽한 인생샷을 남기려던 순간,  \n망컷 때문에 유람선 티켓을 다시 사야만 했습니다 😂  \n\nTried to take the perfect Eiffel Tower shot,  \nbut ended up needing another boat ticket 😂\n\nBGM: Karoline Krüger – You Call It Love\n\n#여행 #파리 #에펠탑 #funny #meme"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT14S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "29361",
+              "likeCount": "168",
+              "favoriteCount": "0",
+              "commentCount": "8"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "jNQq5UA62r-R36nxaky4v1XvRRk",
+            "id": "HIFGtOhweek",
+            "snippet": {
+              "publishedAt": "2025-09-21T02:45:01Z",
+              "channelId": "UCekCucFs7NYg7fBKhty8fNA",
+              "title": "방구석에서 만들어낸 놀라운 콜라보",
+              "description": "방구석에서 전동칫솔과 기타가 만들어낸 놀라운 콜라보.\n짧지만 강렬한 순간, 특별한 울림을 느껴보세요.\n\nIn a tiny room, an electric toothbrush meets a guitar for an amazing collaboration.\nA quirky harmony turning everyday sound into music—enjoy the moment.\n\n출처(Source): Instagram @hancelangleymusic\n\n#연주 #음악 #악기 #music #instrument",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/HIFGtOhweek/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/HIFGtOhweek/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/HIFGtOhweek/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/HIFGtOhweek/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/HIFGtOhweek/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "메타클럽타운",
+              "tags": [
+                "실제상황",
+                "흥미로운영상",
+                "신기한영상",
+                "연주",
+                "음악",
+                "악기",
+                "전동칫솔",
+                "기타연주",
+                "음악콜라보",
+                "음악영상",
+                "화음",
+                "실험음악",
+                "guitar",
+                "acousticguitar",
+                "viralshorts",
+                "musicshorts",
+                "performance",
+                "unexpectedharmony",
+                "collaboration",
+                "soundexperiment"
+              ],
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "방구석에서 만들어낸 놀라운 콜라보",
+                "description": "방구석에서 전동칫솔과 기타가 만들어낸 놀라운 콜라보.\n짧지만 강렬한 순간, 특별한 울림을 느껴보세요.\n\nIn a tiny room, an electric toothbrush meets a guitar for an amazing collaboration.\nA quirky harmony turning everyday sound into music—enjoy the moment.\n\n출처(Source): Instagram @hancelangleymusic\n\n#연주 #음악 #악기 #music #instrument"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT16S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "91172",
+              "likeCount": "842",
+              "favoriteCount": "0",
+              "commentCount": "21"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "6zk4oZof4lLf6oDAeDghA0ByCiI",
+            "id": "lMBth2loL1k",
+            "snippet": {
+              "publishedAt": "2025-09-20T09:30:34Z",
+              "channelId": "UCekCucFs7NYg7fBKhty8fNA",
+              "title": "잠옷 입은 예비 지망생들의 춤열정",
+              "description": "잠옷 차림에도 춤에 몰입하는 예비 지망생들,  \n밤을 잊은 열정이 귀엽고도 감동적으로 다가옵니다.  \n\nEven in pajamas, these young aspirants keep dancing,  \ntheir passion shining through the night with a touch of cuteness.\n\n#댄스 #춤 #아이돌 #dance #cute",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/lMBth2loL1k/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/lMBth2loL1k/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/lMBth2loL1k/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/lMBth2loL1k/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/lMBth2loL1k/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "메타클럽타운",
+              "tags": [
+                "댄스",
+                "춤",
+                "아이돌",
+                "걸그룹",
+                "케이팝",
+                "귀여움",
+                "아이들",
+                "쇼츠",
+                "밈",
+                "연습",
+                "Dance",
+                "Kpop",
+                "GirlGroup",
+                "Idol",
+                "Cute",
+                "Kids",
+                "Shorts",
+                "Funny",
+                "Viral",
+                "Performance"
+              ],
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "잠옷 입은 예비 지망생들의 춤열정",
+                "description": "잠옷 차림에도 춤에 몰입하는 예비 지망생들,  \n밤을 잊은 열정이 귀엽고도 감동적으로 다가옵니다.  \n\nEven in pajamas, these young aspirants keep dancing,  \ntheir passion shining through the night with a touch of cuteness.\n\n#댄스 #춤 #아이돌 #dance #cute"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT12S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "33060",
+              "likeCount": "267",
+              "favoriteCount": "0",
+              "commentCount": "5"
+            }
+          }
+        ],
+        "totalVideos": 9,
+        "trendingVideos": 6
+      },
+      {
+        "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "PL3qNEUdfP2pW0PgtonPLQFR2eM",
+            "id": "IDE_SjWHl98",
+            "snippet": {
+              "publishedAt": "2025-09-26T23:00:18Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "카드 복제기를 찾아내는 카드",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/IDE_SjWHl98/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/IDE_SjWHl98/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/IDE_SjWHl98/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/IDE_SjWHl98/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/IDE_SjWHl98/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "카드 복제기를 찾아내는 카드",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT42S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "18763",
+              "likeCount": "228",
+              "favoriteCount": "0",
+              "commentCount": "4"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "55uTJRqD8oPbQYxQj15FYNeB_cA",
+            "id": "BxZL3Vs2rhs",
+            "snippet": {
+              "publishedAt": "2025-09-26T09:00:18Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "유니버셜 할로윈 캐스트들 출근 전 후 차이",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/BxZL3Vs2rhs/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/BxZL3Vs2rhs/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/BxZL3Vs2rhs/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/BxZL3Vs2rhs/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/BxZL3Vs2rhs/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "유니버셜 할로윈 캐스트들 출근 전 후 차이",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT49S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "555135",
+              "likeCount": "12543",
+              "favoriteCount": "0",
+              "commentCount": "47"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "R4cBSYD1gIxzFml5E2Ow0QucuNc",
+            "id": "6V2FMAkUe6Y",
+            "snippet": {
+              "publishedAt": "2025-09-25T23:00:10Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "어른이 된다는 건",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/6V2FMAkUe6Y/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/6V2FMAkUe6Y/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/6V2FMAkUe6Y/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/6V2FMAkUe6Y/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/6V2FMAkUe6Y/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "어른이 된다는 건",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT52S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "56025",
+              "likeCount": "1327",
+              "favoriteCount": "0",
+              "commentCount": "12"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "_spYWDzLFohfQC0mASbuRpAHpGg",
+            "id": "P1CxoPzz1lM",
+            "snippet": {
+              "publishedAt": "2025-09-25T09:00:39Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "접어먹는 사탕 제대로 먹는 법",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/P1CxoPzz1lM/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/P1CxoPzz1lM/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/P1CxoPzz1lM/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/P1CxoPzz1lM/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/P1CxoPzz1lM/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "접어먹는 사탕 제대로 먹는 법",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT54S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "655263",
+              "likeCount": "10602",
+              "favoriteCount": "0",
+              "commentCount": "216"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "FOnVtVRZ28u-hzcojgv1XF6bCMc",
+            "id": "ykU8DC8uzmw",
+            "snippet": {
+              "publishedAt": "2025-09-24T23:01:11Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "특이점이 온 해킹 기술",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/ykU8DC8uzmw/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/ykU8DC8uzmw/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/ykU8DC8uzmw/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/ykU8DC8uzmw/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/ykU8DC8uzmw/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "특이점이 온 해킹 기술",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT50S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "222978",
+              "likeCount": "2446",
+              "favoriteCount": "0",
+              "commentCount": "142"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "EZtTJFRHj4yfHxWgGuVNoQn7TQo",
+            "id": "j_nvwJhFirA",
+            "snippet": {
+              "publishedAt": "2025-09-24T09:01:09Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "넘사벽인 미국의 사이즈",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/j_nvwJhFirA/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/j_nvwJhFirA/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/j_nvwJhFirA/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/j_nvwJhFirA/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/j_nvwJhFirA/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "넘사벽인 미국의 사이즈",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT47S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "1390181",
+              "likeCount": "23620",
+              "favoriteCount": "0",
+              "commentCount": "901"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "NQSo-7fqryOXkuFIGdo9jrNXZY8",
+            "id": "qe31zeJujE4",
+            "snippet": {
+              "publishedAt": "2025-09-23T23:01:04Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "흑인과 아시안이 베스트 프렌드면",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/qe31zeJujE4/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/qe31zeJujE4/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/qe31zeJujE4/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/qe31zeJujE4/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/qe31zeJujE4/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "흑인과 아시안이 베스트 프렌드면",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT43S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "1951804",
+              "likeCount": "43943",
+              "favoriteCount": "0",
+              "commentCount": "301"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "3iFKIxAwbyZHDFnJKsilWc8t4Tk",
+            "id": "2RYO2y0umIw",
+            "snippet": {
+              "publishedAt": "2025-09-23T09:00:04Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "뇌를 속여서 물에서 음료수 맛이 나게 하는 물병? ㄷㄷ",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/2RYO2y0umIw/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/2RYO2y0umIw/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/2RYO2y0umIw/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/2RYO2y0umIw/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/2RYO2y0umIw/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "뇌를 속여서 물에서 음료수 맛이 나게 하는 물병? ㄷㄷ",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT48S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "76102",
+              "likeCount": "1194",
+              "favoriteCount": "0",
+              "commentCount": "40"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "tXXBJQ-s41-D3_hbPbwAJlcggM8",
+            "id": "1_bou3GM4TI",
+            "snippet": {
+              "publishedAt": "2025-09-22T23:00:02Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "부모 울리는 순수악들 ㅋㅋㅋㅋ",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/1_bou3GM4TI/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/1_bou3GM4TI/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/1_bou3GM4TI/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/1_bou3GM4TI/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/1_bou3GM4TI/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "부모 울리는 순수악들 ㅋㅋㅋㅋ",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT47S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "610907",
+              "likeCount": "11321",
+              "favoriteCount": "0",
+              "commentCount": "108"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "KfxYYqK2qODdGnakYhfrKU4ikIk",
+            "id": "Jk7dAPuZ4YQ",
+            "snippet": {
+              "publishedAt": "2025-09-22T09:00:34Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "분명 맞는 단어인데 이상하게 보일 때 ㅋㅋㅋㅋ",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/Jk7dAPuZ4YQ/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/Jk7dAPuZ4YQ/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/Jk7dAPuZ4YQ/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/Jk7dAPuZ4YQ/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/Jk7dAPuZ4YQ/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "분명 맞는 단어인데 이상하게 보일 때 ㅋㅋㅋㅋ",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT53S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "105435",
+              "likeCount": "3023",
+              "favoriteCount": "0",
+              "commentCount": "159"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "IJKEV1nQp1WvReEjeN52Qa0mWpg",
+            "id": "6Op2a9529oM",
+            "snippet": {
+              "publishedAt": "2025-09-21T23:00:15Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "시력 안 좋은 사람이 안경 벗으면",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/6Op2a9529oM/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/6Op2a9529oM/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/6Op2a9529oM/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/6Op2a9529oM/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/6Op2a9529oM/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "시력 안 좋은 사람이 안경 벗으면",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT52S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "1789228",
+              "likeCount": "47496",
+              "favoriteCount": "0",
+              "commentCount": "835"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "HRm6gaxeEmcvro7AFY_rQWxmZbk",
+            "id": "Uq838Aqpbws",
+            "snippet": {
+              "publishedAt": "2025-09-21T09:00:43Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "초보 운전자가 기겁하는 곳 ㅋㅋㅋㅋㅋㅋ",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/Uq838Aqpbws/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/Uq838Aqpbws/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/Uq838Aqpbws/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/Uq838Aqpbws/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/Uq838Aqpbws/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "초보 운전자가 기겁하는 곳 ㅋㅋㅋㅋㅋㅋ",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT51S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "371798",
+              "likeCount": "7126",
+              "favoriteCount": "0",
+              "commentCount": "148"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "yAyiiY4pXTcihiwGfU-vOXSZa5U",
+            "id": "OnZiHyUvS_4",
+            "snippet": {
+              "publishedAt": "2025-09-20T23:00:32Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "천조국 금수저의 브이로그",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/OnZiHyUvS_4/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/OnZiHyUvS_4/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/OnZiHyUvS_4/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/OnZiHyUvS_4/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/OnZiHyUvS_4/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "천조국 금수저의 브이로그",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT50S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "3483648",
+              "likeCount": "44553",
+              "favoriteCount": "0",
+              "commentCount": "923"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "lXU_TTGh4DYleiTFRm0NsdWy68w",
+            "id": "rm6LHiAl8FA",
+            "snippet": {
+              "publishedAt": "2025-09-20T09:01:15Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "36시간 단식하면 몸에 벌어지는 일",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/rm6LHiAl8FA/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/rm6LHiAl8FA/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/rm6LHiAl8FA/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/rm6LHiAl8FA/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/rm6LHiAl8FA/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "36시간 단식하면 몸에 벌어지는 일",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT54S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "6379051",
+              "likeCount": "112963",
+              "favoriteCount": "0",
+              "commentCount": "2254"
+            }
+          }
+        ],
+        "totalVideos": 14,
+        "trendingVideos": 14
+      }
+    ],
+    "processingTimeMs": 3842,
+    "processingTimeSeconds": "3.8",
+    "avgTimePerChannel": "768",
+    "trendingRate": "48.2",
+    "quotaEfficiency": "9.00"
+  },
+  {
+    "timestamp": "2025-09-27T01:57:31.513Z",
+    "date": "2025. 9. 27.",
+    "totalChannels": 5,
+    "processedChannels": 5,
+    "totalVideos": 27,
+    "trendingVideos": 12,
+    "quotaUsed": 3,
+    "errors": [],
+    "videos": [
+      {
+        "channelId": "UCgCwj2FQ6TPIK-D7a1NajbA",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "Sxga7CBD3Tx99ddmztnSoWcPzek",
+            "id": "qM1yKz3UwMs",
+            "snippet": {
+              "publishedAt": "2025-09-26T22:01:09Z",
+              "channelId": "UCgCwj2FQ6TPIK-D7a1NajbA",
+              "title": "호날두 주니어의 여자친구들(?)💀",
+              "description": "호날두 주니어의 여자친구들(?)💀\n#shorts #호날두",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/qM1yKz3UwMs/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/qM1yKz3UwMs/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/qM1yKz3UwMs/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/qM1yKz3UwMs/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/qM1yKz3UwMs/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "호날두7",
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "호날두 주니어의 여자친구들(?)💀",
+                "description": "호날두 주니어의 여자친구들(?)💀\n#shorts #호날두"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT25S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "166522",
+              "likeCount": "3817",
+              "favoriteCount": "0",
+              "commentCount": "26"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "4eGO-5Ga31_Z5_ofW5vUr2ofopM",
+            "id": "cq8ikmeO4Jk",
+            "snippet": {
+              "publishedAt": "2025-09-25T22:00:48Z",
+              "channelId": "UCgCwj2FQ6TPIK-D7a1NajbA",
+              "title": "호날두 만들기 프로젝트 (둘째 아들)❣️",
+              "description": "호날두 만들기 프로젝트 (둘째 아들)❣️\n#shorts #호날두",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/cq8ikmeO4Jk/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/cq8ikmeO4Jk/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/cq8ikmeO4Jk/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/cq8ikmeO4Jk/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/cq8ikmeO4Jk/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "호날두7",
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "호날두 만들기 프로젝트 (둘째 아들)❣️",
+                "description": "호날두 만들기 프로젝트 (둘째 아들)❣️\n#shorts #호날두"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT31S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "442059",
+              "likeCount": "5812",
+              "favoriteCount": "0",
+              "commentCount": "50"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "mPbZje_eR-MgifAGrAqp0Wf41F8",
+            "id": "Mye2ngP6qnM",
+            "snippet": {
+              "publishedAt": "2025-09-24T22:00:28Z",
+              "channelId": "UCgCwj2FQ6TPIK-D7a1NajbA",
+              "title": "호날두 주니어의 슬리퍼 선물을 신은 조지나❣️",
+              "description": "호날두 주니어의 슬리퍼 선물을 신은 조지나❣️\n#shorts #호날두",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/Mye2ngP6qnM/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/Mye2ngP6qnM/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/Mye2ngP6qnM/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/Mye2ngP6qnM/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/Mye2ngP6qnM/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "호날두7",
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "호날두 주니어의 슬리퍼 선물을 신은 조지나❣️",
+                "description": "호날두 주니어의 슬리퍼 선물을 신은 조지나❣️\n#shorts #호날두"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT24S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "2507672",
+              "likeCount": "28684",
+              "favoriteCount": "0",
+              "commentCount": "145"
+            }
+          }
+        ],
+        "totalVideos": 3,
+        "trendingVideos": 3
+      },
+      {
+        "channelId": "UCekCucFs7NYg7fBKhty8fNA",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "55MtAsKoxxGmNKBxyDMA-hTukSE",
+            "id": "QwemKyWiqtU",
+            "snippet": {
+              "publishedAt": "2025-09-26T13:15:04Z",
+              "channelId": "UCekCucFs7NYg7fBKhty8fNA",
+              "title": "트럼펫 연주가의 은밀한 트레이닝",
+              "description": "운동과 음악이 만나는 순간, 💪🎺\n트럼펫 연주가의 은밀한 트레이닝,\n한 턱걸이마다 울려 퍼지는 단 하나의 음입니다.\n\n웃음과 놀라움이 동시에 터져나오는\n유쾌한 퍼포먼스를 지금 확인해보세요.\n\nWhen music meets muscle. 💪🎺\nThe trumpeter’s secret training:\none pull-up, one note.\nA playful performance that’s as funny as it is impressive.\n\n출처(Source): Instagram @brass.ers\n\n#연주 #트럼펫 #악기 #music #trumpet",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/QwemKyWiqtU/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/QwemKyWiqtU/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/QwemKyWiqtU/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/QwemKyWiqtU/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/QwemKyWiqtU/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "메타클럽타운",
+              "tags": [
+                "실제상황",
+                "웃긴영상",
+                "흥미로운영상",
+                "신기한영상",
+                "트럼펫",
+                "턱걸이",
+                "피트니스",
+                "trumpet",
+                "pullup",
+                "workout",
+                "gym",
+                "funnyvideo",
+                "meme",
+                "viralshorts",
+                "viralvideo",
+                "shorts",
+                "brass",
+                "strength",
+                "음악쇼츠",
+                "fitnessmeme"
+              ],
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "localized": {
+                "title": "트럼펫 연주가의 은밀한 트레이닝",
+                "description": "운동과 음악이 만나는 순간, 💪🎺\n트럼펫 연주가의 은밀한 트레이닝,\n한 턱걸이마다 울려 퍼지는 단 하나의 음입니다.\n\n웃음과 놀라움이 동시에 터져나오는\n유쾌한 퍼포먼스를 지금 확인해보세요.\n\nWhen music meets muscle. 💪🎺\nThe trumpeter’s secret training:\none pull-up, one note.\nA playful performance that’s as funny as it is impressive.\n\n출처(Source): Instagram @brass.ers\n\n#연주 #트럼펫 #악기 #music #trumpet"
+              }
+            },
+            "contentDetails": {
+              "duration": "PT10S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "23092",
+              "likeCount": "100",
+              "favoriteCount": "0",
+              "commentCount": "2"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "05BcyU49zt2eqhrpDNznTI6NC-Q",
+            "id": "zzfo57zbL00",
+            "snippet": {
+              "publishedAt": "2025-09-25T13:15:11Z",
+              "channelId": "UCekCucFs7NYg7fBKhty8fNA",
+              "title": "청소하다 만들어버린 클럽 DJ 무대",
+              "description": "청소하다가 이런 클럽 DJ 무대가 만들어질 줄은 몰랐습니다. 🧽🎶\n손끝의 움직임과 소리가 우연히 맞아떨어져,\n일상이 공연으로 바뀌는 순간이었습니다.\n\nNever thought cleaning could create a club DJ stage.\nThe sync of sound and hand movements turned chores\ninto a surprising live performance.\n\n#연주 #음악 #리듬 #music #rhythm",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/zzfo57zbL00/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/zzfo57zbL00/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/zzfo57zbL00/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/zzfo57zbL00/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/zzfo57zbL00/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "메타클럽타운",
+              "tags": [
+                "실제상황",
+                "흥미로운영상",
+                "신기한영상",
+                "club",
+                "DJ",
+                "EDM",
+                "music",
+                "rhythm",
+                "beat",
+                "viralshorts",
+                "satisfying",
+                "perfect timing",
+                "meme",
+                "연주",
+                "음악",
+                "리듬",
+                "소리",
+                "밈",
+                "중독성",
+                "쇼츠추천"
+              ],
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "청소하다 만들어버린 클럽 DJ 무대",
+                "description": "청소하다가 이런 클럽 DJ 무대가 만들어질 줄은 몰랐습니다. 🧽🎶\n손끝의 움직임과 소리가 우연히 맞아떨어져,\n일상이 공연으로 바뀌는 순간이었습니다.\n\nNever thought cleaning could create a club DJ stage.\nThe sync of sound and hand movements turned chores\ninto a surprising live performance.\n\n#연주 #음악 #리듬 #music #rhythm"
+              },
+              "defaultAudioLanguage": "en"
+            },
+            "contentDetails": {
+              "duration": "PT15S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "19385",
+              "likeCount": "235",
+              "favoriteCount": "0",
+              "commentCount": "5"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "sNgPhmFWOyASorj4uoe99UXPOcY",
+            "id": "pxdrsfz4oDU",
+            "snippet": {
+              "publishedAt": "2025-09-24T13:15:14Z",
+              "channelId": "UCekCucFs7NYg7fBKhty8fNA",
+              "title": "프랑스 아빠의 특별한 교육",
+              "description": "프랑스 공원에서 만난 아빠와 아들 🚴‍♂️  \n진짜 오르막길에서, 아빠의 손길이 아이의 날개가 됩니다.  \n프랑스 아빠의 특별한 교육이 바로 이런 순간 아닐까요?  \n\nA touching scene from a park in France 🇫🇷  \nOn an uphill road, a father’s hand becomes the wings for his child.  \nThis is a special lesson only a French dad could give.  \n\nBGM: 윤종신 – 오르막길 (2012 월간 윤종신 6월호 [뜬금LIVE]) \n\n#감성쇼츠 #가족사랑 #힐링영상 #emotionalshorts #familylove",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/pxdrsfz4oDU/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/pxdrsfz4oDU/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/pxdrsfz4oDU/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/pxdrsfz4oDU/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/pxdrsfz4oDU/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "메타클럽타운",
+              "tags": [
+                "프랑스",
+                "프랑스아빠",
+                "아빠와아들",
+                "부자사랑",
+                "가족사랑",
+                "육아일상",
+                "아이성장",
+                "힐링영상",
+                "감성쇼츠",
+                "짧은영상",
+                "명장면",
+                "France",
+                "FrenchDad",
+                "FatherAndSon",
+                "Parenting",
+                "FamilyLove",
+                "EmotionalShorts",
+                "Heartwarming",
+                "ViralShorts",
+                "힐링쇼츠"
+              ],
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "프랑스 아빠의 특별한 교육",
+                "description": "프랑스 공원에서 만난 아빠와 아들 🚴‍♂️  \n진짜 오르막길에서, 아빠의 손길이 아이의 날개가 됩니다.  \n프랑스 아빠의 특별한 교육이 바로 이런 순간 아닐까요?  \n\nA touching scene from a park in France 🇫🇷  \nOn an uphill road, a father’s hand becomes the wings for his child.  \nThis is a special lesson only a French dad could give.  \n\nBGM: 윤종신 – 오르막길 (2012 월간 윤종신 6월호 [뜬금LIVE]) \n\n#감성쇼츠 #가족사랑 #힐링영상 #emotionalshorts #familylove"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT18S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "11468",
+              "likeCount": "92",
+              "favoriteCount": "0",
+              "commentCount": "4"
+            }
+          }
+        ],
+        "totalVideos": 3,
+        "trendingVideos": 3
+      },
+      {
+        "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "9cWGFikQjikWVmcQiLm8xG2X-Yg",
+            "id": "IDE_SjWHl98",
+            "snippet": {
+              "publishedAt": "2025-09-26T23:00:18Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "카드 복제기를 찾아내는 카드",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/IDE_SjWHl98/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/IDE_SjWHl98/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/IDE_SjWHl98/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/IDE_SjWHl98/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/IDE_SjWHl98/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "카드 복제기를 찾아내는 카드",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT42S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "20241",
+              "likeCount": "231",
+              "favoriteCount": "0",
+              "commentCount": "4"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "gLm5C7u-S8vzxukFNJO3VMygrww",
+            "id": "BxZL3Vs2rhs",
+            "snippet": {
+              "publishedAt": "2025-09-26T09:00:18Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "유니버셜 할로윈 캐스트들 출근 전 후 차이",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/BxZL3Vs2rhs/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/BxZL3Vs2rhs/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/BxZL3Vs2rhs/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/BxZL3Vs2rhs/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/BxZL3Vs2rhs/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "유니버셜 할로윈 캐스트들 출근 전 후 차이",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT49S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "569881",
+              "likeCount": "12740",
+              "favoriteCount": "0",
+              "commentCount": "48"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "l5PFdDs0Yjvw6eaGbz61uKaA8tg",
+            "id": "6V2FMAkUe6Y",
+            "snippet": {
+              "publishedAt": "2025-09-25T23:00:10Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "어른이 된다는 건",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/6V2FMAkUe6Y/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/6V2FMAkUe6Y/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/6V2FMAkUe6Y/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/6V2FMAkUe6Y/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/6V2FMAkUe6Y/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "어른이 된다는 건",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT52S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "56889",
+              "likeCount": "1352",
+              "favoriteCount": "0",
+              "commentCount": "12"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "24S9JVu8bj3dMw08FGW0qlHcMwg",
+            "id": "P1CxoPzz1lM",
+            "snippet": {
+              "publishedAt": "2025-09-25T09:00:39Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "접어먹는 사탕 제대로 먹는 법",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/P1CxoPzz1lM/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/P1CxoPzz1lM/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/P1CxoPzz1lM/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/P1CxoPzz1lM/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/P1CxoPzz1lM/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "접어먹는 사탕 제대로 먹는 법",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT54S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "656600",
+              "likeCount": "10654",
+              "favoriteCount": "0",
+              "commentCount": "216"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "6L-aTlI03M4pSxtmDThlazBbmBg",
+            "id": "ykU8DC8uzmw",
+            "snippet": {
+              "publishedAt": "2025-09-24T23:01:11Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "특이점이 온 해킹 기술",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/ykU8DC8uzmw/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/ykU8DC8uzmw/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/ykU8DC8uzmw/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/ykU8DC8uzmw/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/ykU8DC8uzmw/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "특이점이 온 해킹 기술",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT50S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "223786",
+              "likeCount": "2460",
+              "favoriteCount": "0",
+              "commentCount": "142"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "EZKFW3nUzj3Dq5OHbkLl0LZnp5Q",
+            "id": "j_nvwJhFirA",
+            "snippet": {
+              "publishedAt": "2025-09-24T09:01:09Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "넘사벽인 미국의 사이즈",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/j_nvwJhFirA/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/j_nvwJhFirA/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/j_nvwJhFirA/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/j_nvwJhFirA/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/j_nvwJhFirA/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "넘사벽인 미국의 사이즈",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT47S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "1392430",
+              "likeCount": "23644",
+              "favoriteCount": "0",
+              "commentCount": "901"
+            }
+          }
+        ],
+        "totalVideos": 6,
+        "trendingVideos": 6
+      }
+    ],
+    "processingTimeMs": 3823,
+    "processingTimeSeconds": "3.8",
+    "avgTimePerChannel": "765",
+    "trendingRate": "44.4",
+    "quotaEfficiency": "4.00"
+  },
+  {
+    "timestamp": "2025-09-27T02:01:06.793Z",
+    "date": "2025. 9. 27.",
+    "totalChannels": 5,
+    "processedChannels": 5,
+    "totalVideos": 27,
+    "trendingVideos": 12,
+    "quotaUsed": 3,
+    "errors": [],
+    "videos": [
+      {
+        "channelId": "UCgCwj2FQ6TPIK-D7a1NajbA",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "8PRJ1mC690-0Uh6JYHd-pST3IFw",
+            "id": "qM1yKz3UwMs",
+            "snippet": {
+              "publishedAt": "2025-09-26T22:01:09Z",
+              "channelId": "UCgCwj2FQ6TPIK-D7a1NajbA",
+              "title": "호날두 주니어의 여자친구들(?)💀",
+              "description": "호날두 주니어의 여자친구들(?)💀\n#shorts #호날두",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/qM1yKz3UwMs/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/qM1yKz3UwMs/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/qM1yKz3UwMs/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/qM1yKz3UwMs/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/qM1yKz3UwMs/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "호날두7",
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "호날두 주니어의 여자친구들(?)💀",
+                "description": "호날두 주니어의 여자친구들(?)💀\n#shorts #호날두"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT25S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "169098",
+              "likeCount": "3855",
+              "favoriteCount": "0",
+              "commentCount": "26"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "njlfg-jlSV2ldqDgf7ge2BDV5So",
+            "id": "cq8ikmeO4Jk",
+            "snippet": {
+              "publishedAt": "2025-09-25T22:00:48Z",
+              "channelId": "UCgCwj2FQ6TPIK-D7a1NajbA",
+              "title": "호날두 만들기 프로젝트 (둘째 아들)❣️",
+              "description": "호날두 만들기 프로젝트 (둘째 아들)❣️\n#shorts #호날두",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/cq8ikmeO4Jk/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/cq8ikmeO4Jk/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/cq8ikmeO4Jk/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/cq8ikmeO4Jk/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/cq8ikmeO4Jk/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "호날두7",
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "호날두 만들기 프로젝트 (둘째 아들)❣️",
+                "description": "호날두 만들기 프로젝트 (둘째 아들)❣️\n#shorts #호날두"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT31S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "442059",
+              "likeCount": "5837",
+              "favoriteCount": "0",
+              "commentCount": "51"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "mEaLv1ZloeeSD6rbZAR13QrDhcw",
+            "id": "Mye2ngP6qnM",
+            "snippet": {
+              "publishedAt": "2025-09-24T22:00:28Z",
+              "channelId": "UCgCwj2FQ6TPIK-D7a1NajbA",
+              "title": "호날두 주니어의 슬리퍼 선물을 신은 조지나❣️",
+              "description": "호날두 주니어의 슬리퍼 선물을 신은 조지나❣️\n#shorts #호날두",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/Mye2ngP6qnM/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/Mye2ngP6qnM/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/Mye2ngP6qnM/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/Mye2ngP6qnM/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/Mye2ngP6qnM/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "호날두7",
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "호날두 주니어의 슬리퍼 선물을 신은 조지나❣️",
+                "description": "호날두 주니어의 슬리퍼 선물을 신은 조지나❣️\n#shorts #호날두"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT24S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "2514189",
+              "likeCount": "28726",
+              "favoriteCount": "0",
+              "commentCount": "145"
+            }
+          }
+        ],
+        "totalVideos": 3,
+        "trendingVideos": 3
+      },
+      {
+        "channelId": "UCekCucFs7NYg7fBKhty8fNA",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "5n1dgoEpLigCg943HKdVYAbHSEo",
+            "id": "QwemKyWiqtU",
+            "snippet": {
+              "publishedAt": "2025-09-26T13:15:04Z",
+              "channelId": "UCekCucFs7NYg7fBKhty8fNA",
+              "title": "트럼펫 연주가의 은밀한 트레이닝",
+              "description": "운동과 음악이 만나는 순간, 💪🎺\n트럼펫 연주가의 은밀한 트레이닝,\n한 턱걸이마다 울려 퍼지는 단 하나의 음입니다.\n\n웃음과 놀라움이 동시에 터져나오는\n유쾌한 퍼포먼스를 지금 확인해보세요.\n\nWhen music meets muscle. 💪🎺\nThe trumpeter’s secret training:\none pull-up, one note.\nA playful performance that’s as funny as it is impressive.\n\n출처(Source): Instagram @brass.ers\n\n#연주 #트럼펫 #악기 #music #trumpet",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/QwemKyWiqtU/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/QwemKyWiqtU/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/QwemKyWiqtU/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/QwemKyWiqtU/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/QwemKyWiqtU/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "메타클럽타운",
+              "tags": [
+                "실제상황",
+                "웃긴영상",
+                "흥미로운영상",
+                "신기한영상",
+                "트럼펫",
+                "턱걸이",
+                "피트니스",
+                "trumpet",
+                "pullup",
+                "workout",
+                "gym",
+                "funnyvideo",
+                "meme",
+                "viralshorts",
+                "viralvideo",
+                "shorts",
+                "brass",
+                "strength",
+                "음악쇼츠",
+                "fitnessmeme"
+              ],
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "localized": {
+                "title": "트럼펫 연주가의 은밀한 트레이닝",
+                "description": "운동과 음악이 만나는 순간, 💪🎺\n트럼펫 연주가의 은밀한 트레이닝,\n한 턱걸이마다 울려 퍼지는 단 하나의 음입니다.\n\n웃음과 놀라움이 동시에 터져나오는\n유쾌한 퍼포먼스를 지금 확인해보세요.\n\nWhen music meets muscle. 💪🎺\nThe trumpeter’s secret training:\none pull-up, one note.\nA playful performance that’s as funny as it is impressive.\n\n출처(Source): Instagram @brass.ers\n\n#연주 #트럼펫 #악기 #music #trumpet"
+              }
+            },
+            "contentDetails": {
+              "duration": "PT10S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "23131",
+              "likeCount": "100",
+              "favoriteCount": "0",
+              "commentCount": "2"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "05BcyU49zt2eqhrpDNznTI6NC-Q",
+            "id": "zzfo57zbL00",
+            "snippet": {
+              "publishedAt": "2025-09-25T13:15:11Z",
+              "channelId": "UCekCucFs7NYg7fBKhty8fNA",
+              "title": "청소하다 만들어버린 클럽 DJ 무대",
+              "description": "청소하다가 이런 클럽 DJ 무대가 만들어질 줄은 몰랐습니다. 🧽🎶\n손끝의 움직임과 소리가 우연히 맞아떨어져,\n일상이 공연으로 바뀌는 순간이었습니다.\n\nNever thought cleaning could create a club DJ stage.\nThe sync of sound and hand movements turned chores\ninto a surprising live performance.\n\n#연주 #음악 #리듬 #music #rhythm",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/zzfo57zbL00/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/zzfo57zbL00/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/zzfo57zbL00/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/zzfo57zbL00/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/zzfo57zbL00/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "메타클럽타운",
+              "tags": [
+                "실제상황",
+                "흥미로운영상",
+                "신기한영상",
+                "club",
+                "DJ",
+                "EDM",
+                "music",
+                "rhythm",
+                "beat",
+                "viralshorts",
+                "satisfying",
+                "perfect timing",
+                "meme",
+                "연주",
+                "음악",
+                "리듬",
+                "소리",
+                "밈",
+                "중독성",
+                "쇼츠추천"
+              ],
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "청소하다 만들어버린 클럽 DJ 무대",
+                "description": "청소하다가 이런 클럽 DJ 무대가 만들어질 줄은 몰랐습니다. 🧽🎶\n손끝의 움직임과 소리가 우연히 맞아떨어져,\n일상이 공연으로 바뀌는 순간이었습니다.\n\nNever thought cleaning could create a club DJ stage.\nThe sync of sound and hand movements turned chores\ninto a surprising live performance.\n\n#연주 #음악 #리듬 #music #rhythm"
+              },
+              "defaultAudioLanguage": "en"
+            },
+            "contentDetails": {
+              "duration": "PT15S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "19385",
+              "likeCount": "235",
+              "favoriteCount": "0",
+              "commentCount": "5"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "sNgPhmFWOyASorj4uoe99UXPOcY",
+            "id": "pxdrsfz4oDU",
+            "snippet": {
+              "publishedAt": "2025-09-24T13:15:14Z",
+              "channelId": "UCekCucFs7NYg7fBKhty8fNA",
+              "title": "프랑스 아빠의 특별한 교육",
+              "description": "프랑스 공원에서 만난 아빠와 아들 🚴‍♂️  \n진짜 오르막길에서, 아빠의 손길이 아이의 날개가 됩니다.  \n프랑스 아빠의 특별한 교육이 바로 이런 순간 아닐까요?  \n\nA touching scene from a park in France 🇫🇷  \nOn an uphill road, a father’s hand becomes the wings for his child.  \nThis is a special lesson only a French dad could give.  \n\nBGM: 윤종신 – 오르막길 (2012 월간 윤종신 6월호 [뜬금LIVE]) \n\n#감성쇼츠 #가족사랑 #힐링영상 #emotionalshorts #familylove",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/pxdrsfz4oDU/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/pxdrsfz4oDU/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/pxdrsfz4oDU/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/pxdrsfz4oDU/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/pxdrsfz4oDU/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "메타클럽타운",
+              "tags": [
+                "프랑스",
+                "프랑스아빠",
+                "아빠와아들",
+                "부자사랑",
+                "가족사랑",
+                "육아일상",
+                "아이성장",
+                "힐링영상",
+                "감성쇼츠",
+                "짧은영상",
+                "명장면",
+                "France",
+                "FrenchDad",
+                "FatherAndSon",
+                "Parenting",
+                "FamilyLove",
+                "EmotionalShorts",
+                "Heartwarming",
+                "ViralShorts",
+                "힐링쇼츠"
+              ],
+              "categoryId": "22",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "프랑스 아빠의 특별한 교육",
+                "description": "프랑스 공원에서 만난 아빠와 아들 🚴‍♂️  \n진짜 오르막길에서, 아빠의 손길이 아이의 날개가 됩니다.  \n프랑스 아빠의 특별한 교육이 바로 이런 순간 아닐까요?  \n\nA touching scene from a park in France 🇫🇷  \nOn an uphill road, a father’s hand becomes the wings for his child.  \nThis is a special lesson only a French dad could give.  \n\nBGM: 윤종신 – 오르막길 (2012 월간 윤종신 6월호 [뜬금LIVE]) \n\n#감성쇼츠 #가족사랑 #힐링영상 #emotionalshorts #familylove"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT18S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "11468",
+              "likeCount": "92",
+              "favoriteCount": "0",
+              "commentCount": "4"
+            }
+          }
+        ],
+        "totalVideos": 3,
+        "trendingVideos": 3
+      },
+      {
+        "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+        "videos": [
+          {
+            "kind": "youtube#video",
+            "etag": "Ir4vElfmb0D69AIpVEqW1GTjp30",
+            "id": "IDE_SjWHl98",
+            "snippet": {
+              "publishedAt": "2025-09-26T23:00:18Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "카드 복제기를 찾아내는 카드",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/IDE_SjWHl98/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/IDE_SjWHl98/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/IDE_SjWHl98/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/IDE_SjWHl98/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/IDE_SjWHl98/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "카드 복제기를 찾아내는 카드",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT42S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "20539",
+              "likeCount": "235",
+              "favoriteCount": "0",
+              "commentCount": "5"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "FcNtYklH3-P_wmfhH_cTPHTbfuA",
+            "id": "BxZL3Vs2rhs",
+            "snippet": {
+              "publishedAt": "2025-09-26T09:00:18Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "유니버셜 할로윈 캐스트들 출근 전 후 차이",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/BxZL3Vs2rhs/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/BxZL3Vs2rhs/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/BxZL3Vs2rhs/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/BxZL3Vs2rhs/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/BxZL3Vs2rhs/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "유니버셜 할로윈 캐스트들 출근 전 후 차이",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT49S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "570016",
+              "likeCount": "12788",
+              "favoriteCount": "0",
+              "commentCount": "48"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "z7KmHUDS_9GJNBWY_oAL4FP9Izo",
+            "id": "6V2FMAkUe6Y",
+            "snippet": {
+              "publishedAt": "2025-09-25T23:00:10Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "어른이 된다는 건",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/6V2FMAkUe6Y/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/6V2FMAkUe6Y/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/6V2FMAkUe6Y/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/6V2FMAkUe6Y/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/6V2FMAkUe6Y/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "어른이 된다는 건",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT52S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "57152",
+              "likeCount": "1355",
+              "favoriteCount": "0",
+              "commentCount": "12"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "i5sULvinQnAy1LsGyqMuathxo1g",
+            "id": "P1CxoPzz1lM",
+            "snippet": {
+              "publishedAt": "2025-09-25T09:00:39Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "접어먹는 사탕 제대로 먹는 법",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/P1CxoPzz1lM/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/P1CxoPzz1lM/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/P1CxoPzz1lM/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/P1CxoPzz1lM/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/P1CxoPzz1lM/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "접어먹는 사탕 제대로 먹는 법",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT54S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "657049",
+              "likeCount": "10664",
+              "favoriteCount": "0",
+              "commentCount": "216"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "rw7r1p6njklWtn-SUbeZwUs7F40",
+            "id": "ykU8DC8uzmw",
+            "snippet": {
+              "publishedAt": "2025-09-24T23:01:11Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "특이점이 온 해킹 기술",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/ykU8DC8uzmw/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/ykU8DC8uzmw/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/ykU8DC8uzmw/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/ykU8DC8uzmw/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/ykU8DC8uzmw/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "특이점이 온 해킹 기술",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT50S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "224100",
+              "likeCount": "2465",
+              "favoriteCount": "0",
+              "commentCount": "143"
+            }
+          },
+          {
+            "kind": "youtube#video",
+            "etag": "kRlifwzYckzwwxJU5qn7IyTRHYU",
+            "id": "j_nvwJhFirA",
+            "snippet": {
+              "publishedAt": "2025-09-24T09:01:09Z",
+              "channelId": "UC2PCyP-r5Lw3eCXHjhSthLA",
+              "title": "넘사벽인 미국의 사이즈",
+              "description": "#8",
+              "thumbnails": {
+                "default": {
+                  "url": "https://i.ytimg.com/vi/j_nvwJhFirA/default.jpg",
+                  "width": 120,
+                  "height": 90
+                },
+                "medium": {
+                  "url": "https://i.ytimg.com/vi/j_nvwJhFirA/mqdefault.jpg",
+                  "width": 320,
+                  "height": 180
+                },
+                "high": {
+                  "url": "https://i.ytimg.com/vi/j_nvwJhFirA/hqdefault.jpg",
+                  "width": 480,
+                  "height": 360
+                },
+                "standard": {
+                  "url": "https://i.ytimg.com/vi/j_nvwJhFirA/sddefault.jpg",
+                  "width": 640,
+                  "height": 480
+                },
+                "maxres": {
+                  "url": "https://i.ytimg.com/vi/j_nvwJhFirA/maxresdefault.jpg",
+                  "width": 1280,
+                  "height": 720
+                }
+              },
+              "channelTitle": "쑈옷",
+              "categoryId": "1",
+              "liveBroadcastContent": "none",
+              "defaultLanguage": "ko",
+              "localized": {
+                "title": "넘사벽인 미국의 사이즈",
+                "description": "#8"
+              },
+              "defaultAudioLanguage": "ko"
+            },
+            "contentDetails": {
+              "duration": "PT47S",
+              "dimension": "2d",
+              "definition": "hd",
+              "caption": "false",
+              "licensedContent": true,
+              "contentRating": {},
+              "projection": "rectangular"
+            },
+            "statistics": {
+              "viewCount": "1392430",
+              "likeCount": "23647",
+              "favoriteCount": "0",
+              "commentCount": "901"
+            }
+          }
+        ],
+        "totalVideos": 6,
+        "trendingVideos": 6
+      }
+    ],
+    "processingTimeMs": 3609,
+    "processingTimeSeconds": "3.6",
+    "avgTimePerChannel": "722",
+    "trendingRate": "44.4",
+    "quotaEfficiency": "4.00"
   }
 ]
