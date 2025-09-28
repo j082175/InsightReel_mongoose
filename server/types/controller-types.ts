@@ -37,8 +37,10 @@ export interface VideoMetadata {
     likes?: number;
     views?: number;
     commentsCount?: number;
+    shares?: number;  // TikTok 전용
     uploadDate?: string;
     duration?: number;
+    durationFormatted?: string;
     thumbnailUrl?: string;
     youtubeHandle?: string;
     subscribers?: number;
@@ -53,6 +55,10 @@ export interface VideoMetadata {
     hashtags?: string[];
     mentions?: string[];
     keywords?: string[];
+    language?: string;
+
+    // 플랫폼 정보
+    platform?: string;
 
     // Instagram 특화 필드
     _instagramAuthor?: string;
@@ -156,4 +162,6 @@ export interface VideoProcessingResult {
     videoPath?: string;
     thumbnailPath?: string;
     thumbnailPaths?: string[] | string;
+    duration?: number;
+    analysisContent?: string;
 }

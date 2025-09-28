@@ -253,9 +253,17 @@ export class VideoController {
                 });
 
                 this.updateStats();
+
+                // 🔍 Debug: API 응답 전 결과 확인
+                ServerLogger.info('🔍 API 응답 result 디버그:');
+                ServerLogger.info(`analysisContent in result: "${result.analysisContent}"`);
+                ServerLogger.info(`duration in result: ${result.duration}`);
+                ServerLogger.info(`Full result keys: ${Object.keys(result).join(', ')}`);
+
+                // 메시지를 result 객체에 직접 포함시켜 반환
                 return {
                     message: '비디오가 성공적으로 처리되었습니다.',
-                    data: result,
+                    ...result  // Spread the result directly instead of nesting under 'data'
                 };
             },
             req,
@@ -339,13 +347,15 @@ export class VideoController {
             analysis: null,
         };
 
+        // enrichedMetadata를 try 블록 밖에서 선언하여 catch 블록에서도 접근 가능하게 함
+        let enrichedMetadata: VideoMetadata = { ...(metadata || {}) };
+
         try {
             // Debug: 파이프라인 시작점에서 메타데이터 상태 확인
             ServerLogger.info(`🐛 파이프라인 시작 - metadata: ${metadata ? 'defined' : 'undefined'}`);
 
             // 1단계: 비디오 준비 및 메타데이터 수집
             const step1StartTime = Date.now();
-            let enrichedMetadata: VideoMetadata = { ...(metadata || {}) };
 
             // Instagram 메타데이터 보존 (메타데이터가 있을 때만)
             if (metadata) {
@@ -453,6 +463,145 @@ export class VideoController {
                         );
                     }
                 }
+
+                // Instagram URL인 경우 메타데이터 수집
+                if (platform === PLATFORMS.INSTAGRAM) {
+                    ServerLogger.info('📊 Instagram 메타데이터 수집 중...');
+                    const metadataStartTime = Date.now();
+                    try {
+                        const instagramInfo = await this.videoProcessor.getInstagramVideoInfo(postUrl);
+                        if (instagramInfo) {
+                            // Instagram 썸네일 로컬 다운로드
+                            let localThumbnailUrl = '';
+                            if (instagramInfo.thumbnailUrl) {
+                                try {
+                                    const downloadedThumbnailPath = await this.videoProcessor.downloadThumbnail(
+                                        instagramInfo.thumbnailUrl,
+                                        instagramInfo.shortcode,
+                                        'INSTAGRAM'
+                                    );
+                                    localThumbnailUrl = downloadedThumbnailPath || instagramInfo.thumbnailUrl;
+                                    ServerLogger.info(`📸 Instagram 썸네일 로컬 다운로드: ${localThumbnailUrl}`);
+                                } catch (error) {
+                                    ServerLogger.warn('Instagram 썸네일 다운로드 실패, 원본 URL 사용:', error);
+                                    localThumbnailUrl = instagramInfo.thumbnailUrl;
+                                }
+                            }
+
+                            enrichedMetadata = {
+                                ...enrichedMetadata,
+                                // 기본 비디오 정보
+                                title: instagramInfo.caption ? this.extractInstagramTitle(instagramInfo.caption) : 'Instagram Video',
+                                description: instagramInfo.caption || '',
+                                thumbnailUrl: localThumbnailUrl,
+                                // 채널 정보
+                                channelName: instagramInfo.owner?.username || instagramInfo.owner?.fullName || '',
+                                channelUrl: instagramInfo.owner?.username ? `https://www.instagram.com/${instagramInfo.owner.username}` : '',
+                                instagramAuthor: instagramInfo.owner?.username || '',
+                                _instagramAuthor: instagramInfo.owner?.username || '',
+                                // 통계 정보
+                                likes: instagramInfo.likeCount || 0,
+                                commentsCount: instagramInfo.commentCount || 0,
+                                views: instagramInfo.viewCount || 0,
+                                // 기타 정보
+                                uploadDate: instagramInfo.uploadDate || new Date().toISOString(),
+                                duration: instagramInfo.videoDuration || 0,
+                                contentType: 'shortform', // Instagram은 대부분 숏폼
+                                hashtags: instagramInfo.hashtags || [],
+                                mentions: instagramInfo.mentions || [],
+                                language: instagramInfo.language || '',
+                                platform: 'INSTAGRAM'
+                            };
+                            const metadataTime = Date.now() - metadataStartTime;
+                            ServerLogger.info(`✅ Instagram 메타데이터 수집 완료 (소요시간: ${metadataTime}ms):`);
+                            ServerLogger.info(`👤 채널: ${enrichedMetadata.channelName}`);
+                            ServerLogger.info(`👍 좋아요: ${enrichedMetadata.likes}, 💬 댓글: ${enrichedMetadata.commentsCount}, 👀 조회수: ${enrichedMetadata.views}`);
+                            ServerLogger.info(`📝 제목: ${enrichedMetadata.title}`);
+                            ServerLogger.info(`🏷️ 해시태그: ${enrichedMetadata.hashtags?.length || 0}개`);
+                            ServerLogger.info(`📅 업로드: ${enrichedMetadata.uploadDate}`);
+                        } else {
+                            const metadataTime = Date.now() - metadataStartTime;
+                            ServerLogger.warn(`⚠️ Instagram 메타데이터를 가져올 수 없음 (소요시간: ${metadataTime}ms)`);
+                        }
+                    } catch (error: any) {
+                        const metadataTime = Date.now() - metadataStartTime;
+                        ServerLogger.warn(
+                            `⚠️ Instagram 메타데이터 수집 실패 (무시하고 계속, 소요시간: ${metadataTime}ms):`,
+                            error.message,
+                        );
+                    }
+                }
+
+                // TikTok URL인 경우 메타데이터 수집
+                if (platform === PLATFORMS.TIKTOK) {
+                    ServerLogger.info('📊 TikTok 메타데이터 수집 중...');
+                    const metadataStartTime = Date.now();
+                    try {
+                        const tiktokInfo = await this.videoProcessor.getTikTokVideoInfo(postUrl);
+                        if (tiktokInfo) {
+                            ServerLogger.info('🔍 Controller에서 받은 TikTok 데이터:', JSON.stringify(tiktokInfo, null, 2));
+                            // TikTok 썸네일 로컬 다운로드
+                            let localThumbnailUrl = '';
+                            if (tiktokInfo.thumbnailUrl) {
+                                try {
+                                    const downloadedThumbnailPath = await this.videoProcessor.downloadThumbnail(
+                                        tiktokInfo.thumbnailUrl,
+                                        tiktokInfo.videoId,
+                                        'TIKTOK'
+                                    );
+                                    localThumbnailUrl = downloadedThumbnailPath || tiktokInfo.thumbnailUrl;
+                                    ServerLogger.info(`📸 TikTok 썸네일 로컬 다운로드: ${localThumbnailUrl}`);
+                                } catch (error) {
+                                    ServerLogger.warn('TikTok 썸네일 다운로드 실패, 원본 URL 사용:', error);
+                                    localThumbnailUrl = tiktokInfo.thumbnailUrl;
+                                }
+                            }
+
+                            enrichedMetadata = {
+                                ...enrichedMetadata,
+                                // 기본 비디오 정보
+                                title: tiktokInfo.title || tiktokInfo.description || 'TikTok Video',
+                                description: tiktokInfo.description || '',
+                                thumbnailUrl: localThumbnailUrl,
+                                // 채널 정보
+                                channelName: tiktokInfo.channelName || '',
+                                channelUrl: tiktokInfo.channelName ? `https://www.tiktok.com/@${tiktokInfo.channelName}` : '',
+                                // 통계 정보
+                                likes: tiktokInfo.likes || 0,
+                                commentsCount: tiktokInfo.comments || 0,
+                                views: tiktokInfo.views || 0,
+                                shares: tiktokInfo.shares || 0,
+                                // 기타 정보
+                                uploadDate: tiktokInfo.uploadDate || new Date().toISOString(),
+                                duration: tiktokInfo.duration || 0,
+                                durationFormatted: this.formatDurationFromSeconds(tiktokInfo.duration || 0),
+                                contentType: 'shortform', // TikTok은 모두 숏폼
+                                hashtags: tiktokInfo.hashtags || [],
+                                mentions: tiktokInfo.mentions || [],
+                                language: tiktokInfo.language || '',
+                                platform: 'TIKTOK'
+                            };
+                            const metadataTime = Date.now() - metadataStartTime;
+                            ServerLogger.info(`✅ TikTok 메타데이터 수집 완료 (소요시간: ${metadataTime}ms):`);
+                            ServerLogger.info(`👤 채널: ${enrichedMetadata.channelName}`);
+                            ServerLogger.info(`👍 좋아요: ${enrichedMetadata.likes}, 💬 댓글: ${enrichedMetadata.commentsCount}, 👀 조회수: ${enrichedMetadata.views}`);
+                            ServerLogger.info(`📝 제목: ${enrichedMetadata.title}`);
+                            ServerLogger.info(`🏷️ 해시태그: ${enrichedMetadata.hashtags?.length || 0}개`);
+                            ServerLogger.info(`📅 업로드: ${enrichedMetadata.uploadDate}`);
+                            ServerLogger.info(`⏱️ 지속시간: ${enrichedMetadata.duration}초 (포맷: ${enrichedMetadata.durationFormatted})`);
+                            ServerLogger.info(`🌍 언어: ${enrichedMetadata.language}`);
+                        } else {
+                            const metadataTime = Date.now() - metadataStartTime;
+                            ServerLogger.warn(`⚠️ TikTok 메타데이터를 가져올 수 없음 (소요시간: ${metadataTime}ms)`);
+                        }
+                    } catch (error: any) {
+                        const metadataTime = Date.now() - metadataStartTime;
+                        ServerLogger.warn(
+                            `⚠️ TikTok 메타데이터 수집 실패 (무시하고 계속, 소요시간: ${metadataTime}ms):`,
+                            error.message,
+                        );
+                    }
+                }
             } else {
                 throw new Error('비디오 URL 또는 파일이 필요합니다');
             }
@@ -512,6 +661,12 @@ export class VideoController {
                     enrichedMetadata,
                 );
 
+                // 🔍 Debug: AI 분석 결과 상세 로깅
+                ServerLogger.info('🔍 AI 분석 결과 전체:', JSON.stringify(pipeline.analysis, null, 2));
+                ServerLogger.info(`🔍 AI analysisContent: "${pipeline.analysis?.analysisContent}"`);
+                ServerLogger.info(`🔍 AI analysisContent type: ${typeof pipeline.analysis?.analysisContent}`);
+                ServerLogger.info(`🔍 AI analysisContent length: ${pipeline.analysis?.analysisContent?.length || 0}`);
+
                 const step3Time = Date.now() - step3StartTime;
                 ServerLogger.info(`✅ AI 분석 완료 (소요시간: ${step3Time}ms)`);
             } else {
@@ -544,6 +699,10 @@ export class VideoController {
                     analysisSource: pipeline.analysis.source
                 });
 
+                // 원본 hashtags와 mentions 보존
+                const originalHashtags = enrichedMetadata.hashtags || [];
+                const originalMentions = enrichedMetadata.mentions || [];
+
                 enrichedMetadata = {
                     ...enrichedMetadata,
                     // AI 분석 카테고리 결과
@@ -554,9 +713,15 @@ export class VideoController {
                     fullCategoryPath: pipeline.analysis.fullCategoryPath,
                     categoryDepth: pipeline.analysis.categoryDepth,
                     keywords: pipeline.analysis.keywords,
-                    hashtags: pipeline.analysis.hashtags,
-                    mentions: pipeline.analysis.mentions,
-                    analysisContent: pipeline.analysis.analysisContent,
+                    // AI 분석에서 hashtags가 비어있으면 원본 유지
+                    hashtags: (pipeline.analysis.hashtags && pipeline.analysis.hashtags.length > 0)
+                        ? pipeline.analysis.hashtags
+                        : originalHashtags,
+                    // AI 분석에서 mentions가 비어있으면 원본 유지
+                    mentions: (pipeline.analysis.mentions && pipeline.analysis.mentions.length > 0)
+                        ? pipeline.analysis.mentions
+                        : originalMentions,
+                    analysisContent: pipeline.analysis.analysisContent || '분석 내용 없음',
                     confidence: typeof pipeline.analysis.confidence === 'number'
                         ? pipeline.analysis.confidence.toString()
                         : pipeline.analysis.confidence,
@@ -681,6 +846,13 @@ export class VideoController {
                 ? pipeline.thumbnailPaths[0]
                 : pipeline.thumbnailPaths;
 
+            // 🔍 Debug: 최종 응답 데이터 로깅
+            ServerLogger.info(`🔍 파이프라인 최종 응답 디버그:`);
+            ServerLogger.info(`⏱️ enrichedMetadata.duration: ${enrichedMetadata?.duration}`);
+            ServerLogger.info(`📝 enrichedMetadata.analysisContent: ${enrichedMetadata?.analysisContent}`);
+            ServerLogger.info(`🌍 enrichedMetadata.language: ${enrichedMetadata?.language}`);
+            ServerLogger.info(`🤖 pipeline.analysis?.analysisContent: ${pipeline.analysis?.analysisContent}`);
+
             return {
                 category: pipeline.analysis?.category,
                 mainCategory: pipeline.analysis?.mainCategory,
@@ -695,6 +867,8 @@ export class VideoController {
                 videoPath: pipeline.videoPath!,
                 thumbnailPath: responseThumbnailPath!,
                 thumbnailPaths: pipeline.thumbnailPaths!,
+                duration: enrichedMetadata?.duration || 0,
+                analysisContent: pipeline.analysis?.analysisContent || enrichedMetadata?.analysisContent || '',
             };
         } catch (error) {
             ServerLogger.error('파이프라인 실행 중 오류 발생:', error);
@@ -717,6 +891,8 @@ export class VideoController {
                     videoPath: pipeline.videoPath!,
                     thumbnailPath: '',
                     thumbnailPaths: [],
+                    duration: enrichedMetadata?.duration || 0,
+                    analysisContent: pipeline.analysis?.analysisContent || enrichedMetadata?.analysisContent || '',
                 };
             } else {
                 // 다른 중대한 오류의 경우에만 정리 작업
@@ -903,6 +1079,36 @@ export class VideoController {
         const seconds = parseInt(match[3] || '0');
 
         return hours * 3600 + minutes * 60 + seconds;
+    }
+
+    /**
+     * 초를 MM:SS 형태로 포맷팅
+     */
+    private formatDurationFromSeconds(seconds: number): string {
+        if (!seconds || seconds <= 0) return '0:00';
+
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+
+    /**
+     * Instagram 제목 추출 (caption의 첫 번째 줄에서)
+     */
+    private extractInstagramTitle(caption: string): string {
+        if (!caption) return 'Instagram Video';
+
+        // 첫 번째 줄이나 첫 번째 문장을 제목으로 사용
+        const lines = caption.split('\n');
+        const firstLine = lines[0].trim();
+
+        if (firstLine.length > 3) {
+            // 60자 이내로 제한
+            return firstLine.length > 60 ? firstLine.substring(0, 57) + '...' : firstLine;
+        }
+
+        return 'Instagram Video';
     }
 
     /**

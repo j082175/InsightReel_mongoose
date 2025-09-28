@@ -587,6 +587,7 @@ export class VideoDataConverter {
             thumbnailUrl: metadata?.thumbnailUrl || '',
             language: metadata?.language || '',
             description: metadata?.description || '',
+            analysisContent: analysis?.analysisContent || '',
             channelId: metadata?.channelId || '',
             collectionTime: new Date().toISOString() as ISODateString
         };

@@ -11,24 +11,71 @@ export class TikTokProcessor {
 
     private initializeAPI() {
         try {
-            const TikTokAPI = require('@tobyg74/tiktok-api-dl');
-            this.tikTokAPI = TikTokAPI;
+            // 여러 TikTok API 패키지 시도
+            try {
+                const TikTokScraper = require('@tobyg74/tiktok-api-dl');
+                this.tikTokAPI = TikTokScraper;
+                ServerLogger.info('📱 TikTok API 초기화 성공: @tobyg74/tiktok-api-dl');
+            } catch (err) {
+                ServerLogger.warn('TikTok API 패키지 없음, yt-dlp 대체 방법 사용');
+                this.tikTokAPI = null;
+            }
         } catch (error) {
             ServerLogger.error('TikTok API 초기화 실패:', error);
+            this.tikTokAPI = null;
         }
     }
 
     async downloadVideo(videoUrl: string, filePath: string, startTime?: Date): Promise<boolean> {
         try {
-            const videoInfo = await this.getVideoInfo(videoUrl);
-            if (!videoInfo || !videoInfo.videoUrl) {
-                throw new Error('TikTok 비디오 URL을 가져올 수 없습니다');
-            }
-
-            return await this.downloadFromDirectUrl(videoInfo.videoUrl, filePath);
-
+            ServerLogger.info(`📥 TikTok 비디오 yt-dlp 다운로드 시작: ${videoUrl}`);
+            return await this.downloadWithYtDlp(videoUrl, filePath);
         } catch (error) {
             ServerLogger.error('TikTok 비디오 다운로드 실패:', error);
+            return false;
+        }
+    }
+
+    private async downloadWithYtDlp(videoUrl: string, filePath: string): Promise<boolean> {
+        try {
+            const { exec } = require('child_process');
+            const { promisify } = require('util');
+            const execAsync = promisify(exec);
+            const path = require('path');
+            const fs = require('fs');
+
+            // 출력 디렉토리 확인
+            const outputDir = path.dirname(filePath);
+            if (!fs.existsSync(outputDir)) {
+                fs.mkdirSync(outputDir, { recursive: true });
+            }
+
+            const command = `yt-dlp -o "${filePath}" "${videoUrl}"`;
+            ServerLogger.info(`🔧 yt-dlp 다운로드 명령어: ${command}`);
+
+            const { stdout, stderr } = await execAsync(command, { timeout: 60000 });
+
+            if (stderr) {
+                ServerLogger.warn(`yt-dlp 경고: ${stderr}`);
+            }
+
+            // 파일 존재 및 크기 확인
+            if (fs.existsSync(filePath)) {
+                const stats = fs.statSync(filePath);
+                if (stats.size > 1024) {
+                    ServerLogger.info(`✅ TikTok 비디오 yt-dlp 다운로드 완료: ${filePath} (${stats.size} bytes)`);
+                    return true;
+                } else {
+                    ServerLogger.warn(`❌ 다운로드된 파일이 너무 작습니다: ${stats.size} bytes`);
+                    return false;
+                }
+            } else {
+                ServerLogger.error('❌ yt-dlp 다운로드 완료했지만 파일이 존재하지 않음');
+                return false;
+            }
+
+        } catch (error: any) {
+            ServerLogger.error('yt-dlp TikTok 다운로드 실패:', error.message);
             return false;
         }
     }
@@ -71,18 +118,27 @@ export class TikTokProcessor {
 
     async getVideoInfo(videoUrl: string): Promise<TikTokVideoInfo | null> {
         try {
-            // 여러 버전의 API를 시도
+            // 1. v1 API 시도
             let result = await this.getVideoInfoV1(videoUrl);
             if (result) return result;
 
+            // 2. yt-dlp 대체 방법 시도 (v1 실패 시 바로)
+            ServerLogger.info('📱 TikTok API v1 실패, yt-dlp 우선 시도...');
+            result = await this.getVideoInfoFallback(videoUrl);
+            if (result) return result;
+
+            // 3. yt-dlp도 실패하면 v2 시도
+            ServerLogger.info('🔄 yt-dlp도 실패, TikTok API v2 시도...');
             result = await this.getVideoInfoV2(videoUrl);
             if (result) return result;
 
+            // 4. 마지막으로 v3 시도
+            ServerLogger.info('🔄 TikTok API v2도 실패, v3 최종 시도...');
             result = await this.getVideoInfoV3(videoUrl);
             if (result) return result;
 
-            // 대체 방법
-            return await this.getVideoInfoFallback(videoUrl);
+            ServerLogger.error('❌ 모든 TikTok 추출 방법 실패');
+            return null;
 
         } catch (error) {
             ServerLogger.error('TikTok 비디오 정보 조회 실패:', error);
@@ -92,14 +148,33 @@ export class TikTokProcessor {
 
     private async getVideoInfoV1(videoUrl: string): Promise<TikTokVideoInfo | null> {
         try {
-            if (!this.tikTokAPI) return null;
+            if (!this.tikTokAPI) {
+                ServerLogger.info('TikTok API 없음, yt-dlp 대체 방법으로 직접 이동');
+                return null;
+            }
 
-            const apiResult = await this.tikTokAPI.downloader(videoUrl, {
-                version: "v1"
-            });
+            // 레거시 코드에서 사용했던 정확한 API 메서드 시도
+            let apiResult;
+            if (typeof this.tikTokAPI.Downloader === 'function') {
+                ServerLogger.info('📱 TikTok API Downloader 메서드 사용 (레거시 호환)');
+                apiResult = await this.tikTokAPI.Downloader(videoUrl, { version: "v1" });
+            } else if (typeof this.tikTokAPI.downloader === 'function') {
+                ServerLogger.info('📱 TikTok API downloader 메서드 사용');
+                apiResult = await this.tikTokAPI.downloader(videoUrl, { version: "v1" });
+            } else if (typeof this.tikTokAPI.TiktokDL === 'function') {
+                ServerLogger.info('📱 TikTok API TiktokDL 메서드 사용');
+                apiResult = await this.tikTokAPI.TiktokDL(videoUrl);
+            } else if (typeof this.tikTokAPI === 'function') {
+                ServerLogger.info('📱 TikTok API 직접 함수 호출');
+                apiResult = await this.tikTokAPI(videoUrl);
+            } else {
+                ServerLogger.info('TikTok API 메서드 없음, yt-dlp 대체 방법으로 이동');
+                return null;
+            }
 
-            if (apiResult && apiResult.status === "success") {
-                return this.parseV1TikTokData(apiResult.result, videoUrl);
+            if (apiResult && (apiResult.status === "success" || apiResult.result)) {
+                ServerLogger.info('🔍 TikTok API v1 원본 데이터:', JSON.stringify(apiResult, null, 2));
+                return this.parseV1TikTokData(apiResult.result || apiResult, videoUrl);
             }
 
             return null;
@@ -114,12 +189,17 @@ export class TikTokProcessor {
         try {
             if (!this.tikTokAPI) return null;
 
-            const apiResult = await this.tikTokAPI.downloader(videoUrl, {
-                version: "v2"
-            });
+            let apiResult;
+            if (typeof this.tikTokAPI.Downloader === 'function') {
+                ServerLogger.info('📱 TikTok API v2 Downloader 시도 (레거시 호환)');
+                apiResult = await this.tikTokAPI.Downloader(videoUrl, { version: "v2" });
+            } else {
+                ServerLogger.info('TikTok API v2 메서드 없음, v3로 이동');
+                return null;
+            }
 
-            if (apiResult && apiResult.status === "success") {
-                return this.parseV2TikTokData(apiResult.result, videoUrl);
+            if (apiResult && (apiResult.status === "success" || apiResult.result)) {
+                return this.parseV2TikTokData(apiResult.result || apiResult, videoUrl);
             }
 
             return null;
@@ -134,12 +214,17 @@ export class TikTokProcessor {
         try {
             if (!this.tikTokAPI) return null;
 
-            const apiResult = await this.tikTokAPI.downloader(videoUrl, {
-                version: "v3"
-            });
+            let apiResult;
+            if (typeof this.tikTokAPI.Downloader === 'function') {
+                ServerLogger.info('📱 TikTok API v3 Downloader 시도 (레거시 호환)');
+                apiResult = await this.tikTokAPI.Downloader(videoUrl, { version: "v3" });
+            } else {
+                ServerLogger.info('TikTok API v3 메서드 없음, yt-dlp로 이동');
+                return null;
+            }
 
-            if (apiResult && apiResult.status === "success") {
-                return this.parseV3TikTokData(apiResult.result, videoUrl);
+            if (apiResult && (apiResult.status === "success" || apiResult.result)) {
+                return this.parseV3TikTokData(apiResult.result || apiResult, videoUrl);
             }
 
             return null;
@@ -152,40 +237,89 @@ export class TikTokProcessor {
 
     private async getVideoInfoFallback(videoUrl: string): Promise<TikTokVideoInfo | null> {
         try {
-            // yt-dlp를 사용한 대체 방법
+            ServerLogger.info('🔄 yt-dlp 대체 방법으로 TikTok 메타데이터 추출 시도...');
             const { exec } = require('child_process');
             const { promisify } = require('util');
             const execAsync = promisify(exec);
 
-            const command = `yt-dlp --dump-json "${videoUrl}"`;
-            const { stdout } = await execAsync(command);
+            const command = `yt-dlp --dump-json --write-info-json "${videoUrl}"`;
+            ServerLogger.info(`🔧 yt-dlp 명령어: ${command}`);
+
+            const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
+
+            if (stderr) {
+                ServerLogger.warn(`yt-dlp 경고: ${stderr}`);
+            }
 
             const data = JSON.parse(stdout);
-            return this.parseYtDlpTikTokData(data);
+            ServerLogger.info('🔍 yt-dlp TikTok 원본 데이터:', JSON.stringify(data, null, 2));
+
+            const result = this.parseYtDlpTikTokData(data);
+
+            ServerLogger.info('✅ yt-dlp로 TikTok 메타데이터 추출 성공');
+            ServerLogger.info(`📊 추출된 데이터: 조회수=${result.views}, 좋아요=${result.likes}, 댓글=${result.comments}, 지속시간=${result.duration}`);
+
+            return result;
 
         } catch (error) {
-            ServerLogger.error('TikTok 대체 방법 실패:', error);
+            ServerLogger.error('TikTok yt-dlp 대체 방법 실패:', error);
             return null;
         }
     }
 
     private parseV1TikTokData(videoData: any, videoUrl: string): TikTokVideoInfo {
-        const hashtags = this.extractHashtags(videoData.desc || '');
-        const mentions = this.extractMentions(videoData.desc || '');
+        const description = videoData.desc || '';
+        const hashtags = this.extractHashtags(description);
+        const mentions = this.extractMentions(description);
+
+        // Statistics 구조 디버깅 (올바른 필드명 사용)
+        ServerLogger.info('🔍 TikTok API v1 statistics 구조:', JSON.stringify(videoData.statistics, null, 2));
+
+        const views = parseInt(videoData.statistics?.viewCount || videoData.statistics?.playCount || videoData.playCount || videoData.viewCount || '0');
+        const likes = parseInt(videoData.statistics?.likeCount || videoData.statistics?.diggCount || videoData.likeCount || videoData.diggCount || '0');
+        const comments = parseInt(videoData.statistics?.commentCount || videoData.commentCount || '0');
+        const shares = parseInt(videoData.statistics?.shareCount || videoData.shareCount || '0');
+
+        // Duration 변환: 밀리초를 초로 변환
+        let duration = videoData.video?.duration || videoData.duration || 0;
+        if (duration > 1000) {
+            // 1000보다 크면 밀리초로 가정하여 초로 변환
+            duration = Math.round(duration / 1000);
+        }
+
+        // Language 추출: region 필드에서
+        const language = videoData.region || videoData.author?.region || '';
+
+        // 🔍 Debug: Language 추출 디버깅
+        ServerLogger.info('🔍 Language 추출 디버깅:', {
+            'videoData.region': videoData.region,
+            'videoData.author?.region': videoData.author?.region,
+            'final language': language,
+            'videoData keys': Object.keys(videoData),
+            'author keys': videoData.author ? Object.keys(videoData.author) : 'no author'
+        });
+
+        // Channel name: username 우선, 없으면 nickname
+        const channelName = videoData.author?.username || videoData.author?.uniqueId || videoData.author?.nickname || '';
+
+        ServerLogger.info(`🔍 TikTok API v1 파싱 결과: 조회수=${views}, 좋아요=${likes}, 댓글=${comments}, 지속시간=${duration}초, 언어=${language}, 채널=${channelName}, 해시태그=${hashtags.length}개`);
 
         return {
             videoId: this.extractTikTokId(videoUrl),
-            title: videoData.desc || 'TikTok Video',
-            description: videoData.desc || '',
-            channelName: videoData.author?.nickname || videoData.author?.uniqueId || '',
-            views: parseInt(videoData.stats?.viewCount || '0'),
-            likes: parseInt(videoData.stats?.likeCount || '0'),
-            comments: parseInt(videoData.stats?.commentCount || '0'),
-            shares: parseInt(videoData.stats?.shareCount || '0'),
+            title: description || 'TikTok Video',
+            description: description,
+            channelName: channelName,
+            views: views,
+            likes: likes,
+            comments: comments,
+            shares: shares,
             uploadDate: videoData.createTime ? new Date(videoData.createTime * 1000).toISOString() : new Date().toISOString(),
             thumbnailUrl: videoData.video?.cover || '',
             videoUrl: videoData.video?.playAddr || videoData.video?.downloadAddr,
-            duration: videoData.video?.duration,
+            duration: duration,
+            hashtags: hashtags,
+            mentions: mentions,
+            language: language,
             platform: 'TIKTOK' as const
         };
     }
@@ -227,21 +361,72 @@ export class TikTokProcessor {
     }
 
     private parseYtDlpTikTokData(data: any): TikTokVideoInfo {
+        const description = data.description || data.title || '';
+
+        // 통계 데이터 추출 개선
+        const views = parseInt(data.view_count || data.views || data.play_count || '0');
+        const likes = parseInt(data.like_count || data.likes || data.favourite_count || '0');
+        const comments = parseInt(data.comment_count || data.comments || '0');
+        const shares = parseInt(data.repost_count || data.shares || data.share_count || '0');
+
+        // 지속시간 처리 개선
+        let duration = data.duration;
+        if (typeof duration === 'string') {
+            duration = parseFloat(duration);
+        }
+        duration = duration || 0;
+
+        // 해시태그 및 멘션 추출
+        const hashtags = this.extractHashtags(description);
+        const mentions = this.extractMentions(description);
+
+        // 🔍 Debug: yt-dlp language 추출 디버깅
+        const language = data.language || data.subtitles ? Object.keys(data.subtitles)[0] : '';
+        ServerLogger.info('🔍 yt-dlp Language 추출 디버깅:', {
+            'data.language': data.language,
+            'data.subtitles': data.subtitles ? Object.keys(data.subtitles) : 'no subtitles',
+            'final language': language,
+            'data keys': Object.keys(data)
+        });
+
+        ServerLogger.info(`🔍 TikTok 파싱 결과: 조회수=${views}, 좋아요=${likes}, 댓글=${comments}, 지속시간=${duration}초, 언어=${language}, 해시태그=${hashtags.length}개`);
+
         return {
-            videoId: data.id || '',
+            videoId: data.id || this.extractTikTokId(data.webpage_url || ''),
             title: data.title || data.description || 'TikTok Video',
-            description: data.description || data.title || '',
-            channelName: data.uploader || data.channel || '',
-            views: parseInt(data.view_count || '0'),
-            likes: parseInt(data.like_count || '0'),
-            comments: parseInt(data.comment_count || '0'),
-            shares: parseInt(data.repost_count || '0'),
-            uploadDate: data.upload_date || new Date().toISOString(),
-            thumbnailUrl: data.thumbnail || '',
-            videoUrl: data.url,
-            duration: data.duration,
+            description: description,
+            channelName: data.uploader || data.channel || data.uploader_id || '',
+            views: views,
+            likes: likes,
+            comments: comments,
+            shares: shares,
+            uploadDate: this.parseUploadDate(data.upload_date || data.timestamp) || new Date().toISOString(),
+            thumbnailUrl: data.thumbnail || data.thumbnails?.[0]?.url || '',
+            videoUrl: data.url || data.video_url,
+            duration: duration,
+            hashtags: hashtags,
+            mentions: mentions,
+            language: language,
             platform: 'TIKTOK' as const
         };
+    }
+
+    private parseUploadDate(uploadDate: string | number): string {
+        if (!uploadDate) return new Date().toISOString();
+
+        if (typeof uploadDate === 'number') {
+            return new Date(uploadDate * 1000).toISOString();
+        }
+
+        // YYYYMMDD 형식을 ISO string으로 변환
+        if (typeof uploadDate === 'string' && uploadDate.match(/^\d{8}$/)) {
+            const year = uploadDate.substring(0, 4);
+            const month = uploadDate.substring(4, 6);
+            const day = uploadDate.substring(6, 8);
+            return new Date(`${year}-${month}-${day}`).toISOString();
+        }
+
+        return new Date(uploadDate).toISOString();
     }
 
     extractTikTokId(url: string): string {

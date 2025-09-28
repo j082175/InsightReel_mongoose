@@ -13,6 +13,7 @@ export interface TikTokVideoInfo {
     duration?: number;
     hashtags?: string[];
     mentions?: string[];
+    language?: string;
     platform: 'TIKTOK';
 }
 
