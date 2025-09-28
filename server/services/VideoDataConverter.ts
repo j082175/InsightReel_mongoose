@@ -6,48 +6,39 @@
 
 import path from 'path';
 import { ServerLogger } from '../utils/logger';
+import type {
+    FinalVideoData,
+    Platform,
+    ContentType,
+    AnalysisStatus,
+    ISODateString,
+    StandardVideoMetadata,
+    AIAnalysisResult
+} from '../types/video-types';
 
-interface VideoData {
+// 로컬 VideoData 인터페이스 대신 표준 타입 사용
+type VideoData = Partial<StandardVideoMetadata> & {
     platform: string;
     postUrl?: string;
     url?: string;
     videoPath?: string;
-    metadata: any;
-    analysis: any;
-    timestamp: string;
-    channelName?: string;
-    title?: string;
-    description?: string;
-    likes?: number;
-    views?: number;
-    comments?: number;
-    commentsCount?: number;
-    channelUrl?: string;
-    thumbnailUrl?: string;
-    uploadDate?: string;
-}
+    metadata?: any;
+    analysis?: Partial<AIAnalysisResult>;
+    timestamp?: string;
+};
 
-interface ConvertedVideoData {
+// ConvertedVideoData는 FinalVideoData와 동일하게 사용
+type ConvertedVideoData = FinalVideoData & {
     rowNumber: number;
-    uploadDate: string;
-    platform: string;
-    channelName: string;
-    title: string;
-    url: string;
-    views: number;
-    likes: number;
-    commentsCount: number;
-    thumbnailUrl: string;
-    collectionTime: Date;
-    [key: string]: any;
-}
+    collectionTime: ISODateString;
+};
 
 export class VideoDataConverter {
     /**
      * 플랫폼별 데이터 변환 메인 메서드
      */
     static convertToSchema(platform: string, videoData: VideoData, rowNumber: number = 1): ConvertedVideoData {
-        const normalizedPlatform = platform.toUpperCase();
+        const normalizedPlatform = (platform || 'YOUTUBE').toUpperCase();
 
         try {
             switch (normalizedPlatform) {
@@ -81,21 +72,23 @@ export class VideoDataConverter {
 
         // 업로드 날짜 결정 (기존 buildRowData 로직)
         let uploadDate: string;
-        if (metadata.uploadDate) {
+        if (metadata?.uploadDate) {
             uploadDate = new Date(metadata.uploadDate).toLocaleString('ko-KR');
-        } else {
+        } else if (timestamp) {
             uploadDate = new Date(timestamp).toLocaleString('ko-KR');
+        } else {
+            uploadDate = new Date().toLocaleString('ko-KR');
         }
 
         // 🚨 디버깅: 입력 데이터 체크 (개발 환경에서만)
         if (process.env.NODE_ENV === 'development') {
             ServerLogger.debug(`🔍 DEBUG - YouTube 입력 데이터:`, {
-                'metadata keys': Object.keys(metadata),
-                'analysis keys': Object.keys(analysis),
-                'metadata.channelName': metadata.channelName,
-                'metadata.title': metadata.title,
-                'analysis.mainCategory': analysis.mainCategory,
-                'analysis.keywords': analysis.keywords
+                'metadata keys': metadata ? Object.keys(metadata) : [],
+                'analysis keys': analysis ? Object.keys(analysis) : [],
+                'metadata.channelName': metadata?.channelName,
+                'metadata.title': metadata?.title,
+                'analysis.mainCategory': analysis?.mainCategory,
+                'analysis.keywords': analysis?.keywords
             }, 'DATA_CONVERTER');
         }
 
@@ -107,26 +100,26 @@ export class VideoDataConverter {
         ServerLogger.info(
             `🔍 VideoDataConverter - Analysis 체크:`,
             {
-                'analysis.fullCategoryPath': analysis.fullCategoryPath,
-                'analysis.categoryDepth': analysis.categoryDepth,
-                'analysis.fullPath': analysis.fullPath,
-                'analysis.depth': analysis.depth,
+                'analysis.fullCategoryPath': analysis?.fullCategoryPath,
+                'analysis.categoryDepth': analysis?.categoryDepth,
+                'analysis.fullPath': 'legacy_field_not_available',
+                'analysis.depth': 'legacy_field_not_available',
             },
             'DATA_CONVERTER',
         );
 
-        if (isDynamicMode && (analysis.fullCategoryPath || analysis.fullPath)) {
-            fullCategoryPath = analysis.fullCategoryPath || analysis.fullPath;
-            categoryDepth = analysis.categoryDepth || analysis.depth || 0;
+        if (isDynamicMode && analysis?.fullCategoryPath) {
+            fullCategoryPath = analysis.fullCategoryPath || '';
+            categoryDepth = analysis.categoryDepth || 0;
         } else {
-            // 동적 카테고리에서 표준 필드나 레거시 필드가 있으면 사용
-            if (analysis.fullCategoryPath || analysis.fullPath) {
-                fullCategoryPath = analysis.fullCategoryPath || analysis.fullPath;
+            // 동적 카테고리에서 표준 필드가 있으면 사용
+            if (analysis?.fullCategoryPath) {
+                fullCategoryPath = analysis.fullCategoryPath || '';
                 categoryDepth = fullCategoryPath.split(' > ').length;
             } else {
                 // 기존 방식: mainCategory, middleCategory 조합
-                const mainCat = analysis.mainCategory || '미분류';
-                const middleCat = analysis.middleCategory || '';
+                const mainCat = analysis?.mainCategory || '미분류';
+                const middleCat = analysis?.middleCategory || '';
                 if (middleCat && middleCat !== '미분류') {
                     fullCategoryPath = `${mainCat} > ${middleCat}`;
                     categoryDepth = 2;
@@ -145,67 +138,58 @@ export class VideoDataConverter {
 
             // YouTube 전용 33개 필드
             uploadDate: uploadDate,
-            platform: (platform || 'YOUTUBE').toUpperCase(),
-            channelName: metadata.channelName ||
-                        metadata.channel ||
-                        metadata.channelTitle ||
-                        metadata.author ||
-                        metadata.account ||
+            platform: (platform || 'YOUTUBE').toUpperCase() as Platform,
+            channelName: metadata?.channelName ||
+                        metadata?.channel ||
+                        metadata?.channelTitle ||
+                        metadata?.author ||
+                        metadata?.account ||
                         '',
-            title: metadata.title || '',
-            youtubeHandle: metadata.youtubeHandle || '',
-            channelUrl: metadata.channelUrl || '',
-            mainCategory: analysis.mainCategory || '미분류',
-            middleCategory: analysis.middleCategory || '',
+            title: metadata?.title || '',
+            youtubeHandle: metadata?.youtubeHandle || '',
+            channelUrl: metadata?.channelUrl || '',
+            mainCategory: analysis?.mainCategory || '미분류',
+            middleCategory: analysis?.middleCategory || '',
             fullCategoryPath: fullCategoryPath,
             categoryDepth: categoryDepth,
-            keywords: Array.isArray(analysis.keywords)
+            keywords: Array.isArray(analysis?.keywords)
                 ? analysis.keywords
-                : analysis.keywords
+                : analysis?.keywords
                 ? [analysis.keywords]
                 : [],
-            hashtags: Array.isArray(analysis.hashtags)
+            hashtags: Array.isArray(analysis?.hashtags)
                 ? analysis.hashtags
-                : analysis.hashtags
+                : analysis?.hashtags
                 ? [analysis.hashtags]
                 : [],
-            mentions: Array.isArray(analysis.mentions)
+            mentions: Array.isArray(analysis?.mentions)
                 ? analysis.mentions
-                : analysis.mentions
+                : analysis?.mentions
                 ? [analysis.mentions]
                 : [],
-            description: metadata.description || '',
+            description: metadata?.description || '',
             analysisContent:
-                analysis.analysisContent ||
-                analysis.summary ||
-                analysis.description ||
-                analysis.content ||
+                analysis?.analysisContent ||
                 '',
-            comments: metadata.comments || '',
-            likes: this.parseNumber(metadata.likes),
-            commentsCount: this.parseNumber(metadata.commentsCount),
-            views: this.parseNumber(metadata.views),
-            duration: metadata.duration || '',
-            contentType: metadata.contentType || 'longform',
-            subscribers: this.parseNumber(metadata.subscribers),
-            channelVideos: this.parseNumber(metadata.channelVideos),
-            monetized: metadata.monetized || 'N',
-            youtubeCategory: metadata.youtubeCategory || '',
-            license: metadata.license || 'YOUTUBE',
-            quality: metadata.quality || 'sd',
-            language: metadata.language || null,
+            comments: metadata?.comments || '',
+            likes: this.parseNumber(metadata?.likes),
+            commentsCount: this.parseNumber(metadata?.commentsCount),
+            views: this.parseNumber(metadata?.views),
+            duration: metadata?.duration || '',
+            contentType: (metadata?.contentType as ContentType) || 'longform',
+            subscribers: this.parseNumber(metadata?.subscribers),
+            channelVideos: this.parseNumber(metadata?.channelVideos),
+            monetized: metadata?.monetized || '',
+            youtubeCategory: metadata?.youtubeCategory || '',
+            license: metadata?.license || '',
+            quality: metadata?.quality || '',
+            language: metadata?.language || '',
+            channelId: metadata?.channelId || '',
+            categoryId: metadata?.categoryId || '',
             url: url,
-            videoUrl: (() => {
-                const videoUrlValue = metadata.videoUrl || url;
-                ServerLogger.info(
-                    `🔍 VideoDataConverter - VIDEO_URL: "${videoUrlValue}"`,
-                    {},
-                    'DATA_CONVERTER',
-                );
-                return videoUrlValue;
-            })(),
+            shares: this.parseNumber(metadata?.shares || 0),
             topComments: (() => {
-                const topCommentsValue = metadata.topComments || '';
+                const topCommentsValue = metadata?.topComments || '';
                 ServerLogger.info(
                     `🔍 VideoDataConverter - TOP_COMMENTS: "${topCommentsValue?.substring(
                         0,
@@ -216,19 +200,13 @@ export class VideoDataConverter {
                 );
                 return topCommentsValue;
             })(),
-            thumbnailUrl: metadata.thumbnailUrl || '',
-            confidence: this.formatConfidence(analysis.confidence),
-            analysisStatus: analysis.aiModel || 'completed',
-            categoryMatchRate: analysis.categoryMatch
-                ? `${analysis.categoryMatch.matchScore}%`
-                : '',
-            matchType: analysis.categoryMatch
-                ? analysis.categoryMatch.matchType
-                : '',
-            matchReason: analysis.categoryMatch
-                ? analysis.categoryMatch.matchReason
-                : '',
-            collectionTime: new Date(), // 수집시간
+            thumbnailUrl: metadata?.thumbnailUrl || '',
+            confidence: this.formatConfidence(analysis?.confidence),
+            analysisStatus: analysis?.analysisStatus || 'completed',
+            categoryMatchRate: analysis?.categoryMatchRate || '',
+            matchType: analysis?.matchType || '',
+            matchReason: analysis?.matchReason || '',
+            collectionTime: new Date().toISOString() as ISODateString, // 수집시간
         };
 
         return result;
@@ -263,26 +241,26 @@ export class VideoDataConverter {
         ServerLogger.info(
             `🔍 VideoDataConverter - Analysis 체크:`,
             {
-                'analysis.fullCategoryPath': analysis.fullCategoryPath,
-                'analysis.categoryDepth': analysis.categoryDepth,
-                'analysis.fullPath': analysis.fullPath,
-                'analysis.depth': analysis.depth,
+                'analysis.fullCategoryPath': analysis?.fullCategoryPath,
+                'analysis.categoryDepth': analysis?.categoryDepth,
+                'analysis.fullPath': 'legacy_field_not_available',
+                'analysis.depth': 'legacy_field_not_available',
             },
             'DATA_CONVERTER',
         );
 
-        if (isDynamicMode && (analysis.fullCategoryPath || analysis.fullPath)) {
-            fullCategoryPath = analysis.fullCategoryPath || analysis.fullPath;
-            categoryDepth = analysis.categoryDepth || analysis.depth || 0;
+        if (isDynamicMode && analysis?.fullCategoryPath) {
+            fullCategoryPath = analysis.fullCategoryPath || '';
+            categoryDepth = analysis.categoryDepth || 0;
         } else {
-            // 동적 카테고리에서 표준 필드나 레거시 필드가 있으면 사용
-            if (analysis.fullCategoryPath || analysis.fullPath) {
-                fullCategoryPath = analysis.fullCategoryPath || analysis.fullPath;
+            // 동적 카테고리에서 표준 필드가 있으면 사용
+            if (analysis?.fullCategoryPath) {
+                fullCategoryPath = analysis.fullCategoryPath || '';
                 categoryDepth = fullCategoryPath.split(' > ').length;
             } else {
                 // 기존 방식: mainCategory, middleCategory 조합
-                const mainCat = analysis.mainCategory || '미분류';
-                const middleCat = analysis.middleCategory || '';
+                const mainCat = analysis?.mainCategory || '미분류';
+                const middleCat = analysis?.middleCategory || '';
                 if (middleCat && middleCat !== '미분류') {
                     fullCategoryPath = `${mainCat} > ${middleCat}`;
                     categoryDepth = 2;
@@ -295,24 +273,24 @@ export class VideoDataConverter {
 
         // 🔍 DEBUG 로깅 - Instagram 데이터 변환 전 확인 (개발 환경에서만)
         ServerLogger.error(`🔍 DEBUG - Instagram 입력 데이터:`, {
-            'metadata keys': Object.keys(metadata),
-            'analysis keys': Object.keys(analysis),
-            'metadata.channelName': metadata.channelName,
-            'metadata.channel': metadata.channel,
-            'metadata.channelTitle': metadata.channelTitle,
-            'metadata.author': metadata.author,
-            'metadata.account': metadata.account,
-            'metadata.title': metadata.title,
-            'metadata.likes': metadata.likes,
-            'metadata.views': metadata.views,
-            'metadata.comments': metadata.comments,
-            'metadata.commentsCount': metadata.commentsCount,
+            'metadata keys': metadata ? Object.keys(metadata) : [],
+            'analysis keys': analysis ? Object.keys(analysis) : [],
+            'metadata.channelName': metadata?.channelName,
+            'metadata.channel': metadata?.channel,
+            'metadata.channelTitle': metadata?.channelTitle,
+            'metadata.author': metadata?.author,
+            'metadata.account': metadata?.account,
+            'metadata.title': metadata?.title,
+            'metadata.likes': metadata?.likes,
+            'metadata.views': metadata?.views,
+            'metadata.comments': metadata?.comments,
+            'metadata.commentsCount': metadata?.commentsCount,
             'videoData.likes': videoData.likes,
             'videoData.views': videoData.views,
             'videoData.title': videoData.title,
             'videoData.channelName': videoData.channelName,
-            'analysis.mainCategory': analysis.mainCategory,
-            'analysis.keywords': analysis.keywords
+            'analysis.mainCategory': analysis?.mainCategory,
+            'analysis.keywords': analysis?.keywords
         }, 'INSTAGRAM_DATA_CONVERTER');
 
         // Instagram 20개 필드 변환
@@ -323,7 +301,7 @@ export class VideoDataConverter {
 
             // Instagram 전용 19개 필드
             uploadDate: uploadDate,
-            platform: (platform || 'INSTAGRAM').toUpperCase(),
+            platform: (platform || 'INSTAGRAM').toUpperCase() as Platform,
             channelName: videoData.channelName ||
                         (metadata && metadata.channelName) ||
                         (metadata && metadata.channel) ||
@@ -364,31 +342,34 @@ export class VideoDataConverter {
             middleCategory: (analysis && analysis.middleCategory) || '',
             fullCategoryPath: fullCategoryPath,
             categoryDepth: categoryDepth,
-            keywords: (analysis && Array.isArray(analysis.keywords))
-                ? analysis.keywords
-                : (analysis && analysis.keywords)
-                ? [analysis.keywords]
-                : [],
-            hashtags: (analysis && Array.isArray(analysis.hashtags))
-                ? analysis.hashtags
-                : (analysis && analysis.hashtags)
-                ? [analysis.hashtags]
-                : [],
-            mentions: (analysis && Array.isArray(analysis.mentions))
-                ? analysis.mentions
-                : (analysis && analysis.mentions)
-                ? [analysis.mentions]
-                : [],
+            keywords: analysis?.keywords || [],
+            hashtags: analysis?.hashtags || [],
+            mentions: analysis?.mentions || [],
             description: videoData.description || (metadata && metadata.description) || '',
-            analysisContent: (analysis && analysis.summary) || '',
+            analysisContent: analysis?.analysisContent || '',
             likes: this.parseNumber(videoData.likes || (metadata && metadata.likes) || 0),
             views: this.parseNumber(videoData.views || (metadata && metadata.views) || 0),
             commentsCount: this.parseNumber(videoData.comments || videoData.commentsCount || (metadata && metadata.commentsCount) || 0),
+            shares: this.parseNumber((metadata && metadata.shares) || 0),
+            subscribers: this.parseNumber((metadata && metadata.subscribers) || 0),
+            channelVideos: this.parseNumber((metadata && metadata.channelVideos) || 0),
+            contentType: (metadata && metadata.contentType) || 'shortform',
+            quality: (metadata && metadata.quality) || '',
+            language: (metadata && metadata.language) || '',
+            topComments: (metadata && metadata.topComments) || '',
+            comments: (metadata && metadata.comments) || '',
+            youtubeHandle: '', // Instagram에서는 빈값
+            monetized: '', // Instagram에서는 빈값
+            youtubeCategory: '', // Instagram에서는 빈값
+            categoryId: '', // Instagram에서는 빈값
+            license: '', // Instagram에서는 빈값
+            duration: (metadata && metadata.duration) || '0:30', // Instagram 기본 길이
+            channelId: (metadata && metadata.channelId) || '',
             url: url,
             thumbnailUrl: (metadata && metadata.thumbnailUrl) || videoData.thumbnailUrl || '',
             confidence: this.formatConfidence((analysis && analysis.confidence) || 0),
-            analysisStatus: (analysis && analysis.aiModel) || 'completed',
-            collectionTime: new Date(),
+            analysisStatus: analysis?.analysisStatus || 'completed',
+            collectionTime: new Date().toISOString() as ISODateString,
         };
 
         return result;
@@ -404,17 +385,19 @@ export class VideoDataConverter {
 
         // 디버깅: TikTok 메타데이터 확인
         ServerLogger.info('🔍 STEP2 - VideoDataConverter 입력 메타데이터:', {
-            thumbnailUrl: metadata.thumbnailUrl,
-            language: metadata.language,
-            description: metadata.description
+            thumbnailUrl: metadata?.thumbnailUrl,
+            language: metadata?.language,
+            description: metadata?.description
         });
 
         // 업로드 날짜 결정
         let uploadDate: string;
-        if (metadata.uploadDate) {
+        if (metadata?.uploadDate) {
             uploadDate = new Date(metadata.uploadDate).toLocaleDateString('ko-KR');
-        } else {
+        } else if (timestamp) {
             uploadDate = new Date(timestamp).toLocaleString('ko-KR');
+        } else {
+            uploadDate = new Date().toLocaleDateString('ko-KR');
         }
 
         // 동적 카테고리 처리
@@ -422,12 +405,12 @@ export class VideoDataConverter {
         let fullCategoryPath = '';
         let categoryDepth = 0;
 
-        if (isDynamicMode && (analysis.fullCategoryPath || analysis.fullPath)) {
-            fullCategoryPath = analysis.fullCategoryPath || analysis.fullPath;
-            categoryDepth = analysis.categoryDepth || analysis.depth || 0;
+        if (isDynamicMode && analysis?.fullCategoryPath) {
+            fullCategoryPath = analysis.fullCategoryPath || '';
+            categoryDepth = analysis.categoryDepth || 0;
         } else {
-            const mainCat = analysis.mainCategory || '엔터테인먼트';
-            const middleCat = analysis.middleCategory || '';
+            const mainCat = analysis?.mainCategory || '엔터테인먼트';
+            const middleCat = analysis?.middleCategory || '';
             if (middleCat && middleCat !== '미분류') {
                 fullCategoryPath = `${mainCat} > ${middleCat}`;
                 categoryDepth = 2;
@@ -439,19 +422,19 @@ export class VideoDataConverter {
 
         const result: ConvertedVideoData = {
             rowNumber: rowNumber,
-            platform: 'TIKTOK',
-            channelName: metadata.channelName || '알 수 없음',
+            platform: 'TIKTOK' as Platform,
+            channelName: metadata?.channelName || '알 수 없음',
             channelUrl: (() => {
                 // 기존 channelUrl이 있으면 사용
                 let result = videoData.channelUrl || (metadata && metadata.channelUrl) || (videoData.metadata && videoData.metadata.channelUrl) || '';
 
                 // channelUrl이 없으면 channelName으로 생성
                 if (!result) {
-                    const channelName = metadata.channelName ||
-                                      metadata.channel ||
-                                      metadata.channelTitle ||
-                                      metadata.author ||
-                                      metadata.account ||
+                    const channelName = metadata?.channelName ||
+                                      metadata?.channel ||
+                                      metadata?.channelTitle ||
+                                      metadata?.author ||
+                                      metadata?.account ||
                                       '';
                     if (channelName) {
                         // TikTok URL 생성: https://www.tiktok.com/@{username}
@@ -469,32 +452,48 @@ export class VideoDataConverter {
                 return result;
             })(),
             url: url,
-            title: metadata.title || '제목 없음',
+            title: metadata?.title || '제목 없음',
             uploadDate: uploadDate,
-            views: metadata.views || 0,
-            likes: metadata.likes || 0,
-            commentsCount: metadata.commentsCount || metadata.comments || 0,
-            shares: metadata.shares || 0,
-            duration: metadata.durationFormatted || '0:30',
-            contentType: metadata.contentType || 'shortform',
-            category: metadata.category || '엔터테인먼트',
-            mainCategory: analysis.mainCategory || '엔터테인먼트',
-            middleCategory: analysis.middleCategory || '',
+            views: metadata?.views || 0,
+            likes: metadata?.likes || 0,
+            commentsCount: metadata?.commentsCount || metadata?.comments || 0,
+            shares: metadata?.shares || 0,
+            subscribers: this.parseNumber(metadata?.subscribers || 0),
+            channelVideos: this.parseNumber(metadata?.channelVideos || 0),
+            duration: metadata?.durationFormatted || '0:30',
+            contentType: (metadata?.contentType as ContentType) || 'shortform',
+            quality: metadata?.quality || '',
+            topComments: metadata?.topComments || '',
+            comments: metadata?.comments || '',
+            youtubeHandle: '', // TikTok에서는 빈값
+            monetized: '', // TikTok에서는 빈값
+            youtubeCategory: '', // TikTok에서는 빈값
+            categoryId: '', // TikTok에서는 빈값
+            license: '', // TikTok에서는 빈값
+            mainCategory: analysis?.mainCategory || '엔터테인먼트',
+            middleCategory: analysis?.middleCategory || '',
             fullCategoryPath: fullCategoryPath,
             categoryDepth: categoryDepth,
-            keywords: (analysis.keywords || []).join(', '),
-            hashtags: (metadata.hashtags || []).join(', '),
-            mentions: (metadata.mentions || []).join(', '),
-            musicTitle: metadata.musicTitle || '',
-            musicAuthor: metadata.musicAuthor || '',
-            originalSound: metadata.originalSound || false,
-            channelVerified: metadata.channelVerified || false,
-            isCommercial: metadata.isCommercial || false,
-            effectsUsed: (metadata.effectsUsed || []).join(', '),
-            thumbnailUrl: metadata.thumbnailUrl || '',
-            language: metadata.language || '',
-            description: metadata.description || '',
-            collectionTime: new Date()
+            keywords: Array.isArray(analysis?.keywords)
+                ? analysis.keywords
+                : analysis?.keywords
+                ? [analysis.keywords as string]
+                : [],
+            hashtags: Array.isArray(metadata?.hashtags)
+                ? metadata.hashtags
+                : metadata?.hashtags
+                ? [metadata.hashtags as string]
+                : [],
+            mentions: Array.isArray(metadata?.mentions)
+                ? metadata.mentions
+                : metadata?.mentions
+                ? [metadata.mentions as string]
+                : [],
+            thumbnailUrl: metadata?.thumbnailUrl || '',
+            language: metadata?.language || '',
+            description: metadata?.description || '',
+            channelId: metadata?.channelId || '',
+            collectionTime: new Date().toISOString() as ISODateString
         };
 
         ServerLogger.info(`🔍 STEP2 - VideoDataConverter 출력 language: '${result.language}'`);
@@ -538,7 +537,7 @@ export class VideoDataConverter {
      * Google Sheets 행 데이터를 MongoDB 문서로 변환
      */
     static convertRowDataToDocument(rowData: any[], platform: string): any {
-        const normalizedPlatform = platform.toUpperCase();
+        const normalizedPlatform = (platform || 'YOUTUBE').toUpperCase();
 
         try {
             if (normalizedPlatform === 'YOUTUBE') {
@@ -672,7 +671,7 @@ export class VideoDataConverter {
      * MongoDB 문서를 Google Sheets 행 데이터로 역변환
      */
     static convertDocumentToRowData(document: any, platform: string): any[] {
-        const normalizedPlatform = platform.toUpperCase();
+        const normalizedPlatform = (platform || 'YOUTUBE').toUpperCase();
 
         try {
             if (normalizedPlatform === 'YOUTUBE') {
@@ -768,7 +767,7 @@ export class VideoDataConverter {
      * 플랫폼별 필드 개수 반환
      */
     static getFieldCount(platform: string): number {
-        const normalizedPlatform = platform.toUpperCase();
+        const normalizedPlatform = (platform || 'YOUTUBE').toUpperCase();
 
         switch (normalizedPlatform) {
             case 'YOUTUBE':
@@ -787,7 +786,7 @@ export class VideoDataConverter {
      */
     static logConversion(platform: string, originalData: any, convertedData: any): void {
         ServerLogger.info(
-            `데이터 변환 완료: ${platform.toUpperCase()}`,
+            `데이터 변환 완료: ${(platform || 'YOUTUBE').toUpperCase()}`,
             {
                 url: originalData.url || originalData.postUrl,
                 channelName: originalData.metadata?.channelName,

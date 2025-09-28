@@ -1,16 +1,1 @@
-const axios = require('axios');
-
-async function testVideosAPI() {
-    try {
-        console.log('🔍 Testing /api/videos endpoint...');
-        const response = await axios.get('http://localhost:3000/api/videos');
-        console.log('✅ Success:', response.status);
-        console.log('📊 Data:', JSON.stringify(response.data, null, 2));
-    } catch (error) {
-        console.error('❌ Error:', error.response?.status, error.response?.statusText);
-        console.error('📋 Error data:', error.response?.data);
-        console.error('🔍 Full error:', error.message);
-    }
-}
-
-testVideosAPI();
+const axios = require('axios'); async function testVideoProcessing() { try { console.log('🔍 YouTube 비디오 처리 테스트 시작...'); const response = await axios.post('http://localhost:3000/api/process-video', { url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }, { timeout: 60000, headers: { 'Content-Type': 'application/json' } }); console.log('✅ API 응답 상태:', response.status); console.log('📋 응답 데이터:', JSON.stringify(response.data, null, 2)); if (response.data.success) { console.log('🎯 성공\! 저장된 비디오 데이터:'); console.log('- Title:', response.data.data.title); console.log('- Views:', response.data.data.views); console.log('- Likes:', response.data.data.likes); console.log('- Comments:', response.data.data.commentsCount); console.log('- Channel:', response.data.data.channelName); console.log('- Channel URL:', response.data.data.channelUrl); console.log('- YouTube Handle:', response.data.data.youtubeHandle); console.log('- Quality:', response.data.data.quality); console.log('- Tags:', response.data.data.hashtags); console.log('- Content Type:', response.data.data.contentType); console.log('- YouTube Category:', response.data.data.youtubeCategory); } else { console.log('❌ 처리 실패:', response.data.error); } } catch (error) { console.error('❌ 테스트 실패:', error.response?.data || error.message); } } testVideoProcessing();

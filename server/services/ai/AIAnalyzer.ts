@@ -27,7 +27,7 @@ interface AnalysisResult {
 export class AIAnalyzer {
     private geminiAnalyzer: GeminiAnalyzer;
     private categoryManager: any;
-    private useDynamicCategories: boolean;
+    private useDynamicCategories: boolean = false;
 
     constructor() {
         this.geminiAnalyzer = new GeminiAnalyzer();
@@ -154,7 +154,8 @@ export class AIAnalyzer {
             }
 
             if (!analysisResult.success) {
-                throw new Error(`Gemini 분석 실패: ${analysisResult.error}`);
+                const errorMsg = analysisResult.error || '알 수 없는 Gemini 분석 오류';
+                throw new Error(`Gemini 분석 실패: ${errorMsg}`);
             }
 
             // 응답 파싱
@@ -244,7 +245,8 @@ export class AIAnalyzer {
             }
 
             if (!analysisResult.success) {
-                throw new Error(`Gemini 분석 실패: ${analysisResult.error}`);
+                const errorMsg = analysisResult.error || '알 수 없는 Gemini 분석 오류';
+                throw new Error(`Gemini 분석 실패: ${errorMsg}`);
             }
 
             // 응답 파싱 및 카테고리 결합

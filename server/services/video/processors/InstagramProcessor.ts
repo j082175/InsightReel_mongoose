@@ -194,7 +194,7 @@ export class InstagramProcessor {
         return 'Instagram Video';
     }
 
-    private extractInstagramId(url: string): string {
+    extractInstagramId(url: string): string {
         const match = url.match(/\/p\/([A-Za-z0-9_-]+)/);
         return match ? match[1] : '';
     }

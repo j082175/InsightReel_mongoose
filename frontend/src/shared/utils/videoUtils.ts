@@ -6,25 +6,27 @@ import { Video } from '../types';
 
 /**
  * 비디오 ID를 추출합니다.
- * ⚡ _id 통일: MongoDB _id를 모든 계층에서 직접 사용
+ * ⚡ _id 표준화: MongoDB _id를 표준으로 사용
  */
 export const getVideoId = (video: Video): string => {
-  // MongoDB _id 필드 직접 사용 - 변환 불필요
+  // _id가 필수이므로 fallback 최소화
   return video?._id || video?.id || '';
 };
 
 /**
  * 썸네일 URL을 추출합니다.
- * ⚡ 단순화됨: 이제 thumbnailUrl 필드만 사용
+ * ⚡ 표준화: thumbnailUrl이 필수이므로 간소화
  */
 export const getThumbnailUrl = (video: Video): string => {
+  // thumbnailUrl이 필수이므로 기본 반환
   return video?.thumbnailUrl || '';
 };
 
 /**
  * 조회수를 추출합니다.
- * ⚡ 단순화됨: 이제 views 필드만 사용
+ * ⚡ 표준화: views가 필수이므로 간소화
  */
 export const getViewCount = (video: Video): number => {
+  // views가 필수이므로 기본 반환
   return video?.views || 0;
 };

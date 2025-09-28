@@ -28,6 +28,8 @@ export interface YouTubeRawData {
     thumbnails: { high: { url: string } };
     description: string;
     categoryId: string;
+    tags?: string[];  // 해시태그 배열
+    channelCustomUrl?: string;  // 채널 커스텀 URL
   };
   statistics: {
     viewCount: string;
@@ -36,6 +38,12 @@ export interface YouTubeRawData {
   };
   contentDetails: {
     duration: string;
+    definition: string;  // 'hd' | 'sd' 화질 정보
+    caption: string;     // 'true' | 'false' 자막 여부
+  };
+  status?: {
+    embeddable: boolean;  // 퍼가기 허용 여부
+    madeForKids: boolean; // 키즈 콘텐츠 여부
   };
 }
 
@@ -80,49 +88,49 @@ export interface TikTokRawData {
 // (AI 분석 전, 플랫폼간 공통 필드 위주)
 // =================================================================
 export interface StandardVideoMetadata {
-  // 🎯 핵심 성과 지표
+  // 🎯 핵심 성과 지표 (Required with defaults)
   views: number;
   likes: number;
   commentsCount: number;
-  shares?: number;
+  shares: number; // Required: 기본값 0
 
-  // 🎯 기본 정보
+  // 🎯 기본 정보 (Required)
   title: string;
   channelName: string;
   uploadDate: ISODateString;
   thumbnailUrl: string;
   description: string;
 
-  // 🎯 플랫폼 정보
+  // 🎯 플랫폼 정보 (Required)
   platform: Platform;
   url: string; // 원본 URL
 
-  // 🎯 채널 정보
-  channelUrl?: string;
-  subscribers?: number;
-  channelVideos?: number;
+  // 🎯 채널 정보 (Required with defaults)
+  channelUrl: string; // Required: 기본값 ''
+  subscribers: number; // Required: 기본값 0
+  channelVideos: number; // Required: 기본값 0
 
-  // 🎯 비디오 상세 (플랫폼 종속적)
-  youtubeHandle?: string;
-  duration?: number;
-  monetized?: string;
-  youtubeCategory?: string;
-  categoryId?: string;
-  license?: string;
-  quality?: string;
-  language?: string;
-  contentType?: ContentType;
-  channelId?: string;
+  // 🎯 비디오 상세 (Required with defaults for consistency)
+  youtubeHandle: string; // Required: 기본값 ''
+  duration: string; // Required: duration은 문자열 (PT30S, 0:30)
+  monetized: string; // Required: 기본값 'N'
+  youtubeCategory: string; // Required: 기본값 ''
+  categoryId: string; // Required: 기본값 ''
+  license: string; // Required: 기본값 'YOUTUBE'
+  quality: string; // Required: 기본값 'sd'
+  language: string; // Required: 기본값 ''
+  contentType: ContentType; // Required: 기본값 'longform'
+  channelId: string; // Required: 기본값 ''
 
-  // 🎯 소셜 메타데이터
-  hashtags?: string[];
-  mentions?: string[];
+  // 🎯 소셜 메타데이터 (Required with defaults)
+  hashtags: string[]; // Required: 기본값 []
+  mentions: string[]; // Required: 기본값 []
 
-  // 🎯 시스템 메타데이터
-  collectionTime?: ISODateString;
-  rowNumber?: number;
-  topComments?: string;
-  comments?: string; // (Deprecated 권장)
+  // 🎯 시스템 메타데이터 (Required with defaults)
+  collectionTime: ISODateString; // Required: 자동 생성
+  rowNumber: number; // Required: 자동 증가
+  topComments: string; // Required: 기본값 ''
+  comments: string; // Required: 기본값 '' (Deprecated 권장)
 }
 
 // =================================================================

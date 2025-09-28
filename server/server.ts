@@ -15,6 +15,20 @@ const startServer = async () => {
         const app = await createApp();
         const PORT = config.get('PORT');
 
+        // MongoDB 연결 시도 (USE_MONGODB가 true인 경우에만)
+        if (process.env.USE_MONGODB === 'true') {
+            try {
+                ServerLogger.info('🔗 MongoDB 연결 시도 중...');
+                await DatabaseManager.connect();
+                ServerLogger.info('✅ MongoDB 연결 완료');
+            } catch (dbError) {
+                ServerLogger.error('❌ MongoDB 연결 실패, Google Sheets 전용 모드로 실행:', dbError);
+                // MongoDB 연결이 실패해도 서버는 계속 실행 (Google Sheets 모드)
+            }
+        } else {
+            ServerLogger.info('ℹ️ MongoDB 사용 안함 - Google Sheets 전용 모드');
+        }
+
         // yt-dlp 자동 업데이트 시스템 설정
         setupYtDlpAutoUpdater();
 
@@ -45,7 +59,7 @@ const startServer = async () => {
 
         return server;
 
-    } catch (error) {
+    } catch (error: any) {
         ServerLogger.error('🚨 서버 시작 실패', error.message, 'START');
         process.exit(1);
     }
@@ -67,7 +81,7 @@ const setupYtDlpAutoUpdater = () => {
             } else {
                 ServerLogger.info('ℹ️ yt-dlp.exe 이미 최신 버전');
             }
-        } catch (error) {
+        } catch (error: any) {
             ServerLogger.warn('⚠️ yt-dlp.exe 자동 업데이트 실패:', error.message);
         }
     };
@@ -104,7 +118,7 @@ const setupGracefulShutdown = (server: any) => {
                 const ServiceRegistry = require('./utils/service-registry');
                 ServiceRegistry.clearAll();
                 ServerLogger.info('✅ 서비스 레지스트리 정리 완료', 'SHUTDOWN');
-            } catch (serviceError) {
+            } catch (serviceError: any) {
                 ServerLogger.warn('⚠️ 서비스 정리 실패 (무시하고 계속)', serviceError.message, 'SHUTDOWN');
             }
 
@@ -122,7 +136,7 @@ const setupGracefulShutdown = (server: any) => {
             }
 
             ServerLogger.info('🧹 메모리 정리 완료', 'SHUTDOWN');
-        } catch (cleanupError) {
+        } catch (cleanupError: any) {
             ServerLogger.error('⚠️ 메모리 정리 중 오류 (무시하고 계속)', cleanupError.message, 'SHUTDOWN');
         }
 

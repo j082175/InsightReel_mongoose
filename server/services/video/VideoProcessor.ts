@@ -1,5 +1,5 @@
 import { ServerLogger } from '../../utils/logger';
-import { Platform, FinalVideoData, StandardVideoMetadata } from '../../types/video-types';
+import { Platform, FinalVideoData, StandardVideoMetadata, ContentType } from '../../types/video-types';
 import { InstagramReelInfo } from '../instagram/types/instagram-types';
 import { TikTokVideoInfo } from '../tiktok/types/tiktok-types';
 import { YouTubeProcessor } from './processors/YouTubeProcessor';
@@ -50,11 +50,8 @@ export class VideoProcessor {
         if (this._initialized) return;
 
         try {
-            // YouTube 처리기 초기화 (내부적으로 HybridYouTubeExtractor 초기화)
-            // YouTubeProcessor가 초기화를 필요로 하는 경우에만 호출
-            if (this.youtubeProcessor && typeof this.youtubeProcessor.initialize === 'function') {
-                await this.youtubeProcessor.initialize();
-            }
+            // YouTube 처리기는 생성자에서 자동으로 초기화됨 (HybridYouTubeExtractor 포함)
+            // 별도의 initialize 호출이 필요하지 않음
 
             this._initialized = true;
             ServerLogger.info('✅ VideoProcessor 초기화 완료');
@@ -105,7 +102,9 @@ export class VideoProcessor {
 
             // 비디오 다운로드
             if (options.downloadVideo !== false) {
-                videoPath = await this.downloadVideo(videoUrl, platform, videoInfo.videoId);
+                // Controller에서 전달받은 videoId를 사용
+                const videoId = 'unknown'; // processVideo에서는 직접 호출하므로 기본값 사용
+                videoPath = await this.downloadVideo(videoUrl, platform, videoId);
             }
 
             // 썸네일 생성
@@ -151,7 +150,7 @@ export class VideoProcessor {
         }
     }
 
-    private async downloadVideo(videoUrl: string, platform: Platform, videoId: string): Promise<string | undefined> {
+    async downloadVideo(videoUrl: string, platform: Platform, videoId: string): Promise<string | undefined> {
         try {
             const sanitizedId = VideoUtils.sanitizeFileName(videoId);
             const filePath = path.join(this.downloadDir, 'videos', `${platform}_${sanitizedId}.mp4`);
@@ -192,7 +191,7 @@ export class VideoProcessor {
         }
     }
 
-    private async processThumbnail(
+    async processThumbnail(
         thumbnailUrl: string,
         videoPath: string | undefined,
         videoId: string,
@@ -200,16 +199,24 @@ export class VideoProcessor {
         analysisType: 'single' | 'multi-frame' | 'full' = 'multi-frame'
     ): Promise<string | undefined> {
         try {
+            ServerLogger.info(`🔍 썸네일 처리 시작: URL=${thumbnailUrl}, videoPath=${videoPath}, videoId=${videoId}`);
+
             // 온라인 썸네일 다운로드 시도
             if (thumbnailUrl) {
+                ServerLogger.info(`📥 온라인 썸네일 다운로드 시도: ${thumbnailUrl}`);
                 const downloadedThumbnail = await this.thumbnailExtractor.downloadThumbnail(
                     thumbnailUrl,
                     videoId,
                     platform
                 );
                 if (downloadedThumbnail) {
+                    ServerLogger.info(`✅ 온라인 썸네일 다운로드 성공: ${downloadedThumbnail}`);
                     return downloadedThumbnail;
+                } else {
+                    ServerLogger.warn(`❌ 온라인 썸네일 다운로드 실패, 로컬 생성으로 전환`);
                 }
+            } else {
+                ServerLogger.warn(`⚠️ 썸네일 URL이 없음, 로컬 생성으로 전환`);
             }
 
             // 로컬 비디오 파일에서 썸네일 생성
@@ -235,12 +242,7 @@ export class VideoProcessor {
         thumbnailPath?: string
     ): StandardVideoMetadata {
         const baseMetadata: StandardVideoMetadata = {
-            title: videoInfo.title || videoInfo.caption || '',
-            description: videoInfo.description || videoInfo.caption || '',
-            platform,
-            url: videoInfo.url || '',
-            channelId: videoInfo.channelId || '',
-            channelName: videoInfo.channelName || videoInfo.channelTitle || videoInfo.owner?.username || '',
+            // 핵심 성과 지표
             views: parseInt(
                 videoInfo.views?.toString() ||
                 videoInfo.viewCount?.toString() ||
@@ -252,16 +254,54 @@ export class VideoProcessor {
                 '0'
             ),
             commentsCount: parseInt(
-                videoInfo.comments?.toString() ||
                 videoInfo.commentCount?.toString() ||
+                videoInfo.commentsCount?.toString() ||
+                videoInfo.comments?.toString() ||
                 '0'
             ),
-            uploadDate: videoInfo.uploadDate || new Date().toISOString(),
+            shares: parseInt(
+                videoInfo.shares?.toString() ||
+                videoInfo.shareCount?.toString() ||
+                '0'
+            ),
+
+            // 기본 정보
+            title: videoInfo.title || videoInfo.caption || '',
+            channelName: videoInfo.channelTitle || videoInfo.channelName || videoInfo.owner?.username || '',
+            uploadDate: videoInfo.uploadDate || videoInfo.publishedAt || new Date().toISOString(),
             thumbnailUrl: thumbnailPath || videoInfo.thumbnailUrl || '',
-            // videoUrl은 StandardVideoMetadata에 없음 (url 필드 사용)
-            duration: this.parseDuration(videoInfo.duration || videoInfo.videoDuration, platform),
+            description: videoInfo.description || videoInfo.caption || '',
+
+            // 플랫폼 정보
+            platform,
+            url: videoInfo.url || '',
+
+            // 채널 정보 (기본값)
+            channelUrl: '',
+            subscribers: 0,
+            channelVideos: 0,
+
+            // 비디오 상세 (기본값)
+            youtubeHandle: '',
+            duration: this.parseDurationToString(videoInfo.duration || videoInfo.videoDuration, platform),
+            monetized: 'N',
+            youtubeCategory: '',
+            categoryId: videoInfo.categoryId || '',
+            license: 'YOUTUBE',
+            quality: 'sd',
+            language: '',
+            contentType: 'longform' as ContentType,
+            channelId: videoInfo.channelId || '',
+
+            // 소셜 메타데이터
             hashtags: this.extractHashtags(videoInfo.description || videoInfo.caption || '', platform),
-            mentions: this.extractMentions(videoInfo.description || videoInfo.caption || '', platform)
+            mentions: this.extractMentions(videoInfo.description || videoInfo.caption || '', platform),
+
+            // 시스템 메타데이터 (기본값)
+            collectionTime: new Date().toISOString(),
+            rowNumber: 0, // 나중에 DB에서 자동 증가
+            topComments: '',
+            comments: ''
         };
 
         // 플랫폼별 추가 메타데이터
@@ -294,6 +334,29 @@ export class VideoProcessor {
                 return this.youtubeProcessor.parseYouTubeDuration(duration);
             default:
                 return typeof duration === 'number' ? duration : parseInt(duration?.toString() || '0');
+        }
+    }
+
+    private parseDurationToString(duration: any, platform: Platform): string {
+        if (!duration) return '0';
+
+        // 만약 이미 문자열 형태라면 그대로 반환
+        if (typeof duration === 'string') {
+            return duration;
+        }
+
+        // 숫자 형태라면 seconds를 문자열로 변환
+        const durationInSeconds = this.parseDuration(duration, platform);
+
+        // 초를 "MM:SS" 또는 "HH:MM:SS" 형태로 변환
+        const hours = Math.floor(durationInSeconds / 3600);
+        const minutes = Math.floor((durationInSeconds % 3600) / 60);
+        const seconds = durationInSeconds % 60;
+
+        if (hours > 0) {
+            return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        } else {
+            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
         }
     }
 
@@ -359,6 +422,19 @@ export class VideoProcessor {
         this.thumbnailExtractor.cleanOldThumbnails(maxAge);
     }
 
+    // VideoId 추출 메서드들 (Controller에서 사용)
+    extractYouTubeId(url: string): string | null {
+        return this.youtubeProcessor.extractYouTubeId(url);
+    }
+
+    extractInstagramId(url: string): string | null {
+        return this.instagramProcessor.extractInstagramId?.(url) || null;
+    }
+
+    extractTikTokId(url: string): string | null {
+        return this.tikTokProcessor.extractTikTokId?.(url) || null;
+    }
+
     // 플랫폼별 URL 검증
     validateUrl(url: string): { isValid: boolean; platform: Platform | null } {
         const platform = this.detectPlatform(url);
@@ -379,6 +455,34 @@ export class VideoProcessor {
         }
 
         return { isValid, platform };
+    }
+
+    /**
+     * 썸네일 생성 (레거시 호환)
+     */
+    async generateThumbnail(videoPath: string, analysisType: string = 'multi-frame'): Promise<string | string[]> {
+        try {
+            const result = await this.thumbnailExtractor.generateThumbnail(videoPath, analysisType as any);
+            if (result.success) {
+                return result.thumbnailPath || '';
+            }
+            throw new Error('썸네일 생성 실패');
+        } catch (error) {
+            ServerLogger.error('썸네일 생성 실패:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * YouTube 비디오 정보 수집 (레거시 호환)
+     */
+    async getYouTubeVideoInfo(videoUrl: string): Promise<any> {
+        try {
+            return await this.youtubeProcessor.getVideoInfo(videoUrl);
+        } catch (error) {
+            ServerLogger.error('YouTube 비디오 정보 수집 실패:', error);
+            throw error;
+        }
     }
 }
 

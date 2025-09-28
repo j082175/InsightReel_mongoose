@@ -10,7 +10,7 @@ import {
 } from '../../../types/channel.types';
 import { ServerLogger } from '../../../utils/logger';
 
-const YouTubeChannelService = require('../../../services/YouTubeChannelDataCollector');
+const YouTubeChannelService = require('../../../services/youtube/services/ChannelDataCollector');
 const YouTubeChannelAnalyzer = require('../../../services/youtube/YouTubeChannelAnalyzer');
 
 export class ChannelAnalyzer {

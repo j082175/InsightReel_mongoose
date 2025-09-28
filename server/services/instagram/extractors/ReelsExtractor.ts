@@ -72,7 +72,7 @@ export class ReelsExtractor {
 
             return extractedData;
 
-        } catch (error) {
+        } catch (error: any) {
             ServerLogger.error('Instagram Reel 정보 추출 실패:', error);
             return {
                 success: false,
@@ -91,7 +91,8 @@ export class ReelsExtractor {
 
             if (!fs.existsSync(scriptPath)) {
                 ServerLogger.warn('Python 스크립트 파일이 없습니다. 인라인 실행 모드 사용');
-                return this.runInlinePythonScript(shortcode).then(resolve);
+                this.runInlinePythonScript(shortcode).then(resolve);
+                return;
             }
 
             const pythonProcess = spawn(this.pythonExecutable, [scriptPath, shortcode]);
@@ -123,7 +124,7 @@ export class ReelsExtractor {
                         success: false,
                         error: `Process exited with code ${code}`,
                         stderr,
-                        exitCode: code
+                        exitCode: code || undefined
                     });
                 }
             });
@@ -229,7 +230,7 @@ if __name__ == "__main__":
                         success: false,
                         error: stderr || 'Python 실행 실패',
                         stderr,
-                        exitCode: code
+                        exitCode: code || undefined
                     });
                 }
             });
@@ -283,7 +284,7 @@ if __name__ == "__main__":
                 extractedAt: new Date().toISOString()
             };
 
-        } catch (error) {
+        } catch (error: any) {
             ServerLogger.error('Reel 데이터 파싱 실패:', error);
             return {
                 success: false,

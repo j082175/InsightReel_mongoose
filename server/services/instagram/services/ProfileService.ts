@@ -41,7 +41,7 @@ export class ProfileService {
                 };
             }
 
-        } catch (error) {
+        } catch (error: any) {
             ServerLogger.error(`❌ 프로필 정보 수집 실패: @${username}`, error);
             return {
                 success: false,
@@ -144,10 +144,10 @@ if __name__ == "__main__":
                         resolve({
                             success: false,
                             error: stderr || 'No output from Python script',
-                            exitCode: code
+                            exitCode: code || undefined
                         });
                     }
-                } catch (error) {
+                } catch (error: any) {
                     resolve({
                         success: false,
                         error: `Failed to parse output: ${error.message}`,

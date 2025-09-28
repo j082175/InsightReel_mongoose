@@ -332,15 +332,20 @@ class UnifiedGeminiManager {
         const result = await model.generateContent(requestData, requestOptions);
         const response = result.response;
         const text = response.text();
-        
+
         const duration = Date.now() - startTime;
         this.usageTracker.increment(currentModel, true);
         // 개발 환경에서만 개별 성공 로그 출력
         if (process.env.NODE_ENV === 'development') {
           ServerLogger.debug(`✅ 폴백 모델 분석 성공 (${currentModel}, ${duration}ms)`, null, 'UNIFIED');
         }
-        
-        return text;
+
+        return {
+          success: true,
+          response: text,
+          model: currentModel,
+          timestamp: new Date().toISOString()
+        };
         
       } catch (error) {
         lastError = error;
@@ -381,11 +386,17 @@ class UnifiedGeminiManager {
       try {
         // 현재 키로 시도
         const result = await this.tryWithCurrentStrategy(prompt, imageBase64, options);
-        
+
         if (result) {
           const duration = Date.now() - startTime;
           ServerLogger.success(`✅ Multi-Key AI 분석 성공 (${attempt}/${this.retryAttempts}회 시도, ${duration}ms)`, null, 'UNIFIED');
-          return result;
+          // 일관된 형태로 반환
+          return {
+            success: true,
+            response: result.text || result.response || result,
+            model: result.model || 'multi-key',
+            timestamp: result.timestamp || new Date().toISOString()
+          };
         }
         
       } catch (error) {
@@ -444,7 +455,12 @@ class UnifiedGeminiManager {
             const duration = Date.now() - startTime;
             this.usageTracker.increment(modelType, true);
             ServerLogger.success(`✅ Model-Priority AI 분석 성공 (모델: ${modelType}, 시도: ${attemptCount}, ${duration}ms)`, null, 'UNIFIED');
-            return result;
+            return {
+              success: true,
+              response: result.text || result.response || result,
+              model: result.model || modelType,
+              timestamp: result.timestamp || new Date().toISOString()
+            };
           }
           
         } catch (error) {

@@ -6,7 +6,8 @@
   "main": "server/index.ts",
   "scripts": {
     "build:ts": "tsc",
-    "dev": "npm run kill-port && npx ts-node --transpile-only server/index.ts",
+    "dev": "npm run kill-port && npx ts-node server/index.ts",
+    "dev:fast": "npm run kill-port && npx ts-node --transpile-only server/index.ts",
     "dev:js": "npm run kill-port && node --expose-gc server/index.js",
     "dev-watch": "npm run kill-port && nodemon server/index.js",
     "dev:ts": "npm run kill-port && tsc --watch & nodemon dist/server/index.js",

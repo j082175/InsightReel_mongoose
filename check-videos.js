@@ -1,0 +1,1 @@
+const axios = require('axios'); async function checkVideos() { try { const response = await axios.get('http://localhost:3000/api/videos?limit=1'); console.log('✅ 최근 비디오:', JSON.stringify(response.data, null, 2)); } catch (error) { console.error('❌ 오류:', error.response?.data || error.message); } } checkVideos();

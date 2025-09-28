@@ -1,16 +1,89 @@
 /**
- * 🚀 Google Sheets + MongoDB 통합 저장 서비스
+ * 🚀 Google Sheets + MongoDB 통합 저장 서비스 (TypeScript)
  * 새 인터페이스 기반 직접 필드 접근 방식
- * video-types.js 인터페이스 표준 준수
+ * video-types.ts 인터페이스 표준 준수
  */
 
-const { SheetsManager } = require('./sheets/SheetsManager');
-const { VideoDataConverter } = require('../../dist/server/services/VideoDataConverter');
-const Video = require('../../dist/server/models/Video').default;
-const { ServerLogger } = require('../utils/logger');
-const mongoose = require('mongoose');
+import { SheetsManager } from './sheets/SheetsManager';
+import { VideoDataConverter } from './VideoDataConverter';
+import Video from '../models/Video';
+import { ServerLogger } from '../utils/logger';
+import mongoose from 'mongoose';
+import type {
+    Platform,
+    FinalVideoData,
+    VideoDocument,
+    ISODateString,
+    StandardVideoMetadata,
+    AIAnalysisResult
+} from '../types/video-types';
+
+// 표준 타입 사용 (중복 제거)
+type VideoData = Partial<StandardVideoMetadata> & {
+    url?: string;
+    postUrl?: string;
+    metadata?: any;
+    analysis?: Partial<AIAnalysisResult>;
+    timestamp?: string;
+};
+
+interface SaveResult {
+    success: boolean;
+    platform: Platform;
+    rowNumber?: number;
+    sheets?: any;
+    mongodb?: VideoDocument;
+    error?: string;
+    performance?: {
+        totalTime: number;
+        sheetsTime: number;
+        mongoTime: number;
+    };
+}
+
+interface BatchSaveResult {
+    success: boolean;
+    platform: Platform;
+    total?: number;
+    sheets?: any;
+    mongodb?: {
+        success: number;
+        failed: number;
+        results: Array<{
+            success: boolean;
+            data?: VideoDocument;
+            error?: string;
+            originalIndex: number;
+            url?: string;
+        }>;
+    };
+    error?: string;
+    performance?: {
+        totalTime: number;
+        sheetsTime: number;
+        mongoTime: number;
+    };
+}
+
+interface SaveStatistics {
+    sheets: Record<string, number>;
+    mongodb: Record<string, number>;
+    total: Record<string, number>;
+}
+
+interface ConsistencyValidationResult {
+    platform: Platform;
+    sheetsCount: number;
+    mongoCount: number;
+    mismatches: any[];
+    duplicateUrls: any[];
+    consistent: boolean;
+}
 
 class UnifiedVideoSaver {
+    private sheetsManager: SheetsManager | null;
+    private readonly sheetsEnabled: boolean;
+
     constructor() {
         // SheetsManager는 Google Sheets 기능이 활성화된 경우에만 초기화
         this.sheetsManager = null;
@@ -19,7 +92,7 @@ class UnifiedVideoSaver {
         if (this.sheetsEnabled) {
             try {
                 this.sheetsManager = new SheetsManager();
-            } catch (error) {
+            } catch (error: any) {
                 ServerLogger.warn('⚠️ SheetsManager 초기화 실패, MongoDB 전용 모드로 실행', error.message, 'UNIFIED_SAVER');
                 this.sheetsEnabled = false;
             }
@@ -30,15 +103,15 @@ class UnifiedVideoSaver {
 
     /**
      * 단일 비디오 데이터 통합 저장
-     * @param {string} platform - 플랫폼 ('YOUTUBE', 'INSTAGRAM')
-     * @param {Object} videoData - 비디오 데이터 객체
-     * @param {number} rowNumber - Google Sheets 행 번호
-     * @returns {Promise<Object>} 저장 결과
+     * @param platform - 플랫폼 ('YOUTUBE', 'INSTAGRAM', 'TIKTOK')
+     * @param videoData - 비디오 데이터 객체
+     * @param rowNumber - Google Sheets 행 번호
+     * @returns 저장 결과
      */
-    async saveVideoData(platform, videoData, rowNumber = null) {
+    async saveVideoData(platform: Platform, videoData: VideoData, rowNumber: number | null = null): Promise<SaveResult> {
         const startTime = Date.now();
-        let sheetsResult = null;
-        let mongoResult = null;
+        let sheetsResult: any = null;
+        let mongoResult: VideoDocument | undefined = undefined;
 
         try {
             ServerLogger.info(
@@ -51,15 +124,14 @@ class UnifiedVideoSaver {
             );
 
             // 1단계: Google Sheets 저장 비활성화 확인 (먼저 체크)
-            let actualRowNumber;
+            let actualRowNumber: number;
 
             if (!this.sheetsEnabled) {
                 // Sheets 비활성화시 기본 행 번호 사용
                 actualRowNumber = rowNumber || 1;
             } else {
                 // Sheets 활성화시 실제 다음 행 번호 가져오기
-                actualRowNumber =
-                    rowNumber || (await this.getNextRowNumber(platform));
+                actualRowNumber = rowNumber || (await this.getNextRowNumber(platform));
             }
 
             // 2단계: 플랫폼별 데이터 변환
@@ -71,11 +143,13 @@ class UnifiedVideoSaver {
                 'videoData.metadata.title': videoData.metadata?.title,
                 actualRowNumber
             });
+
             const convertedData = VideoDataConverter.convertToSchema(
                 platform,
-                videoData,
+                { ...videoData, platform } as any,
                 actualRowNumber,
             );
+
             VideoDataConverter.logConversion(
                 platform,
                 videoData,
@@ -99,10 +173,7 @@ class UnifiedVideoSaver {
                     spreadsheetUrl: null,
                 };
             } else {
-                sheetsResult = await this.saveToGoogleSheets(
-                    platform,
-                    videoData,
-                );
+                sheetsResult = await this.saveToGoogleSheets(platform, videoData);
             }
             const sheetsEndTime = Date.now();
 
@@ -150,7 +221,7 @@ class UnifiedVideoSaver {
                     mongoTime: mongoTime,
                 },
             };
-        } catch (error) {
+        } catch (error: any) {
             ServerLogger.error(
                 `❌ 통합 저장 실패: ${platform.toUpperCase()}`,
                 error.message,
@@ -160,13 +231,13 @@ class UnifiedVideoSaver {
             // 롤백 처리 (MongoDB만 삭제, Google Sheets는 유지)
             if (mongoResult && mongoResult._id) {
                 try {
-                    await this.rollbackMongoDB(platform, mongoResult._id);
+                    await this.rollbackMongoDB(platform, mongoResult._id.toString());
                     ServerLogger.info(
                         `🔄 MongoDB 롤백 완료: ${mongoResult._id}`,
                         null,
                         'UNIFIED_SAVER',
                     );
-                } catch (rollbackError) {
+                } catch (rollbackError: any) {
                     ServerLogger.error(
                         `❌ MongoDB 롤백 실패: ${mongoResult._id}`,
                         rollbackError.message,
@@ -187,14 +258,20 @@ class UnifiedVideoSaver {
 
     /**
      * 배치 비디오 데이터 통합 저장
-     * @param {string} platform - 플랫폼
-     * @param {Array} videoDataArray - 비디오 데이터 배열
-     * @returns {Promise<Object>} 저장 결과
+     * @param platform - 플랫폼
+     * @param videoDataArray - 비디오 데이터 배열
+     * @returns 저장 결과
      */
-    async saveBatchVideoData(platform, videoDataArray) {
+    async saveBatchVideoData(platform: Platform, videoDataArray: VideoData[]): Promise<BatchSaveResult> {
         const startTime = Date.now();
-        let sheetsResult = null;
-        let mongoResults = [];
+        let sheetsResult: any = null;
+        let mongoResults: Array<{
+            success: boolean;
+            data?: VideoDocument;
+            error?: string;
+            originalIndex: number;
+            url?: string;
+        }> = [];
         let successCount = 0;
         let failedCount = 0;
 
@@ -223,10 +300,7 @@ class UnifiedVideoSaver {
                     spreadsheetUrl: null,
                 };
             } else {
-                sheetsResult = await this.saveBatchToGoogleSheets(
-                    platform,
-                    videoDataArray,
-                );
+                sheetsResult = await this.saveBatchToGoogleSheets(platform, videoDataArray);
             }
             const sheetsEndTime = Date.now();
 
@@ -252,13 +326,10 @@ class UnifiedVideoSaver {
                 try {
                     const convertedData = VideoDataConverter.convertToSchema(
                         platform,
-                        videoData,
+                        { ...videoData, platform } as any,
                         rowNumber,
                     );
-                    const mongoResult = await this.saveToMongoDB(
-                        platform,
-                        convertedData,
-                    );
+                    const mongoResult = await this.saveToMongoDB(platform, convertedData);
 
                     mongoResults.push({
                         success: true,
@@ -266,7 +337,7 @@ class UnifiedVideoSaver {
                         originalIndex: i,
                     });
                     successCount++;
-                } catch (error) {
+                } catch (error: any) {
                     mongoResults.push({
                         success: false,
                         error: error.message,
@@ -276,9 +347,7 @@ class UnifiedVideoSaver {
                     failedCount++;
 
                     ServerLogger.warn(
-                        `⚠️ MongoDB 개별 저장 실패 [${i + 1}/${
-                            videoDataArray.length
-                        }]`,
+                        `⚠️ MongoDB 개별 저장 실패 [${i + 1}/${videoDataArray.length}]`,
                         {
                             url: videoData.url || videoData.postUrl,
                             error: error.message,
@@ -326,7 +395,7 @@ class UnifiedVideoSaver {
                     mongoTime: mongoTime,
                 },
             };
-        } catch (error) {
+        } catch (error: any) {
             ServerLogger.error(
                 `❌ 배치 통합 저장 실패: ${platform.toUpperCase()}`,
                 error.message,
@@ -358,13 +427,13 @@ class UnifiedVideoSaver {
     /**
      * Google Sheets 저장 (기존 SheetsManager 사용)
      */
-    async saveToGoogleSheets(platform, videoData) {
+    async saveToGoogleSheets(platform: Platform, videoData: VideoData): Promise<any> {
         try {
             if (!this.sheetsManager) {
                 throw new Error('SheetsManager가 초기화되지 않았습니다');
             }
             return await this.sheetsManager.saveVideoData(videoData);
-        } catch (error) {
+        } catch (error: any) {
             throw new Error(`Google Sheets 저장 실패: ${error.message}`);
         }
     }
@@ -372,13 +441,13 @@ class UnifiedVideoSaver {
     /**
      * Google Sheets 배치 저장 (기존 SheetsManager 사용)
      */
-    async saveBatchToGoogleSheets(platform, videoDataArray) {
+    async saveBatchToGoogleSheets(platform: Platform, videoDataArray: VideoData[]): Promise<any> {
         try {
             if (!this.sheetsManager) {
                 throw new Error('SheetsManager가 초기화되지 않았습니다');
             }
             return await this.sheetsManager.saveVideoBatch(videoDataArray);
-        } catch (error) {
+        } catch (error: any) {
             throw new Error(`Google Sheets 배치 저장 실패: ${error.message}`);
         }
     }
@@ -386,7 +455,7 @@ class UnifiedVideoSaver {
     /**
      * MongoDB 저장
      */
-    async saveToMongoDB(platform, convertedData) {
+    async saveToMongoDB(platform: Platform, convertedData: FinalVideoData & { rowNumber: number; collectionTime: ISODateString }): Promise<VideoDocument> {
         try {
             // 통합된 Video 모델 사용
             const Model = Video;
@@ -400,28 +469,47 @@ class UnifiedVideoSaver {
                     'UNIFIED_SAVER',
                 );
 
-                // 기존 문서 업데이트
+                // 기존 문서 업데이트 - rowNumber와 collectionTime 제외하고 FinalVideoData만 저장
+                const { rowNumber, collectionTime, ...finalVideoData } = convertedData;
+                const updateData = {
+                    ...finalVideoData,
+                    collectionTime: new Date(collectionTime).toISOString()
+                };
+
                 const updatedDoc = await Model.findOneAndUpdate(
                     { url: convertedData.url },
-                    convertedData,
+                    updateData,
                     { new: true, upsert: false },
                 );
+
+                if (!updatedDoc) {
+                    throw new Error('문서 업데이트 실패');
+                }
 
                 ServerLogger.info(
                     `🔄 MongoDB 기존 문서 업데이트: ${updatedDoc._id}`,
                     null,
                     'UNIFIED_SAVER',
                 );
-                return updatedDoc;
+                return updatedDoc as unknown as VideoDocument;
             }
 
-            // 새 문서 생성
+            // 새 문서 생성 - rowNumber와 collectionTime 제외하고 FinalVideoData만 저장
+            const { rowNumber, collectionTime, ...finalVideoData } = convertedData;
+
+            // collectionTime을 ISO string으로 변환하여 추가
+            const mongoData = {
+                ...finalVideoData,
+                collectionTime: new Date(collectionTime).toISOString()
+            };
+
             ServerLogger.info('🔍 STEP3 - MongoDB 저장 직전 데이터:', {
-                thumbnailUrl: convertedData.thumbnailUrl,
-                language: convertedData.language,
-                description: convertedData.description
+                thumbnailUrl: mongoData.thumbnailUrl,
+                language: mongoData.language,
+                description: mongoData.description
             });
-            const newDoc = new Model(convertedData);
+
+            const newDoc = new Model(mongoData);
             const savedDoc = await newDoc.save();
 
             ServerLogger.info(
@@ -434,8 +522,8 @@ class UnifiedVideoSaver {
                 'UNIFIED_SAVER',
             );
 
-            return savedDoc;
-        } catch (error) {
+            return savedDoc as unknown as VideoDocument;
+        } catch (error: any) {
             if (error.code === 11000) {
                 // 중복 키 에러 처리
                 ServerLogger.warn(
@@ -452,7 +540,7 @@ class UnifiedVideoSaver {
     /**
      * MongoDB 롤백 (단일 문서)
      */
-    async rollbackMongoDB(platform, documentId) {
+    async rollbackMongoDB(platform: Platform, documentId: string): Promise<boolean> {
         try {
             const Model = Video;
             const deletedDoc = await Model.findByIdAndDelete(documentId);
@@ -472,7 +560,7 @@ class UnifiedVideoSaver {
                 );
                 return false;
             }
-        } catch (error) {
+        } catch (error: any) {
             ServerLogger.error(
                 `❌ MongoDB 롤백 실패: ${documentId}`,
                 error.message,
@@ -485,10 +573,15 @@ class UnifiedVideoSaver {
     /**
      * MongoDB 배치 롤백 (다중 문서)
      */
-    async rollbackBatchMongoDB(platform, successResults) {
+    async rollbackBatchMongoDB(
+        platform: Platform,
+        successResults: Array<{ success: boolean; data?: VideoDocument }>
+    ): Promise<void> {
         try {
             const Model = Video;
-            const documentIds = successResults.map((r) => r.data._id);
+            const documentIds = successResults
+                .filter(r => r.success && r.data)
+                .map((r) => r.data!._id);
 
             if (documentIds.length === 0) {
                 return;
@@ -503,7 +596,7 @@ class UnifiedVideoSaver {
                 null,
                 'UNIFIED_SAVER',
             );
-        } catch (error) {
+        } catch (error: any) {
             ServerLogger.error(
                 `❌ MongoDB 배치 롤백 실패`,
                 error.message,
@@ -516,7 +609,7 @@ class UnifiedVideoSaver {
     /**
      * Google Sheets 다음 행 번호 가져오기
      */
-    async getNextRowNumber(platform) {
+    async getNextRowNumber(platform: Platform): Promise<number> {
         try {
             if (!this.sheetsManager) {
                 ServerLogger.warn(
@@ -527,18 +620,15 @@ class UnifiedVideoSaver {
                 return 2; // 기본값 (헤더 다음 행)
             }
 
-            const sheetName = await this.sheetsManager.getSheetNameByPlatform(
-                platform,
-            );
-            const response =
-                await this.sheetsManager.sheets.spreadsheets.values.get({
-                    spreadsheetId: this.sheetsManager.spreadsheetId,
-                    range: `${sheetName}!A:A`,
-                });
+            const sheetName = await (this.sheetsManager as any).getSheetNameByPlatform(platform);
+            const response = await (this.sheetsManager as any).sheets.spreadsheets.values.get({
+                spreadsheetId: (this.sheetsManager as any).spreadsheetId,
+                range: `${sheetName}!A:A`,
+            });
 
             const values = response.data.values || [];
             return values.length + 1; // 헤더 포함하여 다음 행 번호
-        } catch (error) {
+        } catch (error: any) {
             ServerLogger.warn(
                 `⚠️ 다음 행 번호 조회 실패, 기본값 사용: ${error.message}`,
                 null,
@@ -551,9 +641,9 @@ class UnifiedVideoSaver {
     /**
      * 플랫폼별 저장 통계 조회
      */
-    async getSaveStatistics(platform = null) {
+    async getSaveStatistics(platform: Platform | null = null): Promise<SaveStatistics> {
         try {
-            const stats = {
+            const stats: SaveStatistics = {
                 sheets: {},
                 mongodb: {},
                 total: {},
@@ -562,18 +652,18 @@ class UnifiedVideoSaver {
             if (platform) {
                 // 특정 플랫폼 통계
                 const Model = Video;
-                const mongoCount = await Model.countDocuments();
+                const mongoCount = await Model.countDocuments({ platform });
 
                 stats.mongodb[platform] = mongoCount;
                 stats.total[platform] = mongoCount;
             } else {
                 // 전체 플랫폼 통계
-                const platforms = ['YOUTUBE', 'INSTAGRAM'];
+                const platforms: Platform[] = ['YOUTUBE', 'INSTAGRAM', 'TIKTOK'];
 
                 for (const plt of platforms) {
                     try {
                         const Model = Video;
-                        const mongoCount = await Model.countDocuments();
+                        const mongoCount = await Model.countDocuments({ platform: plt });
                         stats.mongodb[plt] = mongoCount;
                         stats.total[plt] = mongoCount;
                     } catch (error) {
@@ -584,7 +674,7 @@ class UnifiedVideoSaver {
             }
 
             return stats;
-        } catch (error) {
+        } catch (error: any) {
             ServerLogger.error(
                 '저장 통계 조회 실패',
                 error.message,
@@ -597,7 +687,7 @@ class UnifiedVideoSaver {
     /**
      * 데이터 일관성 검증 (Google Sheets vs MongoDB)
      */
-    async validateDataConsistency(platform, limit = 100) {
+    async validateDataConsistency(platform: Platform, limit: number = 100): Promise<ConsistencyValidationResult> {
         try {
             ServerLogger.info(
                 `🔍 데이터 일관성 검증 시작: ${platform.toUpperCase()}`,
@@ -605,18 +695,15 @@ class UnifiedVideoSaver {
                 'UNIFIED_SAVER',
             );
 
-            let sheetRows = [];
+            let sheetRows: any[] = [];
 
             // Google Sheets 데이터 조회 (SheetsManager가 있는 경우에만)
             if (this.sheetsManager) {
-                const sheetName = await this.sheetsManager.getSheetNameByPlatform(
-                    platform,
-                );
-                const response =
-                    await this.sheetsManager.sheets.spreadsheets.values.get({
-                        spreadsheetId: this.sheetsManager.spreadsheetId,
-                        range: `${sheetName}!A2:ZZ${limit + 1}`, // 헤더 제외하고 limit 개수만큼
-                    });
+                const sheetName = await (this.sheetsManager as any).getSheetNameByPlatform(platform);
+                const response = await (this.sheetsManager as any).sheets.spreadsheets.values.get({
+                    spreadsheetId: (this.sheetsManager as any).spreadsheetId,
+                    range: `${sheetName}!A2:ZZ${limit + 1}`, // 헤더 제외하고 limit 개수만큼
+                });
 
                 sheetRows = response.data.values || [];
             } else {
@@ -629,12 +716,12 @@ class UnifiedVideoSaver {
 
             // MongoDB 데이터 조회
             const Model = Video;
-            const mongoDocs = await Model.find({})
+            const mongoDocs = await Model.find({ platform })
                 .limit(limit)
                 .sort({ createdAt: -1 });
 
             // 일관성 검증
-            const results = {
+            const results: ConsistencyValidationResult = {
                 platform: platform,
                 sheetsCount: sheetRows.length,
                 mongoCount: mongoDocs.length,
@@ -644,8 +731,8 @@ class UnifiedVideoSaver {
             };
 
             // URL 기준으로 매칭 검증
-            const sheetUrls = new Set();
-            const mongoUrls = new Set();
+            const sheetUrls = new Set<string>();
+            const mongoUrls = new Set<string>();
 
             sheetRows.forEach((row, index) => {
                 const url = row[27] || row[16]; // YouTube: 27, Instagram: 16
@@ -675,12 +762,8 @@ class UnifiedVideoSaver {
             });
 
             // 차이점 찾기
-            const onlyInSheets = [...sheetUrls].filter(
-                (url) => !mongoUrls.has(url),
-            );
-            const onlyInMongo = [...mongoUrls].filter(
-                (url) => !sheetUrls.has(url),
-            );
+            const onlyInSheets = [...sheetUrls].filter((url) => !mongoUrls.has(url));
+            const onlyInMongo = [...mongoUrls].filter((url) => !sheetUrls.has(url));
 
             if (onlyInSheets.length > 0 || onlyInMongo.length > 0) {
                 results.consistent = false;
@@ -691,7 +774,7 @@ class UnifiedVideoSaver {
                         onlyInSheets: onlyInSheets.slice(0, 5),
                         onlyInMongo: onlyInMongo.slice(0, 5),
                     },
-                };
+                } as any;
             }
 
             ServerLogger.info(
@@ -707,7 +790,7 @@ class UnifiedVideoSaver {
             );
 
             return results;
-        } catch (error) {
+        } catch (error: any) {
             ServerLogger.error(
                 `❌ 데이터 일관성 검증 실패: ${platform.toUpperCase()}`,
                 error.message,
@@ -718,4 +801,4 @@ class UnifiedVideoSaver {
     }
 }
 
-module.exports = UnifiedVideoSaver;
+export default UnifiedVideoSaver;

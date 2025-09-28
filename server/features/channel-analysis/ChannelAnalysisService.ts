@@ -11,6 +11,9 @@ const { ChannelBackupService } = require('./services/ChannelBackupService');
 const { ChannelDataService } = require('./services/ChannelDataService');
 const { ChannelSearchService } = require('./services/ChannelSearchService');
 
+// ChannelData 타입 import 추가
+import type { ChannelData } from '../../types/channel.types';
+
 const DuplicateCheckManager = require('../../models/DuplicateCheckManager');
 const Channel = require('../../models/ChannelModel');
 
@@ -19,6 +22,11 @@ const Channel = require('../../models/ChannelModel');
  * 각 전문 서비스들을 조합하여 완전한 채널 분석 기능 제공
  */
 class ChannelAnalysisService {
+    private dataService: any;
+    private backupService: any;
+    private searchService: any;
+    private analyzer: any;
+
     constructor() {
         // 분리된 서비스들 초기화
         this.dataService = new ChannelDataService();
@@ -54,11 +62,11 @@ class ChannelAnalysisService {
      * 📊 YouTube API에서 채널 상세 분석 후 생성/업데이트
      */
     async createOrUpdateWithAnalysis(
-        channelIdentifier,
-        userKeywords = [],
-        includeAnalysis = true,
-        skipAIAnalysis = false,
-        queueNormalizedChannelId = null,
+        channelIdentifier: string,
+        userKeywords: string[] = [],
+        includeAnalysis: boolean = true,
+        skipAIAnalysis: boolean = false,
+        queueNormalizedChannelId: string | null = null,
     ) {
         try {
             // 🚨 중복검사 - 리소스 사용 전에 즉시 확인

@@ -344,6 +344,11 @@ export class VideoUtils {
      * 안전한 파일명 생성
      */
     static sanitizeFileName(fileName: string, maxLength: number = 255): string {
+        // null/undefined 체크
+        if (!fileName || typeof fileName !== 'string') {
+            return 'unknown_file';
+        }
+
         // 위험한 문자 제거
         let sanitized = fileName.replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
 
@@ -421,8 +426,8 @@ export class VideoUtils {
             if (process.platform === 'win32') {
                 // Windows: fsutil 출력 파싱
                 const lines = stdout.split('\n');
-                const freeLine = lines.find(line => line.includes('사용 가능한 바이트') || line.includes('Total free bytes'));
-                const totalLine = lines.find(line => line.includes('총 바이트') || line.includes('Total # of bytes'));
+                const freeLine = lines.find((line: string) => line.includes('사용 가능한 바이트') || line.includes('Total free bytes'));
+                const totalLine = lines.find((line: string) => line.includes('총 바이트') || line.includes('Total # of bytes'));
 
                 if (freeLine && totalLine) {
                     const freeBytes = parseInt(freeLine.match(/\d+/)?.[0] || '0');

@@ -50,7 +50,7 @@ export class TikTokManager {
                     extractedAt: new Date().toISOString()
                 };
             }
-        } catch (error) {
+        } catch (error: any) {
             return {
                 success: false,
                 error: error.message || 'Unknown error',
@@ -76,7 +76,7 @@ export class TikTokManager {
                 videoInfo: videoInfo || undefined,
                 downloadTime: Date.now() - startTime
             };
-        } catch (error) {
+        } catch (error: any) {
             return {
                 success: false,
                 error: error.message || 'Download failed',

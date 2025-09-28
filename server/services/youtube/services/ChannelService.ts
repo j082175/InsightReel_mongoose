@@ -101,7 +101,7 @@ export class ChannelService {
             }
 
             return null;
-        } catch (error) {
+        } catch (error: any) {
             if (error.response?.status === 403) {
                 ServerLogger.error('❌ YouTube API 할당량 초과 또는 권한 없음');
             }
@@ -130,7 +130,7 @@ export class ChannelService {
             ServerLogger.warn(`⚠️ 고비용 search.list API 사용: ${channelName} (100 units 소모)`);
             return await this.fallbackSearch(channelName);
 
-        } catch (error) {
+        } catch (error: any) {
             if (error.response?.status === 403) {
                 ServerLogger.error('❌ YouTube API 할당량 초과 또는 권한 없음');
             }
@@ -236,7 +236,7 @@ export class ChannelService {
             }
 
             return null;
-        } catch (error) {
+        } catch (error: any) {
             ServerLogger.error('❌ 최후의 search.list API도 실패:', error.message);
             throw error;
         }

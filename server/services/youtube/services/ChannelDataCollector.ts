@@ -419,7 +419,7 @@ export class ChannelDataCollector {
             }
 
             return null;
-        } catch (error) {
+        } catch (error: any) {
             ServerLogger.error(`YouTube 채널 정보 조회 실패: ${error.message}`);
             return null;
         }

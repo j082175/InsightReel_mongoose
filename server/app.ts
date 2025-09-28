@@ -5,8 +5,31 @@ import { setupMiddleware } from './middleware';
 import routes from './routes';
 import { ServerLogger } from './utils/logger';
 
-// 환경변수 로드
-dotenv.config({ path: path.join(__dirname, '../.env') });
+// 환경변수 로드 (TypeScript 컴파일 후 경로 고려)
+// ts-node로 실행 시와 컴파일된 js 실행 시 모두 고려
+const possibleEnvPaths = [
+    path.join(__dirname, '../.env'),  // ts-node로 실행시
+    path.join(__dirname, '../../.env'), // 컴파일된 js 실행시
+    path.join(process.cwd(), '.env')    // 프로젝트 루트의 .env
+];
+
+let envLoaded = false;
+for (const envPath of possibleEnvPaths) {
+    try {
+        if (require('fs').existsSync(envPath)) {
+            dotenv.config({ path: envPath });
+            envLoaded = true;
+            console.log(`✅ Environment loaded from: ${envPath}`);
+            break;
+        }
+    } catch (error) {
+        // Continue to next path
+    }
+}
+
+if (!envLoaded) {
+    console.warn('⚠️ No .env file found in expected locations');
+}
 
 // 설정 검증
 import { getConfig } from './config/config-validator';

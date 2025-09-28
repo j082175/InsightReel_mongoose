@@ -6,20 +6,20 @@
     "outDir": "./dist",
     "rootDir": "./",
 
-    // 엄격한 타입 체크 설정 (마이그레이션 중 완화)
-    "strict": false,                          // 모든 strict 옵션 비활성화
-    "noImplicitAny": false,                  // any 타입 허용
-    "strictNullChecks": false,               // null/undefined 체크 완화
-    "strictFunctionTypes": false,            // 함수 타입 체크 완화
-    "strictBindCallApply": false,            // bind, call, apply 체크 완화
-    "strictPropertyInitialization": false,   // 프로퍼티 초기화 체크 완화
-    "noImplicitThis": false,                 // this 타입 암시적 any 허용
-    "alwaysStrict": false,                   // strict 모드 비활성화
+    // 엄격한 타입 체크 설정 (완전 활성화!)
+    "strict": true,                          // 🔥 모든 strict 옵션 활성화!
+    "noImplicitAny": true,                   // any 타입 명시적 지정 필수
+    "strictNullChecks": true,                // null/undefined 체크 활성화
+    "strictFunctionTypes": true,             // 함수 타입 체크 활성화
+    "strictBindCallApply": true,             // bind, call, apply 체크 활성화
+    "strictPropertyInitialization": true,    // 프로퍼티 초기화 체크 활성화
+    "noImplicitThis": true,                  // this 타입 명시적 지정 필수
+    "alwaysStrict": true,                    // strict 모드 활성화
 
-    // 추가 체크 옵션 (마이그레이션 중 완화)
+    // 추가 체크 옵션 (단계적 활성화)
     "noUnusedLocals": false,                 // 사용안한 로컬 변수 허용
     "noUnusedParameters": false,             // 사용안한 파라미터 허용
-    "noImplicitReturns": false,              // 모든 경로에서 반환값 불필요
+    "noImplicitReturns": true,               // 🔥 모든 경로에서 반환값 필수!
     "noFallthroughCasesInSwitch": false,     // switch문 fallthrough 허용
     "noUncheckedIndexedAccess": false,       // 인덱스 접근시 undefined 체크 완화
     "exactOptionalPropertyTypes": false,     // 옵셔널 프로퍼티 정확한 타입 완화

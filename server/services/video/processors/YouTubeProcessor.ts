@@ -1,7 +1,8 @@
 import * as ytdl from '@distube/ytdl-core';
 import { ServerLogger } from '../../../utils/logger';
-import { Platform } from '../../../types/video-types';
+import { Platform, YouTubeRawData } from '../../../types/video-types';
 
+// YouTubeRawData를 평면화한 처리 전용 인터페이스
 interface YouTubeVideoInfo {
     id: string;
     title: string;
@@ -10,11 +11,17 @@ interface YouTubeVideoInfo {
     channelTitle: string;
     views: number;
     likes: number;
-    comments: number;
+    commentCount: number;  // 표준 필드명 사용
     duration: string;
     uploadDate: string;
     thumbnailUrl: string;
     categoryId: string;
+    tags: string[];
+    channelCustomUrl: string;
+    quality: string;
+    hasCaption: boolean;
+    embeddable: boolean;
+    madeForKids: boolean;
 }
 
 interface YouTubeProcessingOptions {
@@ -49,34 +56,35 @@ export class YouTubeProcessor {
 
             ServerLogger.info(`YouTube 비디오 다운로드 시작: ${videoId}`);
 
-            // ytdl-core를 사용한 다운로드
-            const info = await ytdl.getInfo(videoUrl);
-            const format = ytdl.chooseFormat(info.formats, {
-                quality: 'highestvideo',
-                filter: 'audioandvideo'
+            // yt-dlp를 사용한 다운로드
+            const { exec } = require('child_process');
+            const { promisify } = require('util');
+            const execAsync = promisify(exec);
+
+            // 비디오 다운로드 명령어 (YouTube Shorts 호환)
+            const command = `yt-dlp -f "best[ext=mp4]" -o "${filePath}" "${videoUrl}"`;
+
+            ServerLogger.info(`실행 명령어: ${command}`);
+
+            const { stdout, stderr } = await execAsync(command, {
+                timeout: 120000 // 2분 타임아웃
             });
 
-            if (!format) {
-                throw new Error('적절한 비디오 형식을 찾을 수 없습니다');
+            if (stderr) {
+                ServerLogger.warn('yt-dlp 경고:', stderr);
             }
 
-            const stream = ytdl.downloadFromInfo(info, { format });
+            // 파일이 성공적으로 생성되었는지 확인
             const fs = require('fs');
-            const writeStream = fs.createWriteStream(filePath);
+            if (fs.existsSync(filePath)) {
+                const stats = fs.statSync(filePath);
+                if (stats.size > 1024) { // 1KB 이상
+                    ServerLogger.success(`YouTube 비디오 다운로드 완료: ${filePath} (${stats.size} bytes)`);
+                    return true;
+                }
+            }
 
-            return new Promise((resolve, reject) => {
-                stream.pipe(writeStream);
-
-                writeStream.on('finish', () => {
-                    ServerLogger.success(`YouTube 비디오 다운로드 완료: ${filePath}`);
-                    resolve(true);
-                });
-
-                writeStream.on('error', (error: Error) => {
-                    ServerLogger.error('YouTube 다운로드 오류:', error);
-                    reject(error);
-                });
-            });
+            throw new Error('다운로드된 파일이 없거나 크기가 너무 작습니다');
 
         } catch (error) {
             ServerLogger.error('YouTube 비디오 다운로드 실패:', error);
@@ -86,16 +94,40 @@ export class YouTubeProcessor {
 
     async getVideoInfo(videoUrl: string, options: YouTubeProcessingOptions = {}): Promise<YouTubeVideoInfo | null> {
         try {
+            ServerLogger.info('🔍 YouTubeProcessor.getVideoInfo 시작:', {
+                videoUrl,
+                useYtdlFirst: options.useYtdlFirst,
+                hasHybridExtractor: !!this.hybridExtractor
+            });
+
             if (options.useYtdlFirst === false && this.hybridExtractor) {
                 // 하이브리드 추출기 우선 사용
+                ServerLogger.info('🔄 하이브리드 추출기 사용 중...');
                 const result = await this.hybridExtractor.extractVideoData(videoUrl);
+                ServerLogger.info('🔍 하이브리드 추출기 결과:', { success: result.success, dataKeys: result.data ? Object.keys(result.data).slice(0, 10) : null });
+
                 if (result.success) {
-                    return this.normalizeVideoInfo(result.data);
+                    const normalized = this.normalizeVideoInfo(result.data);
+                    ServerLogger.info('🔍 정규화된 결과:', {
+                        channelTitle: normalized.channelTitle,
+                        commentCount: normalized.commentCount,  // 표준 필드명 사용
+                        views: normalized.views,
+                        likes: normalized.likes
+                    });
+                    return normalized;
                 }
             }
 
             // 기본 YouTube API 사용
-            return await this.getVideoInfoLegacy(videoUrl);
+            ServerLogger.info('🔄 레거시 YouTube API 사용 중...');
+            const legacyResult = await this.getVideoInfoLegacy(videoUrl);
+            ServerLogger.info('🔍 레거시 API 결과:', {
+                channelTitle: legacyResult?.channelTitle,
+                commentCount: legacyResult?.commentCount,  // 표준 필드명 사용
+                views: legacyResult?.views,
+                likes: legacyResult?.likes
+            });
+            return legacyResult;
 
         } catch (error) {
             ServerLogger.error('YouTube 비디오 정보 조회 실패:', error);
@@ -116,7 +148,7 @@ export class YouTubeProcessor {
             const axios = require('axios');
             const response = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
                 params: {
-                    part: 'snippet,statistics,contentDetails',
+                    part: 'snippet,statistics,contentDetails,status',  // status 추가
                     id: videoId,
                     key: apiKey
                 }
@@ -139,6 +171,7 @@ export class YouTubeProcessor {
         const snippet = item.snippet || {};
         const statistics = item.statistics || {};
         const contentDetails = item.contentDetails || {};
+        const status = item.status || {};
 
         return {
             id: item.id,
@@ -148,28 +181,60 @@ export class YouTubeProcessor {
             channelTitle: snippet.channelTitle || '',
             views: parseInt(statistics.viewCount || '0'),
             likes: parseInt(statistics.likeCount || '0'),
-            comments: parseInt(statistics.commentCount || '0'),
+            commentCount: parseInt(statistics.commentCount || '0'),  // 표준 필드명 사용
             duration: contentDetails.duration || '',
             uploadDate: snippet.publishedAt || '',
             thumbnailUrl: snippet.thumbnails?.high?.url || '',
-            categoryId: snippet.categoryId || ''
+            categoryId: snippet.categoryId || '',
+            // 새로운 필드들 추가
+            tags: snippet.tags || [],
+            channelCustomUrl: snippet.channelCustomUrl || '',
+            quality: contentDetails.definition || 'sd',  // 'hd' | 'sd'
+            hasCaption: contentDetails.caption === 'true',
+            embeddable: status.embeddable !== false,
+            madeForKids: status.madeForKids === true
         };
     }
 
     private normalizeVideoInfo(data: any): YouTubeVideoInfo {
+        // 디버깅: 실제 받은 데이터 구조 로깅
+        ServerLogger.info('🔍 YouTube 원본 데이터 구조:', {
+            channelFields: {
+                channelName: data.channelName,
+                channelTitle: data.channelTitle,
+                channel: data.channel,
+                uploader: data.uploader,
+                uploaderName: data.uploaderName
+            },
+            commentFields: {
+                commentCount: data.commentCount,  // 표준 필드명을 첫 번째로
+                commentsCount: data.commentsCount,
+                comments: data.comments,
+                comment_count: data.comment_count
+            },
+            allKeys: Object.keys(data).slice(0, 20) // 처음 20개 키만
+        });
+
         return {
             id: data.id || data.videoId || '',
             title: data.title || '',
             description: data.description || '',
             channelId: data.channelId || '',
-            channelTitle: data.channelName || data.channelTitle || '',
-            views: parseInt(data.views || data.viewCount || '0'),
-            likes: parseInt(data.likes || data.likeCount || '0'),
-            comments: parseInt(data.commentsCount || data.commentCount || '0'),
+            channelTitle: data.channelTitle || data.channelName || data.uploader || data.uploaderName || '',
+            views: parseInt(data.views || data.viewCount || data.view_count || '0'),
+            likes: parseInt(data.likes || data.likeCount || data.like_count || '0'),
+            commentCount: parseInt(data.commentCount || data.commentsCount || data.comments || data.comment_count || '0'),  // 표준 필드명 사용
             duration: data.duration || '',
             uploadDate: data.uploadDate || data.publishedAt || '',
             thumbnailUrl: data.thumbnailUrl || '',
-            categoryId: data.categoryId || ''
+            categoryId: data.categoryId || '',
+            // 누락된 필드들 추가
+            tags: data.tags || [],
+            channelCustomUrl: data.channelCustomUrl || '',
+            quality: data.quality || data.definition || 'sd',
+            hasCaption: data.hasCaption || data.caption === 'true',
+            embeddable: data.embeddable !== false,
+            madeForKids: data.madeForKids === true
         };
     }
 
@@ -179,7 +244,8 @@ export class YouTubeProcessor {
         const patterns = [
             /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
             /youtube\.com\/v\/([^&\n?#]+)/,
-            /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+            /youtube\.com\/watch\?.*v=([^&\n?#]+)/,
+            /youtube\.com\/shorts\/([^&\n?#]+)/  // YouTube Shorts 지원 추가
         ];
 
         for (const pattern of patterns) {
@@ -194,22 +260,28 @@ export class YouTubeProcessor {
 
     isYouTubeUrl(url: string): boolean {
         if (!url || typeof url !== 'string') return false;
-        return /^https?:\/\/(www\.)?(youtube\.com|youtu\.be)/.test(url);
+        // 레거시 호환성: youtube.com 또는 youtu.be가 포함되면 허용
+        return url.includes('youtube.com') || url.includes('youtu.be');
     }
 
     private async getApiKey(): Promise<string | null> {
         if (!this.youtubeApiKey) {
             try {
-                const ApiKeyManager = require('../../ApiKeyManager');
-                const apiKeyManager = new ApiKeyManager();
+                const apiKeyManager = require('../../ApiKeyManager');
+                await apiKeyManager.initialize();
                 const activeKeys = await apiKeyManager.getActiveApiKeys();
+
+                ServerLogger.info(`🔍 YouTube API 키 디버그 - 로드된 키 개수: ${activeKeys.length}`);
+                if (activeKeys.length > 0) {
+                    ServerLogger.info(`🔍 첫 번째 API 키 미리보기: ${activeKeys[0].substring(0, 10)}...`);
+                }
 
                 if (activeKeys.length === 0) {
                     ServerLogger.warn('사용 가능한 YouTube API 키가 없습니다');
                     return null;
                 }
 
-                this.youtubeApiKey = activeKeys[0].key;
+                this.youtubeApiKey = activeKeys[0];
             } catch (error) {
                 ServerLogger.error('API 키 로드 실패:', error);
                 return null;

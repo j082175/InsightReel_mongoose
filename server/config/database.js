@@ -26,9 +26,10 @@ class DatabaseManager {
         maxPoolSize: 10,
         minPoolSize: 2,
         
-        // 타임아웃 설정
-        serverSelectionTimeoutMS: 5000,
-        socketTimeoutMS: 45000,
+        // 타임아웃 설정 (더 관대하게)
+        serverSelectionTimeoutMS: 30000,  // 30초로 증가
+        socketTimeoutMS: 60000,           // 60초로 증가
+        connectTimeoutMS: 30000,          // 연결 타임아웃 30초
         
         // 기타 옵션
         retryWrites: true,

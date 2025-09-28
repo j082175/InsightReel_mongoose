@@ -158,7 +158,7 @@ export class GeminiAnalyzer {
             const startTime = Date.now();
             ServerLogger.info(`Gemini 이미지 쿼리 시작: ${prompt.substring(0, 100)}...`);
 
-            const result = await this.geminiManager.queryGeminiWithImage(prompt, imageBase64);
+            const result = await this.geminiManager.generateContent(prompt, imageBase64);
 
             const duration = Date.now() - startTime;
 
@@ -244,7 +244,7 @@ export class GeminiAnalyzer {
             } else {
                 // 폴백: 첫 번째 이미지만 사용
                 ServerLogger.warn('다중 이미지 지원 없음, 첫 번째 이미지 사용');
-                result = await this.geminiManager.queryGeminiWithImage(prompt, validImages[0]);
+                result = await this.geminiManager.generateContent(prompt, validImages[0]);
             }
 
             const duration = Date.now() - startTime;

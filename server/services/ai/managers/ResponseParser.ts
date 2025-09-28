@@ -324,14 +324,14 @@ export class ResponseParser {
         if (data.keywords) {
             if (Array.isArray(data.keywords)) {
                 normalized.keywords = data.keywords
-                    .map(k => typeof k === 'string' ? k.trim() : String(k).trim())
-                    .filter(k => k.length > 0)
+                    .map((k: any) => typeof k === 'string' ? k.trim() : String(k).trim())
+                    .filter((k: string) => k.length > 0)
                     .slice(0, 20); // 최대 20개로 제한
             } else if (typeof data.keywords === 'string') {
                 normalized.keywords = data.keywords
                     .split(/[,;|]/)
-                    .map(k => k.trim())
-                    .filter(k => k.length > 0)
+                    .map((k: string) => k.trim())
+                    .filter((k: string) => k.length > 0)
                     .slice(0, 20);
             }
         }

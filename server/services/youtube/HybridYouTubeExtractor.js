@@ -1,8 +1,8 @@
 const ytdl = require('@distube/ytdl-core');
 const axios = require('axios');
-const { ServerLogger } = require('../utils/logger');
-const { API_TIMEOUTS } = require('../config/api-constants');
-const MultiKeyManager = require('../utils/multi-key-manager');
+const { ServerLogger } = require('../../utils/logger');
+const { API_TIMEOUTS } = require('../../config/api-constants');
+const MultiKeyManager = require('../../utils/multi-key-manager');
 
 /**
  * 🚀 하이브리드 YouTube 데이터 추출기

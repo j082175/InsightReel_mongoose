@@ -7,12 +7,14 @@ import { Platform } from './video';
 
 // ===== 기본 채널 정보 (ChannelCore) =====
 export interface ChannelCore {
-  id: string; // MongoDB _id → id 변환된 값
-  _id?: string; // MongoDB ObjectId (원본)
+  _id: string; // MongoDB ObjectId (표준 ID)
   channelId: string; // YouTube/Instagram/TikTok 실제 채널 ID
-  name: string;
+  name: string; // 필수 → 모든 채널은 이름이 있어야 함
+  platform: Platform; // 필수 → 모든 채널은 플랫폼이 있어야 함
+
+  // 선택적 필드들
+  id?: string; // 임시 호환용 (향후 제거 예정)
   url?: string;
-  platform: Platform;
   subscribers?: number;
   description?: string;
   thumbnailUrl?: string;
@@ -126,18 +128,12 @@ export interface Channel
     ChannelClusterInfo,
     ChannelStats,
     ChannelMetadata {
-  // MongoDB 필드 (통일된 ID) - 명시적 추가
-  _id?: string; // MongoDB ObjectId → 모든 API에서 사용
-
-  // UI 전용 필드 (레거시 호환)
-  videoCount?: number; // totalVideos와 동일
-  subscriberCount?: number; // subscribers와 동일
-  category?: string; // categoryInfo.majorCategory와 동일
-  avatarUrl?: string; // thumbnailUrl과 동일
-  channelUrl?: string; // url과 동일
-  avgUploadsPerDay?: number; // dailyUploadRate와 동일
-  viewsLast7Days?: number; // last7DaysViews와 동일
-  avgVideoDuration?: number; // avgDurationSeconds와 동일
+  // UI 전용 필드 (하위 호환성을 위한 임시 유지)
+  videoCount?: number; // totalVideos와 동일 (향후 제거 예정)
+  subscriberCount?: number; // subscribers와 동일 (향후 제거 예정)
+  category?: string; // categoryInfo.majorCategory와 동일 (향후 제거 예정)
+  avatarUrl?: string; // thumbnailUrl과 동일 (향후 제거 예정)
+  channelUrl?: string; // url과 동일 (향후 제거 예정)
 
   // 분석 상태 (UI용)
   analysisStatus?:

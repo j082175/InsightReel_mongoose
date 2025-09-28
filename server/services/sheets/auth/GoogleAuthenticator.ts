@@ -165,7 +165,7 @@ export class GoogleAuthenticator {
             ServerLogger.error('Google Sheets 연결 테스트 실패:', error);
 
             // 403 에러는 권한 문제
-            if (error.code === 403) {
+            if ((error as any).code === 403) {
                 return {
                     status: 'permission_denied',
                     error: '스프레드시트 접근 권한이 없습니다. 서비스 계정에 편집 권한을 부여해주세요.'
@@ -173,7 +173,7 @@ export class GoogleAuthenticator {
             }
 
             // 404 에러는 스프레드시트를 찾을 수 없음
-            if (error.code === 404) {
+            if ((error as any).code === 404) {
                 return {
                     status: 'not_found',
                     error: '스프레드시트를 찾을 수 없습니다. GOOGLE_SPREADSHEET_ID를 확인해주세요.'

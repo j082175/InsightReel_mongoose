@@ -4,9 +4,10 @@ import { Platform } from './video-types';
 // Express 요청/응답 확장 타입
 export interface VideoProcessRequest extends Request {
     body: {
-        platform: Platform;
+        platform?: Platform;
         videoUrl?: string;
-        postUrl: string;
+        postUrl?: string;
+        url?: string;           // 안드로이드 앱이 보내는 키
         metadata?: VideoMetadata;
         analysisType?: AnalysisType;
         useAI?: boolean;
@@ -44,6 +45,7 @@ export interface VideoMetadata {
     channelVideos?: number;
     contentType?: string;
     topComments?: string;
+    comments?: string;
     youtubeCategory?: string;
     monetized?: string;
     quality?: string;

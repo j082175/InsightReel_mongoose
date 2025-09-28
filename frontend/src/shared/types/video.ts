@@ -12,9 +12,9 @@ export interface LegacyVideoCore {
   // 자동 생성 필드
   rowNumber?: number;
 
-  // 기본 메타데이터
+  // 기본 메타데이터 (필수)
   uploadDate: string;
-  platform: Platform;
+  platform: Platform; // 필수 → 모든 비디오는 플랫폼이 있어야 함
 
   // 콘텐츠 분석 필드
   keywords?: string[];
@@ -29,7 +29,7 @@ export interface LegacyVideoCore {
 
   // URL 정보
   url?: string;
-  thumbnailUrl?: string;
+  thumbnailUrl: string; // 필수 → 모든 비디오는 썸네일이 있어야 함
 
   // 제목 (필수)
   title: string;
@@ -65,7 +65,7 @@ export interface AIAnalysis {
 export interface YouTubeSpecific {
   youtubeHandle?: string;
   comments?: string;
-  views?: number;
+  views: number; // 필수 → 모든 비디오는 조회수가 있어야 함
   duration?: string;
   contentType?: ContentType;
   monetized?: string;
@@ -104,16 +104,14 @@ export interface Video
     AIAnalysis,
     YouTubeSpecific,
     SystemMetadata {
-  id: string;
-  // MongoDB 필드 (통일된 ID) - 모든 계층에서 _id 사용
-  _id: string; // MongoDB ObjectId → 필수 필드로 변경
+  // MongoDB 필드 (표준 ID) - _id만 사용
+  _id: string; // MongoDB ObjectId → 필수 필드
 
-  // UI 전용 필드 (레거시 호환용)
-  videoId?: string; // 비디오 고유 ID
-  thumbnail?: string; // thumbnailUrl과 동일
+  // UI 전용 필드 (하위 호환성을 위한 임시 유지)
+  id?: string; // 임시 호환용 (향후 제거 예정)
+  videoId?: string; // 비디오 고유 ID (향후 제거 예정)
   channelAvatar?: string;
   channelAvatarUrl?: string; // channelAvatar와 동일
-  viewCount?: number; // views와 동일
   daysAgo?: number;
   isTrending?: boolean;
   embedUrl?: string;

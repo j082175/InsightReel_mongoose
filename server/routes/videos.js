@@ -8,7 +8,7 @@ const { ServerLogger } = require('../utils/logger');
 const VideoProcessor = require('../../dist/server/services/video/VideoProcessor');
 const AIAnalyzer = require('../../dist/server/services/ai/AIAnalyzer');
 const SheetsManager = require('../../dist/server/services/sheets/SheetsManager');
-const UnifiedVideoSaver = require('../services/UnifiedVideoSaver');
+const UnifiedVideoSaver = require('../../dist/server/services/UnifiedVideoSaver').default;
 
 /**
  * 🎯 개별 영상 관리 API
