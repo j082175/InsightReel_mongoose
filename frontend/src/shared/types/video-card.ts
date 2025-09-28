@@ -4,16 +4,12 @@
 
 export interface VideoCardData {
   _id?: string;
-  videoId?: string;
-  id?: string | number;
   title: string;
   url: string;
   thumbnailUrl?: string;
-  thumbnail?: string;
   channelName: string;
   channelUrl?: string;
   views?: number;
-  viewCount?: number;
   likes?: number;
   platform?: string;
   duration?: string;

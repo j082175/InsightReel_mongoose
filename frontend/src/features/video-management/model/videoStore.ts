@@ -241,29 +241,6 @@ export const useVideoStore = (
     }
   }, [hasMore, isLoadingMore, fetchNextPage]);
 
-  // 🚀 DEBUG: VideoStore 상태 로깅
-  console.log('🔧 [DEBUG] VideoStore 상태:', {
-    rawVideosCount: videos.length,
-    filteredVideosCount: filteredVideos.length,
-    loading,
-    isLoadingMore,
-    hasMore,
-    queryError: queryError?.message,
-    infiniteDataPages: infiniteVideosData?.pages?.length,
-    // React Query의 hasNextPage 상세 분석
-    reactQueryState: {
-      hasNextPage: hasMore, // 이미 hasMore로 destructuring됨
-      isFetchingNextPage: isLoadingMore,
-      isLoading: loading,
-      pages: infiniteVideosData?.pages?.map((page, index) => ({
-        pageIndex: index,
-        videosCount: page.videos?.length,
-        pagination: page.pagination
-      }))
-    },
-    firstRawVideo: videos[0]?.title,
-    firstFilteredVideo: filteredVideos[0]?.title
-  });
 
   return {
     // State (React Query + local state 조합)
