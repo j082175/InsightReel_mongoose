@@ -270,6 +270,14 @@ export class InstagramManager {
         }
     }
 
+    /**
+     * API 키 캐시 클리어 (서비스 레지스트리 요구사항)
+     */
+    clearApiKeyCache(): void {
+        // Instagram은 API 키를 사용하지 않지만 서비스 레지스트리 호환성을 위해 빈 메서드 제공
+        ServerLogger.debug('Instagram API 키 캐시 클리어 (No-op)', null, 'INSTAGRAM');
+    }
+
     // ===== 싱글톤 패턴 =====
 
     private static instance: InstagramManager | null = null;

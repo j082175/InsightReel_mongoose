@@ -198,8 +198,93 @@ export class VideoProcessor {
         platform: Platform,
         analysisType: 'single' | 'multi-frame' | 'full' = 'multi-frame'
     ): Promise<string | undefined> {
+        // 다중 프레임이 필요한 경우 새로운 메서드 사용
+        if (analysisType === 'multi-frame' || analysisType === 'full') {
+            const result = await this.processThumbnailMultiFrame(thumbnailUrl, videoPath, videoId, platform, analysisType);
+            // 첫 번째 프레임만 반환 (기존 호환성 유지)
+            if (Array.isArray(result) && result.length > 0) {
+                return result[0];
+            }
+            return typeof result === 'string' ? result : undefined;
+        }
+
+        // 단일 프레임 처리
+        return this.processThumbnailSingle(thumbnailUrl, videoPath, videoId, platform);
+    }
+
+    async processThumbnailMultiFrame(
+        thumbnailUrl: string,
+        videoPath: string | undefined,
+        videoId: string,
+        platform: Platform,
+        analysisType: 'single' | 'multi-frame' | 'full' = 'multi-frame'
+    ): Promise<string | string[] | undefined> {
         try {
             ServerLogger.info(`🔍 썸네일 처리 시작: URL=${thumbnailUrl}, videoPath=${videoPath}, videoId=${videoId}`);
+            ServerLogger.info(`🔍 분석 타입: ${analysisType}, 비디오 파일 존재: ${videoPath ? fs.existsSync(videoPath) : false}`);
+
+            // 다중 프레임 분석이 필요한 경우, 비디오 파일을 우선적으로 사용
+            // 기본적으로 multi-frame으로 처리 (single이 아닌 경우)
+            const shouldUseMultiFrame = analysisType !== 'single' && videoPath && fs.existsSync(videoPath);
+            ServerLogger.info(`🎯 다중 프레임 사용 결정: analysisType="${analysisType}", shouldUse=${shouldUseMultiFrame}`);
+
+            if (shouldUseMultiFrame) {
+                ServerLogger.info(`🎬 다중 프레임 분석을 위해 비디오 파일에서 썸네일 생성 중...`);
+                const result = await this.thumbnailExtractor.generateThumbnail(videoPath, 'multi-frame');
+                if (result.success && result.framePaths && result.framePaths.length > 0) {
+                    ServerLogger.info(`✅ ${result.framePaths.length}개 프레임 추출 완료`);
+                    return result.framePaths; // 다중 프레임 배열 반환
+                }
+                ServerLogger.warn(`❌ 비디오 파일에서 썸네일 생성 실패, 온라인 썸네일로 대체`);
+            }
+
+            // 온라인 썸네일 다운로드 시도 (단일 프레임이거나 비디오 파일이 없는 경우)
+            if (thumbnailUrl) {
+                ServerLogger.info(`📥 온라인 썸네일 다운로드 시도: ${thumbnailUrl}`);
+                const downloadedThumbnail = await this.thumbnailExtractor.downloadThumbnail(
+                    thumbnailUrl,
+                    videoId,
+                    platform
+                );
+                if (downloadedThumbnail) {
+                    ServerLogger.info(`✅ 온라인 썸네일 다운로드 성공: ${downloadedThumbnail}`);
+                    return downloadedThumbnail;
+                } else {
+                    ServerLogger.warn(`❌ 온라인 썸네일 다운로드 실패, 로컬 생성으로 전환`);
+                }
+            } else {
+                ServerLogger.warn(`⚠️ 썸네일 URL이 없음, 로컬 생성으로 전환`);
+            }
+
+            // 로컬 비디오 파일에서 썸네일 생성 (최종 fallback)
+            if (videoPath && fs.existsSync(videoPath)) {
+                const fallbackAnalysisType = analysisType === 'single' ? 'single' : 'multi-frame';
+                const result = await this.thumbnailExtractor.generateThumbnail(videoPath, fallbackAnalysisType);
+                if (result.success) {
+                    if (fallbackAnalysisType === 'multi-frame' && result.framePaths && result.framePaths.length > 0) {
+                        return result.framePaths; // 다중 프레임 배열 반환
+                    } else if (result.thumbnailPath) {
+                        return result.thumbnailPath; // 단일 프레임 반환
+                    }
+                }
+            }
+
+            return undefined;
+
+        } catch (error) {
+            ServerLogger.error('썸네일 처리 실패:', error);
+            return undefined;
+        }
+    }
+
+    async processThumbnailSingle(
+        thumbnailUrl: string,
+        videoPath: string | undefined,
+        videoId: string,
+        platform: Platform
+    ): Promise<string | undefined> {
+        try {
+            ServerLogger.info(`🔍 단일 썸네일 처리 시작: URL=${thumbnailUrl}, videoPath=${videoPath}, videoId=${videoId}`);
 
             // 온라인 썸네일 다운로드 시도
             if (thumbnailUrl) {
@@ -221,7 +306,7 @@ export class VideoProcessor {
 
             // 로컬 비디오 파일에서 썸네일 생성
             if (videoPath && fs.existsSync(videoPath)) {
-                const result = await this.thumbnailExtractor.generateThumbnail(videoPath, analysisType);
+                const result = await this.thumbnailExtractor.generateThumbnail(videoPath, 'single');
                 if (result.success && result.thumbnailPath) {
                     return result.thumbnailPath;
                 }
@@ -230,7 +315,7 @@ export class VideoProcessor {
             return undefined;
 
         } catch (error) {
-            ServerLogger.error('썸네일 처리 실패:', error);
+            ServerLogger.error('단일 썸네일 처리 실패:', error);
             return undefined;
         }
     }

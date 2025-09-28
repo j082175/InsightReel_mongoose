@@ -57,8 +57,10 @@ export const createVideoSchema = (): Schema<FinalVideoData> => {
     // ===== AI 분석 결과 =====
     mainCategory: { type: String, default: '', index: true },
     middleCategory: { type: String, default: '' },
+    subCategory: { type: String, default: '' },
+    detailCategory: { type: String, default: '' },
     fullCategoryPath: { type: String, default: '' },
-    categoryDepth: { type: Number, default: 0 },
+    categoryDepth: { type: Number, default: 4 }, // 4단계 카테고리
     keywords: [{ type: String }],
     hashtags: [{ type: String }],
     mentions: [{ type: String }],

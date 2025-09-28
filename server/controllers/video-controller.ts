@@ -207,7 +207,7 @@ export class VideoController {
             postUrl,
             url,
             metadata,
-            analysisType = 'quick',
+            analysisType = 'multi-frame',
             useAI = true,
         } = req.body;
 
@@ -271,7 +271,7 @@ export class VideoController {
         const {
             platform,
             postUrl,
-            analysisType = 'quick',
+            analysisType = 'multi-frame',
             useAI = true,
         } = req.body;
         const metadata = req.body.metadata || {};
@@ -319,16 +319,19 @@ export class VideoController {
      * 비디오 처리 파이프라인 실행
      */
     async executeVideoProcessingPipeline(options: PipelineOptions): Promise<VideoProcessingResult> {
+        const startTime = Date.now();
         const {
             platform,
             videoUrl,
             videoPath,
             postUrl,
             metadata,
-            analysisType = 'quick',
+            analysisType = 'multi-frame',
             useAI = true,
             isBlob,
         } = options;
+
+        ServerLogger.info(`⏱️ 비디오 처리 파이프라인 시작 - Platform: ${platform}, URL: ${videoUrl || 'blob'}`);
 
         const pipeline: PipelineResult = {
             videoPath: null,
@@ -341,6 +344,7 @@ export class VideoController {
             ServerLogger.info(`🐛 파이프라인 시작 - metadata: ${metadata ? 'defined' : 'undefined'}`);
 
             // 1단계: 비디오 준비 및 메타데이터 수집
+            const step1StartTime = Date.now();
             let enrichedMetadata: VideoMetadata = { ...(metadata || {}) };
 
             // Instagram 메타데이터 보존 (메타데이터가 있을 때만)
@@ -381,15 +385,27 @@ export class VideoController {
 
                 ServerLogger.info(`🔍 Controller에서 VideoId 추출: ${videoId} from ${videoUrl}`);
 
+                ServerLogger.info(`📥 비디오 다운로드 시도: ${videoUrl}`);
+                const downloadStartTime = Date.now();
+
                 pipeline.videoPath = (await this.videoProcessor.downloadVideo(
                     videoUrl,
                     platform,
                     videoId
                 )) || null;
 
+                const downloadTime = Date.now() - downloadStartTime;
+
+                if (pipeline.videoPath) {
+                    ServerLogger.info(`✅ 비디오 다운로드 성공: ${pipeline.videoPath} (소요시간: ${downloadTime}ms)`);
+                } else {
+                    ServerLogger.warn(`❌ 비디오 다운로드 실패 또는 경로 없음 (소요시간: ${downloadTime}ms)`);
+                }
+
                 // YouTube URL인 경우 메타데이터 수집
                 if (platform === PLATFORMS.YOUTUBE) {
                     ServerLogger.info('📊 YouTube 메타데이터 수집 중...');
+                    const metadataStartTime = Date.now();
                     try {
                         const youtubeInfo = await this.videoProcessor.getYouTubeVideoInfo(postUrl);
                         enrichedMetadata = {
@@ -401,7 +417,7 @@ export class VideoController {
                             // 채널 정보
                             channelName: youtubeInfo.channelTitle,
                             channelUrl: youtubeInfo.channelCustomUrl || `https://www.youtube.com/channel/${youtubeInfo.channelId}`,
-                            youtubeHandle: this.extractYouTubeHandle(youtubeInfo.channelCustomUrl),
+                            youtubeHandle: this.extractYouTubeHandle(youtubeInfo.channelCustomUrl, youtubeInfo.channelTitle),
                             ...(await this.getChannelInfo(youtubeInfo.channelId)),
                             // 통계 정보
                             likes: youtubeInfo.likes,
@@ -409,17 +425,18 @@ export class VideoController {
                             views: youtubeInfo.views,
                             // 기타 정보
                             uploadDate: youtubeInfo.uploadDate,
-                            duration: youtubeInfo.duration,
+                            duration: this.parseDurationToSeconds(youtubeInfo.duration),
                             contentType: this.classifyContentType(this.parseDurationToSeconds(youtubeInfo.duration)),
                             topComments: await this.getTopComments(youtubeInfo.id), // 댓글 API 호출
                             comments: '', // topComments와 동일하게 설정
-                            youtubeCategory: youtubeInfo.categoryId || '',
+                            youtubeCategory: this.getYouTubeCategoryName(youtubeInfo.categoryId),
                             monetized: 'N',
                             quality: youtubeInfo.quality,
                             license: 'YOUTUBE',
                             hashtags: youtubeInfo.tags,
                         };
-                        ServerLogger.info(`✅ YouTube 메타데이터 수집 완료:`);
+                        const metadataTime = Date.now() - metadataStartTime;
+                        ServerLogger.info(`✅ YouTube 메타데이터 수집 완료 (소요시간: ${metadataTime}ms):`);
                         ServerLogger.info(`👤 채널: ${enrichedMetadata.channelName}`);
                         ServerLogger.info(
                             `👍 좋아요: ${enrichedMetadata.likes}, 💬 댓글: ${enrichedMetadata.commentsCount}, 👀 조회수: ${enrichedMetadata.views}`,
@@ -429,8 +446,9 @@ export class VideoController {
                         );
                         ServerLogger.info(`📅 업로드: ${enrichedMetadata.uploadDate}`);
                     } catch (error: any) {
+                        const metadataTime = Date.now() - metadataStartTime;
                         ServerLogger.warn(
-                            '⚠️ YouTube 메타데이터 수집 실패 (무시하고 계속):',
+                            `⚠️ YouTube 메타데이터 수집 실패 (무시하고 계속, 소요시간: ${metadataTime}ms):`,
                             error.message,
                         );
                     }
@@ -440,27 +458,44 @@ export class VideoController {
             }
 
             // 2단계: 썸네일/프레임 생성 (YouTube API 썸네일 URL 우선 사용)
+            const step1Time = Date.now() - step1StartTime;
+            ServerLogger.info(`1️⃣ 단계 완료 (소요시간: ${step1Time}ms)`);
+
             ServerLogger.info('2️⃣ 썸네일 처리 시작...');
+            const step2StartTime = Date.now();
             const videoId = this.getVideoIdByPlatform(videoUrl, platform as Platform) || 'unknown';
             const thumbnailUrl = enrichedMetadata?.thumbnailUrl || '';
 
-            const processedThumbnailPath = await this.videoProcessor.processThumbnail(
+            // 분석 타입 정규화 및 디버깅
+            const normalizedAnalysisType = analysisType === 'multi-frame' || analysisType === 'full'
+                ? analysisType
+                : 'multi-frame'; // 기본값을 multi-frame으로 강제 설정
+
+            ServerLogger.info(`🔍 원본 analysisType: "${analysisType}" → 정규화된 값: "${normalizedAnalysisType}"`);
+
+            const processedThumbnailPath = await this.videoProcessor.processThumbnailMultiFrame(
                 thumbnailUrl,
                 pipeline.videoPath || '',
                 videoId,
                 platform as Platform,
-                analysisType as any
+                normalizedAnalysisType
             );
 
             if (processedThumbnailPath) {
-                pipeline.thumbnailPaths = [processedThumbnailPath];
-                ServerLogger.info(`✅ 썸네일 처리 완료: ${processedThumbnailPath}`);
+                // 배열이면 그대로 사용, 문자열이면 배열로 감싸기
+                pipeline.thumbnailPaths = Array.isArray(processedThumbnailPath)
+                    ? processedThumbnailPath
+                    : [processedThumbnailPath];
+                const step2Time = Date.now() - step2StartTime;
+                ServerLogger.info(`✅ 썸네일 처리 완료: ${pipeline.thumbnailPaths.length}개 프레임 (소요시간: ${step2Time}ms)`);
             } else {
-                ServerLogger.warn('⚠️ 썸네일 처리 실패, 빈 배열로 설정');
+                const step2Time = Date.now() - step2StartTime;
+                ServerLogger.warn(`⚠️ 썸네일 처리 실패, 빈 배열로 설정 (소요시간: ${step2Time}ms)`);
                 pipeline.thumbnailPaths = [];
             }
 
             // 3단계: AI 분석 (AI 토글이 꺼져있으면 생략)
+            const step3StartTime = Date.now();
             if (useAI && analysisType !== 'none') {
                 const thumbnailCount = Array.isArray(pipeline.thumbnailPaths)
                     ? pipeline.thumbnailPaths.length
@@ -476,15 +511,23 @@ export class VideoController {
                     pipeline.thumbnailPaths,
                     enrichedMetadata,
                 );
+
+                const step3Time = Date.now() - step3StartTime;
+                ServerLogger.info(`✅ AI 분석 완료 (소요시간: ${step3Time}ms)`);
             } else {
                 ServerLogger.info('3️⃣ AI 분석 건너뜀 (사용자 설정 또는 분석 타입)');
+                const step3Time = Date.now() - step3StartTime;
+                ServerLogger.info(`✅ AI 분석 건너뜀 완료 (소요시간: ${step3Time}ms)`);
                 // 기본 분석 결과 생성
                 pipeline.analysis = {
                     category: '분석 안함',
                     mainCategory: '미분류',
                     middleCategory: '기본',
+                    subCategory: '기본',
+                    detailCategory: '기본',
                     keywords: [],
                     hashtags: [],
+                    analysisContent: 'AI 분석이 비활성화되어 기본값으로 설정됨',
                     confidence: 0,
                     frameCount: Array.isArray(pipeline.thumbnailPaths)
                         ? pipeline.thumbnailPaths.length
@@ -506,6 +549,8 @@ export class VideoController {
                     // AI 분석 카테고리 결과
                     mainCategory: pipeline.analysis.mainCategory,
                     middleCategory: pipeline.analysis.middleCategory,
+                    subCategory: pipeline.analysis.subCategory,
+                    detailCategory: pipeline.analysis.detailCategory,
                     fullCategoryPath: pipeline.analysis.fullCategoryPath,
                     categoryDepth: pipeline.analysis.categoryDepth,
                     keywords: pipeline.analysis.keywords,
@@ -520,13 +565,17 @@ export class VideoController {
                     // 카테고리 매칭 결과 (누락되었던 필드들)
                     categoryMatchRate: pipeline.analysis.categoryMatch
                         ? `${pipeline.analysis.categoryMatch.matchScore}%`
-                        : "",
+                        : pipeline.analysis.confidence
+                            ? typeof pipeline.analysis.confidence === 'number'
+                                ? `${Math.round(pipeline.analysis.confidence * 100)}%`
+                                : pipeline.analysis.confidence
+                            : "85%", // 기본값
                     matchType: pipeline.analysis.categoryMatch
                         ? pipeline.analysis.categoryMatch.matchType
-                        : "",
+                        : "AI_ANALYSIS", // 기본값
                     matchReason: pipeline.analysis.categoryMatch
                         ? pipeline.analysis.categoryMatch.matchReason
-                        : ""
+                        : "AI 모델 기반 자동 분류" // 기본값
                 };
                 ServerLogger.info('🔄 AI 분석 결과가 enrichedMetadata에 병합됨', {
                     categoryMatchRate: enrichedMetadata.categoryMatchRate,
@@ -625,7 +674,8 @@ export class VideoController {
                 );
             }
 
-            ServerLogger.info('✅ 비디오 처리 파이프라인 완료');
+            const totalTime = Date.now() - startTime;
+            ServerLogger.info(`✅ 비디오 처리 파이프라인 완료 (총 소요시간: ${totalTime}ms)`);
 
             const responseThumbnailPath = Array.isArray(pipeline.thumbnailPaths)
                 ? pipeline.thumbnailPaths[0]
@@ -635,6 +685,8 @@ export class VideoController {
                 category: pipeline.analysis?.category,
                 mainCategory: pipeline.analysis?.mainCategory,
                 middleCategory: pipeline.analysis?.middleCategory,
+                subCategory: pipeline.analysis?.subCategory,
+                detailCategory: pipeline.analysis?.detailCategory,
                 keywords: pipeline.analysis?.keywords,
                 hashtags: pipeline.analysis?.hashtags,
                 confidence: pipeline.analysis?.confidence,
@@ -655,6 +707,8 @@ export class VideoController {
                     category: pipeline.analysis?.category,
                     mainCategory: pipeline.analysis?.mainCategory,
                     middleCategory: pipeline.analysis?.middleCategory,
+                    subCategory: pipeline.analysis?.subCategory,
+                    detailCategory: pipeline.analysis?.detailCategory,
                     keywords: pipeline.analysis?.keywords,
                     hashtags: pipeline.analysis?.hashtags,
                     confidence: pipeline.analysis?.confidence,
@@ -852,26 +906,67 @@ export class VideoController {
     }
 
     /**
-     * YouTube 핸들 추출
+     * YouTube 핸들 추출 (customUrl 우선, 없으면 channelTitle 사용)
      */
-    private extractYouTubeHandle(customUrl: string): string {
-        if (!customUrl) return '';
+    private extractYouTubeHandle(customUrl: string, channelTitle?: string): string {
+        ServerLogger.info(`🔍 YouTube 핸들 추출 시도: customUrl="${customUrl}", channelTitle="${channelTitle}"`);
 
-        if (customUrl.startsWith('@')) {
-            return customUrl;
+        // 1. customUrl이 있는 경우 처리
+        if (customUrl && typeof customUrl === 'string') {
+            // @로 시작하는 경우
+            if (customUrl.startsWith('@')) {
+                ServerLogger.info(`✅ @ 핸들 발견: ${customUrl}`);
+                return customUrl;
+            }
+
+            // URL에서 @ 핸들 추출
+            const handleMatch = customUrl.match(/@([a-zA-Z0-9_.-]+)/);
+            if (handleMatch) {
+                const handle = `@${handleMatch[1]}`;
+                ServerLogger.info(`✅ URL에서 핸들 추출: ${handle}`);
+                return handle;
+            }
+
+            // /c/ 또는 /user/ 경로에서 추출
+            const pathMatch = customUrl.match(/(?:\/c\/|\/user\/)([^\/\?]+)/);
+            if (pathMatch) {
+                const handle = `@${pathMatch[1]}`;
+                ServerLogger.info(`✅ 경로에서 핸들 추출: ${handle}`);
+                return handle;
+            }
+
+            // 단순 문자열인 경우 @ 추가
+            if (customUrl && !customUrl.includes('/') && !customUrl.includes('http')) {
+                const handle = `@${customUrl}`;
+                ServerLogger.info(`✅ 단순 문자열로 핸들 생성: ${handle}`);
+                return handle;
+            }
         }
 
-        const handleMatch = customUrl.match(/@([a-zA-Z0-9_.-]+)/);
-        if (handleMatch) {
-            return `@${handleMatch[1]}`;
+        // 2. customUrl 실패 시 channelTitle에서 핸들 생성
+        if (channelTitle && typeof channelTitle === 'string') {
+            const sanitized = channelTitle
+                .replace(/[^a-zA-Z0-9가-힣\s]/g, '') // 특수문자 제거
+                .replace(/\s+/g, '') // 공백 제거
+                .slice(0, 15); // 길이 제한
+
+            if (sanitized) {
+                const handle = `@${sanitized}`;
+                ServerLogger.info(`🔄 채널명으로 핸들 생성: ${handle}`);
+                return handle;
+            }
         }
 
-        const pathMatch = customUrl.match(/(?:\/c\/|\/user\/)([^\/\?]+)/);
-        if (pathMatch) {
-            return `@${pathMatch[1]}`;
-        }
-
+        ServerLogger.warn(`❌ YouTube 핸들 추출 실패: customUrl="${customUrl}", channelTitle="${channelTitle}"`);
         return '';
+    }
+
+    /**
+     * YouTube 카테고리 ID를 이름으로 변환
+     */
+    private getYouTubeCategoryName(categoryId: string | number): string {
+        const YouTubeDataProcessor = require('../utils/youtube-data-processor').default;
+        return YouTubeDataProcessor.getCategoryName(categoryId);
     }
 
     /**

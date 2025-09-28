@@ -22,7 +22,7 @@ interface FrameAnalysisResult {
 export class FrameAnalyzer {
     private static readonly DEFAULT_OPTIONS: FrameAnalysisOptions = {
         analysisType: 'multi-frame',
-        maxFrames: 5,
+        maxFrames: 20, // 추출된 모든 프레임 사용 (기존 5개 → 20개로 증가)
         fallbackToSingle: true
     };
 

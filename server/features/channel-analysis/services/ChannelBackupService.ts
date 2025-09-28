@@ -8,7 +8,7 @@ import path from 'path';
 import { ServerLogger } from '../../../utils/logger';
 import { ChannelData } from '../../../types/channel.types';
 
-const Channel = require('../../../models/ChannelModel');
+import Channel from '../../../models/Channel';
 
 export class ChannelBackupService {
     private dataPath: string;
@@ -87,7 +87,7 @@ export class ChannelBackupService {
     async syncBackupFile(): Promise<void> {
         try {
             // MongoDB에서 모든 채널 가져오기
-            const mongoChannels: ChannelData[] = await Channel.find({}).lean();
+            const mongoChannels = await Channel.find({}).lean();
 
             // 백업 파일에 저장
             await fs.writeFile(

@@ -117,16 +117,32 @@ export class VideoDataConverter {
                 fullCategoryPath = analysis.fullCategoryPath || '';
                 categoryDepth = fullCategoryPath.split(' > ').length;
             } else {
-                // 기존 방식: mainCategory, middleCategory 조합
+                // 개선된 방식: mainCategory, middleCategory, subCategory 조합 (4+ 레벨 지원)
                 const mainCat = analysis?.mainCategory || '미분류';
                 const middleCat = analysis?.middleCategory || '';
-                if (middleCat && middleCat !== '미분류') {
-                    fullCategoryPath = `${mainCat} > ${middleCat}`;
-                    categoryDepth = 2;
-                } else {
-                    fullCategoryPath = mainCat;
-                    categoryDepth = 1;
+                const subCat = analysis?.subCategory || '';
+
+                // 카테고리 경로 구성: "애완동물/동물 > 강아지 > 미용/관리 > 목욕" 형태 지원
+                const pathParts = [mainCat];
+
+                if (middleCat && middleCat !== '미분류' && middleCat !== mainCat) {
+                    pathParts.push(middleCat);
                 }
+
+                if (subCat && subCat !== '미분류' && subCat !== middleCat && subCat !== mainCat) {
+                    pathParts.push(subCat);
+                }
+
+                // AI 응답에서 추가 세부 카테고리가 있다면 처리 (4레벨 이상)
+                if (analysis?.detailCategory &&
+                    analysis.detailCategory !== subCat &&
+                    analysis.detailCategory !== middleCat &&
+                    analysis.detailCategory !== mainCat) {
+                    pathParts.push(analysis.detailCategory);
+                }
+
+                fullCategoryPath = pathParts.join(' > ');
+                categoryDepth = pathParts.length;
             }
         }
 
@@ -146,10 +162,18 @@ export class VideoDataConverter {
                         metadata?.account ||
                         '',
             title: metadata?.title || '',
-            youtubeHandle: metadata?.youtubeHandle || '',
+            youtubeHandle: metadata?.youtubeHandle || metadata?.channelCustomUrl || '',
             channelUrl: metadata?.channelUrl || '',
-            mainCategory: analysis?.mainCategory || '미분류',
+            mainCategory: (() => {
+                ServerLogger.info('🔍 DEBUG mainCategory mapping:', {
+                    'analysis?.mainCategory': analysis?.mainCategory,
+                    'analysis object keys': analysis ? Object.keys(analysis) : 'analysis is null/undefined',
+                    'analysis': analysis ? JSON.stringify(analysis).substring(0, 200) + '...' : 'null'
+                });
+                return analysis?.mainCategory || '미분류';
+            })(),
             middleCategory: analysis?.middleCategory || '',
+            subCategory: analysis?.subCategory || '',
             fullCategoryPath: fullCategoryPath,
             categoryDepth: categoryDepth,
             keywords: Array.isArray(analysis?.keywords)
@@ -157,11 +181,24 @@ export class VideoDataConverter {
                 : analysis?.keywords
                 ? [analysis.keywords]
                 : [],
-            hashtags: Array.isArray(analysis?.hashtags)
-                ? analysis.hashtags
-                : analysis?.hashtags
-                ? [analysis.hashtags]
-                : [],
+            hashtags: (() => {
+                // 해시태그 추출 우선순위: 1) metadata.hashtags (VideoProcessor에서 추출) 2) analysis.hashtags 3) description에서 추출
+                if (Array.isArray(metadata?.hashtags) && metadata.hashtags.length > 0) {
+                    return metadata.hashtags;
+                }
+                if (Array.isArray(analysis?.hashtags) && analysis.hashtags.length > 0) {
+                    return analysis.hashtags;
+                }
+                if (analysis?.hashtags && typeof analysis.hashtags === 'string') {
+                    return [analysis.hashtags];
+                }
+                // 마지막 폴백: description에서 직접 추출
+                if (metadata?.description) {
+                    const VideoUtils = require('./video/utils/VideoUtils').default;
+                    return VideoUtils.extractHashtags(metadata.description);
+                }
+                return [];
+            })(),
             mentions: Array.isArray(analysis?.mentions)
                 ? analysis.mentions
                 : analysis?.mentions
@@ -203,9 +240,32 @@ export class VideoDataConverter {
             thumbnailUrl: metadata?.thumbnailUrl || '',
             confidence: this.formatConfidence(analysis?.confidence),
             analysisStatus: analysis?.analysisStatus || 'completed',
-            categoryMatchRate: analysis?.categoryMatchRate || '',
-            matchType: analysis?.matchType || '',
-            matchReason: analysis?.matchReason || '',
+            categoryMatchRate: (() => {
+                // 직접 필드 확인 (categoryMatch 객체는 타입에 없음)
+                if (analysis?.categoryMatchRate) {
+                    return analysis.categoryMatchRate;
+                }
+                // 기본 신뢰도 기반 계산
+                if (analysis?.confidence && typeof analysis.confidence === 'string') {
+                    const numericConfidence = parseFloat(analysis.confidence);
+                    if (!isNaN(numericConfidence)) {
+                        return `${Math.round(numericConfidence * 100)}%`;
+                    }
+                }
+                return '85%'; // 기본값
+            })(),
+            matchType: (() => {
+                if (analysis?.matchType) {
+                    return analysis.matchType;
+                }
+                return 'ai-analysis'; // 기본값
+            })(),
+            matchReason: (() => {
+                if (analysis?.matchReason) {
+                    return analysis.matchReason;
+                }
+                return 'AI 분석 결과'; // 기본값
+            })(),
             collectionTime: new Date().toISOString() as ISODateString, // 수집시간
         };
 
@@ -258,16 +318,32 @@ export class VideoDataConverter {
                 fullCategoryPath = analysis.fullCategoryPath || '';
                 categoryDepth = fullCategoryPath.split(' > ').length;
             } else {
-                // 기존 방식: mainCategory, middleCategory 조합
+                // 개선된 방식: mainCategory, middleCategory, subCategory 조합 (4+ 레벨 지원)
                 const mainCat = analysis?.mainCategory || '미분류';
                 const middleCat = analysis?.middleCategory || '';
-                if (middleCat && middleCat !== '미분류') {
-                    fullCategoryPath = `${mainCat} > ${middleCat}`;
-                    categoryDepth = 2;
-                } else {
-                    fullCategoryPath = mainCat;
-                    categoryDepth = 1;
+                const subCat = analysis?.subCategory || '';
+
+                // 카테고리 경로 구성: "애완동물/동물 > 강아지 > 미용/관리 > 목욕" 형태 지원
+                const pathParts = [mainCat];
+
+                if (middleCat && middleCat !== '미분류' && middleCat !== mainCat) {
+                    pathParts.push(middleCat);
                 }
+
+                if (subCat && subCat !== '미분류' && subCat !== middleCat && subCat !== mainCat) {
+                    pathParts.push(subCat);
+                }
+
+                // AI 응답에서 추가 세부 카테고리가 있다면 처리 (4레벨 이상)
+                if (analysis?.detailCategory &&
+                    analysis.detailCategory !== subCat &&
+                    analysis.detailCategory !== middleCat &&
+                    analysis.detailCategory !== mainCat) {
+                    pathParts.push(analysis.detailCategory);
+                }
+
+                fullCategoryPath = pathParts.join(' > ');
+                categoryDepth = pathParts.length;
             }
         }
 
@@ -340,6 +416,7 @@ export class VideoDataConverter {
             })(),
             mainCategory: (analysis && analysis.mainCategory) || '미분류',
             middleCategory: (analysis && analysis.middleCategory) || '',
+            subCategory: (analysis && analysis.subCategory) || '',
             fullCategoryPath: fullCategoryPath,
             categoryDepth: categoryDepth,
             keywords: analysis?.keywords || [],
@@ -409,15 +486,32 @@ export class VideoDataConverter {
             fullCategoryPath = analysis.fullCategoryPath || '';
             categoryDepth = analysis.categoryDepth || 0;
         } else {
+            // 개선된 방식: mainCategory, middleCategory, subCategory 조합 (4+ 레벨 지원)
             const mainCat = analysis?.mainCategory || '엔터테인먼트';
             const middleCat = analysis?.middleCategory || '';
-            if (middleCat && middleCat !== '미분류') {
-                fullCategoryPath = `${mainCat} > ${middleCat}`;
-                categoryDepth = 2;
-            } else {
-                fullCategoryPath = mainCat;
-                categoryDepth = 1;
+            const subCat = analysis?.subCategory || '';
+
+            // 카테고리 경로 구성: "애완동물/동물 > 강아지 > 미용/관리 > 목욕" 형태 지원
+            const pathParts = [mainCat];
+
+            if (middleCat && middleCat !== '미분류' && middleCat !== mainCat) {
+                pathParts.push(middleCat);
             }
+
+            if (subCat && subCat !== '미분류' && subCat !== middleCat && subCat !== mainCat) {
+                pathParts.push(subCat);
+            }
+
+            // AI 응답에서 추가 세부 카테고리가 있다면 처리 (4레벨 이상)
+            if (analysis?.detailCategory &&
+                analysis.detailCategory !== subCat &&
+                analysis.detailCategory !== middleCat &&
+                analysis.detailCategory !== mainCat) {
+                pathParts.push(analysis.detailCategory);
+            }
+
+            fullCategoryPath = pathParts.join(' > ');
+            categoryDepth = pathParts.length;
         }
 
         const result: ConvertedVideoData = {
@@ -472,6 +566,7 @@ export class VideoDataConverter {
             license: '', // TikTok에서는 빈값
             mainCategory: analysis?.mainCategory || '엔터테인먼트',
             middleCategory: analysis?.middleCategory || '',
+            subCategory: analysis?.subCategory || '',
             fullCategoryPath: fullCategoryPath,
             categoryDepth: categoryDepth,
             keywords: Array.isArray(analysis?.keywords)

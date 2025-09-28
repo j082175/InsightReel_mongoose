@@ -227,24 +227,59 @@ class UnifiedGeminiManager {
    * 메인 콘텐츠 생성 메소드 - 폴백 모드에 따라 분기
    */
   async generateContent(prompt, imageBase64 = null, options = {}) {
-    // 🎯 조건부 모델 선택: 특정 모델 지정 시 직접 사용
-    if (options.modelType && ['pro', 'flash', 'flash-lite'].includes(options.modelType)) {
-      return await this.generateContentWithSpecificModel(options.modelType, prompt, imageBase64, options);
-    }
-    
-    if (this.fallbackMode === 'multi-key') {
-      return await this.generateContentMultiKey(prompt, imageBase64, options);
-    } else if (this.fallbackMode === 'model-priority') {
-      return await this.generateContentModelPriority(prompt, imageBase64, options);
-    } else if (this.fallbackMode === 'single-model') {
-      // Single-model은 다중 이미지만 지원
-      const imageContents = imageBase64 ? [{
-        inlineData: {
-          mimeType: 'image/jpeg', 
-          data: imageBase64
-        }
-      }] : [];
-      return await this.generateContentWithImagesSingleModel(prompt, imageContents, options);
+    ServerLogger.info('🔥 generateContent ENTRY DEBUG - 메서드 호출됨');
+    try {
+      let result;
+
+      // 🎯 조건부 모델 선택: 특정 모델 지정 시 직접 사용
+      if (options.modelType && ['pro', 'flash', 'flash-lite'].includes(options.modelType)) {
+        result = await this.generateContentWithSpecificModel(options.modelType, prompt, imageBase64, options);
+      } else if (this.fallbackMode === 'multi-key') {
+        result = await this.generateContentMultiKey(prompt, imageBase64, options);
+      } else if (this.fallbackMode === 'model-priority') {
+        result = await this.generateContentModelPriority(prompt, imageBase64, options);
+      } else if (this.fallbackMode === 'single-model') {
+        // Single-model은 다중 이미지만 지원
+        const imageContents = imageBase64 ? [{
+          inlineData: {
+            mimeType: 'image/jpeg',
+            data: imageBase64
+          }
+        }] : [];
+        result = await this.generateContentWithImagesSingleModel(prompt, imageContents, options);
+      }
+
+      // GeminiAnalyzer가 기대하는 형식으로 변환
+      ServerLogger.info('🔍 generateContent DEBUG - 변환 전 result 구조:', {
+        hasResult: !!result,
+        resultType: typeof result,
+        hasText: !!(result && result.text),
+        hasResponse: !!(result && result.response),
+        resultKeys: result ? Object.keys(result) : [],
+        resultPreview: result ? JSON.stringify(result, null, 2).substring(0, 500) : 'null'
+      });
+
+      if (result && result.text) {
+        return {
+          success: true,
+          response: result.text,
+          model: result.model,
+          timestamp: result.timestamp,
+          duration: result.duration
+        };
+      } else {
+        return {
+          success: false,
+          error: 'Gemini 응답이 비어있습니다',
+          response: null
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message,
+        response: null
+      };
     }
   }
 
@@ -1178,6 +1213,74 @@ class UnifiedGeminiManager {
       model: `${modelType} (single-key)`,
       timestamp: new Date().toISOString()
     };
+  }
+
+  /**
+   * 다중 이미지 분석을 위한 메서드 (GeminiAnalyzer.ts에서 호출)
+   * @param {string} prompt - 텍스트 프롬프트
+   * @param {Array} imageBase64Array - Base64 인코딩된 이미지 배열
+   * @param {Object} options - 추가 옵션
+   */
+  async queryGeminiWithMultipleImages(prompt, imageBase64Array = [], options = {}) {
+    try {
+      ServerLogger.info(`🖼️ 다중 이미지 분석 시작 (이미지 수: ${imageBase64Array.length})`, null, 'UNIFIED');
+
+      // Base64 배열을 이미지 콘텐츠 형식으로 변환
+      ServerLogger.info(`🔄 Base64 변환 시작...`, null, 'UNIFIED');
+      const imageContents = imageBase64Array.map(base64 => ({
+        inlineData: {
+          mimeType: 'image/jpeg',
+          data: base64
+        }
+      }));
+      ServerLogger.info(`✅ Base64 변환 완료: ${imageContents.length}개 이미지`, null, 'UNIFIED');
+
+      // 다중 이미지 콘텐츠 생성 호출
+      ServerLogger.info(`🔄 generateContentWithImages 호출 시작...`, null, 'UNIFIED');
+      const result = await this.generateContentWithImages(prompt, imageContents, options);
+      ServerLogger.info(`✅ generateContentWithImages 호출 완료`, null, 'UNIFIED');
+
+      // 상세한 결과 디버깅
+      ServerLogger.info(`🔍 generateContentWithImages 결과 디버깅:`, {
+        hasResult: !!result,
+        resultType: typeof result,
+        hasText: result && 'text' in result,
+        textValue: result?.text,
+        textType: typeof result?.text,
+        textLength: result?.text ? result.text.length : 0,
+        allKeys: result ? Object.keys(result) : [],
+        fullResult: JSON.stringify(result, null, 2).substring(0, 500)
+      }, 'UNIFIED');
+
+      if (result && result.text && result.text.trim().length > 0) {
+        ServerLogger.success(`✅ 다중 이미지 분석 성공`, null, 'UNIFIED');
+        return {
+          success: true,
+          response: result.text.trim(),
+          model: result.model,
+          timestamp: result.timestamp
+        };
+      } else {
+        ServerLogger.error(`❌ 다중 이미지 분석 결과가 비어있거나 유효하지 않음`, {
+          hasResult: !!result,
+          hasText: result && 'text' in result,
+          textValue: result?.text,
+          textLength: result?.text ? result.text.length : 0
+        }, 'UNIFIED');
+        return {
+          success: false,
+          error: '분석 결과가 비어있거나 유효하지 않습니다',
+          response: null
+        };
+      }
+    } catch (error) {
+      ServerLogger.error(`❌ 다중 이미지 분석 실패: ${error.message}`, error, 'UNIFIED');
+      return {
+        success: false,
+        error: error.message,
+        response: null
+      };
+    }
   }
 
   // API 키 캐시 클리어 (파일 변경 시 호출)

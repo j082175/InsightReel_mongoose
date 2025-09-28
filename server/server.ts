@@ -116,7 +116,7 @@ const setupGracefulShutdown = (server: any) => {
             // 2. 서비스 정리
             try {
                 const ServiceRegistry = require('./utils/service-registry');
-                ServiceRegistry.clearAll();
+                ServiceRegistry.clearAllServiceCaches();
                 ServerLogger.info('✅ 서비스 레지스트리 정리 완료', 'SHUTDOWN');
             } catch (serviceError: any) {
                 ServerLogger.warn('⚠️ 서비스 정리 실패 (무시하고 계속)', serviceError.message, 'SHUTDOWN');

@@ -15,7 +15,7 @@ const { ChannelSearchService } = require('./services/ChannelSearchService');
 import type { ChannelData } from '../../types/channel.types';
 
 const DuplicateCheckManager = require('../../models/DuplicateCheckManager');
-const Channel = require('../../models/ChannelModel');
+const Channel = require('../../models/Channel');
 
 /**
  * 📊 채널 분석 서비스 (메인 조합기)

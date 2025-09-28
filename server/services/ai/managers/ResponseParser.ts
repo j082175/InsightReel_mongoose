@@ -2,11 +2,13 @@ import { ServerLogger } from '../../../utils/logger';
 
 interface ParsedResponse {
     success: boolean;
-    majorCategory?: string;
+    mainCategory?: string;
     middleCategory?: string;
     subCategory?: string;
+    detailCategory?: string;
     keywords?: string[];
     summary?: string;
+    analysisContent?: string;
     confidence?: number;
     error?: string;
     rawResponse?: string;
@@ -19,7 +21,7 @@ interface ValidationResult {
 }
 
 export class ResponseParser {
-    private static readonly REQUIRED_FIELDS = ['majorCategory', 'middleCategory'];
+    private static readonly REQUIRED_FIELDS = ['mainCategory', 'middleCategory'];
     private static readonly CONFIDENCE_THRESHOLD = 0.5;
 
     /**
@@ -111,9 +113,9 @@ export class ResponseParser {
 
             // 카테고리 추출 패턴들
             const patterns = {
-                majorCategory: [
+                mainCategory: [
                     /대카테고리[:\s]*([^\n\r]+)/i,
-                    /major[_\s]*category[:\s]*([^\n\r]+)/i,
+                    /main[_\s]*category[:\s]*([^\n\r]+)/i,
                     /메인[_\s]*카테고리[:\s]*([^\n\r]+)/i
                 ],
                 middleCategory: [
@@ -193,12 +195,12 @@ export class ResponseParser {
             for (const [category, keywords] of Object.entries(categoryKeywords)) {
                 for (const keyword of keywords) {
                     if (lowerText.includes(keyword.toLowerCase())) {
-                        result.majorCategory = category;
+                        result.mainCategory = category;
                         result.confidence = 0.6; // 낮은 신뢰도
                         break;
                     }
                 }
-                if (result.majorCategory) break;
+                if (result.mainCategory) break;
             }
 
             // 간단한 키워드 추출
@@ -207,7 +209,7 @@ export class ResponseParser {
                 result.keywords = words.slice(0, 10); // 최대 10개
             }
 
-            if (result.majorCategory || result.keywords) {
+            if (result.mainCategory || result.keywords) {
                 return { success: true, data: result };
             }
 
@@ -252,7 +254,7 @@ export class ResponseParser {
 
             return {
                 success: true,
-                majorCategory: normalized.majorCategory,
+                mainCategory: normalized.mainCategory,
                 middleCategory: normalized.middleCategory,
                 subCategory: normalized.subCategory,
                 keywords: normalized.keywords,
@@ -313,7 +315,7 @@ export class ResponseParser {
         const normalized: any = {};
 
         // 문자열 필드 정규화
-        const stringFields = ['majorCategory', 'middleCategory', 'subCategory', 'summary'];
+        const stringFields = ['mainCategory', 'middleCategory', 'subCategory', 'summary'];
         for (const field of stringFields) {
             if (data[field] && typeof data[field] === 'string') {
                 normalized[field] = data[field].trim();
@@ -351,7 +353,7 @@ export class ResponseParser {
         let confidence = 0.5; // 기본 신뢰도
 
         // 필수 필드 존재 여부
-        if (data.majorCategory) confidence += 0.2;
+        if (data.mainCategory) confidence += 0.2;
         if (data.middleCategory) confidence += 0.2;
 
         // 추가 정보 존재 여부

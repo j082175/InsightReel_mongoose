@@ -139,6 +139,8 @@ export interface StandardVideoMetadata {
 export interface AIAnalysisResult {
   mainCategory: string;
   middleCategory: string;
+  subCategory?: string; // 3rd level category support
+  detailCategory?: string; // 4th level category support for deep hierarchy
   fullCategoryPath: string;
   categoryDepth: number;
   keywords: string[];

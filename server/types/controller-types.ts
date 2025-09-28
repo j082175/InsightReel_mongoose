@@ -61,6 +61,8 @@ export interface VideoMetadata {
     // AI 분석 결과
     mainCategory?: string;
     middleCategory?: string;
+    subCategory?: string;
+    detailCategory?: string;
     fullCategoryPath?: string;
     categoryDepth?: number;
     analysisContent?: string;
@@ -87,6 +89,8 @@ export interface AnalysisResult {
     category?: string;
     mainCategory?: string;
     middleCategory?: string;
+    subCategory?: string;
+    detailCategory?: string;
     fullCategoryPath?: string;
     categoryDepth?: number;
     keywords?: string[];
@@ -142,6 +146,8 @@ export interface VideoProcessingResult {
     category?: string;
     mainCategory?: string;
     middleCategory?: string;
+    subCategory?: string;
+    detailCategory?: string;
     keywords?: string[];
     hashtags?: string[];
     confidence?: number | string;

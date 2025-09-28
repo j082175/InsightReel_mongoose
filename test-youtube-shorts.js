@@ -2,8 +2,8 @@ const axios = require('axios');
 
 async function testYouTubeShorts() {
     try {
-        // 실제 YouTube Shorts URL로 테스트
-        const shortsUrl = 'https://www.youtube.com/shorts/dQw4w9WgXcQ';
+        // 실제 YouTube Shorts URL로 테스트 (실제 존재하는 Shorts)
+        const shortsUrl = 'https://www.youtube.com/shorts/8Z5EjAmZS1o';
 
         console.log('🔍 YouTube Shorts 영상 처리 시작:', shortsUrl);
 

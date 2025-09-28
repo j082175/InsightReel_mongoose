@@ -21,7 +21,7 @@
     "android:increment": "node scripts/increment-version.js",
     "android:update-server": "node scripts/update-server-version.js",
     "android:deploy": "auto-deploy-android.bat",
-    "build": "webpack --mode production",
+    "build": "npm run build:ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

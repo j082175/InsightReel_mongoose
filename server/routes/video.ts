@@ -3,6 +3,7 @@ import { ServerLogger } from '../utils/logger';
 import ResponseHandler from '../utils/response-handler';
 import { HTTP_STATUS_CODES, API_MESSAGES } from '../config/api-messages';
 import { IVideo } from '../types/models';
+import VideoModel from '../models/Video';
 
 // Import TypeScript VideoController
 import { VideoController } from '../controllers/video-controller';
@@ -16,10 +17,47 @@ router.post('/process-video', videoController.processVideo);
 // 비디오 목록 조회
 router.get('/videos', async (req: Request, res: Response) => {
     try {
-        // TODO: 비디오 목록 조회 로직 구현 (MongoDB Video 모델 사용)
-        const videos: IVideo[] = [];
-        ResponseHandler.success(res, { videos });
+        ServerLogger.info('📋 비디오 목록 조회 요청 시작');
+
+        // 쿼리 파라미터 파싱
+        const {
+            limit = '15',
+            platform,
+            sortBy = 'uploadDate',
+            order = 'desc'
+        } = req.query;
+
+        const limitNum = parseInt(limit as string, 10);
+        const sortOrder = order as 'desc' | 'asc';
+
+        let videos;
+        let total = 0;
+
+        if (platform && ['YOUTUBE', 'INSTAGRAM', 'TIKTOK'].includes(platform as string)) {
+            // 플랫폼별 조회
+            videos = await VideoModel.findByPlatform(
+                platform as 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK',
+                sortBy as any,
+                sortOrder,
+                limitNum
+            );
+            total = await VideoModel.countDocuments({ platform });
+        } else {
+            // 전체 비디오 조회
+            videos = await VideoModel.getRecentVideos(limitNum, sortBy as any, sortOrder);
+            total = await VideoModel.countDocuments();
+        }
+
+        ServerLogger.info(`✅ 비디오 목록 조회 완료: ${videos.length}개 (전체: ${total}개)`);
+
+        ResponseHandler.success(res, videos, null, {
+            total,
+            count: videos.length,
+            limit: limitNum,
+            platform: platform || 'all'
+        });
     } catch (error) {
+        ServerLogger.error('❌ 비디오 목록 조회 실패:', error);
         ResponseHandler.serverError(res, error, 'Failed to fetch videos');
     }
 });

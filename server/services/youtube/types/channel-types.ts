@@ -49,13 +49,12 @@ export interface VideoDetailedInfo extends VideoBasicInfo {
 }
 
 // VideoComment은 extraction-types.ts에서 import
-import { VideoComment } from './extraction-types';
 
 export interface VideoAnalysis {
     videoId: string;
     title: string;
     aiAnalysis?: {
-        majorCategory?: string;
+        mainCategory?: string;
         middleCategory?: string;
         subCategory?: string;
         keywords?: string[];
@@ -201,7 +200,7 @@ export interface ChannelAnalysisConfig {
     maxVideos: number;
     includeComments: boolean;
     includeAIAnalysis: boolean;
-    analysisDepth: 'basic' | 'standard' | 'comprehensive';
+    analysisDepth: "basic" | "standard" | "comprehensive";
     timeRange?: {
         startDate: string;
         endDate: string;

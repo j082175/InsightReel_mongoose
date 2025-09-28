@@ -4,242 +4,240 @@
  */
 
 // 공통 옵션
-const commonFieldOptions = { type: String, default: '' };
+const commonFieldOptions = { type: String, default: "" };
 const numberFieldOptions = { type: Number, default: 0 };
 const dateFieldOptions = { type: String, default: () => new Date().toISOString() };
 
 // ===== 기본 채널 정보 =====
 const ChannelCore = {
-  // 기본 식별 정보
-  channelId: {
-    type: String,
-    required: true,
-    unique: true,
-    index: true
-  },
-  
-  name: {
-    type: String,
-    required: true,
-    index: true
-  },
-  
-  url: commonFieldOptions,
-  
-  platform: {
-    type: String,
-    required: true,
-    enum: ['YOUTUBE', 'INSTAGRAM', 'TIKTOK'],
-    index: true
-  },
-  
-  subscribers: {
-    type: Number,
-    required: false,
-    index: true
-  },
-  
-  description: commonFieldOptions,
-  thumbnailUrl: commonFieldOptions,
-  customUrl: commonFieldOptions,
-  
-  contentType: {
-    type: String,
-    enum: ['auto', 'shortform', 'longform', 'mixed'],
-    default: 'auto',
-    required: false
-  },
+    // 기본 식별 정보
+    channelId: {
+        type: String,
+        required: true,
+        unique: true,
+        index: true,
+    },
 
-  // 언어 및 지역 정보
-  defaultLanguage: {
-    type: String,
-    default: '',
-    index: true
-  },
+    name: {
+        type: String,
+        required: true,
+        index: true,
+    },
 
-  country: {
-    type: String,
-    default: '',
-    index: true
-  },
+    url: commonFieldOptions,
 
-  publishedAt: {
-    type: String,
-    default: ''
-  }
+    platform: {
+        type: String,
+        required: true,
+        enum: ["YOUTUBE", "INSTAGRAM", "TIKTOK"],
+        index: true,
+    },
+
+    subscribers: {
+        type: Number,
+        required: false,
+        index: true,
+    },
+
+    description: commonFieldOptions,
+    thumbnailUrl: commonFieldOptions,
+    customUrl: commonFieldOptions,
+
+    contentType: {
+        type: String,
+        enum: ["auto", "shortform", "longform", "mixed"],
+        default: "auto",
+        required: false,
+    },
+
+    // 언어 및 지역 정보
+    defaultLanguage: {
+        type: String,
+        default: "",
+        index: true,
+    },
+
+    country: {
+        type: String,
+        default: "",
+        index: true,
+    },
+
+    publishedAt: {
+        type: String,
+        default: "",
+    },
 };
 
 // ===== AI 분석 결과 =====
 const ChannelAIAnalysis = {
-  keywords: [{ type: String }],
-  aiTags: [{ type: String }],
-  deepInsightTags: [{ type: String }],
-  allTags: [{ type: String }],
-  
-  categoryInfo: {
-    majorCategory: {
-      type: String,
-      required: false
-    },
-    middleCategory: {
-      type: String,
-      required: false
-    },
-    subCategory: {
-      type: String,
-      required: false
-    },
-    fullCategoryPath: {
-      type: String,
-      required: false
-    },
-    categoryDepth: {
-      type: Number,
-      required: false,
-      min: 1,
-      max: 6
-    },
-    categoryConfidence: {
-      type: Number,
-      required: false,
-      min: 0,
-      max: 1
-    },
-    consistencyLevel: {
-      type: String,
-      enum: ['high', 'medium', 'low'],
-      required: false,
-      index: true
-    },
-    consistencyReason: {
-      type: String,
-      required: false
-    }
-  },
+    keywords: [{ type: String }],
+    aiTags: [{ type: String }],
+    deepInsightTags: [{ type: String }],
+    allTags: [{ type: String }],
 
-  // channelIdentity 추가 정보
-  targetAudience: {
-    type: String,
-    required: false,
-    default: ''
-  },
+    categoryInfo: {
+        mainCategory: {
+            type: String,
+            required: false,
+        },
+        middleCategory: {
+            type: String,
+            required: false,
+        },
+        subCategory: {
+            type: String,
+            required: false,
+        },
+        fullCategoryPath: {
+            type: String,
+            required: false,
+        },
+        categoryDepth: {
+            type: Number,
+            required: false,
+            min: 1,
+            max: 6,
+        },
+        categoryConfidence: {
+            type: Number,
+            required: false,
+            min: 0,
+            max: 1,
+        },
+        consistencyLevel: {
+            type: String,
+            enum: ["high", "medium", "low"],
+            required: false,
+            index: true,
+        },
+        consistencyReason: {
+            type: String,
+            required: false,
+        },
+    },
 
-  contentStyle: {
-    type: String,
-    required: false,
-    default: ''
-  },
+    // channelIdentity 추가 정보
+    targetAudience: {
+        type: String,
+        required: false,
+        default: "",
+    },
 
-  uniqueFeatures: [{ type: String }],
+    contentStyle: {
+        type: String,
+        required: false,
+        default: "",
+    },
 
-  channelPersonality: {
-    type: String,
-    required: false,
-    default: ''
-  }
+    uniqueFeatures: [{ type: String }],
+
+    channelPersonality: {
+        type: String,
+        required: false,
+        default: "",
+    },
 };
 
 // ===== 클러스터 정보 =====
 const ChannelClusterInfo = {
-  clusterIds: [{ type: String }],
-  suggestedClusters: [{ type: Object }]  // 유연한 구조
+    clusterIds: [{ type: String }],
+    suggestedClusters: [{ type: Object }], // 유연한 구조
 };
 
 // ===== 성과 통계 =====
 const ChannelStats = {
-  dailyUploadRate: numberFieldOptions,
-  last7DaysViews: {
-    type: Number,
-    required: false,
-    index: true
-  },
-  
-  avgDurationSeconds: numberFieldOptions,
-  avgDurationFormatted: commonFieldOptions,
-  shortFormRatio: numberFieldOptions,
-  
-  // 기간별 조회수 (중첩 객체)
-  viewsByPeriod: {
-    last7Days: { type: Number, required: false },
-    last30Days: { type: Number, required: false },
-    last90Days: { type: Number, required: false },
-    lastYear: { type: Number, required: false }
-  },
-  
-  totalVideos: {
-    type: Number,
-    required: false,
-    index: true
-  },
-  
-  totalViews: {
-    type: Number,
-    required: false,
-    index: true
-  },
-  
-  averageViewsPerVideo: numberFieldOptions,
-  
-  uploadFrequency: {
-    pattern: { 
-      type: String, 
-      enum: ['daily', 'weekly', 'bi_weekly', 'multiple_per_week', 'irregular'],
-      required: false 
+    dailyUploadRate: numberFieldOptions,
+    last7DaysViews: {
+        type: Number,
+        required: false,
+        index: true,
     },
-    avgDaysBetweenUploads: numberFieldOptions,
-    consistency: numberFieldOptions
-  },
-  
-  mostViewedVideo: {
-    videoId: commonFieldOptions,
-    title: commonFieldOptions,
-    publishedAt: { type: Date, required: false },
-    thumbnailUrl: commonFieldOptions,
-    viewCount: numberFieldOptions,
-    likeCount: numberFieldOptions,
-    commentCount: numberFieldOptions,
-    duration: commonFieldOptions,
-    durationSeconds: numberFieldOptions,
-    tags: [{ type: String }],
-    categoryId: commonFieldOptions
-  }
-};
 
-const dateFieldOptions = { type: Date, default: () => new Date() };
+    avgDurationSeconds: numberFieldOptions,
+    avgDurationFormatted: commonFieldOptions,
+    shortFormRatio: numberFieldOptions,
+
+    // 기간별 조회수 (중첩 객체)
+    viewsByPeriod: {
+        last7Days: { type: Number, required: false },
+        last30Days: { type: Number, required: false },
+        last90Days: { type: Number, required: false },
+        lastYear: { type: Number, required: false },
+    },
+
+    totalVideos: {
+        type: Number,
+        required: false,
+        index: true,
+    },
+
+    totalViews: {
+        type: Number,
+        required: false,
+        index: true,
+    },
+
+    averageViewsPerVideo: numberFieldOptions,
+
+    uploadFrequency: {
+        pattern: {
+            type: String,
+            enum: ["daily", "weekly", "bi_weekly", "multiple_per_week", "irregular"],
+            required: false,
+        },
+        avgDaysBetweenUploads: numberFieldOptions,
+        consistency: numberFieldOptions,
+    },
+
+    mostViewedVideo: {
+        videoId: commonFieldOptions,
+        title: commonFieldOptions,
+        publishedAt: { type: Date, required: false },
+        thumbnailUrl: commonFieldOptions,
+        viewCount: numberFieldOptions,
+        likeCount: numberFieldOptions,
+        commentCount: numberFieldOptions,
+        duration: commonFieldOptions,
+        durationSeconds: numberFieldOptions,
+        tags: [{ type: String }],
+        categoryId: commonFieldOptions,
+    },
+};
 
 // ===== 메타데이터 =====
 const ChannelMetadata = {
-  lastAnalyzedAt: {
-    type: Date,
-    required: false,
-    index: true,
-    default: () => new Date()
-  },
-  
-  analysisVersion: commonFieldOptions,
-  collectedAt: { type: Date, required: false, default: () => new Date() },
-  publishedAt: { type: Date, required: false },
-  createdAt: { type: Date, required: false, default: () => new Date() },
-  updatedAt: { type: Date, required: false, default: () => new Date() },
-  version: numberFieldOptions
+    lastAnalyzedAt: {
+        type: Date,
+        required: false,
+        index: true,
+        default: () => new Date(),
+    },
+
+    analysisVersion: commonFieldOptions,
+    collectedAt: { type: Date, required: false, default: () => new Date() },
+    publishedAt: { type: Date, required: false },
+    createdAt: { type: Date, required: false, default: () => new Date() },
+    updatedAt: { type: Date, required: false, default: () => new Date() },
+    version: numberFieldOptions,
 };
 
 // ===== 전체 Channel 스키마 조합 =====
 const createChannelSchema = () => {
-  return {
-    ...ChannelCore,
-    ...ChannelAIAnalysis,
-    ...ChannelClusterInfo,
-    ...ChannelStats,
-    ...ChannelMetadata
-  };
+    return {
+        ...ChannelCore,
+        ...ChannelAIAnalysis,
+        ...ChannelClusterInfo,
+        ...ChannelStats,
+        ...ChannelMetadata,
+    };
 };
 
 module.exports = {
-  ChannelCore,
-  ChannelAIAnalysis,
-  ChannelClusterInfo,
-  ChannelStats,
-  ChannelMetadata,
-  createChannelSchema
+    ChannelCore,
+    ChannelAIAnalysis,
+    ChannelClusterInfo,
+    ChannelStats,
+    ChannelMetadata,
+    createChannelSchema,
 };

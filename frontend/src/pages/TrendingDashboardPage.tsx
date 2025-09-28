@@ -145,7 +145,7 @@ const TrendingDashboardPage: React.FC = () => {
       const result = await response.json();
 
       if (result.success) {
-        setChannelGroups(result.data);
+        setChannelGroups(Array.isArray(result.data) ? result.data : []);
       }
     } catch (error) {
       toast.error('채널 그룹 로딩에 실패했습니다.');
@@ -288,7 +288,7 @@ const TrendingDashboardPage: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">전체 그룹</option>
-              {channelGroups.map((group) => (
+              {(channelGroups || []).map((group) => (
                 <option key={group._id} value={group._id}>
                   {group.name}
                 </option>
@@ -571,12 +571,12 @@ const TrendingDashboardPage: React.FC = () => {
             채널 그룹 현황
           </h3>
           <span className="text-sm text-gray-500">
-            {channelGroups.filter((g) => g.isActive).length}개 활성 그룹
+            {(channelGroups || []).filter((g) => g.isActive).length}개 활성 그룹
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {channelGroups.slice(0, 6).map((group) => (
+          {(channelGroups || []).slice(0, 6).map((group) => (
             <div
               key={group._id}
               className="border border-gray-200 rounded-lg p-4"
@@ -607,10 +607,10 @@ const TrendingDashboardPage: React.FC = () => {
           ))}
         </div>
 
-        {channelGroups.length > 6 && (
+        {(channelGroups || []).length > 6 && (
           <div className="text-center mt-4">
             <span className="text-sm text-gray-500">
-              +{channelGroups.length - 6}개 그룹 더 보기
+              +{(channelGroups || []).length - 6}개 그룹 더 보기
             </span>
           </div>
         )}

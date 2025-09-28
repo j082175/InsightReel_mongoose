@@ -328,8 +328,8 @@ export class BatchProcessor {
             return '';
         }
 
-        // 우선순위: medium > high > default > standard > maxres
-        const priorities = ['medium', 'high', 'default', 'standard', 'maxres'];
+        // 우선순위: maxres > high > medium > standard > default
+        const priorities = ['maxres', 'high', 'medium', 'standard', 'default'];
 
         for (const priority of priorities) {
             if (thumbnails[priority]?.url) {
@@ -343,8 +343,11 @@ export class BatchProcessor {
     /**
      * YouTube 핸들명 추출
      */
-    private extractYouTubeHandle(customUrl: string): string {
+    private extractYouTubeHandle(customUrl: string | undefined): string {
+        ServerLogger.info(`🔍 YouTube 핸들 추출 시도: customUrl="${customUrl}", type=${typeof customUrl}`);
+
         if (!customUrl || typeof customUrl !== 'string') {
+            ServerLogger.warn(`⚠️ YouTube 핸들 추출 실패: customUrl이 비어있거나 문자열이 아님`);
             return '';
         }
 

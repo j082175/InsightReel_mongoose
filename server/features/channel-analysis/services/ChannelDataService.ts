@@ -6,7 +6,7 @@
 import { ChannelData } from '../../../types/channel.types';
 import { ServerLogger } from '../../../utils/logger';
 
-const Channel = require('../../../models/ChannelModel');
+const Channel = require('../../../models/Channel');
 
 export class ChannelDataService {
     /**

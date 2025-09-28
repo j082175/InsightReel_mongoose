@@ -239,8 +239,11 @@ export class GeminiAnalyzer {
 
             // 다중 이미지 처리 (UnifiedGeminiManager에 해당 메서드가 있다고 가정)
             let result;
+            ServerLogger.info(`🔍 GeminiAnalyzer DEBUG: queryGeminiWithMultipleImages 존재 여부: ${!!this.geminiManager.queryGeminiWithMultipleImages}`);
             if (this.geminiManager.queryGeminiWithMultipleImages) {
+                ServerLogger.info('🔍 GeminiAnalyzer DEBUG: queryGeminiWithMultipleImages 호출 시작');
                 result = await this.geminiManager.queryGeminiWithMultipleImages(prompt, validImages);
+                ServerLogger.info('🔍 GeminiAnalyzer DEBUG: queryGeminiWithMultipleImages 호출 완료:', result);
             } else {
                 // 폴백: 첫 번째 이미지만 사용
                 ServerLogger.warn('다중 이미지 지원 없음, 첫 번째 이미지 사용');

@@ -18,6 +18,7 @@ interface YouTubeVideoInfo {
     categoryId: string;
     tags: string[];
     channelCustomUrl: string;
+    youtubeHandle?: string;  // 채널 핸들 필드 추가
     quality: string;
     hasCaption: boolean;
     embeddable: boolean;
@@ -159,7 +160,59 @@ export class YouTubeProcessor {
             }
 
             const item = response.data.items[0];
-            return this.parseVideoData(item);
+            const videoData = this.parseVideoData(item);
+
+            // 채널 핸들 가져오기를 위한 추가 API 호출
+            if (videoData.channelId) {
+                try {
+                    ServerLogger.info('🔍 채널 핸들 조회 시작:', { channelId: videoData.channelId });
+                    const channelResponse = await axios.get('https://www.googleapis.com/youtube/v3/channels', {
+                        params: {
+                            part: 'snippet',
+                            id: videoData.channelId,
+                            key: apiKey
+                        }
+                    });
+
+                    if (channelResponse.data.items && channelResponse.data.items.length > 0) {
+                        const channelData = channelResponse.data.items[0].snippet;
+                        ServerLogger.info('🔍 채널 API 응답:', {
+                            handle: channelData.handle,
+                            customUrl: channelData.customUrl
+                        });
+
+                        // handle 필드가 있으면 사용
+                        if (channelData.handle) {
+                            videoData.youtubeHandle = channelData.handle;
+                            ServerLogger.success('✅ 채널 핸들 설정 완료:', channelData.handle);
+                        } else if (channelData.customUrl) {
+                            // handle이 없으면 customUrl 사용 (이미 @ 포함된 경우 체크)
+                            const customUrl = channelData.customUrl.startsWith('@')
+                                ? channelData.customUrl
+                                : `@${channelData.customUrl}`;
+                            videoData.youtubeHandle = customUrl;
+                            ServerLogger.success('✅ 채널 핸들 설정 완료 (customUrl):', customUrl);
+                        } else {
+                            // 둘 다 없으면 channelCustomUrl을 fallback으로 사용
+                            if (videoData.channelCustomUrl) {
+                                const fallbackUrl = videoData.channelCustomUrl.startsWith('@')
+                                    ? videoData.channelCustomUrl
+                                    : `@${videoData.channelCustomUrl}`;
+                                videoData.youtubeHandle = fallbackUrl;
+                                ServerLogger.success('✅ 채널 핸들 설정 완료 (fallback):', fallbackUrl);
+                            } else {
+                                ServerLogger.warn('⚠️ 채널 핸들, customUrl, channelCustomUrl 모두 없음');
+                            }
+                        }
+                    } else {
+                        ServerLogger.warn('⚠️ 채널 API 응답에 items 없음');
+                    }
+                } catch (channelError) {
+                    ServerLogger.warn('채널 핸들 조회 실패 (계속 진행):', channelError);
+                }
+            }
+
+            return videoData;
 
         } catch (error) {
             ServerLogger.error('YouTube Legacy API 조회 실패:', error);
@@ -189,6 +242,7 @@ export class YouTubeProcessor {
             // 새로운 필드들 추가
             tags: snippet.tags || [],
             channelCustomUrl: snippet.channelCustomUrl || '',
+            youtubeHandle: undefined,  // 초기값, 이후 채널 API 호출로 설정됨
             quality: contentDetails.definition || 'sd',  // 'hd' | 'sd'
             hasCaption: contentDetails.caption === 'true',
             embeddable: status.embeddable !== false,
@@ -231,6 +285,7 @@ export class YouTubeProcessor {
             // 누락된 필드들 추가
             tags: data.tags || [],
             channelCustomUrl: data.channelCustomUrl || '',
+            youtubeHandle: data.youtubeHandle || undefined,
             quality: data.quality || data.definition || 'sd',
             hasCaption: data.hasCaption || data.caption === 'true',
             embeddable: data.embeddable !== false,

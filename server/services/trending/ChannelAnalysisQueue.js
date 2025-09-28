@@ -89,7 +89,7 @@ class ChannelAnalysisQueue extends EventEmitter {
             }
 
             // 2. 메인 Channel 컬렉션에서 중복 검사
-            const Channel = require('../models/ChannelModel');
+            const Channel = require('../models/Channel');
             const existing = await Channel.findOne({
                 channelId: youtubeData.id,
             });

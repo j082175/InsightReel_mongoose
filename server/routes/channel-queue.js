@@ -287,7 +287,7 @@ router.post('/check-duplicate', async (req, res) => {
                 ServerLogger.warn(`⚠️ 중복 채널 발견 (전용 DB): ${normalizedChannelId}`);
             } else {
                 // 3. 전용 DB에 없으면 메인 channels 컬렉션도 확인 (기존 데이터 호환)
-                const Channel = require('../models/ChannelModel');
+                const Channel = require('../models/Channel');
                 const existingChannel = await Channel.findOne({
                     $or: [
                         { customUrl: channelIdentifier },

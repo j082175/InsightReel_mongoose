@@ -13,7 +13,7 @@ import {
 // 일시적으로 require 문 유지 (다른 파일들이 아직 TypeScript로 변환되지 않음)
 const YouTubeChannelService = require('../../services/YouTubeChannelService');
 const YouTubeChannelAnalyzer = require('../../services/YouTubeChannelAnalyzer');
-const Channel = require('../../models/ChannelModel');
+const Channel = require('../../models/Channel');
 const DuplicateCheckManager = require('../../models/DuplicateCheckManager');
 
 /**

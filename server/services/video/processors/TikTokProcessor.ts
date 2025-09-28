@@ -279,7 +279,7 @@ export class TikTokProcessor {
         if (!description) return [];
 
         const hashtags = description.match(/#[\w가-힣]+/g);
-        return hashtags ? hashtags.map(tag => tag.substring(1)) : [];
+        return hashtags ? hashtags : []; // # 기호 유지 (기존 .substring(1) 제거)
     }
 
     extractMentions(description: string): string[] {

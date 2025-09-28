@@ -1,9 +1,9 @@
-const axios = require('axios');
-const { ServerLogger } = require('../utils/logger');
-const UsageTracker = require('../utils/usage-tracker');
-const AIAnalyzer = require('./AIAnalyzer');
-const UnifiedCategoryManager = require('./UnifiedCategoryManager');
-const VideoProcessor = require('../../dist/server/services/video/VideoProcessor');
+const axios = require("axios");
+const { ServerLogger } = require("../utils/logger");
+const UsageTracker = require("../utils/usage-tracker");
+const AIAnalyzer = require("./AIAnalyzer");
+const UnifiedCategoryManager = require("./UnifiedCategoryManager");
+const VideoProcessor = require("../../dist/server/services/video/VideoProcessor");
 
 /**
  * YouTube 채널 상세 분석 서비스
@@ -11,29 +11,29 @@ const VideoProcessor = require('../../dist/server/services/video/VideoProcessor'
  */
 class YouTubeChannelAnalyzer {
     constructor() {
-        this.baseURL = 'https://www.googleapis.com/youtube/v3';
+        this.baseURL = "https://www.googleapis.com/youtube/v3";
         this.usageTracker = UsageTracker.getInstance();
         this.aiAnalyzer = new AIAnalyzer();
         this.categoryManager = UnifiedCategoryManager.getInstance({
-            mode: 'dynamic',
+            mode: "dynamic",
         });
         this.videoProcessor = new VideoProcessor();
         this.apiKey = null; // ApiKeyManager에서 동적으로 로드
 
         // 서비스 레지스트리에 등록
-        const serviceRegistry = require('../utils/service-registry');
+        const serviceRegistry = require("../utils/service-registry");
         serviceRegistry.register(this);
 
-        ServerLogger.success('🔧 YouTube 채널 분석 서비스 초기화 완료');
+        ServerLogger.success("🔧 YouTube 채널 분석 서비스 초기화 완료");
     }
 
     async getApiKey() {
         if (!this.apiKey) {
-            const apiKeyManager = require('./ApiKeyManager');
+            const apiKeyManager = require("./ApiKeyManager");
             await apiKeyManager.initialize();
             const activeKeys = await apiKeyManager.getActiveApiKeys();
             if (activeKeys.length === 0) {
-                throw new Error('활성화된 API 키가 없습니다. ApiKeyManager에 키를 추가해주세요.');
+                throw new Error("활성화된 API 키가 없습니다. ApiKeyManager에 키를 추가해주세요.");
             }
             this.apiKey = activeKeys[0];
         }
@@ -50,14 +50,11 @@ class YouTubeChannelAnalyzer {
             // 1. 채널 기본 정보 및 업로드 플레이리스트 ID 가져오기
             const channelInfo = await this.getChannelInfo(channelId);
             if (!channelInfo) {
-                throw new Error('채널 정보를 찾을 수 없습니다.');
+                throw new Error("채널 정보를 찾을 수 없습니다.");
             }
 
             // 2. 채널의 모든 영상 목록 가져오기
-            const videos = await this.getChannelVideos(
-                channelInfo.uploadsPlaylistId,
-                maxVideos,
-            );
+            const videos = await this.getChannelVideos(channelInfo.uploadsPlaylistId, maxVideos);
 
             // 3. 영상들의 상세 정보 가져오기
             const detailedVideos = await this.getVideosDetails(videos);
@@ -65,9 +62,7 @@ class YouTubeChannelAnalyzer {
             // 4. 분석 수행
             const analysis = this.performAnalysis(detailedVideos);
 
-            ServerLogger.success(
-                `✅ 채널 분석 완료: ${detailedVideos.length}개 영상 분석`,
-            );
+            ServerLogger.success(`✅ 채널 분석 완료: ${detailedVideos.length}개 영상 분석`);
 
             return {
                 channelInfo,
@@ -89,12 +84,12 @@ class YouTubeChannelAnalyzer {
             const response = await axios.get(`${this.baseURL}/channels`, {
                 params: {
                     key: await this.getApiKey(),
-                    part: 'snippet,statistics,contentDetails',
+                    part: "snippet,statistics,contentDetails",
                     id: channelId,
                 },
             });
 
-            this.usageTracker.increment('youtube-channels', true);
+            this.usageTracker.increment("youtube-channels", true);
 
             if (response.data.items && response.data.items.length > 0) {
                 const channel = response.data.items[0];
@@ -102,23 +97,21 @@ class YouTubeChannelAnalyzer {
                     id: channel.id,
                     title: channel.snippet.title,
                     description: channel.snippet.description,
-                    uploadsPlaylistId:
-                        channel.contentDetails.relatedPlaylists.uploads,
+                    uploadsPlaylistId: channel.contentDetails.relatedPlaylists.uploads,
                     totalVideos: parseInt(channel.statistics.videoCount) || 0,
                     totalViews: parseInt(channel.statistics.viewCount) || 0,
-                    subscribers:
-                        parseInt(channel.statistics.subscriberCount) || 0,
+                    subscribers: parseInt(channel.statistics.subscriberCount) || 0,
                     // 추가된 필드들
-                    defaultLanguage: channel.snippet.defaultLanguage || '',
-                    country: channel.snippet.country || '',
-                    customUrl: channel.snippet.customUrl || '',
-                    publishedAt: channel.snippet.publishedAt || '',
+                    defaultLanguage: channel.snippet.defaultLanguage || "",
+                    country: channel.snippet.country || "",
+                    customUrl: channel.snippet.customUrl || "",
+                    publishedAt: channel.snippet.publishedAt || "",
                 };
             }
 
             return null;
         } catch (error) {
-            this.usageTracker.increment('youtube-channels', false);
+            this.usageTracker.increment("youtube-channels", false);
             throw error;
         }
     }
@@ -135,7 +128,7 @@ class YouTubeChannelAnalyzer {
             while (videos.length < maxVideos) {
                 const params = {
                     key: await this.getApiKey(),
-                    part: 'snippet',
+                    part: "snippet",
                     playlistId: uploadsPlaylistId,
                     maxResults: Math.min(maxResults, maxVideos - videos.length),
                 };
@@ -144,11 +137,8 @@ class YouTubeChannelAnalyzer {
                     params.pageToken = nextPageToken;
                 }
 
-                const response = await axios.get(
-                    `${this.baseURL}/playlistItems`,
-                    { params },
-                );
-                this.usageTracker.increment('youtube-channels', true);
+                const response = await axios.get(`${this.baseURL}/playlistItems`, { params });
+                this.usageTracker.increment("youtube-channels", true);
 
                 if (response.data.items) {
                     response.data.items.forEach((item) => {
@@ -156,8 +146,7 @@ class YouTubeChannelAnalyzer {
                             videoId: item.snippet.resourceId.videoId,
                             title: item.snippet.title,
                             publishedAt: item.snippet.publishedAt,
-                            thumbnailUrl:
-                                item.snippet.thumbnails?.medium?.url || '',
+                            thumbnailUrl: item.snippet.thumbnails?.medium?.url || "",
                         });
                     });
                 }
@@ -172,7 +161,7 @@ class YouTubeChannelAnalyzer {
             ServerLogger.info(`📺 영상 목록 수집 완료: ${videos.length}개`);
             return videos;
         } catch (error) {
-            this.usageTracker.increment('youtube-channels', false);
+            this.usageTracker.increment("youtube-channels", false);
             throw error;
         }
     }
@@ -187,37 +176,29 @@ class YouTubeChannelAnalyzer {
 
             for (let i = 0; i < videos.length; i += batchSize) {
                 const batch = videos.slice(i, i + batchSize);
-                const videoIds = batch.map((v) => v.videoId).join(',');
+                const videoIds = batch.map((v) => v.videoId).join(",");
 
                 const response = await axios.get(`${this.baseURL}/videos`, {
                     params: {
                         key: await this.getApiKey(),
-                        part: 'snippet,statistics,contentDetails',
+                        part: "snippet,statistics,contentDetails",
                         id: videoIds,
                     },
                 });
 
-                this.usageTracker.increment('youtube-channels', true);
+                this.usageTracker.increment("youtube-channels", true);
 
                 if (response.data.items) {
                     response.data.items.forEach((video) => {
-                        const originalVideo = batch.find(
-                            (v) => v.videoId === video.id,
-                        );
+                        const originalVideo = batch.find((v) => v.videoId === video.id);
                         if (originalVideo) {
                             detailedVideos.push({
                                 ...originalVideo,
-                                viewCount:
-                                    parseInt(video.statistics.viewCount) || 0,
-                                likeCount:
-                                    parseInt(video.statistics.likeCount) || 0,
-                                commentCount:
-                                    parseInt(video.statistics.commentCount) ||
-                                    0,
+                                viewCount: parseInt(video.statistics.viewCount) || 0,
+                                likeCount: parseInt(video.statistics.likeCount) || 0,
+                                commentCount: parseInt(video.statistics.commentCount) || 0,
                                 duration: video.contentDetails.duration,
-                                durationSeconds: this.parseDuration(
-                                    video.contentDetails.duration,
-                                ),
+                                durationSeconds: this.parseDuration(video.contentDetails.duration),
                                 tags: video.snippet.tags || [],
                                 categoryId: video.snippet.categoryId,
                             });
@@ -229,12 +210,10 @@ class YouTubeChannelAnalyzer {
                 await new Promise((resolve) => setTimeout(resolve, 100));
             }
 
-            ServerLogger.info(
-                `📊 영상 상세정보 수집 완료: ${detailedVideos.length}개`,
-            );
+            ServerLogger.info(`📊 영상 상세정보 수집 완료: ${detailedVideos.length}개`);
             return detailedVideos;
         } catch (error) {
-            this.usageTracker.increment('youtube-channels', false);
+            this.usageTracker.increment("youtube-channels", false);
             throw error;
         }
     }
@@ -262,7 +241,7 @@ class YouTubeChannelAnalyzer {
         ServerLogger.info(`🔍 performAnalysis 호출: ${videos?.length || 0}개 비디오`);
 
         if (!videos || videos.length === 0) {
-            ServerLogger.warn('⚠️ 비디오 데이터 없음 - 빈 분석 반환');
+            ServerLogger.warn("⚠️ 비디오 데이터 없음 - 빈 분석 반환");
             return this.getEmptyAnalysis();
         }
 
@@ -277,32 +256,20 @@ class YouTubeChannelAnalyzer {
         // 1. 채널 설명은 이미 기본 정보에서 가져옴
 
         // 2. 일평균 업로드 (최근 30일 기준)
-        const recentVideos = videos.filter(
-            (v) => new Date(v.publishedAt) > periods.month,
-        );
+        const recentVideos = videos.filter((v) => new Date(v.publishedAt) > periods.month);
         const dailyUploadRate = recentVideos.length / 30;
 
         // 3. 최근 7일 조회수
-        const last7DaysVideos = videos.filter(
-            (v) => new Date(v.publishedAt) > periods.week,
-        );
-        const last7DaysViews = last7DaysVideos.reduce(
-            (sum, v) => sum + v.viewCount,
-            0,
-        );
+        const last7DaysVideos = videos.filter((v) => new Date(v.publishedAt) > periods.week);
+        const last7DaysViews = last7DaysVideos.reduce((sum, v) => sum + v.viewCount, 0);
 
         // 4. 영상 평균시간
-        const totalDuration = videos.reduce(
-            (sum, v) => sum + v.durationSeconds,
-            0,
-        );
-        const avgDurationSeconds =
-            videos.length > 0 ? totalDuration / videos.length : 0;
+        const totalDuration = videos.reduce((sum, v) => sum + v.durationSeconds, 0);
+        const avgDurationSeconds = videos.length > 0 ? totalDuration / videos.length : 0;
 
         // 5. 숏폼 비율 (60초 이하)
         const shortVideos = videos.filter((v) => v.durationSeconds <= 60);
-        const shortFormRatio =
-            videos.length > 0 ? (shortVideos.length / videos.length) * 100 : 0;
+        const shortFormRatio = videos.length > 0 ? (shortVideos.length / videos.length) * 100 : 0;
 
         // 6. 채널 일별 조회수 (기간별)
         const viewsByPeriod = {
@@ -323,13 +290,16 @@ class YouTubeChannelAnalyzer {
             totalViews: this.channelStats?.channelViews || calculatedTotalViews,
 
             // 평균은 API 통계 기준으로 계산 (더 정확함)
-            averageViewsPerVideo: this.channelStats?.channelViews && this.channelStats?.channelVideos
-                ? Math.round(this.channelStats.channelViews / this.channelStats.channelVideos)
-                : (calculatedTotalVideos > 0 ? Math.round(calculatedTotalViews / calculatedTotalVideos) : 0),
+            averageViewsPerVideo:
+                this.channelStats?.channelViews && this.channelStats?.channelVideos
+                    ? Math.round(this.channelStats.channelViews / this.channelStats.channelVideos)
+                    : calculatedTotalVideos > 0
+                    ? Math.round(calculatedTotalViews / calculatedTotalVideos)
+                    : 0,
 
             mostViewedVideo: videos.reduce(
                 (max, v) => (v.viewCount > max.viewCount ? v : max),
-                videos[0] || {},
+                videos[0] || {}
             ),
             uploadFrequency: this.calculateUploadFrequency(videos),
         };
@@ -361,7 +331,7 @@ class YouTubeChannelAnalyzer {
      * 업로드 빈도 분석
      */
     calculateUploadFrequency(videos) {
-        if (videos.length < 2) return { pattern: 'insufficient_data' };
+        if (videos.length < 2) return { pattern: "insufficient_data" };
 
         // 업로드 간격 계산
         const sortedVideos = videos
@@ -371,22 +341,20 @@ class YouTubeChannelAnalyzer {
         const intervals = [];
         for (let i = 0; i < sortedVideos.length - 1; i++) {
             const daysDiff =
-                (sortedVideos[i].date - sortedVideos[i + 1].date) /
-                (1000 * 60 * 60 * 24);
+                (sortedVideos[i].date - sortedVideos[i + 1].date) / (1000 * 60 * 60 * 24);
             intervals.push(daysDiff);
         }
 
         const avgInterval =
-            intervals.reduce((sum, interval) => sum + interval, 0) /
-            intervals.length;
+            intervals.reduce((sum, interval) => sum + interval, 0) / intervals.length;
 
         let pattern;
-        if (avgInterval <= 1) pattern = 'daily';
-        else if (avgInterval <= 3) pattern = 'multiple_per_week';
-        else if (avgInterval <= 7) pattern = 'weekly';
-        else if (avgInterval <= 15) pattern = 'bi_weekly';
-        else if (avgInterval <= 31) pattern = 'monthly';
-        else pattern = 'irregular';
+        if (avgInterval <= 1) pattern = "daily";
+        else if (avgInterval <= 3) pattern = "multiple_per_week";
+        else if (avgInterval <= 7) pattern = "weekly";
+        else if (avgInterval <= 15) pattern = "bi_weekly";
+        else if (avgInterval <= 31) pattern = "monthly";
+        else pattern = "irregular";
 
         return {
             pattern,
@@ -401,21 +369,14 @@ class YouTubeChannelAnalyzer {
     calculateConsistency(intervals) {
         if (intervals.length < 3) return 0;
 
-        const mean =
-            intervals.reduce((sum, interval) => sum + interval, 0) /
-            intervals.length;
+        const mean = intervals.reduce((sum, interval) => sum + interval, 0) / intervals.length;
         const variance =
-            intervals.reduce(
-                (sum, interval) => sum + Math.pow(interval - mean, 2),
-                0,
-            ) / intervals.length;
+            intervals.reduce((sum, interval) => sum + Math.pow(interval - mean, 2), 0) /
+            intervals.length;
         const standardDeviation = Math.sqrt(variance);
 
         // 표준편차가 작을수록 일관성이 높음 (100점 만점)
-        const consistencyScore = Math.max(
-            0,
-            100 - (standardDeviation / mean) * 100,
-        );
+        const consistencyScore = Math.max(0, 100 - (standardDeviation / mean) * 100);
         return Math.round(consistencyScore);
     }
 
@@ -444,33 +405,28 @@ class YouTubeChannelAnalyzer {
             const response = await axios.get(`${this.baseURL}/commentThreads`, {
                 params: {
                     key: await this.getApiKey(),
-                    part: 'snippet',
+                    part: "snippet",
                     videoId: videoId,
                     maxResults: maxComments,
-                    order: 'relevance',
+                    order: "relevance",
                 },
             });
 
-            this.usageTracker.increment('youtube-comments', true);
+            this.usageTracker.increment("youtube-comments", true);
 
             if (response.data.items) {
                 return response.data.items.map((item) => ({
                     text: item.snippet.topLevelComment.snippet.textDisplay,
-                    author: item.snippet.topLevelComment.snippet
-                        .authorDisplayName,
-                    likeCount:
-                        item.snippet.topLevelComment.snippet.likeCount || 0,
-                    publishedAt:
-                        item.snippet.topLevelComment.snippet.publishedAt,
+                    author: item.snippet.topLevelComment.snippet.authorDisplayName,
+                    likeCount: item.snippet.topLevelComment.snippet.likeCount || 0,
+                    publishedAt: item.snippet.topLevelComment.snippet.publishedAt,
                 }));
             }
 
             return [];
         } catch (error) {
-            this.usageTracker.increment('youtube-comments', false);
-            ServerLogger.warn(
-                `⚠️ 댓글 수집 실패 (${videoId}): ${error.message}`,
-            );
+            this.usageTracker.increment("youtube-comments", false);
+            ServerLogger.warn(`⚠️ 댓글 수집 실패 (${videoId}): ${error.message}`);
             return [];
         }
     }
@@ -482,7 +438,7 @@ class YouTubeChannelAnalyzer {
         try {
             const videoData = {
                 title: video.title,
-                description: video.description || '',
+                description: video.description || "",
                 tags: video.tags || [],
                 duration: video.durationSeconds,
                 viewCount: video.viewCount,
@@ -494,12 +450,12 @@ class YouTubeChannelAnalyzer {
 영상 정보:
 - 제목: ${videoData.title}
 - 설명: ${videoData.description}
-- 태그: ${videoData.tags.join(', ')}
+- 태그: ${videoData.tags.join(", ")}
 - 길이: ${videoData.duration}초
 - 조회수: ${videoData.viewCount}회
 
 주요 댓글들:
-${videoData.comments.map((comment, i) => `${i + 1}. ${comment}`).join('\n')}
+${videoData.comments.map((comment, i) => `${i + 1}. ${comment}`).join("\n")}
 
 반드시 아래 JSON 형식으로만 응답하세요. 다른 텍스트는 포함하지 마세요:
 
@@ -511,46 +467,39 @@ ${videoData.comments.map((comment, i) => `${i + 1}. ${comment}`).join('\n')}
   "tone": "콘텐츠 톤앤매너"
 }`;
 
-            const analysis =
-                await this.aiAnalyzer.geminiManager.generateContent(
-                    prompt,
-                    null, // 이미지 없음 (텍스트만)
-                    { modelType: 'flash-lite' },
-                );
+            const analysis = await this.aiAnalyzer.geminiManager.generateContent(
+                prompt,
+                null, // 이미지 없음 (텍스트만)
+                { modelType: "flash-lite" }
+            );
 
             // UnifiedGeminiManager 응답 처리
             let responseText;
-            if (typeof analysis === 'object' && analysis.text) {
+            if (typeof analysis === "object" && analysis.text) {
                 responseText = analysis.text; // UnifiedGeminiManager 응답 형태
-            } else if (typeof analysis === 'string') {
+            } else if (typeof analysis === "string") {
                 responseText = analysis; // 직접 문자열
             } else {
-                throw new Error('Unexpected response format');
+                throw new Error("Unexpected response format");
             }
 
             // JSON 파싱 처리
             let cleanedResponse = responseText.trim();
-            if (cleanedResponse.includes('```json')) {
-                cleanedResponse = cleanedResponse
-                    .split('```json')[1]
-                    .split('```')[0]
-                    .trim();
-            } else if (cleanedResponse.includes('```')) {
-                cleanedResponse = cleanedResponse
-                    .split('```')[1]
-                    .split('```')[0]
-                    .trim();
+            if (cleanedResponse.includes("```json")) {
+                cleanedResponse = cleanedResponse.split("```json")[1].split("```")[0].trim();
+            } else if (cleanedResponse.includes("```")) {
+                cleanedResponse = cleanedResponse.split("```")[1].split("```")[0].trim();
             }
 
             return JSON.parse(cleanedResponse);
         } catch (error) {
             ServerLogger.warn(`⚠️ 영상 콘텐츠 분석 실패: ${error.message}`);
             return {
-                contentType: '기타',
-                subCategory: '분석 실패',
+                contentType: "기타",
+                subCategory: "분석 실패",
                 keywords: [],
-                audience: '알 수 없음',
-                tone: '알 수 없음',
+                audience: "알 수 없음",
+                tone: "알 수 없음",
             };
         }
     }
@@ -559,18 +508,20 @@ ${videoData.comments.map((comment, i) => `${i + 1}. ${comment}`).join('\n')}
      * 영상 프레임 추출 헬퍼 함수
      */
     async extractVideoFrames(videoUrl) {
-        const fs = require('fs');
+        const fs = require("fs");
         let videoPath = null;
         try {
             ServerLogger.info(`🎬 프레임 추출용 비디오 다운로드: ${videoUrl}`);
 
             // 비디오 다운로드
-            videoPath = await this.videoProcessor.downloadVideo(videoUrl, 'YOUTUBE');
+            videoPath = await this.videoProcessor.downloadVideo(videoUrl, "YOUTUBE");
 
             // 프레임 추출 (multi-frame 모드로 다중 프레임)
-            const frames = await this.videoProcessor.generateThumbnail(videoPath, 'multi-frame');
+            const frames = await this.videoProcessor.generateThumbnail(videoPath, "multi-frame");
 
-            ServerLogger.info(`✅ 프레임 추출 완료: ${Array.isArray(frames) ? frames.length : 1}개`);
+            ServerLogger.info(
+                `✅ 프레임 추출 완료: ${Array.isArray(frames) ? frames.length : 1}개`
+            );
 
             return Array.isArray(frames) ? frames : [frames];
         } catch (error) {
@@ -597,7 +548,7 @@ ${videoData.comments.map((comment, i) => `${i + 1}. ${comment}`).join('\n')}
             // 1. 기본 메타데이터 구성
             const videoData = {
                 title: video.title,
-                description: video.description || '',
+                description: video.description || "",
                 tags: video.tags || [],
                 duration: video.durationSeconds,
                 viewCount: video.viewCount,
@@ -614,12 +565,12 @@ ${videoData.comments.map((comment, i) => `${i + 1}. ${comment}`).join('\n')}
 메타데이터 정보:
 - 제목: ${videoData.title}
 - 설명: ${videoData.description}
-- 태그: ${videoData.tags.join(', ')}
+- 태그: ${videoData.tags.join(", ")}
 - 길이: ${videoData.duration}초
 - 조회수: ${videoData.viewCount}회
 
 주요 댓글들:
-${videoData.comments.map((comment, i) => `${i + 1}. ${comment}`).join('\n')}`;
+${videoData.comments.map((comment, i) => `${i + 1}. ${comment}`).join("\n")}`;
 
             if (frames) {
                 prompt += `\n\n첨부된 이미지들은 이 영상의 대표 프레임들입니다. 메타데이터와 시각적 내용을 모두 고려하여 더 정확한 분석을 해주세요.`;
@@ -636,7 +587,7 @@ ${videoData.comments.map((comment, i) => `${i + 1}. ${comment}`).join('\n')}`;
   "audience": "대상 시청자",
   "tone": "콘텐츠 톤앤매너",
   "confidence": 85,
-  "analysisMethod": "${frames ? 'hybrid' : 'metadata-only'}"
+  "analysisMethod": "${frames ? "hybrid" : "metadata-only"}"
 }`;
 
             // 4. AI 분석 실행
@@ -647,44 +598,40 @@ ${videoData.comments.map((comment, i) => `${i + 1}. ${comment}`).join('\n')}`;
                 analysis = await this.aiAnalyzer.geminiManager.generateContentWithImages(
                     prompt,
                     imageContents,
-                    { modelType: 'flash-lite' },
+                    { modelType: "flash-lite" }
                 );
             } else {
                 // 프레임 없으면 텍스트만 분석
-                analysis = await this.aiAnalyzer.geminiManager.generateContent(
-                    prompt,
-                    null,
-                    { modelType: 'flash-lite' },
-                );
+                analysis = await this.aiAnalyzer.geminiManager.generateContent(prompt, null, {
+                    modelType: "flash-lite",
+                });
             }
 
             // 5. 응답 처리 (기존 로직과 동일)
             let responseText;
-            if (typeof analysis === 'object' && analysis.text) {
+            if (typeof analysis === "object" && analysis.text) {
                 responseText = analysis.text;
-            } else if (typeof analysis === 'string') {
+            } else if (typeof analysis === "string") {
                 responseText = analysis;
             } else {
-                throw new Error('Unexpected response format');
+                throw new Error("Unexpected response format");
             }
 
             let cleanedResponse = responseText.trim();
-            if (cleanedResponse.includes('```json')) {
-                cleanedResponse = cleanedResponse
-                    .split('```json')[1]
-                    .split('```')[0]
-                    .trim();
-            } else if (cleanedResponse.includes('```')) {
-                cleanedResponse = cleanedResponse
-                    .split('```')[1]
-                    .split('```')[0]
-                    .trim();
+            if (cleanedResponse.includes("```json")) {
+                cleanedResponse = cleanedResponse.split("```json")[1].split("```")[0].trim();
+            } else if (cleanedResponse.includes("```")) {
+                cleanedResponse = cleanedResponse.split("```")[1].split("```")[0].trim();
             }
 
             const result = JSON.parse(cleanedResponse);
 
             // 하이브리드 분석 여부 로깅
-            ServerLogger.info(`${frames ? '🎬 하이브리드' : '📝 메타데이터'} 분석 완료: ${result.contentType} (신뢰도: ${result.confidence || 'N/A'}%)`);
+            ServerLogger.info(
+                `${frames ? "🎬 하이브리드" : "📝 메타데이터"} 분석 완료: ${
+                    result.contentType
+                } (신뢰도: ${result.confidence || "N/A"}%)`
+            );
 
             return result;
         } catch (error) {
@@ -699,24 +646,26 @@ ${videoData.comments.map((comment, i) => `${i + 1}. ${comment}`).join('\n')}`;
      * 프레임 경로를 이미지 콘텐츠 형식으로 변환
      */
     async convertFramesToImageContents(frames) {
-        const fs = require('fs');
+        const fs = require("fs");
         const imageContents = [];
 
         for (const framePath of frames) {
             try {
                 if (fs.existsSync(framePath)) {
                     const imageBuffer = fs.readFileSync(framePath);
-                    const base64Data = imageBuffer.toString('base64');
+                    const base64Data = imageBuffer.toString("base64");
 
                     // Gemini API가 요구하는 형식
                     imageContents.push({
                         inlineData: {
                             data: base64Data,
-                            mimeType: 'image/jpeg'
-                        }
+                            mimeType: "image/jpeg",
+                        },
                     });
 
-                    ServerLogger.info(`🖼️ 프레임 변환 완료: ${framePath} (${base64Data.length} bytes)`);
+                    ServerLogger.info(
+                        `🖼️ 프레임 변환 완료: ${framePath} (${base64Data.length} bytes)`
+                    );
                 } else {
                     ServerLogger.warn(`⚠️ 프레임 파일 없음: ${framePath}`);
                 }
@@ -743,11 +692,11 @@ ${videoData.comments.map((comment, i) => `${i + 1}. ${comment}`).join('\n')}`;
 ${videoAnalyses
     .map(
         (analysis, i) =>
-            `영상 ${i + 1}: ${analysis.contentType} - ${
-                analysis.subCategory
-            } (${(analysis.keywords || []).join(', ')})`,
+            `영상 ${i + 1}: ${analysis.contentType} - ${analysis.subCategory} (${(
+                analysis.keywords || []
+            ).join(", ")})`
     )
-    .join('\n')}
+    .join("\n")}
 
 채널 정보:
 - 구독자: ${channelInfo.subscribers?.toLocaleString()}명
@@ -775,7 +724,7 @@ ${videoAnalyses
 
             // 2. 카테고리 분석을 위한 추가 프롬프트 생성 (일관성 검증 포함)
             const categoryPrompt =
-                this.categoryManager.buildDynamicCategoryPrompt('YOUTUBE') +
+                this.categoryManager.buildDynamicCategoryPrompt("YOUTUBE") +
                 `
 
 **분석할 채널 정보:**
@@ -785,17 +734,14 @@ ${videoAnalyses
 
 **채널의 주요 콘텐츠 패턴:**
 ${videoAnalyses
-    .map(
-        (analysis, i) =>
-            `${i + 1}. ${analysis.contentType} - ${analysis.subCategory}`,
-    )
-    .join('\n')}
+    .map((analysis, i) => `${i + 1}. ${analysis.contentType} - ${analysis.subCategory}`)
+    .join("\n")}
 
 **채널 태그들:**
 ${videoAnalyses
     .flatMap((a) => a.keywords || [])
     .slice(0, 20)
-    .join(', ')}
+    .join(", ")}
 
 **🎯 일관성 검증 지침:**
 위 5개 영상을 분석했을 때, 콘텐츠가 **일관된 주제**를 다루고 있나요?
@@ -818,62 +764,61 @@ ${videoAnalyses
 }`;
 
             // 병렬로 두 분석 수행
-            const identityModelType = process.env.CHANNEL_FINAL_ANALYSIS_MODEL || 'pro';
-            const categoryModelType = process.env.CHANNEL_REINTERPRETATION_MODEL || 'flash-lite';
+            const identityModelType = process.env.CHANNEL_FINAL_ANALYSIS_MODEL || "pro";
+            const categoryModelType = process.env.CHANNEL_REINTERPRETATION_MODEL || "flash-lite";
 
             const [identityAnalysis, categoryAnalysis] = await Promise.all([
                 this.aiAnalyzer.geminiManager.generateContent(
                     identityPrompt,
                     null, // 이미지 없음 (텍스트만)
-                    { modelType: identityModelType },
+                    { modelType: identityModelType }
                 ),
                 this.aiAnalyzer.geminiManager.generateContent(
                     categoryPrompt,
                     null, // 이미지 없음 (텍스트만)
-                    { modelType: categoryModelType },
+                    { modelType: categoryModelType }
                 ),
             ]);
 
             // 1. 채널 정체성 분석 결과 파싱
             let identityResponseText;
-            if (typeof identityAnalysis === 'object' && identityAnalysis.text) {
+            if (typeof identityAnalysis === "object" && identityAnalysis.text) {
                 identityResponseText = identityAnalysis.text;
-            } else if (typeof identityAnalysis === 'string') {
+            } else if (typeof identityAnalysis === "string") {
                 identityResponseText = identityAnalysis;
             } else {
-                throw new Error('Identity analysis response format error');
+                throw new Error("Identity analysis response format error");
             }
 
             let cleanedIdentityResponse = identityResponseText.trim();
-            if (cleanedIdentityResponse.includes('```json')) {
+            if (cleanedIdentityResponse.includes("```json")) {
                 cleanedIdentityResponse = cleanedIdentityResponse
-                    .split('```json')[1]
-                    .split('```')[0]
+                    .split("```json")[1]
+                    .split("```")[0]
                     .trim();
-            } else if (cleanedIdentityResponse.includes('```')) {
+            } else if (cleanedIdentityResponse.includes("```")) {
                 cleanedIdentityResponse = cleanedIdentityResponse
-                    .split('```')[1]
-                    .split('```')[0]
+                    .split("```")[1]
+                    .split("```")[0]
                     .trim();
             }
 
             const identity = JSON.parse(cleanedIdentityResponse);
 
             // 2. 카테고리 분석 결과 파싱
-            const metadata = { platform: 'YOUTUBE', title: channelInfo.title };
-            const categoryResult =
-                this.categoryManager.processDynamicCategoryResponse(
-                    categoryAnalysis,
-                    metadata,
-                    'flash-lite',
-                );
+            const metadata = { platform: "YOUTUBE", title: channelInfo.title };
+            const categoryResult = this.categoryManager.processDynamicCategoryResponse(
+                categoryAnalysis,
+                metadata,
+                "flash-lite"
+            );
 
             // 3. 통합 결과 반환
             const result = {
                 ...identity,
                 // 카테고리 정보 추가 (일관성 정보 포함)
                 categoryInfo: {
-                    majorCategory: categoryResult.mainCategory,
+                    mainCategory: categoryResult.mainCategory,
                     middleCategory: categoryResult.middleCategory,
                     fullCategoryPath: categoryResult.fullPath,
                     categoryDepth: categoryResult.depth,
@@ -889,20 +834,20 @@ ${videoAnalyses
             };
 
             ServerLogger.success(
-                `✅ 채널 종합 분석 완료: ${result.categoryInfo.fullCategoryPath} (${result.categoryInfo.categoryDepth}단계)`,
+                `✅ 채널 종합 분석 완료: ${result.categoryInfo.fullCategoryPath} (${result.categoryInfo.categoryDepth}단계)`
             );
 
             return result;
         } catch (error) {
             ServerLogger.error(`❌ 채널 종합 분석 실패: ${error.message}`);
             return {
-                primaryCategory: '기타',
+                primaryCategory: "기타",
                 secondaryCategories: [],
                 channelTags: [],
-                targetAudience: '분석 실패',
-                contentStyle: '분석 실패',
+                targetAudience: "분석 실패",
+                contentStyle: "분석 실패",
                 uniqueFeatures: [],
-                channelPersonality: '분석 실패',
+                channelPersonality: "분석 실패",
             };
         }
     }
@@ -914,46 +859,40 @@ ${videoAnalyses
         channelId,
         maxVideos = 200,
         includeContentAnalysis = false,
-        channelStats = null, // YouTube API 채널 통계
+        channelStats = null // YouTube API 채널 통계
     ) {
         // YouTube API 통계 저장 (performAnalysis에서 사용)
         this.channelStats = channelStats;
         try {
             ServerLogger.info(`🔍 향상된 채널 분석 시작: ${channelId}`);
-            ServerLogger.info(
-                `🔍 DEBUG: includeContentAnalysis = ${includeContentAnalysis}`,
-            );
+            ServerLogger.info(`🔍 DEBUG: includeContentAnalysis = ${includeContentAnalysis}`);
 
             // 기본 분석 수행
-            const basicAnalysis = await this.analyzeChannel(
-                channelId,
-                maxVideos,
-            );
+            const basicAnalysis = await this.analyzeChannel(channelId, maxVideos);
             ServerLogger.info(
-                `🔍 DEBUG: basicAnalysis 결과 - videos: ${basicAnalysis.videos?.length || 0}개, shortFormRatio: ${basicAnalysis.analysis.shortFormRatio}`,
+                `🔍 DEBUG: basicAnalysis 결과 - videos: ${
+                    basicAnalysis.videos?.length || 0
+                }개, shortFormRatio: ${basicAnalysis.analysis.shortFormRatio}`
             );
 
             // 콘텐츠 분석이 활성화된 경우 분석 수행
             if (!includeContentAnalysis) {
-                ServerLogger.info('📊 기본 분석만 수행 (콘텐츠 분석 비활성화)');
+                ServerLogger.info("📊 기본 분석만 수행 (콘텐츠 분석 비활성화)");
                 return basicAnalysis;
             }
 
             // 숏폼 vs 롱폼 분석 전략 선택
             if (basicAnalysis.analysis.shortFormRatio < 50) {
-                ServerLogger.info('📚 롱폼 채널 - 메타데이터 기반 분석 시작');
+                ServerLogger.info("📚 롱폼 채널 - 메타데이터 기반 분석 시작");
 
                 // 롱폼 채널 분석
                 const longformAnalysis = await this.analyzeLongformChannel(
                     basicAnalysis.videos,
-                    basicAnalysis.channelInfo,
+                    basicAnalysis.channelInfo
                 );
 
                 // 디버깅: 롱폼 분석 결과 확인
-                ServerLogger.info(
-                    '🔍 롱폼 분석 결과:',
-                    JSON.stringify(longformAnalysis, null, 2),
-                );
+                ServerLogger.info("🔍 롱폼 분석 결과:", JSON.stringify(longformAnalysis, null, 2));
 
                 const result = {
                     ...basicAnalysis,
@@ -963,16 +902,12 @@ ${videoAnalyses
                         enhancedAnalysis: {
                             channelIdentity: {
                                 channelTags: longformAnalysis.channelTags || [],
-                                primaryCategory:
-                                    longformAnalysis.primaryCategory,
-                                secondaryCategories:
-                                    longformAnalysis.secondaryCategories || [],
+                                primaryCategory: longformAnalysis.primaryCategory,
+                                secondaryCategories: longformAnalysis.secondaryCategories || [],
                                 targetAudience: longformAnalysis.targetAudience,
                                 contentStyle: longformAnalysis.contentStyle,
-                                uniqueFeatures:
-                                    longformAnalysis.uniqueFeatures || [],
-                                channelPersonality:
-                                    longformAnalysis.channelPersonality,
+                                uniqueFeatures: longformAnalysis.uniqueFeatures || [],
+                                channelPersonality: longformAnalysis.channelPersonality,
                             },
                         },
                     },
@@ -980,17 +915,14 @@ ${videoAnalyses
 
                 // 디버깅: 최종 결과 확인
                 ServerLogger.info(
-                    '🔍 최종 결과 aiTags:',
-                    JSON.stringify(
-                        result.analysis.enhancedAnalysis?.channelIdentity
-                            ?.channelTags,
-                    ),
+                    "🔍 최종 결과 aiTags:",
+                    JSON.stringify(result.analysis.enhancedAnalysis?.channelIdentity?.channelTags)
                 );
 
                 return result;
             }
 
-            ServerLogger.info('🎬 숏폼 채널 - 콘텐츠 분석 시작');
+            ServerLogger.info("🎬 숏폼 채널 - 콘텐츠 분석 시작");
 
             // 최신 5개 영상 선택
             const recentVideos = basicAnalysis.videos.slice(0, 5);
@@ -1001,26 +933,25 @@ ${videoAnalyses
                 ServerLogger.info(`🔍 영상 분석 중: ${video.title}`);
 
                 const comments = await this.getVideoComments(video.videoId, 15);
-                const contentAnalysis = await this.analyzeVideoContentHybrid(
-                    video,
-                    comments,
-                );
+                const contentAnalysis = await this.analyzeVideoContentHybrid(video, comments);
 
                 videoAnalyses.push(contentAnalysis);
 
                 // API 호출 간격 (상수 사용)
-                const UnifiedGeminiManager = require('../utils/unified-gemini-manager');
-                await new Promise((resolve) => setTimeout(resolve, UnifiedGeminiManager.VIDEO_ANALYSIS_DELAY));
+                const UnifiedGeminiManager = require("../utils/unified-gemini-manager");
+                await new Promise((resolve) =>
+                    setTimeout(resolve, UnifiedGeminiManager.VIDEO_ANALYSIS_DELAY)
+                );
             }
 
             // 채널 종합 분석
             const channelIdentity = await this.synthesizeChannelIdentity(
                 videoAnalyses,
-                basicAnalysis.channelInfo,
+                basicAnalysis.channelInfo
             );
 
             ServerLogger.success(
-                `✅ 향상된 채널 분석 완료: AI 태그 ${channelIdentity.channelTags.length}개 생성`,
+                `✅ 향상된 채널 분석 완료: AI 태그 ${channelIdentity.channelTags.length}개 생성`
             );
 
             return {
@@ -1028,7 +959,7 @@ ${videoAnalyses
                 enhancedAnalysis: {
                     videoAnalyses,
                     channelIdentity,
-                    analysisMethod: 'content_and_comments',
+                    analysisMethod: "content_and_comments",
                     analyzedVideos: recentVideos.length,
                 },
             };
@@ -1046,7 +977,7 @@ ${videoAnalyses
             dailyUploadRate: 0,
             last7DaysViews: 0,
             avgDurationSeconds: 0,
-            avgDurationFormatted: '0초',
+            avgDurationFormatted: "0초",
             shortFormRatio: 0,
             viewsByPeriod: {
                 last7Days: 0,
@@ -1057,7 +988,7 @@ ${videoAnalyses
             totalVideos: 0,
             totalViews: 0,
             averageViewsPerVideo: 0,
-            uploadFrequency: { pattern: 'no_data' },
+            uploadFrequency: { pattern: "no_data" },
         };
     }
 
@@ -1070,24 +1001,20 @@ ${videoAnalyses
             const metadata = this.aggregateMetadata(videos, channelInfo);
 
             // 2. Gemini로 종합 분석 (1회 호출)
-            const analysis = await this.synthesizeLongformChannelIdentity(
-                metadata,
-            );
+            const analysis = await this.synthesizeLongformChannelIdentity(metadata);
 
             ServerLogger.success(
-                `✅ 롱폼 채널 분석 완료: ${
-                    analysis.channelTags?.length || 0
-                }개 태그 생성`,
+                `✅ 롱폼 채널 분석 완료: ${analysis.channelTags?.length || 0}개 태그 생성`
             );
             return analysis;
         } catch (error) {
-            ServerLogger.error('❌ 롱폼 채널 분석 실패', error);
+            ServerLogger.error("❌ 롱폼 채널 분석 실패", error);
             return {
-                primaryCategory: '일반',
+                primaryCategory: "일반",
                 channelTags: [],
-                targetAudience: '일반 시청자',
-                contentStyle: '롱폼 콘텐츠',
-                channelPersonality: '정보 전달형',
+                targetAudience: "일반 시청자",
+                contentStyle: "롱폼 콘텐츠",
+                channelPersonality: "정보 전달형",
             };
         }
     }
@@ -1097,26 +1024,18 @@ ${videoAnalyses
      */
     aggregateMetadata(videos, channelInfo) {
         // 모든 제목 수집
-        const allTitles = videos
-            .map((v) => v.title)
-            .filter((t) => t && t.length > 0);
+        const allTitles = videos.map((v) => v.title).filter((t) => t && t.length > 0);
 
         // 모든 설명 수집 (비어있지 않은 것만)
-        const allDescriptions = videos
-            .map((v) => v.description)
-            .filter((d) => d && d.length > 10);
+        const allDescriptions = videos.map((v) => v.description).filter((d) => d && d.length > 10);
 
         // 모든 태그 수집
-        const allTags = videos
-            .flatMap((v) => v.tags || [])
-            .filter((t) => t && t.length > 0);
+        const allTags = videos.flatMap((v) => v.tags || []).filter((t) => t && t.length > 0);
 
         // 카테고리 ID 집계
         const categoryIds = videos.map((v) => v.categoryId).filter((c) => c);
         const categoryFreq = {};
-        categoryIds.forEach(
-            (c) => (categoryFreq[c] = (categoryFreq[c] || 0) + 1),
-        );
+        categoryIds.forEach((c) => (categoryFreq[c] = (categoryFreq[c] || 0) + 1));
 
         // 조회수 통계
         const viewCounts = videos.map((v) => v.viewCount || 0);
@@ -1125,8 +1044,7 @@ ${videoAnalyses
 
         // 영상 길이 통계
         const durations = videos.map((v) => v.durationSeconds || 0);
-        const avgDuration =
-            durations.reduce((sum, d) => sum + d, 0) / durations.length;
+        const avgDuration = durations.reduce((sum, d) => sum + d, 0) / durations.length;
 
         return {
             channelInfo,
@@ -1147,7 +1065,7 @@ ${videoAnalyses
             categories: {
                 frequency: categoryFreq,
                 mostCommon: Object.keys(categoryFreq).sort(
-                    (a, b) => categoryFreq[b] - categoryFreq[a],
+                    (a, b) => categoryFreq[b] - categoryFreq[a]
                 )[0],
             },
             statistics: {
@@ -1195,19 +1113,19 @@ ${videoAnalyses
 - 총 영상: ${metadata.videoCount}개
 
 영상 제목 샘플 (최신 20개):
-${metadata.titles.sample.map((title, i) => `${i + 1}. ${title}`).join('\n')}
+${metadata.titles.sample.map((title, i) => `${i + 1}. ${title}`).join("\n")}
 
 영상 설명 샘플 (최신 10개):
 ${metadata.descriptions.sample
     .slice(0, 5)
     .map((desc, i) => `${i + 1}. ${desc.slice(0, 100)}...`)
-    .join('\n')}
+    .join("\n")}
 
 상위 태그 (빈도순):
 ${metadata.tags.top20
     .slice(0, 15)
     .map((item) => `- ${item.tag} (${item.count}회)`)
-    .join('\n')}
+    .join("\n")}
 
 통계:
 - 평균 조회수: ${metadata.statistics.avgViews.toLocaleString()}회
@@ -1232,7 +1150,7 @@ ${metadata.tags.top20
 
         // 2. 카테고리 분석을 위한 추가 프롬프트 생성 (일관성 검증 포함)
         const categoryPrompt =
-            this.categoryManager.buildDynamicCategoryPrompt('YOUTUBE') +
+            this.categoryManager.buildDynamicCategoryPrompt("YOUTUBE") +
             `
 
 **분석할 채널 정보:**
@@ -1244,13 +1162,13 @@ ${metadata.tags.top20
 ${metadata.titles.sample
     .slice(0, 10)
     .map((title, i) => `${i + 1}. ${title}`)
-    .join('\n')}
+    .join("\n")}
 
 **상위 태그들:**
 ${metadata.tags.top20
     .slice(0, 10)
     .map((item) => item.tag)
-    .join(', ')}
+    .join(", ")}
 
 **🎯 일관성 검증 지침:**
 위 영상 제목들과 태그들을 분석했을 때, 채널이 **일관된 주제**를 다루고 있나요?
@@ -1273,19 +1191,19 @@ ${metadata.tags.top20
 }`;
 
         // 병렬로 두 분석 수행
-        const identityModelType = process.env.CHANNEL_FINAL_ANALYSIS_MODEL || 'pro';
-        const categoryModelType = process.env.CHANNEL_REINTERPRETATION_MODEL || 'flash-lite';
+        const identityModelType = process.env.CHANNEL_FINAL_ANALYSIS_MODEL || "pro";
+        const categoryModelType = process.env.CHANNEL_REINTERPRETATION_MODEL || "flash-lite";
 
         const [identityAnalysis, categoryAnalysis] = await Promise.all([
             this.aiAnalyzer.geminiManager.generateContent(
                 identityPrompt,
                 null, // 이미지 없음 (텍스트만)
-                { modelType: identityModelType },
+                { modelType: identityModelType }
             ),
             this.aiAnalyzer.geminiManager.generateContent(
                 categoryPrompt,
                 null, // 이미지 없음 (텍스트만)
-                { modelType: categoryModelType },
+                { modelType: categoryModelType }
             ),
         ]);
 
@@ -1294,53 +1212,48 @@ ${metadata.tags.top20
             let identityResponseText;
             if (identityAnalysis && identityAnalysis.text) {
                 identityResponseText = identityAnalysis.text;
-            } else if (
-                identityAnalysis &&
-                typeof identityAnalysis === 'string'
-            ) {
+            } else if (identityAnalysis && typeof identityAnalysis === "string") {
                 identityResponseText = identityAnalysis;
             } else {
-                throw new Error('Identity 분석 응답을 받지 못했습니다');
+                throw new Error("Identity 분석 응답을 받지 못했습니다");
             }
 
             const identityJsonMatch = identityResponseText.match(/\{[\s\S]*\}/);
             if (!identityJsonMatch) {
-                throw new Error('Identity JSON 형식을 찾을 수 없습니다');
+                throw new Error("Identity JSON 형식을 찾을 수 없습니다");
             }
 
             const identity = JSON.parse(identityJsonMatch[0]);
 
             // 2. 카테고리 분석 결과 파싱
             const channelMetadata = {
-                platform: 'YOUTUBE',
+                platform: "YOUTUBE",
                 title: metadata.channelInfo.title || metadata.channelInfo.name,
             };
-            const categoryResult =
-                this.categoryManager.processDynamicCategoryResponse(
-                    categoryAnalysis,
-                    channelMetadata,
-                    'flash-lite',
-                );
+            const categoryResult = this.categoryManager.processDynamicCategoryResponse(
+                categoryAnalysis,
+                channelMetadata,
+                "flash-lite"
+            );
 
             // 3. 통합 결과 반환
             const result = {
-                primaryCategory: identity.primaryCategory || '일반',
+                primaryCategory: identity.primaryCategory || "일반",
                 secondaryCategories: Array.isArray(identity.secondaryCategories)
                     ? identity.secondaryCategories
                     : [],
                 channelTags: Array.isArray(identity.channelTags)
                     ? identity.channelTags.slice(0, 10)
                     : [],
-                targetAudience: identity.targetAudience || '일반 시청자',
-                contentStyle: identity.contentStyle || '롱폼 콘텐츠',
+                targetAudience: identity.targetAudience || "일반 시청자",
+                contentStyle: identity.contentStyle || "롱폼 콘텐츠",
                 uniqueFeatures: Array.isArray(identity.uniqueFeatures)
                     ? identity.uniqueFeatures
                     : [],
-                channelPersonality:
-                    identity.channelPersonality || '정보 전달형',
+                channelPersonality: identity.channelPersonality || "정보 전달형",
                 // 카테고리 정보 추가 (일관성 정보 포함)
                 categoryInfo: {
-                    majorCategory: categoryResult.mainCategory,
+                    mainCategory: categoryResult.mainCategory,
                     middleCategory: categoryResult.middleCategory,
                     fullCategoryPath: categoryResult.fullPath,
                     categoryDepth: categoryResult.depth,
@@ -1351,35 +1264,30 @@ ${metadata.tags.top20
             };
 
             // 카테고리 관련 키워드를 channelTags에 병합 (중복 제거)
-            const allTags = [
-                ...result.channelTags,
-                ...(categoryResult.keywords || []),
-            ];
+            const allTags = [...result.channelTags, ...(categoryResult.keywords || [])];
             result.channelTags = [...new Set(allTags)].slice(0, 15);
 
             ServerLogger.success(
-                `✅ 롱폼 채널 종합 분석 완료: ${result.categoryInfo.fullCategoryPath} (${result.categoryInfo.categoryDepth}단계)`,
+                `✅ 롱폼 채널 종합 분석 완료: ${result.categoryInfo.fullCategoryPath} (${result.categoryInfo.categoryDepth}단계)`
             );
 
             return result;
         } catch (error) {
-            ServerLogger.error('❌ 롱폼 채널 분석 파싱 실패', error);
+            ServerLogger.error("❌ 롱폼 채널 분석 파싱 실패", error);
 
             // 파싱 실패 시 기본값 반환 (카테고리 정보 포함)
             const fallbackResult = {
-                primaryCategory: '일반',
+                primaryCategory: "일반",
                 secondaryCategories: [],
-                channelTags: metadata.tags.top20
-                    .slice(0, 8)
-                    .map((item) => item.tag),
-                targetAudience: '일반 시청자',
-                contentStyle: '롱폼 콘텐츠',
+                channelTags: metadata.tags.top20.slice(0, 8).map((item) => item.tag),
+                targetAudience: "일반 시청자",
+                contentStyle: "롱폼 콘텐츠",
                 uniqueFeatures: [],
-                channelPersonality: '정보 전달형',
+                channelPersonality: "정보 전달형",
                 categoryInfo: {
-                    majorCategory: '엔터테인먼트',
-                    middleCategory: '일반',
-                    fullCategoryPath: '엔터테인먼트 > 일반 > 기본',
+                    mainCategory: "엔터테인먼트",
+                    middleCategory: "일반",
+                    fullCategoryPath: "엔터테인먼트 > 일반 > 기본",
                     categoryDepth: 3,
                     categoryConfidence: 0.3,
                 },
@@ -1392,14 +1300,9 @@ ${metadata.tags.top20
     /**
      * 🔄 AI 재해석: 사용자 카테고리를 기반으로 기존 AI 태그 재분석
      */
-    async reinterpretWithUserCategory(
-        userKeywords,
-        existingAiTags,
-        videoAnalyses,
-        channelInfo,
-    ) {
+    async reinterpretWithUserCategory(userKeywords, existingAiTags, videoAnalyses, channelInfo) {
         if (!userKeywords || userKeywords.length === 0) {
-            ServerLogger.warn('⚠️ 사용자 카테고리가 없어 재해석 건너뜀');
+            ServerLogger.warn("⚠️ 사용자 카테고리가 없어 재해석 건너뜀");
             return [];
         }
 
@@ -1412,9 +1315,7 @@ ${metadata.tags.top20
                 videoAnalyses.forEach((analysis, i) => {
                     if (analysis.comments && Array.isArray(analysis.comments)) {
                         commentsSample.push(
-                            `영상${i + 1} 댓글: ${analysis.comments
-                                .slice(0, 3)
-                                .join(', ')}`,
+                            `영상${i + 1} 댓글: ${analysis.comments.slice(0, 3).join(", ")}`
                         );
                     }
                 });
@@ -1424,16 +1325,16 @@ ${metadata.tags.top20
 사용자 관점에서 채널의 진짜 성격을 재해석해주세요.
 
 채널 정보:
-- 이름: ${channelInfo?.title || '알 수 없음'}
-- 설명: ${channelInfo?.description || '설명 없음'}
+- 이름: ${channelInfo?.title || "알 수 없음"}
+- 설명: ${channelInfo?.description || "설명 없음"}
 
 기존 AI 분석 결과:
-- AI 태그: ${existingAiTags.join(', ')}
+- AI 태그: ${existingAiTags.join(", ")}
 
 사용자 분류: "${userCategory}"
 
 영상 반응 샘플:
-${commentsSample.slice(0, 5).join('\n')}
+${commentsSample.slice(0, 5).join("\n")}
 
 **중요**: 사용자가 "${userCategory}"로 분류한 이유를 깊이 있게 분석하고,
 표면적인 주제가 아닌 시청자들의 진짜 만족 요소나 숨겨진 콘텐츠 성격을 파악하세요.
@@ -1444,53 +1345,40 @@ ${commentsSample.slice(0, 5).join('\n')}
 10개 이내의 재해석된 태그를 JSON 배열 형태로만 응답하세요:
 ["태그1", "태그2", "태그3", ...]`;
 
-            ServerLogger.info(
-                `🔄 AI 재해석 시작: 사용자 카테고리 "${userCategory}" 기반`,
-            );
+            ServerLogger.info(`🔄 AI 재해석 시작: 사용자 카테고리 "${userCategory}" 기반`);
 
-            const reinterpretation =
-                await this.aiAnalyzer.geminiManager.generateContent(
-                    prompt,
-                    null,
-                    { modelType: 'flash-lite' },
-                );
+            const reinterpretation = await this.aiAnalyzer.geminiManager.generateContent(
+                prompt,
+                null,
+                { modelType: "flash-lite" }
+            );
 
             // 응답 파싱
             let responseText;
-            if (typeof reinterpretation === 'object' && reinterpretation.text) {
+            if (typeof reinterpretation === "object" && reinterpretation.text) {
                 responseText = reinterpretation.text;
-            } else if (typeof reinterpretation === 'string') {
+            } else if (typeof reinterpretation === "string") {
                 responseText = reinterpretation;
             } else {
-                throw new Error('Unexpected response format');
+                throw new Error("Unexpected response format");
             }
 
             // JSON 파싱
             let cleanedResponse = responseText.trim();
-            if (cleanedResponse.includes('```json')) {
-                cleanedResponse = cleanedResponse
-                    .split('```json')[1]
-                    .split('```')[0]
-                    .trim();
-            } else if (cleanedResponse.includes('```')) {
-                cleanedResponse = cleanedResponse
-                    .split('```')[1]
-                    .split('```')[0]
-                    .trim();
+            if (cleanedResponse.includes("```json")) {
+                cleanedResponse = cleanedResponse.split("```json")[1].split("```")[0].trim();
+            } else if (cleanedResponse.includes("```")) {
+                cleanedResponse = cleanedResponse.split("```")[1].split("```")[0].trim();
             }
 
             const reinterpretedTags = JSON.parse(cleanedResponse);
 
             if (Array.isArray(reinterpretedTags)) {
-                ServerLogger.success(
-                    `✅ AI 재해석 완료: ${reinterpretedTags.length}개 태그 생성`,
-                );
-                ServerLogger.info(
-                    `🏷️ 재해석 태그: ${reinterpretedTags.join(', ')}`,
-                );
+                ServerLogger.success(`✅ AI 재해석 완료: ${reinterpretedTags.length}개 태그 생성`);
+                ServerLogger.info(`🏷️ 재해석 태그: ${reinterpretedTags.join(", ")}`);
                 return reinterpretedTags.slice(0, 10); // 최대 10개로 제한
             } else {
-                throw new Error('재해석 결과가 배열이 아님');
+                throw new Error("재해석 결과가 배열이 아님");
             }
         } catch (error) {
             ServerLogger.warn(`⚠️ AI 재해석 실패: ${error.message}`);
@@ -1501,7 +1389,7 @@ ${commentsSample.slice(0, 5).join('\n')}
     // API 키 캐시 클리어 (파일 변경 시 호출)
     clearApiKeyCache() {
         this.apiKey = null;
-        ServerLogger.info('🔄 YouTubeChannelAnalyzer API 키 캐시 클리어', null, 'YT-ANALYZER');
+        ServerLogger.info("🔄 YouTubeChannelAnalyzer API 키 캐시 클리어", null, "YT-ANALYZER");
     }
 }
 
