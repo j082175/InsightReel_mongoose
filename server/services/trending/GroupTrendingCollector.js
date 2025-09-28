@@ -1,11 +1,11 @@
 const HighViewCollector = require('./HighViewCollector');
-const ChannelGroup = require('../models/ChannelGroup');
-const TrendingVideo = require('../models/TrendingVideo');
-const DurationClassifier = require('../utils/duration-classifier').default;
-const { ServerLogger } = require('../utils/logger');
-const { PLATFORMS } = require('../config/api-messages');
-const { CONTENT_LIMITS } = require('../config/constants');
-const { YouTubeApiTypeUtils } = require('../types/youtube-api-types');
+const ChannelGroup = require('../../models/ChannelGroup');
+const TrendingVideo = require('../../models/TrendingVideo');
+const DurationClassifier = require('../../utils/duration-classifier').default;
+const { ServerLogger } = require('../../utils/logger');
+const { PLATFORMS } = require('../../config/api-messages');
+const { CONTENT_LIMITS } = require('../../config/constants');
+const { YouTubeApiTypeUtils } = require('../../types/youtube-api-types');
 
 /**
  * 🎯 그룹별 트렌딩 영상 수집기

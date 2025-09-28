@@ -1,7 +1,7 @@
 const axios = require('axios');
-const { ServerLogger } = require('../utils/logger');
-const UsageTracker = require('../utils/usage-tracker');
-const MultiKeyManager = require('../utils/multi-key-manager');
+const { ServerLogger } = require('../../utils/logger');
+const UsageTracker = require('../../utils/usage-tracker');
+const MultiKeyManager = require('../../utils/multi-key-manager');
 const fs = require('fs').promises;
 const path = require('path');
 
