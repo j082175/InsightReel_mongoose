@@ -47,6 +47,16 @@ export class ThumbnailExtractor {
         });
     }
 
+    /**
+     * Convert absolute path to relative path for database storage
+     */
+    private toRelativePath(absolutePath: string): string {
+        // Convert absolute path to relative path from project root
+        const projectRoot = path.join(__dirname, '../../../../');
+        const relativePath = path.relative(projectRoot, absolutePath);
+        return relativePath.replace(/\\/g, '/'); // Normalize to forward slashes
+    }
+
     async generateThumbnail(
         videoPath: string,
         analysisType: 'single' | 'multi-frame' | 'full' = 'multi-frame'
@@ -94,12 +104,14 @@ export class ThumbnailExtractor {
                 .jpeg({ quality: 80 })
                 .toFile(thumbnailPath);
 
-            ServerLogger.info(`이미지 썸네일 생성 완료: ${thumbnailPath}`);
-            return thumbnailPath;
+            const relativePath = this.toRelativePath(thumbnailPath);
+            ServerLogger.info(`이미지 썸네일 생성 완료: ${relativePath}`);
+            return relativePath;
         } catch (error) {
             // Sharp가 없는 경우 단순 복사
             fs.copyFileSync(imagePath, thumbnailPath);
-            return thumbnailPath;
+            const relativePath = this.toRelativePath(thumbnailPath);
+            return relativePath;
         }
     }
 
@@ -118,10 +130,11 @@ export class ThumbnailExtractor {
             const success = await this.extractFrameAtTime(videoPath, timeInSeconds, thumbnailPath);
 
             if (success) {
+                const relativePath = this.toRelativePath(thumbnailPath);
                 return {
                     success: true,
-                    thumbnailPath,
-                    framePaths: [thumbnailPath]
+                    thumbnailPath: relativePath,
+                    framePaths: [relativePath]
                 };
             } else {
                 throw new Error('썸네일 추출 실패');
@@ -176,8 +189,8 @@ export class ThumbnailExtractor {
 
             return {
                 success: true,
-                thumbnailPath: mainThumbnailPath,
-                framePaths
+                thumbnailPath: this.toRelativePath(mainThumbnailPath),
+                framePaths: framePaths.map(path => this.toRelativePath(path))
             };
 
         } catch (error) {
@@ -356,8 +369,9 @@ export class ThumbnailExtractor {
                 if (stats.size === 0) {
                     fs.unlinkSync(localPath);
                 } else {
-                    ServerLogger.info(`썸네일이 이미 존재합니다: ${localPath}`);
-                    return localPath;
+                    const relativePath = this.toRelativePath(localPath);
+                    ServerLogger.info(`썸네일이 이미 존재합니다: ${relativePath}`);
+                    return relativePath;
                 }
             }
 
@@ -382,8 +396,9 @@ export class ThumbnailExtractor {
                 writer.on('finish', () => {
                     const stats = fs.statSync(localPath);
                     if (stats.size > 1024) { // 1KB 이상
-                        ServerLogger.success(`썸네일 다운로드 완료: ${localPath}`);
-                        resolve(localPath);
+                        const relativePath = this.toRelativePath(localPath);
+                        ServerLogger.success(`썸네일 다운로드 완료: ${relativePath}`);
+                        resolve(relativePath);
                     } else {
                         ServerLogger.warn(`다운로드된 썸네일이 너무 작습니다: ${stats.size} bytes`);
                         fs.unlinkSync(localPath);

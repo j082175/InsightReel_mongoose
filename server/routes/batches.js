@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const CollectionBatch = require('../models/CollectionBatch');
-const TrendingVideo = require('../models/TrendingVideo');
+const CollectionBatch = require('../models/CollectionBatch').default || require('../models/CollectionBatch');
+const TrendingVideo = require('../models/TrendingVideo').default || require('../models/TrendingVideo');
 const { HTTP_STATUS_CODES, ERROR_CODES, API_MESSAGES } = require('../config/api-messages');
 const { ServerLogger } = require('../utils/logger');
 

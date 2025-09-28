@@ -13,8 +13,7 @@ const trendingVideoSchema = new Schema<ITrendingVideo, TrendingVideoModelType>({
   videoId: {
     type: String,
     required: true,
-    trim: true,
-    index: true
+    trim: true
   },
   title: {
     type: String,

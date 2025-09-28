@@ -7,7 +7,7 @@ import { Video } from '../types';
  */
 export const useInfiniteVideos = (batchId?: string, pageSize = 50) => {
   return useInfiniteQuery({
-    queryKey: ['videos', 'infinite', { batchId, pageSize }],
+    queryKey: ['videos', 'infinite', 'refresh-now', { batchId, pageSize }],
     queryFn: async ({ pageParam = 0 }) => {
       console.log('🔄 [useInfiniteVideos] 페이지 로딩 시작:', {
         pageParam,
@@ -49,8 +49,8 @@ export const useInfiniteVideos = (batchId?: string, pageSize = 50) => {
       console.log('❌ [useInfiniteVideos] 더 이상 로드할 페이지 없음');
       return undefined;
     },
-    staleTime: 2 * 60 * 1000, // 2분
-    gcTime: 5 * 60 * 1000, // 5분
+    staleTime: 1 * 60 * 1000, // 1 minute
+    gcTime: 5 * 60 * 1000, // 5 minutes
     initialPageParam: 0,
   });
 };

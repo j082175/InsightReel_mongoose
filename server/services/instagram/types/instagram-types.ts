@@ -26,6 +26,7 @@ export interface InstagramReelInfo {
     thumbnailUrl: string;
     hashtags: string[];
     mentions: string[];
+    language?: string;
     location?: {
         name: string;
         id: string;

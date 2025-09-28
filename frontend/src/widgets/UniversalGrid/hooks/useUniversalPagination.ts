@@ -17,8 +17,11 @@ export const useUniversalPagination = <T extends GridItem>(
   const [itemsPerPage, setItemsPerPage] = useState(initialItemsPerPage);
   const [useVirtualScrolling, setUseVirtualScrolling] = useState(true);
 
+  // 방어적 프로그래밍: data가 배열이 아닌 경우 빈 배열로 처리
+  const safeData = Array.isArray(data) ? data : [];
+
   // 기본 계산값들
-  const totalItems = data.length;
+  const totalItems = safeData.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -27,16 +30,16 @@ export const useUniversalPagination = <T extends GridItem>(
   const currentData = useMemo(() => {
     // 가상 스크롤링 모드에서는 전체 데이터 반환
     if (useVirtualScrolling) {
-      return data;
+      return safeData;
     }
     // 일반 모드에서는 페이지네이션된 데이터 반환
-    return data.slice(startIndex, endIndex);
-  }, [data, useVirtualScrolling, startIndex, endIndex]);
+    return safeData.slice(startIndex, endIndex);
+  }, [safeData, useVirtualScrolling, startIndex, endIndex]);
 
   // 페이지네이션된 데이터 (일반 모드용)
   const paginatedData = useMemo(() => {
-    return data.slice(startIndex, endIndex);
-  }, [data, startIndex, endIndex]);
+    return safeData.slice(startIndex, endIndex);
+  }, [safeData, startIndex, endIndex]);
 
   // 유틸리티 값들
   const hasNextPage = currentPage < totalPages;

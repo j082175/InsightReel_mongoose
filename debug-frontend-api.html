@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Frontend API Call</title>
+</head>
+<body>
+    <h1>Debug Frontend API Response</h1>
+    <div id="output"></div>
+
+    <script>
+        async function testAPICall() {
+            try {
+                console.log('🔍 Testing frontend API call...');
+
+                const response = await fetch('http://localhost:3000/api/videos?limit=50&offset=0');
+                const data = await response.json();
+
+                console.log('📨 Raw Response:', data);
+                console.log('🔍 Response structure analysis:');
+                console.log('- success:', data.success);
+                console.log('- data type:', typeof data.data);
+                console.log('- data.videos exists:', !!data.data?.videos);
+                console.log('- data.videos length:', data.data?.videos?.length);
+                console.log('- pagination exists:', !!data.pagination);
+                console.log('- pagination.total:', data.pagination?.total);
+                console.log('- pagination.hasMore:', data.pagination?.hasMore);
+
+                // Simulate the exact same logic as frontend
+                let result;
+                if (data.success && data.data) {
+                    if (data.data.videos && Array.isArray(data.data.videos)) {
+                        console.log('✅ Taking data.videos path');
+                        result = {
+                            videos: data.data.videos,
+                            pagination: data.pagination || {
+                                total: data.data.videos.length,
+                                limit: 50,
+                                offset: 0,
+                                hasMore: false
+                            }
+                        };
+                    } else if (Array.isArray(data.data)) {
+                        console.log('✅ Taking direct data array path');
+                        result = {
+                            videos: data.data,
+                            pagination: data.pagination || {}
+                        };
+                    }
+                }
+
+                console.log('🎯 Final processed result:', result);
+                console.log('🎯 Final pagination:', result?.pagination);
+
+                document.getElementById('output').innerHTML = `
+                    <h2>API Response Analysis</h2>
+                    <p><strong>Total videos:</strong> ${result?.pagination?.total || 'undefined'}</p>
+                    <p><strong>Has more:</strong> ${result?.pagination?.hasMore || 'undefined'}</p>
+                    <p><strong>Videos returned:</strong> ${result?.videos?.length || 'undefined'}</p>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                `;
+
+            } catch (error) {
+                console.error('❌ Error:', error);
+                document.getElementById('output').innerHTML = `<p>Error: ${error.message}</p>`;
+            }
+        }
+
+        testAPICall();
+    </script>
+</body>
+</html>

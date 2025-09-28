@@ -20,15 +20,54 @@ export class InstagramProcessor {
 
     async downloadVideo(videoUrl: string, filePath: string, startTime?: Date): Promise<boolean> {
         try {
-            const directVideoUrl = await this.extractVideoUrl(videoUrl);
-            if (!directVideoUrl) {
-                throw new Error('Instagram 비디오 URL을 추출할 수 없습니다');
-            }
-
-            return await this.downloadFromDirectUrl(directVideoUrl, filePath);
-
+            ServerLogger.info(`📥 Instagram 비디오 yt-dlp 다운로드 시작: ${videoUrl}`);
+            return await this.downloadWithYtDlp(videoUrl, filePath);
         } catch (error) {
             ServerLogger.error('Instagram 비디오 다운로드 실패:', error);
+            return false;
+        }
+    }
+
+    private async downloadWithYtDlp(videoUrl: string, filePath: string): Promise<boolean> {
+        try {
+            const { exec } = require('child_process');
+            const { promisify } = require('util');
+            const execAsync = promisify(exec);
+            const path = require('path');
+            const fs = require('fs');
+
+            // 출력 디렉토리 확인
+            const outputDir = path.dirname(filePath);
+            if (!fs.existsSync(outputDir)) {
+                fs.mkdirSync(outputDir, { recursive: true });
+            }
+
+            const command = `yt-dlp -o "${filePath}" "${videoUrl}"`;
+            ServerLogger.info(`🔧 yt-dlp 다운로드 명령어: ${command}`);
+
+            const { stdout, stderr } = await execAsync(command, { timeout: 60000 });
+
+            if (stderr) {
+                ServerLogger.warn(`yt-dlp 경고: ${stderr}`);
+            }
+
+            // 파일 존재 및 크기 확인
+            if (fs.existsSync(filePath)) {
+                const stats = fs.statSync(filePath);
+                if (stats.size > 1024) {
+                    ServerLogger.info(`✅ Instagram 비디오 yt-dlp 다운로드 완료: ${filePath} (${stats.size} bytes)`);
+                    return true;
+                } else {
+                    ServerLogger.warn(`❌ 다운로드된 파일이 너무 작습니다: ${stats.size} bytes`);
+                    return false;
+                }
+            } else {
+                ServerLogger.error('❌ yt-dlp 다운로드 완료했지만 파일이 존재하지 않음');
+                return false;
+            }
+
+        } catch (error: any) {
+            ServerLogger.error('yt-dlp Instagram 다운로드 실패:', error.message);
             return false;
         }
     }
@@ -86,7 +125,8 @@ export class InstagramProcessor {
     async getVideoInfo(instagramUrl: string): Promise<InstagramReelInfo | null> {
         try {
             if (this.instagramExtractor) {
-                const instagramData = await this.instagramExtractor.extractData(instagramUrl);
+                ServerLogger.info('📱 Instagram Manager로 비디오 정보 추출 시도...');
+                const instagramData = await this.instagramExtractor.extractReel(instagramUrl);
 
                 if (!instagramData.success) {
                     ServerLogger.warn('Instagram 추출기에서 데이터를 가져올 수 없음');
@@ -96,29 +136,43 @@ export class InstagramProcessor {
                 return this.normalizeInstagramData(instagramData.data);
             }
 
+            ServerLogger.warn('Instagram 추출기가 초기화되지 않음, yt-dlp 대체 방법 사용');
             return await this.getVideoInfoFallback(instagramUrl);
 
         } catch (error) {
             ServerLogger.error('Instagram 비디오 정보 조회 실패:', error);
-            return null;
+            ServerLogger.warn('yt-dlp 대체 방법으로 시도...');
+            return await this.getVideoInfoFallback(instagramUrl);
         }
     }
 
     private async getVideoInfoFallback(instagramUrl: string): Promise<InstagramReelInfo | null> {
         try {
-            // yt-dlp를 사용한 대체 방법
+            ServerLogger.info('🔄 yt-dlp 대체 방법으로 Instagram 메타데이터 추출 시도...');
             const { exec } = require('child_process');
             const { promisify } = require('util');
             const execAsync = promisify(exec);
 
-            const command = `yt-dlp --dump-json "${instagramUrl}"`;
-            const { stdout } = await execAsync(command);
+            // yt-dlp에서 더 많은 메타데이터 추출
+            const command = `yt-dlp --dump-json --write-info-json "${instagramUrl}"`;
+            ServerLogger.info(`🔧 yt-dlp 명령어: ${command}`);
+
+            const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
+
+            if (stderr) {
+                ServerLogger.warn(`yt-dlp 경고: ${stderr}`);
+            }
 
             const data = JSON.parse(stdout);
-            return this.parseYtDlpData(data);
+            const result = this.parseYtDlpData(data);
+
+            ServerLogger.info('✅ yt-dlp로 Instagram 메타데이터 추출 성공');
+            ServerLogger.info(`📊 추출된 데이터: 조회수=${result.viewCount}, 좋아요=${result.likeCount}, 댓글=${result.commentCount}`);
+
+            return result;
 
         } catch (error) {
-            ServerLogger.error('Instagram 대체 방법 실패:', error);
+            ServerLogger.error('Instagram yt-dlp 대체 방법 실패:', error);
             return null;
         }
     }
@@ -127,21 +181,23 @@ export class InstagramProcessor {
         const caption = data.caption || data.title || '';
 
         return {
-            shortcode: data.id || this.extractInstagramId(data.url || ''),
+            shortcode: data.shortcode || data.id || this.extractInstagramId(data.url || ''),
             url: data.url || '',
             caption: caption,
             timestamp: data.timestamp || Date.now(),
-            uploadDate: data.date || data.created_at || new Date().toISOString(),
-            viewCount: parseInt(data.video_view_count || data.views || '0'),
-            likeCount: parseInt(data.likes || data.like_count || '0'),
-            commentCount: parseInt(data.comments || data.comment_count || '0'),
-            isVideo: true,
-            videoDuration: data.duration || undefined,
-            videoUrl: data.video_url || data.url,
-            thumbnailUrl: data.display_url || data.thumbnail_url || '',
-            hashtags: this.extractHashtags(caption),
-            mentions: this.extractMentions(caption),
-            owner: {
+            uploadDate: data.uploadDate || data.date || data.created_at || new Date().toISOString(),
+            // ReelsExtractor 데이터 형식에 맞춰 수정
+            viewCount: data.viewCount || parseInt(data.video_view_count || data.views || '0'),
+            likeCount: data.likeCount || parseInt(data.likes || data.like_count || '0'),
+            commentCount: data.commentCount || parseInt(data.comments || data.comment_count || '0'),
+            isVideo: data.isVideo !== undefined ? data.isVideo : true,
+            videoDuration: data.videoDuration || data.duration || undefined,
+            videoUrl: data.videoUrl || data.video_url || data.url,
+            thumbnailUrl: data.thumbnailUrl || data.display_url || data.thumbnail_url || '',
+            hashtags: data.hashtags || this.extractHashtags(caption),
+            mentions: data.mentions || this.extractMentions(caption),
+            language: data.language || undefined,
+            owner: data.owner || {
                 username: data.username || data.owner_username || '',
                 fullName: data.full_name || data.owner_username || '',
                 isVerified: data.is_verified || false,
@@ -152,31 +208,55 @@ export class InstagramProcessor {
     }
 
     private parseYtDlpData(data: any): InstagramReelInfo {
-        const description = data.description || '';
+        const description = data.description || data.title || '';
 
+        // yt-dlp에서 제공하는 더 풍부한 메타데이터 활용
         return {
-            shortcode: data.id || '',
+            shortcode: data.id || this.extractInstagramId(data.webpage_url || ''),
             url: data.webpage_url || data.url || '',
             caption: description,
             timestamp: Date.now(),
-            uploadDate: data.upload_date || new Date().toISOString(),
-            viewCount: parseInt(data.view_count || '0'),
-            likeCount: parseInt(data.like_count || '0'),
-            commentCount: parseInt(data.comment_count || '0'),
-            isVideo: true,
+            uploadDate: this.parseUploadDate(data.upload_date || data.timestamp),
+            viewCount: parseInt(data.view_count || data.views || '0'),
+            likeCount: parseInt(data.like_count || data.likes || '0'),
+            commentCount: parseInt(data.comment_count || data.comments || '0'),
+            isVideo: data.vcodec !== 'none' && data.vcodec !== null,
             videoDuration: data.duration || undefined,
-            videoUrl: data.url,
-            thumbnailUrl: data.thumbnail || '',
+            videoUrl: data.url || data.video_url,
+            thumbnailUrl: data.thumbnail || data.thumbnails?.[0]?.url || '',
             hashtags: this.extractHashtags(description),
             mentions: this.extractMentions(description),
+            language: data.language || data.automatic_captions ? Object.keys(data.automatic_captions)[0] : undefined,
+            location: data.location ? {
+                name: data.location.name || '',
+                id: data.location.id || ''
+            } : undefined,
             owner: {
-                username: data.uploader || data.channel || '',
+                username: data.uploader || data.channel || data.uploader_id || '',
                 fullName: data.uploader || data.channel || '',
-                isVerified: false,
-                profilePicUrl: ''
+                isVerified: data.uploader_verified || false,
+                profilePicUrl: data.uploader_avatar || data.channel_avatar || ''
             },
             platform: 'INSTAGRAM' as const
         };
+    }
+
+    private parseUploadDate(uploadDate: string | number): string {
+        if (!uploadDate) return new Date().toISOString();
+
+        if (typeof uploadDate === 'number') {
+            return new Date(uploadDate * 1000).toISOString();
+        }
+
+        // YYYYMMDD 형식을 ISO string으로 변환
+        if (typeof uploadDate === 'string' && uploadDate.match(/^\d{8}$/)) {
+            const year = uploadDate.substring(0, 4);
+            const month = uploadDate.substring(4, 6);
+            const day = uploadDate.substring(6, 8);
+            return new Date(`${year}-${month}-${day}`).toISOString();
+        }
+
+        return new Date(uploadDate).toISOString();
     }
 
     private extractInstagramTitle(caption: string): string {
@@ -195,28 +275,63 @@ export class InstagramProcessor {
     }
 
     extractInstagramId(url: string): string {
-        const match = url.match(/\/p\/([A-Za-z0-9_-]+)/);
-        return match ? match[1] : '';
+        // Reel과 일반 Post 모두 지원
+        const patterns = [
+            /\/reel\/([A-Za-z0-9_-]+)/,  // Reel URL
+            /\/p\/([A-Za-z0-9_-]+)/,     // 일반 Post URL
+            /\/tv\/([A-Za-z0-9_-]+)/     // IGTV URL
+        ];
+
+        for (const pattern of patterns) {
+            const match = url.match(pattern);
+            if (match) {
+                return match[1];
+            }
+        }
+
+        return '';
     }
 
     async extractVideoUrl(instagramUrl: string): Promise<string | null> {
         try {
-            // Instagram 페이지에서 직접 비디오 URL 추출
+            ServerLogger.info(`🔍 Instagram 비디오 URL 추출 시도: ${instagramUrl}`);
+
+            // 1. yt-dlp를 우선적으로 사용
+            const ytDlpUrl = await this.extractVideoUrlWithYtDlp(instagramUrl);
+            if (ytDlpUrl) {
+                ServerLogger.info(`✅ yt-dlp로 비디오 URL 추출 성공: ${ytDlpUrl}`);
+                return ytDlpUrl;
+            }
+
+            ServerLogger.warn('⚠️ yt-dlp 실패, 직접 HTML 파싱 시도');
+
+            // 2. HTML 파싱 방법 (대체)
             const axios = require('axios');
             const response = await axios.get(instagramUrl, {
                 headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'DNT': '1',
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1',
+                    'Sec-Fetch-Dest': 'document',
+                    'Sec-Fetch-Mode': 'navigate',
+                    'Sec-Fetch-Site': 'none'
                 }
             });
 
             const html = response.data;
 
-            // JSON 데이터에서 비디오 URL 추출
+            // JSON 데이터에서 비디오 URL 추출 (개선된 패턴)
             const patterns = [
                 /"video_url":"([^"]+)"/,
                 /"src":"([^"]+\.mp4[^"]*)"/,
                 /property="og:video" content="([^"]+)"/,
-                /property="og:video:secure_url" content="([^"]+)"/
+                /property="og:video:secure_url" content="([^"]+)"/,
+                /"playback_video_dash_manifest":"([^"]+)"/,
+                /"video_dash_manifest":"([^"]+)"/
             ];
 
             for (const pattern of patterns) {
@@ -231,7 +346,8 @@ export class InstagramProcessor {
                         });
                     }
 
-                    if (videoUrl && videoUrl.includes('.mp4')) {
+                    if (videoUrl && (videoUrl.includes('.mp4') || videoUrl.includes('video'))) {
+                        ServerLogger.info(`✅ HTML 파싱으로 비디오 URL 추출 성공: ${videoUrl}`);
                         return videoUrl;
                     }
                 }
@@ -240,9 +356,11 @@ export class InstagramProcessor {
             // meta tag에서 추출
             const metaMatch = html.match(/<meta[^>]*property="og:video"[^>]*content="([^"]+)"/);
             if (metaMatch && metaMatch[1]) {
+                ServerLogger.info(`✅ Meta 태그에서 비디오 URL 추출 성공: ${metaMatch[1]}`);
                 return metaMatch[1];
             }
 
+            ServerLogger.warn('❌ 모든 Instagram URL 추출 방법 실패');
             return null;
 
         } catch (error) {
@@ -251,9 +369,39 @@ export class InstagramProcessor {
         }
     }
 
+    private async extractVideoUrlWithYtDlp(instagramUrl: string): Promise<string | null> {
+        try {
+            const { exec } = require('child_process');
+            const { promisify } = require('util');
+            const execAsync = promisify(exec);
+
+            // yt-dlp로 직접 비디오 URL 추출
+            const command = `yt-dlp --get-url "${instagramUrl}"`;
+            ServerLogger.info(`🔧 yt-dlp 명령어 실행: ${command}`);
+
+            const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
+
+            if (stderr) {
+                ServerLogger.warn(`yt-dlp 경고: ${stderr}`);
+            }
+
+            const videoUrl = stdout.trim();
+            if (videoUrl && videoUrl.startsWith('http')) {
+                return videoUrl;
+            }
+
+            return null;
+
+        } catch (error: any) {
+            ServerLogger.error('yt-dlp 비디오 URL 추출 실패:', error.message);
+            return null;
+        }
+    }
+
     isInstagramUrl(url: string): boolean {
         if (!url || typeof url !== 'string') return false;
-        return /^https?:\/\/(www\.)?instagram\.com/.test(url);
+        // Reel, Post, IGTV 모든 URL 형태 지원
+        return /^https?:\/\/(www\.)?instagram\.com\/(reel|p|tv)\//.test(url);
     }
 
     // Instagram 특화 메타데이터 추출

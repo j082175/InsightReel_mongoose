@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const ChannelGroup = require('../models/ChannelGroup');
-const TrendingVideo = require('../models/TrendingVideo');
-const CollectionBatch = require('../models/CollectionBatch');
+const ChannelGroup = require('../models/ChannelGroup').default || require('../models/ChannelGroup');
+const TrendingVideo = require('../models/TrendingVideo').default || require('../models/TrendingVideo');
+const CollectionBatch = require('../models/CollectionBatch').default || require('../models/CollectionBatch');
 const GroupTrendingCollector = require('../services/trending/GroupTrendingCollector');
 const { HTTP_STATUS_CODES, ERROR_CODES, API_MESSAGES } = require('../config/api-messages');
 const { ServerLogger } = require('../utils/logger');
@@ -539,7 +539,7 @@ router.post('/collect-multiple', async (req, res) => {
       for (const channel of group.channels) {
         try {
           // Channel 컬렉션에서 실제 채널 정보 조회
-          const Channel = require('../models/Channel');
+          const Channel = require('../models/Channel').default || require('../models/Channel');
           let actualChannel;
           let channelIdentifier;
 

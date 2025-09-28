@@ -31,6 +31,12 @@ const SimpleAutocomplete = <T extends Record<string, any>>({
   useEffect(() => {
     const uniqueValues = new Set<string>();
 
+    // data가 배열인지 확인
+    if (!Array.isArray(data)) {
+      setOptions([]);
+      return;
+    }
+
     data.forEach(item => {
       searchFields.forEach(field => {
         const value = item[field];
@@ -62,6 +68,12 @@ const SimpleAutocomplete = <T extends Record<string, any>>({
   // 검색 수행 함수
   const performSearch = (searchTerm: string) => {
     if (onSearchChange) {
+      // data가 배열인지 확인
+      if (!Array.isArray(data)) {
+        onSearchChange(searchTerm, []);
+        return;
+      }
+
       const filteredData = data.filter(item => {
         if (!searchTerm) return true;
 

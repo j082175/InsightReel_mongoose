@@ -569,6 +569,42 @@ export class VideoProcessor {
             throw error;
         }
     }
+
+    /**
+     * Instagram 비디오 정보 수집
+     */
+    async getInstagramVideoInfo(videoUrl: string): Promise<InstagramReelInfo | null> {
+        try {
+            return await this.instagramProcessor.getVideoInfo(videoUrl);
+        } catch (error) {
+            ServerLogger.error('Instagram 비디오 정보 수집 실패:', error);
+            return null;
+        }
+    }
+
+    /**
+     * TikTok 비디오 정보 수집
+     */
+    async getTikTokVideoInfo(videoUrl: string): Promise<TikTokVideoInfo | null> {
+        try {
+            return await this.tikTokProcessor.getVideoInfo(videoUrl);
+        } catch (error) {
+            ServerLogger.error('TikTok 비디오 정보 수집 실패:', error);
+            return null;
+        }
+    }
+
+    /**
+     * 썸네일 다운로드 (로컬 저장)
+     */
+    async downloadThumbnail(thumbnailUrl: string, videoId: string, platform: string): Promise<string | null> {
+        try {
+            return await this.thumbnailExtractor.downloadThumbnail(thumbnailUrl, videoId, platform);
+        } catch (error) {
+            ServerLogger.error('썸네일 다운로드 실패:', error);
+            return null;
+        }
+    }
 }
 
 export default VideoProcessor;

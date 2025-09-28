@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const TrendingVideo = require('../models/TrendingVideo');
+const TrendingVideo = require('../models/TrendingVideo').default;
 const ChannelGroup = require('../models/ChannelGroup');
 const { HTTP_STATUS_CODES, ERROR_CODES, API_MESSAGES } = require('../config/api-messages');
 const { ServerLogger } = require('../utils/logger');

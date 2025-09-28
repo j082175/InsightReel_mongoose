@@ -7,10 +7,14 @@ import adminRouter from './admin';
 
 const router = Router();
 
+// Import JavaScript batch router
+const batchesRouter = require('./batches');
+
 // 라우터 등록
 router.use('/api', videoRouter);
 router.use('/api', channelRouter);
-router.use('/api', trendingRouter);
+router.use('/api/batches', batchesRouter);
+router.use('/api/trending', trendingRouter);
 router.use('/api', clusterRouter);
 router.use('/api', adminRouter);
 

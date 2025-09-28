@@ -84,15 +84,19 @@ export const videosApi = {
       if (response.data.data.videos && Array.isArray(response.data.data.videos)) {
         console.log('✅ [videosApi.getVideos] 비디오 데이터 파싱 성공 (data.videos):', response.data.data.videos.length);
         console.log('📊 [videosApi.getVideos] pagination 정보:', response.data.pagination);
-        return {
+        console.log('🔍 [videosApi.getVideos] pagination.total 값:', response.data.pagination?.total);
+        console.log('🔍 [videosApi.getVideos] 실제 반환할 pagination:', response.data.pagination || { total: response.data.data.videos.length, limit: 50, offset: 0, hasMore: false });
+        const result = {
           videos: response.data.data.videos,
           pagination: response.data.pagination || {
-            total: response.data.data.total || response.data.data.videos.length,
+            total: response.data.data.videos.length,
             limit: 50,
             offset: 0,
             hasMore: false
           }
         };
+        console.log('🎯 [videosApi.getVideos] 최종 반환 데이터:', { videosLength: result.videos.length, pagination: result.pagination });
+        return result;
       }
       // Case 2: data가 직접 배열인 경우 (이전 서버 응답 구조)
       else if (Array.isArray(response.data.data)) {

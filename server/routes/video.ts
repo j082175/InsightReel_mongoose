@@ -21,40 +21,47 @@ router.get('/videos', async (req: Request, res: Response) => {
 
         // 쿼리 파라미터 파싱
         const {
-            limit = '15',
+            limit = '50',
+            offset = '0',
             platform,
             sortBy = 'uploadDate',
             order = 'desc'
         } = req.query;
 
         const limitNum = parseInt(limit as string, 10);
+        const offsetNum = parseInt(offset as string, 10);
         const sortOrder = order as 'desc' | 'asc';
 
-        let videos;
-        let total = 0;
-
+        let query: any = {};
         if (platform && ['YOUTUBE', 'INSTAGRAM', 'TIKTOK'].includes(platform as string)) {
-            // 플랫폼별 조회
-            videos = await VideoModel.findByPlatform(
-                platform as 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK',
-                sortBy as any,
-                sortOrder,
-                limitNum
-            );
-            total = await VideoModel.countDocuments({ platform });
-        } else {
-            // 전체 비디오 조회
-            videos = await VideoModel.getRecentVideos(limitNum, sortBy as any, sortOrder);
-            total = await VideoModel.countDocuments();
+            query.platform = platform;
         }
 
-        ServerLogger.info(`✅ 비디오 목록 조회 완료: ${videos.length}개 (전체: ${total}개)`);
+        // 전체 개수 조회
+        const total = await VideoModel.countDocuments(query);
 
-        ResponseHandler.success(res, videos, null, {
-            total,
-            count: videos.length,
-            limit: limitNum,
-            platform: platform || 'all'
+        // 페이지네이션 적용하여 비디오 조회
+        const sortOptions: any = {};
+        sortOptions[sortBy as string] = sortOrder === 'desc' ? -1 : 1;
+
+        const videos = await VideoModel.find(query)
+            .sort(sortOptions)
+            .skip(offsetNum)
+            .limit(limitNum)
+            .lean();
+
+        ServerLogger.info(`✅ 비디오 목록 조회 완료: ${videos.length}개 (오프셋: ${offsetNum}, 전체: ${total}개)`);
+
+        // 프론트엔드가 기대하는 형식으로 응답
+        const hasMore = offsetNum + videos.length < total;
+
+        ResponseHandler.success(res, { videos }, null, {
+            pagination: {
+                total,
+                limit: limitNum,
+                offset: offsetNum,
+                hasMore
+            }
         });
     } catch (error) {
         ServerLogger.error('❌ 비디오 목록 조회 실패:', error);
