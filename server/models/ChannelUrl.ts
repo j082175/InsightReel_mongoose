@@ -1,5 +1,6 @@
 import { Schema, model, Model } from 'mongoose';
 import { IChannelUrl } from '../types/models';
+import { ServerLogger } from '../utils/logger';
 
 // 🎯 모델 타입 (정적 메서드 포함)
 export interface ChannelUrlModelType extends Model<IChannelUrl> {
@@ -111,7 +112,7 @@ channelUrlSchema.statics.checkDuplicate = async function (normalizedChannelId: s
 
         return { isDuplicate: false };
     } catch (error: any) {
-        console.error('MongoDB 채널 중복 검사 실패:', error.message);
+        ServerLogger.error('MongoDB 채널 중복 검사 실패', { error: error.message }, 'CHANNEL_MODEL');
         return { isDuplicate: false, error: error.message };
     }
 };
@@ -135,21 +136,23 @@ channelUrlSchema.statics.registerChannel = async function (
 
         await channelDoc.save();
 
-        console.log(
-            `✅ 채널 등록 완료 (processing): ${platform} - ${
-                channelInfo.name || originalChannelIdentifier
-            }`,
+        ServerLogger.success(
+            `채널 등록 완료 (processing): ${platform}`,
+            { name: channelInfo.name || originalChannelIdentifier },
+            'CHANNEL_MODEL'
         );
         if (channelInfo.subscriberCount) {
-            console.log(
-                `👥 구독자 수: ${channelInfo.subscriberCount.toLocaleString()}명`,
+            ServerLogger.info(
+                `구독자 수: ${channelInfo.subscriberCount.toLocaleString()}명`,
+                null,
+                'CHANNEL_MODEL'
             );
         }
 
         return { success: true, document: channelDoc };
     } catch (error: any) {
         if (error.code === 11000) {
-            console.warn(`⚠️ 채널 이미 존재: ${normalizedChannelId}`);
+            ServerLogger.warn('채널 이미 존재', { channelId: normalizedChannelId }, 'CHANNEL_MODEL');
             return {
                 success: false,
                 error: 'DUPLICATE_CHANNEL',
@@ -157,7 +160,7 @@ channelUrlSchema.statics.registerChannel = async function (
             };
         }
 
-        console.error('채널 등록 실패:', error.message);
+        ServerLogger.error('채널 등록 실패', { error: error.message }, 'CHANNEL_MODEL');
         return { success: false, error: error.message };
     }
 };
@@ -196,18 +199,22 @@ channelUrlSchema.statics.updateStatus = async function (
         );
 
         if (result) {
-            console.log(
-                `✅ 채널 상태 업데이트/생성: ${normalizedChannelId} -> ${status}`,
+            ServerLogger.success(
+                `채널 상태 업데이트/생성: ${status}`,
+                { channelId: normalizedChannelId },
+                'CHANNEL_MODEL'
             );
             return { success: true };
         } else {
-            console.warn(
-                `⚠️ 채널 상태 업데이트 실패: ${normalizedChannelId}`,
+            ServerLogger.warn(
+                '채널 상태 업데이트 실패',
+                { channelId: normalizedChannelId },
+                'CHANNEL_MODEL'
             );
             return { success: false, error: 'UPDATE_FAILED' };
         }
     } catch (error: any) {
-        console.error('채널 상태 업데이트 실패:', error.message);
+        ServerLogger.error('채널 상태 업데이트 실패', { error: error.message }, 'CHANNEL_MODEL');
         return { success: false, error: error.message };
     }
 };
@@ -222,16 +229,19 @@ channelUrlSchema.statics.cleanupStaleProcessing = async function () {
         });
 
         if (result.deletedCount > 0) {
-            console.log(
-                `🧹 오래된 채널 processing 레코드 정리: ${result.deletedCount}개`,
+            ServerLogger.info(
+                `오래된 채널 processing 레코드 정리: ${result.deletedCount}개`,
+                null,
+                'CHANNEL_MODEL'
             );
         }
 
         return { success: true, deletedCount: result.deletedCount };
     } catch (error: any) {
-        console.error(
-            '오래된 채널 processing 레코드 정리 실패:',
-            error.message,
+        ServerLogger.error(
+            '오래된 채널 processing 레코드 정리 실패',
+            { error: error.message },
+            'CHANNEL_MODEL'
         );
         return { success: false, error: error.message };
     }
@@ -272,7 +282,7 @@ channelUrlSchema.statics.getStats = async function () {
             lastUpdated: new Date(),
         };
     } catch (error: any) {
-        console.error('채널 통계 조회 실패:', error.message);
+        ServerLogger.error('채널 통계 조회 실패', { error: error.message }, 'CHANNEL_MODEL');
         return { error: error.message };
     }
 };
@@ -284,14 +294,14 @@ channelUrlSchema.statics.removeChannel = async function (normalizedChannelId: st
         });
 
         if (result.deletedCount > 0) {
-            console.log(`🗑️ 중복검사 DB에서 채널 삭제: ${normalizedChannelId}`);
+            ServerLogger.success('중복검사 DB에서 채널 삭제', { channelId: normalizedChannelId }, 'CHANNEL_MODEL');
             return { success: true, deletedCount: result.deletedCount };
         } else {
-            console.warn(`⚠️ 삭제할 채널을 찾을 수 없음: ${normalizedChannelId}`);
+            ServerLogger.warn('삭제할 채널을 찾을 수 없음', { channelId: normalizedChannelId }, 'CHANNEL_MODEL');
             return { success: false, error: 'NOT_FOUND' };
         }
     } catch (error: any) {
-        console.error('채널 삭제 실패:', error.message);
+        ServerLogger.error('채널 삭제 실패', { error: error.message }, 'CHANNEL_MODEL');
         return { success: false, error: error.message };
     }
 };

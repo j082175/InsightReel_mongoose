@@ -1184,7 +1184,7 @@ export class VideoController {
             const comments = await youtubeProcessor.fetchComments(videoId, 5);
             return comments.join(' | ');
         } catch (error) {
-            console.error('댓글 가져오기 실패:', error);
+            ServerLogger.error('댓글 가져오기 실패', error, 'VIDEO_CONTROLLER');
             return '';
         }
     }

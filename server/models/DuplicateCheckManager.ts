@@ -1,5 +1,6 @@
 import VideoUrl, { VideoUrlModelType } from './VideoUrl';
 import ChannelUrl from './ChannelUrl';
+import { ServerLogger } from '../utils/logger';
 
 type Platform = 'INSTAGRAM' | 'YOUTUBE' | 'TIKTOK';
 
@@ -18,7 +19,7 @@ class DuplicateCheckManager {
       }
       return result;
     } catch (error: any) {
-      console.error(`비디오 중복 검사 실패 (${platform}):`, error.message);
+      ServerLogger.error(`비디오 중복 검사 실패 (${platform})`, { error: error.message }, 'DUPLICATE_MANAGER');
       return { isDuplicate: false, error: error.message };
     }
   }
@@ -34,7 +35,7 @@ class DuplicateCheckManager {
       const Model = this.getVideoModel();
       return await Model.registerUrl(normalizedUrl, originalUrl, platform, sheetLocation, originalPublishDate);
     } catch (error: any) {
-      console.error(`비디오 URL 등록 실패 (${platform}):`, error.message);
+      ServerLogger.error(`비디오 URL 등록 실패 (${platform})`, { error: error.message }, 'DUPLICATE_MANAGER');
       return { success: false, error: error.message };
     }
   }
@@ -50,7 +51,7 @@ class DuplicateCheckManager {
       const Model = this.getVideoModel();
       return await Model.updateStatus(normalizedUrl, status, sheetLocation, originalPublishDate);
     } catch (error: any) {
-      console.error(`비디오 상태 업데이트 실패 (${platform}):`, error.message);
+      ServerLogger.error(`비디오 상태 업데이트 실패 (${platform})`, { error: error.message }, 'DUPLICATE_MANAGER');
       return { success: false, error: error.message };
     }
   }
@@ -59,7 +60,7 @@ class DuplicateCheckManager {
     try {
       return await ChannelUrl.checkDuplicate(normalizedChannelId);
     } catch (error: any) {
-      console.error('채널 중복 검사 실패:', error.message);
+      ServerLogger.error('채널 중복 검사 실패', { error: error.message }, 'DUPLICATE_MANAGER');
       return { isDuplicate: false, error: error.message };
     }
   }
@@ -74,7 +75,7 @@ class DuplicateCheckManager {
     try {
       return await ChannelUrl.registerChannel(normalizedChannelId, originalChannelIdentifier, platform, channelInfo, analysisJob);
     } catch (error: any) {
-      console.error('채널 등록 실패:', error.message);
+      ServerLogger.error('채널 등록 실패', { error: error.message }, 'DUPLICATE_MANAGER');
       return { success: false, error: error.message };
     }
   }
@@ -87,7 +88,7 @@ class DuplicateCheckManager {
     try {
       return await ChannelUrl.updateStatus(normalizedChannelId, status, channelInfo);
     } catch (error: any) {
-      console.error('채널 상태 업데이트 실패:', error.message);
+      ServerLogger.error('채널 상태 업데이트 실패', { error: error.message }, 'DUPLICATE_MANAGER');
       return { success: false, error: error.message };
     }
   }
@@ -96,7 +97,7 @@ class DuplicateCheckManager {
     try {
       return await ChannelUrl.removeChannel(normalizedChannelId);
     } catch (error: any) {
-      console.error('채널 삭제 실패:', error.message);
+      ServerLogger.error('채널 삭제 실패', { error: error.message }, 'DUPLICATE_MANAGER');
       return { success: false, error: error.message };
     }
   }
@@ -117,7 +118,7 @@ class DuplicateCheckManager {
         }
       };
     } catch (error: any) {
-      console.error('종합 통계 조회 실패:', error.message);
+      ServerLogger.error('종합 통계 조회 실패', { error: error.message }, 'DUPLICATE_MANAGER');
       return { error: error.message };
     }
   }
@@ -130,7 +131,7 @@ class DuplicateCheckManager {
       ]);
       const totalDeleted = (videoResult.deletedCount || 0) + (channelResult.deletedCount || 0);
       if (totalDeleted > 0) {
-        console.log(`🧹 전체 오래된 processing 레코드 정리: ${totalDeleted}개`);
+        ServerLogger.info(`전체 오래된 processing 레코드 정리: ${totalDeleted}개`, null, 'DUPLICATE_MANAGER');
       }
       return {
         success: true,
@@ -139,7 +140,7 @@ class DuplicateCheckManager {
         total: totalDeleted
       };
     } catch (error: any) {
-      console.error('전체 processing 레코드 정리 실패:', error.message);
+      ServerLogger.error('전체 processing 레코드 정리 실패', { error: error.message }, 'DUPLICATE_MANAGER');
       return { success: false, error: error.message };
     }
   }

@@ -1,5 +1,6 @@
 import { Schema, model, Model } from 'mongoose';
 import { IVideoUrl } from '../types/models';
+import { ServerLogger } from '../utils/logger';
 
 // 🎯 모델 타입 (정적 메서드 포함)
 export interface VideoUrlModelType extends Model<IVideoUrl> {
@@ -110,9 +111,9 @@ videoUrlSchema.statics.checkDuplicate = async function(normalizedUrl: string) {
     return { isDuplicate: false };
     
   } catch (error: any) {
-    console.error('MongoDB URL 중복 검사 실패:', error.message);
+    ServerLogger.error('MongoDB URL 중복 검사 실패', { error: error.message, url: normalizedUrl }, 'MODEL');
     if (error.message.includes('buffering timed out') || error.message.includes('connection')) {
-      console.warn('⚠️ MongoDB 연결 불안정 - 안전을 위해 중복 처리');
+      ServerLogger.warn('MongoDB 연결 불안정 - 안전을 위해 중복 처리', null, 'MODEL');
       return { isDuplicate: true, error: error.message, reason: 'connection_timeout' };
     }
     return { isDuplicate: false, error: error.message };
@@ -138,9 +139,9 @@ videoUrlSchema.statics.registerUrl = async function(
     
     await urlDoc.save();
     
-    console.log(`✅ URL 등록 완료 (processing): ${platform} - ${normalizedUrl}`);
+    ServerLogger.success(`URL 등록 완료 (processing): ${platform}`, { url: normalizedUrl }, 'MODEL');
     if (originalPublishDate) {
-      console.log(`📅 원본 게시일: ${originalPublishDate.toLocaleString()}`);
+      ServerLogger.info(`원본 게시일: ${originalPublishDate.toLocaleString()}`, null, 'MODEL');
     }
     return { success: true, document: urlDoc };
     
@@ -156,19 +157,19 @@ videoUrlSchema.statics.registerUrl = async function(
           existingDoc.originalPublishDate = originalPublishDate;
           await existingDoc.save();
           
-          console.log(`🔄 Failed URL 재시도: ${platform} - ${normalizedUrl}`);
+          ServerLogger.info(`Failed URL 재시도: ${platform}`, { url: normalizedUrl }, 'MODEL');
           return { success: true, document: existingDoc, retried: true };
         } else {
-          console.warn(`⚠️ URL 이미 존재 (${existingDoc?.status || 'unknown'}): ${normalizedUrl}`);
+          ServerLogger.warn(`URL 이미 존재 (${existingDoc?.status || 'unknown'})`, { url: normalizedUrl }, 'MODEL');
           return { success: false, error: 'DUPLICATE_URL', message: 'URL이 이미 존재합니다.' };
         }
       } catch (findError: any) {
-        console.error('기존 URL 조회 실패:', findError.message);
+        ServerLogger.error('기존 URL 조회 실패', { error: findError.message }, 'MODEL');
         return { success: false, error: findError.message };
       }
     }
     
-    console.error('URL 등록 실패:', error.message);
+    ServerLogger.error('URL 등록 실패', { error: error.message }, 'MODEL');
     return { success: false, error: error.message };
   }
 };
@@ -200,15 +201,15 @@ videoUrlSchema.statics.updateStatus = async function(
     );
     
     if (result.modifiedCount > 0) {
-      console.log(`✅ URL 상태 업데이트: ${normalizedUrl} -> ${status}`);
+      ServerLogger.success(`URL 상태 업데이트: ${status}`, { url: normalizedUrl }, 'MODEL');
       return { success: true };
     } else {
-      console.warn(`⚠️ URL 상태 업데이트 실패 (찾을 수 없음): ${normalizedUrl}`);
+      ServerLogger.warn('URL 상태 업데이트 실패 (찾을 수 없음)', { url: normalizedUrl }, 'MODEL');
       return { success: false, error: 'URL_NOT_FOUND' };
     }
     
   } catch (error: any) {
-    console.error('URL 상태 업데이트 실패:', error.message);
+    ServerLogger.error('URL 상태 업데이트 실패', { error: error.message }, 'MODEL');
     return { success: false, error: error.message };
   }
 };
@@ -223,13 +224,13 @@ videoUrlSchema.statics.cleanupStaleProcessing = async function() {
     });
     
     if (result.deletedCount > 0) {
-      console.log(`🧹 오래된 processing 레코드 정리: ${result.deletedCount}개`);
+      ServerLogger.info(`오래된 processing 레코드 정리: ${result.deletedCount}개`, null, 'MODEL');
     }
     
     return { success: true, deletedCount: result.deletedCount };
     
   } catch (error: any) {
-    console.error('오래된 processing 레코드 정리 실패:', error.message);
+    ServerLogger.error('오래된 processing 레코드 정리 실패', { error: error.message }, 'MODEL');
     return { success: false, error: error.message };
   }
 };
@@ -241,13 +242,13 @@ videoUrlSchema.statics.cleanupAllProcessing = async function() {
     });
     
     if (result.deletedCount > 0) {
-      console.log(`🔄 서버 재시작: 모든 processing 레코드 정리: ${result.deletedCount}개`);
+      ServerLogger.info(`서버 재시작: 모든 processing 레코드 정리: ${result.deletedCount}개`, null, 'MODEL');
     }
     
     return { success: true, deletedCount: result.deletedCount };
     
   } catch (error: any) {
-    console.error('서버 재시작 processing 레코드 정리 실패:', error.message);
+    ServerLogger.error('서버 재시작 processing 레코드 정리 실패', { error: error.message }, 'MODEL');
     return { success: false, error: error.message };
   }
 };
@@ -290,7 +291,7 @@ videoUrlSchema.statics.getStats = async function() {
     };
     
   } catch (error: any) {
-    console.error('URL 통계 조회 실패:', error.message);
+    ServerLogger.error('URL 통계 조회 실패', { error: error.message }, 'MODEL');
     return { error: error.message };
   }
 };
