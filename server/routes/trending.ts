@@ -1,14 +1,19 @@
 import { Router, Request, Response } from 'express';
 import { ServerLogger } from '../utils/logger';
 import ResponseHandler from '../utils/response-handler';
-import { HTTP_STATUS_CODES } from '../config/api-messages';
+import { HTTP_STATUS_CODES, ERROR_CODES, API_MESSAGES } from '../config/api-messages';
 import { ITrendingVideo } from '../types/models';
 import { Platform } from '../types/video-types';
 import TrendingVideo from '../models/TrendingVideo';
 
 const router = Router();
 
-// 트렌딩 수집 시작
+/**
+ * 🎯 트렌딩 영상 관리 API
+ * 수집된 트렌딩 영상들을 조회하고 관리하는 기능
+ */
+
+// POST /api/trending/collect-trending - 트렌딩 수집 시작
 router.post('/collect-trending', async (req: Request, res: Response) => {
     try {
         // TODO: 트렌딩 수집 로직 구현
@@ -18,164 +23,250 @@ router.post('/collect-trending', async (req: Request, res: Response) => {
     }
 });
 
-// 트렌딩 비디오 목록 조회
+// GET /api/trending/videos - 수집된 트렌딩 영상 목록 조회
 router.get('/videos', async (req: Request, res: Response) => {
     try {
         const {
-            platform,
-            limit = 50,
-            offset = 0,
-            sortBy = 'views',
-            sortOrder = 'desc',
-            dateFrom,
-            dateTo,
+            limit = '50',
+            offset = '0',
             groupId,
-            duration
+            duration,
+            platform,
+            minViews,
+            maxViews,
+            keyword,
+            sortBy = 'collectionDate',
+            order = 'desc',
+            dateFrom,
+            dateTo
         } = req.query;
 
-        // TrendingVideo model is already imported at the top
+        ServerLogger.info('📋 트렌딩 영상 조회 요청 시작');
 
-        // 쿼리 조건 구성
+        // 쿼리 빌드
         const query: any = {};
 
-        if (platform) {
-            query.platform = platform;
-        }
-
-        if (groupId) {
+        // 그룹 필터
+        if (groupId && groupId !== 'all') {
             query.groupId = groupId;
         }
 
-        if (duration) {
+        // 플랫폼 필터
+        if (platform && ['YOUTUBE', 'INSTAGRAM', 'TIKTOK'].includes(platform as string)) {
+            query.platform = platform;
+        }
+
+        // 영상 길이 필터
+        if (duration && ['SHORT', 'MID', 'LONG'].includes(duration as string)) {
             query.duration = duration;
         }
 
-        if (dateFrom || dateTo) {
-            query.collectionDate = {};
-            if (dateFrom) {
-                query.collectionDate.$gte = new Date(dateFrom as string);
-            }
-            if (dateTo) {
-                query.collectionDate.$lte = new Date(dateTo as string);
-            }
+        // 조회수 범위 필터
+        if (minViews || maxViews) {
+            query.views = {};
+            if (minViews) query.views.$gte = parseInt(minViews as string);
+            if (maxViews) query.views.$lte = parseInt(maxViews as string);
         }
 
-        // 정렬 조건 구성
-        const sortOptions: any = {};
-        const validSortFields = ['views', 'likes', 'collectionDate', 'uploadDate', 'commentsCount'];
-        const sortField = validSortFields.includes(sortBy as string) ? sortBy as string : 'views';
-        sortOptions[sortField] = sortOrder === 'asc' ? 1 : -1;
+        // 키워드 검색
+        if (keyword) {
+            query.$or = [
+                { title: { $regex: keyword, $options: 'i' } },
+                { channelName: { $regex: keyword, $options: 'i' } },
+                { description: { $regex: keyword, $options: 'i' } }
+            ];
+        }
 
-        // 데이터 조회
-        const total = await TrendingVideo.countDocuments(query);
+        // 날짜 범위 필터
+        if (dateFrom || dateTo) {
+            query.collectionDate = {};
+            if (dateFrom) query.collectionDate.$gte = new Date(dateFrom as string);
+            if (dateTo) query.collectionDate.$lte = new Date(dateTo as string);
+        }
+
+        // 정렬 옵션
+        const sortOptions: any = {};
+        sortOptions[sortBy as string] = order === 'desc' ? -1 : 1;
+
         const videos = await TrendingVideo.find(query)
             .sort(sortOptions)
-            .skip(Number(offset))
-            .limit(Number(limit))
-            .populate('groupId', 'name color')
-            .populate('batchId', 'name');
+            .limit(parseInt(limit as string))
+            .skip(parseInt(offset as string))
+            .lean();
 
-        // 응답 데이터 변환 (frontend TrendingVideo 형식에 맞춤)
-        const transformedVideos = videos.map((video: any) => ({
-            _id: video._id?.toString() || video._id,
-            videoId: video.videoId,
-            title: video.title,
-            url: video.url,
-            platform: video.platform,
-            channelName: video.channelName,
-            channelId: video.channelId,
-            channelUrl: video.channelUrl,
-            views: video.views,
-            likes: video.likes,
-            commentsCount: video.commentsCount,
-            shares: video.shares,
-            uploadDate: video.uploadDate?.toISOString(),
-            duration: video.duration,
-            durationSeconds: video.durationSeconds,
-            thumbnailUrl: video.thumbnailUrl,
-            description: video.description,
-            keywords: video.keywords || [],
-            hashtags: video.hashtags || [],
-            // TrendingVideo 특별 필드
-            trendingScore: video.views / 1000, // 간단한 트렌딩 스코어 계산
-            collectionDate: video.collectionDate?.toISOString(),
-            isPopular: video.views > 100000, // 10만 조회수 이상을 인기 영상으로 분류
-            // 시스템 메타데이터
-            source: 'trending',
-            isFromTrending: true,
-            createdAt: video.createdAt?.toISOString(),
-            // 그룹 정보 (populated)
-            groupName: video.groupName || '개별 채널 수집',
-            // UI 호환성 필드
-            id: video._id?.toString() || video._id, // 임시 호환용
-        }));
+        const totalCount = await TrendingVideo.countDocuments(query);
 
-        ResponseHandler.success(res, {
-            videos: transformedVideos,
+        // 트렌딩 비디오에 source 정보 추가, _id 유지
+        const videosWithSource = videos.map(video => {
+            const { __v, batchId, collectionDate, ...cleanVideo } = video;
+            return {
+                ...cleanVideo,
+                // MongoDB _id 그대로 사용 (변환 없음)
+                views: cleanVideo.views || 0,
+                thumbnailUrl: cleanVideo.thumbnailUrl || '',
+                // 배치 관련 필드
+                batchIds: batchId ? [batchId] : [],
+                collectedAt: collectionDate,
+                // API 메타 정보
+                source: 'trending',
+                isFromTrending: true
+            };
+        });
+
+        ServerLogger.info(`📋 트렌딩 영상 조회: ${videos.length}개 (총 ${totalCount}개)`);
+
+        ResponseHandler.success(res, videosWithSource, null, {
             pagination: {
-                limit: Number(limit),
-                offset: Number(offset),
-                total,
-                hasMore: Number(offset) + Number(limit) < total
-            },
-            filters: {
-                platform,
-                groupId,
-                duration,
-                dateFrom,
-                dateTo
+                total: totalCount,
+                limit: parseInt(limit as string),
+                offset: parseInt(offset as string),
+                hasMore: (parseInt(offset as string) + videos.length) < totalCount
             }
         });
+
     } catch (error) {
+        ServerLogger.error('❌ 트렌딩 영상 조회 실패:', error);
         ResponseHandler.serverError(res, error, 'Failed to fetch trending videos');
     }
 });
 
-// 트렌딩 수집 상태 조회
-router.get('/status', async (req: Request, res: Response) => {
+// GET /api/trending/videos/:id - 특정 트렌딩 영상 상세 조회
+router.get('/videos/:id', async (req: Request, res: Response) => {
     try {
-        // TODO: 트렌딩 수집 상태 조회 로직 구현
-        ResponseHandler.success(res, {
-            status: 'idle',
-            lastRun: null,
-            progress: 0
-        });
+        const video = await TrendingVideo.findById(req.params.id);
+
+        if (!video) {
+            return ResponseHandler.notFound(res, '트렌딩 영상을 찾을 수 없습니다.');
+        }
+
+        // 조회수 정보 추가
+        const videoWithMeta = {
+            ...video.toObject(),
+            source: 'trending',
+            isFromTrending: true
+        };
+
+        ResponseHandler.success(res, videoWithMeta);
     } catch (error) {
-        ResponseHandler.serverError(res, error, 'Failed to fetch trending status');
+        ServerLogger.error('❌ 트렌딩 영상 상세 조회 실패:', error);
+        ResponseHandler.serverError(res, error, 'Failed to fetch trending video');
     }
 });
 
-// 트렌딩 수집 중지
+// DELETE /api/trending/videos/:id - 트렌딩 영상 삭제
+router.delete('/videos/:id', async (req: Request, res: Response) => {
+    try {
+        const deleted = await TrendingVideo.findByIdAndDelete(req.params.id);
+
+        if (!deleted) {
+            return ResponseHandler.notFound(res, '삭제할 트렌딩 영상을 찾을 수 없습니다.');
+        }
+
+        ResponseHandler.success(res, { message: '트렌딩 영상이 삭제되었습니다.' });
+    } catch (error) {
+        ServerLogger.error('❌ 트렌딩 영상 삭제 실패:', error);
+        ResponseHandler.serverError(res, error, 'Failed to delete trending video');
+    }
+});
+
+// GET /api/trending/stats - 트렌딩 영상 통계
+router.get('/stats', async (req: Request, res: Response) => {
+    try {
+        const stats = await TrendingVideo.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    totalVideos: { $sum: 1 },
+                    totalViews: { $sum: '$views' },
+                    avgViews: { $avg: '$views' },
+                    platformBreakdown: {
+                        $push: '$platform'
+                    }
+                }
+            }
+        ]);
+
+        const platformStats = await TrendingVideo.aggregate([
+            {
+                $group: {
+                    _id: '$platform',
+                    count: { $sum: 1 },
+                    totalViews: { $sum: '$views' }
+                }
+            }
+        ]);
+
+        ResponseHandler.success(res, {
+            overview: stats[0] || { totalVideos: 0, totalViews: 0, avgViews: 0 },
+            platforms: platformStats
+        });
+    } catch (error) {
+        ResponseHandler.serverError(res, error, 'Failed to get trending stats');
+    }
+});
+
+// PUT /api/trending/videos/:id - 트렌딩 영상 업데이트
+router.put('/videos/:id', async (req: Request, res: Response) => {
+    try {
+        const updated = await TrendingVideo.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true, runValidators: true }
+        );
+
+        if (!updated) {
+            return ResponseHandler.notFound(res, '업데이트할 트렌딩 영상을 찾을 수 없습니다.');
+        }
+
+        ResponseHandler.success(res, updated);
+    } catch (error) {
+        ServerLogger.error('❌ 트렌딩 영상 업데이트 실패:', error);
+        ResponseHandler.serverError(res, error, 'Failed to update trending video');
+    }
+});
+
+// GET /api/trending/status - 트렌딩 수집 상태 조회
+router.get('/status', async (req: Request, res: Response) => {
+    try {
+        // TODO: 실제 수집 상태 로직 구현
+        ResponseHandler.success(res, {
+            status: 'idle',
+            lastCollection: null,
+            isRunning: false
+        });
+    } catch (error) {
+        ResponseHandler.serverError(res, error, 'Failed to get trending status');
+    }
+});
+
+// POST /api/trending/stop - 트렌딩 수집 중지
 router.post('/stop', async (req: Request, res: Response) => {
     try {
-        // TODO: 트렌딩 수집 중지 로직 구현
+        // TODO: 수집 중지 로직 구현
         ResponseHandler.success(res, { message: 'Trending collection stopped' });
     } catch (error) {
         ResponseHandler.serverError(res, error, 'Failed to stop trending collection');
     }
 });
 
-// 트렌딩 설정 조회
+// GET /api/trending/config - 트렌딩 수집 설정 조회
 router.get('/config', async (req: Request, res: Response) => {
     try {
-        // TODO: 트렌딩 설정 조회 로직 구현
+        // TODO: 설정 조회 로직 구현
         ResponseHandler.success(res, {
-            config: {
-                platforms: ['YOUTUBE', 'INSTAGRAM', 'TIKTOK'],
-                minViews: 1000,
-                maxAge: 7 // days
-            }
+            interval: 3600,
+            platforms: ['YOUTUBE', 'INSTAGRAM'],
+            filters: {}
         });
     } catch (error) {
-        ResponseHandler.serverError(res, error, 'Failed to fetch trending config');
+        ResponseHandler.serverError(res, error, 'Failed to get trending config');
     }
 });
 
-// 트렌딩 설정 업데이트
+// PUT /api/trending/config - 트렌딩 수집 설정 업데이트
 router.put('/config', async (req: Request, res: Response) => {
     try {
-        const config = req.body;
-        // TODO: 트렌딩 설정 업데이트 로직 구현
+        // TODO: 설정 업데이트 로직 구현
         ResponseHandler.success(res, { message: 'Trending config updated' });
     } catch (error) {
         ResponseHandler.serverError(res, error, 'Failed to update trending config');

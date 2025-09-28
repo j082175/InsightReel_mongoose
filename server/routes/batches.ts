@@ -1,21 +1,58 @@
-const express = require('express');
-const router = express.Router();
-const CollectionBatch = require('../models/CollectionBatch').default || require('../models/CollectionBatch');
-const TrendingVideo = require('../models/TrendingVideo').default || require('../models/TrendingVideo');
-const { HTTP_STATUS_CODES, ERROR_CODES, API_MESSAGES } = require('../config/api-messages');
-const { ServerLogger } = require('../utils/logger');
+import express, { Request, Response, Router } from 'express';
+import CollectionBatch from '../models/CollectionBatch';
+import TrendingVideo from '../models/TrendingVideo';
+import ChannelGroup from '../models/ChannelGroup';
+import { HTTP_STATUS_CODES, ERROR_CODES, API_MESSAGES } from '../config/api-messages';
+import { ServerLogger } from '../utils/logger';
+import { ApiResponse } from '../types/controller-types';
+import { ICollectionBatch } from '../types/models';
+
+const router: Router = express.Router();
+
+// Ensure ChannelGroup model is registered by accessing it
+ChannelGroup.modelName;
 
 /**
  * 🎯 수집 배치 관리 API
  * 트렌딩 영상 수집 배치들을 관리하는 기능
  */
 
+// Query parameter interfaces
+interface BatchListQuery {
+  limit?: string;
+  offset?: string;
+  status?: 'pending' | 'running' | 'completed' | 'failed';
+  collectionType?: 'group' | 'channels';
+  dateFrom?: string;
+  dateTo?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+interface BatchVideosQuery {
+  limit?: string;
+  offset?: string;
+}
+
+interface PaginationInfo {
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
+}
+
+interface BatchResponse extends ApiResponse {
+  data?: any;
+  pagination?: PaginationInfo;
+  batch?: any;
+}
+
 // GET /api/batches - 수집 배치 목록 조회
-router.get('/', async (req, res) => {
+router.get('/', async (req: Request<{}, BatchResponse, {}, BatchListQuery>, res: Response<BatchResponse>): Promise<Response<BatchResponse> | void> => {
   try {
-    const { 
-      limit = 20, 
-      offset = 0,
+    const {
+      limit = '20',
+      offset = '0',
       status,
       collectionType,
       dateFrom,
@@ -24,23 +61,23 @@ router.get('/', async (req, res) => {
       sortOrder = 'desc'
     } = req.query;
 
-    let query = {};
-    
+    let query: any = {};
+
     if (status && ['pending', 'running', 'completed', 'failed'].includes(status)) {
       query.status = status;
     }
-    
+
     if (collectionType && ['group', 'channels'].includes(collectionType)) {
       query.collectionType = collectionType;
     }
-    
+
     if (dateFrom || dateTo) {
       query.createdAt = {};
       if (dateFrom) query.createdAt.$gte = new Date(dateFrom);
       if (dateTo) query.createdAt.$lte = new Date(dateTo);
     }
 
-    const sortOptions = {};
+    const sortOptions: any = {};
     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     const batches = await CollectionBatch.find(query)
@@ -67,7 +104,7 @@ router.get('/', async (req, res) => {
 
   } catch (error) {
     ServerLogger.error('배치 목록 조회 실패:', error);
-    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+    return res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: ERROR_CODES.SERVER_ERROR,
       message: '배치 목록 조회에 실패했습니다.'
@@ -76,11 +113,11 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/batches/:id - 특정 배치 상세 조회
-router.get('/:id', async (req, res) => {
+router.get('/:id', async (req: Request<{ id: string }>, res: Response<BatchResponse>): Promise<Response<BatchResponse> | void> => {
   try {
     const batch = await CollectionBatch.findById(req.params.id)
       .populate('targetGroups', 'name color channels');
-    
+
     if (!batch) {
       return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
         success: false,
@@ -90,7 +127,7 @@ router.get('/:id', async (req, res) => {
     }
 
     // 배치의 영상들 개수 조회
-    const videoCount = await TrendingVideo.countDocuments({ 
+    const videoCount = await TrendingVideo.countDocuments({
       collectionDate: {
         $gte: batch.createdAt,
         $lte: batch.completedAt || new Date()
@@ -109,7 +146,7 @@ router.get('/:id', async (req, res) => {
 
   } catch (error) {
     ServerLogger.error('배치 상세 조회 실패:', error);
-    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+    return res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: ERROR_CODES.SERVER_ERROR,
       message: '배치 상세 조회에 실패했습니다.'
@@ -118,10 +155,10 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/batches - 새 수집 배치 생성
-router.post('/', async (req, res) => {
+router.post('/', async (req: Request<{}, BatchResponse, Partial<ICollectionBatch>>, res: Response<BatchResponse>): Promise<Response<BatchResponse> | void> => {
   try {
     const batchData = req.body;
-    
+
     // 필수 필드 검증
     if (!batchData.name || !batchData.name.trim()) {
       return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
@@ -152,7 +189,7 @@ router.post('/', async (req, res) => {
 
   } catch (error) {
     ServerLogger.error('배치 생성 실패:', error);
-    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+    return res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: ERROR_CODES.SERVER_ERROR,
       message: '배치 생성에 실패했습니다.'
@@ -161,10 +198,10 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/batches/:id - 배치 수정
-router.put('/:id', async (req, res) => {
+router.put('/:id', async (req: Request<{ id: string }, BatchResponse, Partial<ICollectionBatch>>, res: Response<BatchResponse>): Promise<Response<BatchResponse> | void> => {
   try {
     const batch = await CollectionBatch.findById(req.params.id);
-    
+
     if (!batch) {
       return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
         success: false,
@@ -195,7 +232,7 @@ router.put('/:id', async (req, res) => {
 
   } catch (error) {
     ServerLogger.error('배치 수정 실패:', error);
-    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+    return res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: ERROR_CODES.SERVER_ERROR,
       message: '배치 수정에 실패했습니다.'
@@ -204,7 +241,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/batches/:id - 배치 삭제
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', async (req: Request<{ id: string }>, res: Response<BatchResponse>): Promise<Response<BatchResponse> | void> => {
   try {
     // ID 유효성 검사
     if (!req.params.id || req.params.id === 'undefined' || req.params.id === 'null') {
@@ -216,7 +253,7 @@ router.delete('/:id', async (req, res) => {
     }
 
     const batch = await CollectionBatch.findById(req.params.id);
-    
+
     if (!batch) {
       return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
         success: false,
@@ -245,7 +282,7 @@ router.delete('/:id', async (req, res) => {
 
   } catch (error) {
     ServerLogger.error('배치 삭제 실패:', error);
-    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+    return res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: ERROR_CODES.SERVER_ERROR,
       message: '배치 삭제에 실패했습니다.'
@@ -254,12 +291,12 @@ router.delete('/:id', async (req, res) => {
 });
 
 // GET /api/batches/:id/videos - 배치의 영상 목록 조회
-router.get('/:id/videos', async (req, res) => {
+router.get('/:id/videos', async (req: Request<{ id: string }, any, {}, BatchVideosQuery>, res: Response): Promise<Response | void> => {
   try {
-    const { limit = 50, offset = 0 } = req.query;
-    
+    const { limit = '50', offset = '0' } = req.query;
+
     const batch = await CollectionBatch.findById(req.params.id);
-    
+
     if (!batch) {
       return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
         success: false,
@@ -269,11 +306,11 @@ router.get('/:id/videos', async (req, res) => {
     }
 
     // batchId로 직접 조회 (더 정확함)
-    let query = { batchId: req.params.id };
-    
+    let query: any = { batchId: req.params.id };
+
     // batchId가 없는 기존 데이터의 경우 시간대로 폴백
     const videosByBatchId = await TrendingVideo.countDocuments(query);
-    
+
     if (videosByBatchId === 0) {
       // batchId가 없는 경우 기간으로 조회 (기존 데이터 호환성)
       query = {
@@ -313,7 +350,7 @@ router.get('/:id/videos', async (req, res) => {
 
   } catch (error) {
     ServerLogger.error('배치 영상 목록 조회 실패:', error);
-    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+    return res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: ERROR_CODES.SERVER_ERROR,
       message: '배치 영상 목록 조회에 실패했습니다.'
@@ -322,7 +359,7 @@ router.get('/:id/videos', async (req, res) => {
 });
 
 // GET /api/batches/stats/overview - 전체 배치 통계
-router.get('/stats/overview', async (req, res) => {
+router.get('/stats/overview', async (req: Request, res: Response): Promise<Response | void> => {
   try {
     const stats = await CollectionBatch.aggregate([
       {
@@ -367,7 +404,7 @@ router.get('/stats/overview', async (req, res) => {
 
   } catch (error) {
     ServerLogger.error('배치 통계 조회 실패:', error);
-    res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+    return res.status(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: ERROR_CODES.SERVER_ERROR,
       message: '배치 통계 조회에 실패했습니다.'
@@ -375,4 +412,4 @@ router.get('/stats/overview', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

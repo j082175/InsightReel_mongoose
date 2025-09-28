@@ -4,11 +4,9 @@ import channelRouter from './channel';
 import trendingRouter from './trending';
 import clusterRouter from './cluster';
 import adminRouter from './admin';
+import batchesRouter from './batches';
 
 const router = Router();
-
-// Import JavaScript batch router
-const batchesRouter = require('./batches');
 
 // 라우터 등록
 router.use('/api', videoRouter);
