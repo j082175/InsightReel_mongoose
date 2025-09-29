@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Modal } from '../Modal';
+import Modal from '../Modal';
 
 interface AnimatedModalProps {
   isOpen: boolean;

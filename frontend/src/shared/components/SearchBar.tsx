@@ -7,6 +7,16 @@ export interface SearchBarProps {
   showFilters?: boolean;
   className?: string;
   children?: React.ReactNode;
+  // Legacy/compatibility props
+  onSearchChange?: (value: string) => void;
+  onSearch?: (value: string) => void;
+  value?: string;
+  onChange?: (value: string) => void;
+  onClear?: () => void;
+  // Additional UI state props
+  loading?: boolean;
+  error?: string;
+  totalResults?: number;
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({
@@ -16,7 +26,27 @@ const SearchBar: React.FC<SearchBarProps> = ({
   showFilters = false,
   className = '',
   children,
+  // Legacy/compatibility props
+  onSearchChange,
+  onSearch,
+  value,
+  onChange,
+  onClear,
+  // Additional UI state props
+  loading,
+  error,
+  totalResults,
 }) => {
+
+  // Use value prop as fallback for searchTerm
+  const currentValue = value !== undefined ? value : searchTerm;
+
+  // Handle change events with fallback
+  const handleChange = (newValue: string) => {
+    onSearchTermChange?.(newValue);
+    onSearchChange?.(newValue);
+    onChange?.(newValue);
+  };
   return (
     <div className={`bg-white rounded-lg shadow p-4 mb-6 ${className}`}>
       <div className="flex flex-col gap-4">
@@ -24,14 +54,8 @@ const SearchBar: React.FC<SearchBarProps> = ({
           <input
             type="text"
             placeholder={placeholder}
-            value={searchTerm}
-            onChange={(e) => {
-              if (typeof onSearchTermChange === 'function') {
-                onSearchTermChange(e.target.value);
-              } else {
-                console.error('onSearchTermChange is not a function:', typeof onSearchTermChange);
-              }
-            }}
+            value={currentValue}
+            onChange={(e) => handleChange(e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <svg

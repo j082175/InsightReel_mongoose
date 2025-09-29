@@ -137,8 +137,8 @@ const IndividualChannelsTab: React.FC<IndividualChannelsTabProps> = ({
       <div className="flex flex-col lg:flex-row gap-4">
         <div className="flex-1">
           <SearchBar
-            value={searchTerm}
-            onChange={onSearchChange}
+            searchTerm={searchTerm}
+            onSearchTermChange={onSearchChange}
             placeholder="채널명, 카테고리, 키워드로 검색..."
             className="w-full"
           />

@@ -12,47 +12,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { formatDate, getDocumentId } from '../../../shared/utils';
-
-interface CollectionBatch {
-  id: string;
-  name: string;
-  description?: string;
-  collectionType: 'group' | 'channels';
-  targetGroups?: Array<{ id: string; name: string; color: string }>;
-  targetChannels?: string[];
-  criteria: {
-    daysBack: number;
-    minViews: number;
-    maxViews?: number;
-    includeShorts: boolean;
-    includeMidform: boolean;
-    includeLongForm: boolean;
-    keywords?: string[];
-    excludeKeywords?: string[];
-  };
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  startedAt?: string;
-  completedAt?: string;
-  totalVideosFound: number;
-  totalVideosSaved: number;
-  failedChannels?: Array<{ channelName: string; error: string }>;
-  quotaUsed: number;
-  stats?: {
-    byPlatform: {
-      YOUTUBE: number;
-      INSTAGRAM: number;
-      TIKTOK: number;
-    };
-    byDuration: {
-      SHORT: number;
-      MID: number;
-      LONG: number;
-    };
-  };
-  errorMessage?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import { CollectionBatch } from '../model/batchStore';
 
 interface BatchCardProps {
   batch: CollectionBatch;
@@ -186,7 +146,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
               <div className="flex flex-wrap gap-1 mt-1">
                 {batch.criteria.keywords.slice(0, 3).map((keyword, index) => (
                   <span
-                    key={`batch-${batch.id}-include-${keyword}-${index}`}
+                    key={`batch-${batch._id}-include-${keyword}-${index}`}
                     className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded"
                   >
                     {keyword}
@@ -210,7 +170,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
                   .slice(0, 3)
                   .map((keyword, index) => (
                     <span
-                      key={`batch-${batch.id}-exclude-${keyword}-${index}`}
+                      key={`batch-${batch._id}-exclude-${keyword}-${index}`}
                       className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded"
                     >
                       {keyword}
@@ -240,7 +200,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
         ))}
         {batch.targetChannels?.slice(0, 3).map((channel, index) => (
           <span
-            key={`batch-${batch.id}-target-channel-${channel}-${index}`}
+            key={`batch-${batch._id}-target-channel-${channel}-${index}`}
             className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded-full"
           >
             {channel}
@@ -311,7 +271,7 @@ const BatchCard: React.FC<BatchCardProps> = ({
             <strong>실패한 채널 ({batch.failedChannels.length}개):</strong>
             <div className="mt-1">
               {batch.failedChannels.slice(0, 2).map((failed, index) => (
-                <div key={`batch-${batch.id}-failed-${failed.channelName}-${index}`} className="text-xs">
+                <div key={`batch-${batch._id}-failed-${failed.channelName}-${index}`} className="text-xs">
                   • {failed.channelName}: {failed.error}
                 </div>
               ))}

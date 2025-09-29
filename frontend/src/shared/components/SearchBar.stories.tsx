@@ -33,7 +33,7 @@ const meta: Meta<typeof SearchBar> = {
     },
   },
   argTypes: {
-    value: {
+    searchTerm: {
       description: '현재 검색어 값',
       control: { type: 'text' },
     },
@@ -41,22 +41,21 @@ const meta: Meta<typeof SearchBar> = {
       description: '플레이스홀더 텍스트',
       control: { type: 'text' },
     },
-    onChange: {
+    onSearchTermChange: {
       description: '검색어 변경 시 호출되는 핸들러',
       action: 'search-changed',
     },
-    onSearch: {
-      description: 'Enter 키 또는 검색 버튼 클릭 시 호출되는 핸들러',
-      action: 'searched',
-    },
-    disabled: {
-      description: '비활성화 상태',
+    showFilters: {
+      description: '필터 영역 표시 여부',
       control: { type: 'boolean' },
+    },
+    className: {
+      description: '추가 CSS 클래스',
+      control: { type: 'text' },
     },
   },
   args: {
-    onChange: () => console.log('Action triggered'),
-    onSearch: () => console.log('Action triggered'),
+    onSearchTermChange: () => console.log('Search term changed'),
   },
   tags: ['autodocs'],
 };
@@ -66,7 +65,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    value: '',
+    searchTerm: '',
     placeholder: '검색어를 입력하세요...',
   },
   parameters: {
@@ -80,7 +79,7 @@ export const Default: Story = {
 
 export const WithValue: Story = {
   args: {
-    value: '테스트 검색어',
+    searchTerm: '테스트 검색어',
     placeholder: '검색어를 입력하세요...',
   },
   parameters: {
@@ -94,7 +93,7 @@ export const WithValue: Story = {
 
 export const VideoSearch: Story = {
   args: {
-    value: '',
+    searchTerm: '',
     placeholder: '비디오 제목이나 채널명으로 검색...',
   },
   parameters: {
@@ -108,7 +107,7 @@ export const VideoSearch: Story = {
 
 export const ChannelSearch: Story = {
   args: {
-    value: '',
+    searchTerm: '',
     placeholder: '채널명 또는 키워드로 검색...',
   },
   parameters: {
@@ -122,7 +121,7 @@ export const ChannelSearch: Story = {
 
 export const BatchSearch: Story = {
   args: {
-    value: '',
+    searchTerm: '',
     placeholder: '배치명으로 검색...',
   },
   parameters: {
@@ -136,9 +135,9 @@ export const BatchSearch: Story = {
 
 export const Disabled: Story = {
   args: {
-    value: '',
+    searchTerm: '',
     placeholder: '검색 기능이 비활성화됨',
-    disabled: true,
+    className: 'pointer-events-none opacity-50',
   },
   parameters: {
     docs: {
@@ -151,7 +150,7 @@ export const Disabled: Story = {
 
 export const LongPlaceholder: Story = {
   args: {
-    value: '',
+    searchTerm: '',
     placeholder: '매우 긴 플레이스홀더 텍스트가 표시되는 경우의 SearchBar 동작을 확인할 수 있습니다',
   },
   parameters: {
@@ -165,7 +164,7 @@ export const LongPlaceholder: Story = {
 
 export const WithLongValue: Story = {
   args: {
-    value: '매우 긴 검색어가 입력된 경우의 SearchBar 동작을 확인해보세요',
+    searchTerm: '매우 긴 검색어가 입력된 경우의 SearchBar 동작을 확인해보세요',
     placeholder: '검색어를 입력하세요...',
   },
   parameters: {
@@ -179,7 +178,7 @@ export const WithLongValue: Story = {
 
 export const KoreanSearch: Story = {
   args: {
-    value: '한글 검색어 테스트',
+    searchTerm: '한글 검색어 테스트',
     placeholder: '한글로 검색해보세요...',
   },
   parameters: {
@@ -193,7 +192,7 @@ export const KoreanSearch: Story = {
 
 export const EnglishSearch: Story = {
   args: {
-    value: 'English search query',
+    searchTerm: 'English search query',
     placeholder: 'Search in English...',
   },
   parameters: {
@@ -207,7 +206,7 @@ export const EnglishSearch: Story = {
 
 export const SpecialCharacters: Story = {
   args: {
-    value: '!@#$%^&*()_+-={}[]|\\:";\'<>?,./~`',
+    searchTerm: '!@#$%^&*()_+-={}[]|\\:";\'<>?,./~`',
     placeholder: '특수문자 검색 테스트...',
   },
   parameters: {
@@ -221,7 +220,7 @@ export const SpecialCharacters: Story = {
 
 export const InteractiveDemo: Story = {
   args: {
-    value: '',
+    searchTerm: '',
     placeholder: '여기에 입력해보세요! Enter로 검색...',
   },
   parameters: {

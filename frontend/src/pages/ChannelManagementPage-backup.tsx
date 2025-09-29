@@ -234,10 +234,9 @@ const ChannelManagementPage: React.FC = () => {
             {activeTab === 'channels' ? (
               <UniversalGrid
                 data={channels}
-                cardType="channel"
                 enableSearch={true}
                 searchPlaceholder="채널명, 키워드 검색..."
-                searchFields={['name', 'description', 'keywords'] as (keyof Channel)[]}
+                searchFields={['name', 'description', 'keywords'] as any[]}
                 onCardClick={handleChannelClick}
                 onDelete={handleChannelDeleteFromGrid}
                 onBulkDelete={handleDeleteBulk}
@@ -248,10 +247,9 @@ const ChannelManagementPage: React.FC = () => {
             ) : (
               <UniversalGrid
                 data={channelGroups}
-                cardType="channelGroup"
                 enableSearch={true}
                 searchPlaceholder="그룹명, 설명 검색..."
-                searchFields={['name', 'description', 'keywords'] as (keyof any)[]}
+                searchFields={['name', 'description', 'keywords'] as any[]}
                 onCardClick={handleGroupClick}
                 onDelete={handleGroupDelete}
                 onBulkDelete={handleGroupDeleteBulk}

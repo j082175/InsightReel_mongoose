@@ -29,7 +29,7 @@ const FeaturesTestPage: React.FC = memo(() => {
   const [isChannelAnalysisModalOpen, setChannelAnalysisModalOpen] =
     useState(false);
   const [selectedChannelForAnalysis, setSelectedChannelForAnalysis] = useState<
-    string | null
+    Channel | null
   >(null);
 
   // 테스트용 데이터들
@@ -43,14 +43,6 @@ const FeaturesTestPage: React.FC = memo(() => {
     uploadDate: '2024-01-15T10:30:00Z',
     duration: 'LONG',
     keywords: ['테스트', '분석', '유튜브'],
-    aiSummary:
-      '이 영상은 테스트 목적으로 제작된 콘텐츠입니다. AI 분석 결과를 시연하기 위한 샘플 데이터를 포함하고 있습니다.',
-    aiAnalysis: {
-      summary: '테스트 영상 요약',
-      keyPoints: ['주요 포인트 1', '주요 포인트 2', '주요 포인트 3'],
-      sentiment: 'positive',
-      topics: ['기술', '교육', '리뷰'],
-    },
   };
 
   const testChannels: Channel[] = [
@@ -208,9 +200,9 @@ const FeaturesTestPage: React.FC = memo(() => {
                 <ChannelCard
                   key={channel._id}
                   channel={channel}
-                  onClick={(ch) => console.log('채널 클릭:', ch)}
-                  onAnalyze={(channelId) => {
-                    setSelectedChannelForAnalysis(channelId);
+                  onChannelClick={(ch) => console.log('채널 클릭:', ch)}
+                  onAnalyze={(channel) => {
+                    setSelectedChannelForAnalysis(channel);
                     setChannelAnalysisModalOpen(true);
                   }}
                   onEdit={(ch) => console.log('채널 편집:', ch)}
@@ -299,9 +291,14 @@ const FeaturesTestPage: React.FC = memo(() => {
               <h3 className="text-lg font-semibold mb-4">BatchVideoList</h3>
               <div className="max-w-2xl">
                 <BatchVideoList
+                  isOpen={true}
+                  onClose={() => console.log('Modal closed')}
+                  batchId="test-batch-1"
+                  batchName="Test Batch"
                   videos={testBatchVideos}
-                  onVideoSelect={(video) =>
-                    console.log('Selected video:', video)
+                  loading={false}
+                  onVideoDelete={(video) =>
+                    console.log('Video deleted:', video)
                   }
                 />
               </div>
@@ -342,10 +339,11 @@ const FeaturesTestPage: React.FC = memo(() => {
               <div className="max-w-2xl">
                 <VideoListItem
                   video={testVideo}
-                  onSelect={(selected) =>
-                    console.log('Video selected:', selected)
-                  }
-                  onAnalyze={(video) => console.log('Analyze video:', video)}
+                  onCardClick={(video) => console.log('Video clicked:', video)}
+                  onDeleteClick={(item) => console.log('Delete video:', item)}
+                  isSelectMode={false}
+                  isSelected={false}
+                  onSelectToggle={(videoId) => console.log('Toggle video:', videoId)}
                 />
               </div>
             </div>

@@ -66,6 +66,9 @@ export interface UniversalGridProps<T extends GridItem> {
   isSelectMode?: boolean;
   onSelectToggle?: (itemId: string) => void;
   onSelectModeToggle?: () => void;
+
+  // 통계 표시 옵션
+  showStats?: boolean;
 }
 
 export interface CardRenderProps<T extends GridItem> {

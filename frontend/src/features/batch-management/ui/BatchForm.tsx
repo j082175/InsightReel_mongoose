@@ -14,8 +14,8 @@ interface BatchFormProps {
   onClose: () => void;
   onSubmit: (data: BatchFormData) => Promise<void>;
   formData?: Partial<BatchFormData>;
-  channelGroups: Array<{ id: string; name: string; color: string }>;
-  channels: Array<{ id: string; name: string }>;
+  channelGroups: Array<{ _id: string; name: string; color: string }>;
+  channels: Array<{ _id: string; name: string }>;
   isSubmitting?: boolean;
 }
 
@@ -38,7 +38,7 @@ const BatchForm: React.FC<BatchFormProps> = ({
     setValue,
     reset,
     formState: { errors, isValid },
-  } = useForm<BatchFormData>({
+  } = useForm({
     resolver: zodResolver(batchFormSchema),
     defaultValues: getDefaultBatchFormData(),
     mode: 'onChange', // 실시간 유효성 검사
@@ -250,16 +250,16 @@ const BatchForm: React.FC<BatchFormProps> = ({
                       </div>
                     ) : (
                       channelGroups.map((group) => (
-                        <label key={group.id} className="flex items-center">
+                        <label key={group._id} className="flex items-center">
                           <input
                             type="checkbox"
-                            checked={field.value.includes(group.id)}
+                            checked={field.value.includes(group._id)}
                             onChange={(e) => {
                               if (e.target.checked) {
-                                field.onChange([...field.value, group.id]);
+                                field.onChange([...field.value, group._id]);
                               } else {
                                 field.onChange(
-                                  field.value.filter((id) => id !== group.id)
+                                  field.value.filter((id) => id !== group._id)
                                 );
                               }
                             }}
@@ -297,16 +297,16 @@ const BatchForm: React.FC<BatchFormProps> = ({
                       </div>
                     ) : (
                       channels.map((channel) => (
-                        <label key={channel.id} className="flex items-center">
+                        <label key={channel._id} className="flex items-center">
                           <input
                             type="checkbox"
-                            checked={field.value.includes(channel.id)}
+                            checked={field.value.includes(channel._id)}
                             onChange={(e) => {
                               if (e.target.checked) {
-                                field.onChange([...field.value, channel.id]);
+                                field.onChange([...field.value, channel._id]);
                               } else {
                                 field.onChange(
-                                  field.value.filter((id) => id !== channel.id)
+                                  field.value.filter((id) => id !== channel._id)
                                 );
                               }
                             }}

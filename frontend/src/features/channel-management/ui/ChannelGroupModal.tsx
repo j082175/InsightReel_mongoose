@@ -9,21 +9,11 @@ import {
   colorPalette,
 } from '../../../shared/schemas/channelGroupSchema';
 import { Modal } from '../../../shared/components';
+import { ChannelGroup } from '../../../shared/types/channel-group';
 
-interface ChannelGroup {
-  _id?: string;
-  name: string;
-  description: string;
-  color: string;
-  channels: string[];
-  keywords: string[];
-  isActive: boolean;
-  lastCollectedAt?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
 
 interface Channel {
+  _id?: string;
   channelId: string;
   name: string;
 }
@@ -54,7 +44,7 @@ const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
     setValue,
     reset,
     formState: { errors, isValid },
-  } = useForm<ChannelGroupFormData>({
+  } = useForm({
     resolver: zodResolver(channelGroupFormSchema),
     defaultValues: getDefaultChannelGroupFormData(),
     mode: 'onChange',

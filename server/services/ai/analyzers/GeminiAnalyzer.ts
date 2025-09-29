@@ -25,13 +25,14 @@ export class GeminiAnalyzer {
 
     private async initializeGemini(): Promise<void> {
         try {
-            const UnifiedGeminiManager = require('../../../utils/unified-gemini-manager');
+            const UnifiedGeminiManagerModule = await import('../../../utils/unified-gemini-manager');
+            const UnifiedGeminiManager = UnifiedGeminiManagerModule.default || UnifiedGeminiManagerModule.UnifiedGeminiManager;
 
             const mode = process.env.GEMINI_FALLBACK_MODE || 'single-model';
             const strategy = process.env.GEMINI_FALLBACK_STRATEGY || 'flash';
 
             this.geminiManager = UnifiedGeminiManager.getInstance({
-                strategy: strategy,
+                strategy: strategy as any,
                 retryAttempts: 3,
                 retryDelay: 2000
             });

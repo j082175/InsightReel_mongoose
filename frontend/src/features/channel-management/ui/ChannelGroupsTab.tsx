@@ -94,8 +94,8 @@ const ChannelGroupsTab: React.FC<ChannelGroupsTabProps> = ({
       <div className="flex flex-col lg:flex-row gap-4">
         <div className="flex-1">
           <SearchBar
-            value={searchTerm}
-            onChange={setSearchTerm}
+            searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
             placeholder="그룹명, 설명, 키워드로 검색..."
             className="w-full"
           />

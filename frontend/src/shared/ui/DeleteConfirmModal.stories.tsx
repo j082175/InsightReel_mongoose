@@ -50,7 +50,7 @@ const meta: Meta<typeof DeleteConfirmModal> = {
       description: '삭제할 항목의 제목/이름',
       control: { type: 'text' },
     },
-    type: {
+    itemName: {
       description: '삭제할 항목의 타입',
       control: { type: 'text' },
     },
@@ -73,7 +73,7 @@ export const Closed: Story = {
   args: {
     isOpen: false,
     title: '테스트 비디오',
-    type: '비디오',
+    itemName: '비디오',
   },
   parameters: {
     docs: {
@@ -88,7 +88,7 @@ export const VideoDelete: Story = {
   args: {
     isOpen: true,
     title: 'YouTube 마케팅 전략 완벽 가이드',
-    type: '비디오',
+    itemName: '비디오',
   },
   parameters: {
     docs: {
@@ -103,7 +103,7 @@ export const ChannelDelete: Story = {
   args: {
     isOpen: true,
     title: '테크 리뷰 채널',
-    type: '채널',
+    itemName: '채널',
   },
   parameters: {
     docs: {
@@ -118,7 +118,10 @@ export const BatchDelete: Story = {
   args: {
     isOpen: true,
     title: '2024년 1월 수집 배치',
-    type: '배치',
+    message: '이 배치를 삭제하면 수집된 모든 데이터가 함께 삭제됩니다.',
+    itemName: '배치',
+    onClose: () => {},
+    onConfirm: () => {},
   },
   parameters: {
     docs: {
@@ -133,7 +136,10 @@ export const ChannelGroupDelete: Story = {
   args: {
     isOpen: true,
     title: '엔터테인먼트 채널 그룹',
-    type: '채널 그룹',
+    message: '이 채널 그룹을 삭제하시겠습니까? 그룹 내 모든 설정이 삭제됩니다.',
+    itemName: '채널 그룹',
+    onClose: () => {},
+    onConfirm: () => {},
   },
   parameters: {
     docs: {
@@ -148,7 +154,10 @@ export const TrendingVideoDelete: Story = {
   args: {
     isOpen: true,
     title: '🔥 바이럴 숏폼 콘텐츠 제작법',
-    type: '트렌딩 비디오',
+    message: '이 트렌딩 비디오를 삭제하시겠습니까?',
+    itemName: '트렌딩 비디오',
+    onClose: () => {},
+    onConfirm: () => {},
   },
   parameters: {
     docs: {
@@ -163,8 +172,11 @@ export const Loading: Story = {
   args: {
     isOpen: true,
     title: '삭제 처리 중인 항목',
-    type: '비디오',
+    message: '삭제 작업이 진행 중입니다. 잠시만 기다려 주세요.',
+    itemName: '비디오',
     isLoading: true,
+    onClose: () => {},
+    onConfirm: () => {},
   },
   parameters: {
     docs: {
@@ -179,7 +191,10 @@ export const LongTitle: Story = {
   args: {
     isOpen: true,
     title: '매우 긴 제목을 가진 비디오입니다 - 이런 경우 제목이 어떻게 표시되는지 확인해보세요',
-    type: '비디오',
+    message: '이 비디오를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.',
+    itemName: '비디오',
+    onClose: () => {},
+    onConfirm: () => {},
   },
   parameters: {
     docs: {
@@ -194,7 +209,10 @@ export const SpecialCharacters: Story = {
   args: {
     isOpen: true,
     title: '[특수문자] & 기호가 포함된 @#$% 비디오 제목!',
-    type: '비디오',
+    message: '이 비디오를 삭제하시겠습니까?',
+    itemName: '비디오',
+    onClose: () => {},
+    onConfirm: () => {},
   },
   parameters: {
     docs: {
@@ -209,7 +227,10 @@ export const KoreanTitle: Story = {
   args: {
     isOpen: true,
     title: '한국어 콘텐츠 제목 예시',
-    type: '비디오',
+    message: '이 비디오를 삭제하시겠습니까?',
+    itemName: '비디오',
+    onClose: () => {},
+    onConfirm: () => {},
   },
   parameters: {
     docs: {
@@ -224,7 +245,10 @@ export const EnglishTitle: Story = {
   args: {
     isOpen: true,
     title: 'Complete Guide to React Development',
-    type: 'video',
+    message: 'Are you sure you want to delete this video?',
+    itemName: 'video',
+    onClose: () => {},
+    onConfirm: () => {},
   },
   parameters: {
     docs: {
@@ -239,7 +263,7 @@ export const MixedLanguage: Story = {
   args: {
     isOpen: true,
     title: 'React 개발자를 위한 Complete Guide to TypeScript',
-    type: '비디오',
+    itemName: '비디오',
   },
   parameters: {
     docs: {
@@ -254,7 +278,7 @@ export const InteractiveDemo: Story = {
   args: {
     isOpen: true,
     title: '인터랙티브 데모 비디오',
-    type: '비디오',
+    itemName: '비디오',
   },
   parameters: {
     docs: {

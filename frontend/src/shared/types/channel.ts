@@ -118,7 +118,6 @@ export interface ChannelMetadata {
   createdAt?: string;
   updatedAt?: string;
   version?: number;
-  _id?: string;
 }
 
 // ===== 전체 Channel 인터페이스 조합 =====

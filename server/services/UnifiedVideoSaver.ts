@@ -762,8 +762,8 @@ class UnifiedVideoSaver {
             });
 
             // 차이점 찾기
-            const onlyInSheets = [...sheetUrls].filter((url) => !mongoUrls.has(url));
-            const onlyInMongo = [...mongoUrls].filter((url) => !sheetUrls.has(url));
+            const onlyInSheets = Array.from(sheetUrls).filter((url) => !mongoUrls.has(url));
+            const onlyInMongo = Array.from(mongoUrls).filter((url) => !sheetUrls.has(url));
 
             if (onlyInSheets.length > 0 || onlyInMongo.length > 0) {
                 results.consistent = false;

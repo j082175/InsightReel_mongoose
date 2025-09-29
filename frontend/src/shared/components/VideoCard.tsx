@@ -7,7 +7,6 @@ import { getPlatformStyle } from '../utils/platformStyles';
 import { getVideoId, getThumbnailUrl, getViewCount } from '../utils/videoUtils';
 import { Video } from '../types';
 import { DeleteConfirmModal } from '../ui';
-import { VideoModal, VideoOnlyModal } from '../../features/video-analysis';
 import { PLATFORMS } from '../types/api';
 import { OptimizedImage } from './OptimizedImage';
 import toast from 'react-hot-toast';
@@ -19,10 +18,6 @@ const CARD_VARIANTS = {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: {
-      duration: 0,
-      ease: [0.4, 0, 0.2, 1],
-    },
   },
   hover: {
     y: -8,
@@ -68,11 +63,15 @@ interface VideoCardProps {
   onChannelClick?: (channelName: string) => void;
   onDelete?: (video: Video) => void;
   onVideoPlay?: (video: Video) => void; // 영상 재생 콜백
+  onInfoClick?: (video: Video) => void; // 정보 모달 콜백
   showArchiveInfo?: boolean;
   // 선택 시스템 (페이지에서 제어)
   isSelected?: boolean;
   isSelectMode?: boolean;
   onSelect?: (videoId: string) => void;
+  // 추가 테스트/호환성을 위한 props
+  onClick?: (video: Video) => void;
+  onSelectToggle?: (videoId: string) => void;
   // 카드 크기 (배지 크기 조절용)
   cardWidth?: number;
 }
@@ -83,15 +82,13 @@ const VideoCard: React.FC<VideoCardProps> = memo(
     onChannelClick,
     onDelete,
     onVideoPlay,
+    onInfoClick,
     showArchiveInfo,
     isSelected = false,
     isSelectMode = false,
     onSelect,
     cardWidth = 280,
   }) => {
-    // 모달 상태 관리 (내장)
-    const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
-    const [selectedVideoForPlay, setSelectedVideoForPlay] = useState<Video | null>(null);
 
     // 삭제 상태
     const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -182,7 +179,8 @@ const VideoCard: React.FC<VideoCardProps> = memo(
             if (onVideoPlay) {
               onVideoPlay(video);
             } else {
-              setSelectedVideoForPlay(video);
+              // 외부에서 처리하도록 위임
+              window.open(video?.url, '_blank', 'noopener,noreferrer');
             }
           } else {
             window.open(video?.url, '_blank', 'noopener,noreferrer');
@@ -193,7 +191,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(
     );
 
     const handleSelectToggle = useCallback(
-      (e: React.MouseEvent) => {
+      (e: React.ChangeEvent<HTMLInputElement>) => {
         e.preventDefault();
         e.stopPropagation();
         if (onSelect) {
@@ -207,9 +205,11 @@ const VideoCard: React.FC<VideoCardProps> = memo(
       (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        setSelectedVideo(video);
+        if (onInfoClick) {
+          onInfoClick(video);
+        }
       },
-      [video]
+      [onInfoClick, video]
     );
 
     const handleChannelClick = useCallback(
@@ -354,7 +354,7 @@ const VideoCard: React.FC<VideoCardProps> = memo(
                 className="inline-block px-[0.4em] py-[0.2em] bg-black bg-opacity-70 text-white rounded"
                 style={{ fontSize: badgeFontSize }}
               >
-                {getDurationLabel(video?.duration || 0)}
+                {getDurationLabel(video?.duration || 'SHORT')}
               </span>
               {(() => {
                 const now = new Date();
@@ -501,15 +501,6 @@ const VideoCard: React.FC<VideoCardProps> = memo(
         isLoading={isDeleting}
       />
 
-      <VideoModal
-        video={selectedVideo}
-        onClose={() => setSelectedVideo(null)}
-      />
-
-      <VideoOnlyModal
-        video={selectedVideoForPlay}
-        onClose={() => setSelectedVideoForPlay(null)}
-      />
     </>);
   },
   // 🚀 성능 최적화: 커스텀 비교 함수로 불필요한 리렌더링 방지

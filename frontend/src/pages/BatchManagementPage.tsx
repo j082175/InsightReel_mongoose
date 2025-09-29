@@ -387,7 +387,6 @@ const BatchManagementPage: React.FC = () => {
         onClose={closeForm}
         onSubmit={handleCreateBatch}
         formData={formData}
-        setFormData={updateFormData}
         channelGroups={[]}
         channels={[]}
         isSubmitting={loading}

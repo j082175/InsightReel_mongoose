@@ -108,7 +108,8 @@ router.get('/quota-status', async (req: Request, res: Response) => {
     try {
         const ApiKeyManager = require('../services/ApiKeyManager');
         const UsageTracker = require('../utils/usage-tracker');
-        const UnifiedGeminiManager = require('../utils/unified-gemini-manager');
+        const UnifiedGeminiManagerModule = await import('../utils/unified-gemini-manager');
+        const UnifiedGeminiManager = UnifiedGeminiManagerModule.default || UnifiedGeminiManagerModule.UnifiedGeminiManager;
 
         // API 키 목록 조회
         await ApiKeyManager.initialize();

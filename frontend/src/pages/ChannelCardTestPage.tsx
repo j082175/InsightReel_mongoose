@@ -32,7 +32,7 @@ const ChannelCardTestPage: React.FC = () => {
   // 테스트용 채널 데이터
   const testChannels: Channel[] = [
     {
-      id: 'youtube-channel-1',
+      _id: 'youtube-channel-1',
       channelId: 'UCabcd1234',
       name: '테크 리뷰 채널',
       platform: 'YOUTUBE',
@@ -51,7 +51,7 @@ const ChannelCardTestPage: React.FC = () => {
       },
     },
     {
-      id: 'instagram-channel-1',
+      _id: 'instagram-channel-1',
       channelId: '@foodie_daily',
       name: '푸디 데일리',
       platform: 'INSTAGRAM',
@@ -70,7 +70,7 @@ const ChannelCardTestPage: React.FC = () => {
       },
     },
     {
-      id: 'tiktok-channel-1',
+      _id: 'tiktok-channel-1',
       channelId: '@dance_viral',
       name: '댄스 바이럴',
       platform: 'TIKTOK',
@@ -89,7 +89,7 @@ const ChannelCardTestPage: React.FC = () => {
       },
     },
     {
-      id: 'youtube-channel-2',
+      _id: 'youtube-channel-2',
       channelId: 'UCefgh5678',
       name: '작은 크리에이터',
       platform: 'YOUTUBE',

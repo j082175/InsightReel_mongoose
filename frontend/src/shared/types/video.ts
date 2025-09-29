@@ -146,15 +146,8 @@ export interface AIAnalysisResult {
 }
 
 // ===== Collection Batch =====
-export interface CollectionBatch {
-  id: string;
-  name: string;
-  keywords: string[];
-  color: string;
-  collectedAt: string;
-  videoCount: number;
-  channels: string[];
-}
+// Note: CollectionBatch interface moved to features/batch-management/model/batchStore.ts
+// Import from there to use the authoritative definition
 
 // ===== Trending Video =====
 export interface TrendingVideo extends Video {

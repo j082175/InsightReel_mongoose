@@ -466,7 +466,6 @@ const BatchFormTestPage: React.FC = () => {
         onClose={handleCloseForm}
         onSubmit={handleSubmit}
         formData={formData}
-        setFormData={setFormData}
         channelGroups={testChannelGroups}
         channels={testChannels}
         isSubmitting={isSubmitting}

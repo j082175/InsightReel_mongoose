@@ -90,7 +90,7 @@ const BatchVideoList: React.FC<BatchVideoListProps> = ({
               data={videos}
               renderCard={(item, cardProps) => {
                 const itemId = getDocumentId(item);
-                const itemTitle = item?.title || item?.name || 'unknown';
+                const itemTitle = item?.title || 'unknown';
 
                 return (
                   <VideoCard

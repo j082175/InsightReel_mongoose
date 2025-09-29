@@ -1,4 +1,4 @@
-const UsageTracker = require('./usage-tracker');
+const UsageTracker = require('./usage-tracker.ts');
 const { ServerLogger } = require('./logger');
 const { YOUTUBE_API_LIMITS } = require('../config/api-constants');
 const fs = require('fs');
@@ -57,7 +57,7 @@ class MultiKeyManager {
     
     // 1. ApiKeyManager에서 활성 키 로드
     const safetyMargin = YOUTUBE_API_LIMITS.SAFETY_MARGIN;
-    const ApiKeyManager = require('../services/ApiKeyManager');
+    const ApiKeyManager = require('../services/ApiKeyManager.ts');
 
     try {
       await ApiKeyManager.initialize();

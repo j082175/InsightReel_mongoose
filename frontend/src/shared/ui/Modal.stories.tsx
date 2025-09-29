@@ -156,7 +156,7 @@ export const Large: Story = {
           ))}
         </div>
         <div className="flex justify-between">
-          <AnimatedButton variant="warning">리셋</AnimatedButton>
+          <AnimatedButton variant="danger">리셋</AnimatedButton>
           <div className="space-x-2">
             <AnimatedButton variant="secondary">취소</AnimatedButton>
             <AnimatedButton variant="primary">저장</AnimatedButton>
@@ -198,7 +198,7 @@ export const ExtraLarge: Story = {
         <div className="flex justify-between">
           <div className="space-x-2">
             <AnimatedButton variant="secondary" size="sm">내보내기</AnimatedButton>
-            <AnimatedButton variant="warning" size="sm">새로고침</AnimatedButton>
+            <AnimatedButton variant="danger" size="sm">새로고침</AnimatedButton>
           </div>
           <div className="space-x-2">
             <AnimatedButton variant="secondary">취소</AnimatedButton>
@@ -236,7 +236,7 @@ export const FullScreen: Story = {
         <div className="flex justify-between border-t pt-4">
           <div className="space-x-2">
             <AnimatedButton variant="secondary">도움말</AnimatedButton>
-            <AnimatedButton variant="warning">리셋</AnimatedButton>
+            <AnimatedButton variant="danger">리셋</AnimatedButton>
           </div>
           <div className="space-x-2">
             <AnimatedButton variant="secondary">취소</AnimatedButton>

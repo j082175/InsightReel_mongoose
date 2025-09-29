@@ -3,19 +3,7 @@ import { MoreVertical, PlayCircle, Settings } from 'lucide-react';
 import { DeleteConfirmModal, NotificationModal } from '../../../shared/ui';
 import { FRONTEND_CONSTANTS } from '../../../shared/config/constants';
 import { getDocumentId } from '../../../shared/utils';
-
-interface ChannelGroup {
-  _id?: string;
-  name: string;
-  description: string;
-  color: string;
-  channels: string[];
-  keywords: string[];
-  isActive: boolean;
-  lastCollectedAt?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import { ChannelGroup } from '../../../shared/types';
 
 interface ChannelGroupCardProps {
   group: ChannelGroup;

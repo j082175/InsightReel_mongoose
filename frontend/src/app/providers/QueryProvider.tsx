@@ -33,7 +33,7 @@ export const QueryProvider: React.FC<QueryProviderProps> = ({ children }) => {
       {children}
       {/* 개발 환경에서만 DevTools 표시 */}
       {import.meta.env.MODE === 'development' && (
-        <ReactQueryDevtools initialIsOpen={false} position="bottom-left" />
+        <ReactQueryDevtools initialIsOpen={false} />
       )}
     </QueryClientProvider>
   );

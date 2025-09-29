@@ -1,18 +1,6 @@
 import React, { useState } from 'react';
 import ChannelGroupCard from '../features/channel-management/ui/ChannelGroupCard';
-
-interface ChannelGroup {
-  _id?: string;
-  name: string;
-  description: string;
-  color: string;
-  channels: string[];
-  keywords: string[];
-  isActive: boolean;
-  lastCollectedAt?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import { ChannelGroup } from '../shared/types';
 
 /**
  * ChannelGroupCardTestPage - ChannelGroupCard 컴포넌트 전용 테스트 페이지
@@ -45,7 +33,13 @@ const ChannelGroupCardTestPage: React.FC = () => {
       name: '테크 리뷰어 그룹',
       description: '최신 기술과 가젯을 리뷰하는 채널들의 모음',
       color: '#EF4444',
-      channels: ['UC123abc', 'UC456def', 'UC789ghi', 'UC101jkl', 'UC112mno'],
+      channels: [
+        { channelId: 'UC123abc', name: '테크 리뷰채널 A' },
+        { channelId: 'UC456def', name: '가젯 인사이트' },
+        { channelId: 'UC789ghi', name: 'IT 뉴스데스크' },
+        { channelId: 'UC101jkl', name: '스마트폰 리뷰' },
+        { channelId: 'UC112mno', name: '노트북 가이드' }
+      ],
       keywords: ['테크', 'IT', '리뷰', '가젯', '스마트폰', '노트북'],
       isActive: true,
       lastCollectedAt: '2024-09-15T06:30:00.000Z',
@@ -57,7 +51,10 @@ const ChannelGroupCardTestPage: React.FC = () => {
       name: '푸드 크리에이터',
       description: '맛있는 음식과 레시피를 소개하는 채널들',
       color: '#10B981',
-      channels: ['UC201abc', 'UC202def'],
+      channels: [
+        { channelId: 'UC201abc', name: '맛집 탐방' },
+        { channelId: 'UC202def', name: '레시피 마스터' }
+      ],
       keywords: ['음식', '레시피', '요리', '맛집'],
       isActive: true,
       lastCollectedAt: '2024-09-14T14:20:00.000Z',
@@ -70,14 +67,14 @@ const ChannelGroupCardTestPage: React.FC = () => {
       description: '최신 K-POP 댄스와 트렌드를 다루는 채널들',
       color: '#8B5CF6',
       channels: [
-        'UC301abc',
-        'UC302def',
-        'UC303ghi',
-        'UC304jkl',
-        'UC305mno',
-        'UC306pqr',
-        'UC307stu',
-        'UC308vwx',
+        { channelId: 'UC301abc', name: '엔터테인먼트 A' },
+        { channelId: 'UC302def', name: '코미디 센터' },
+        { channelId: 'UC303ghi', name: '버라이어티 쇼' },
+        { channelId: 'UC304jkl', name: '음악 토크쇼' },
+        { channelId: 'UC305mno', name: '드라마 리뷰' },
+        { channelId: 'UC306pqr', name: '영화 분석' },
+        { channelId: 'UC307stu', name: '연예 뉴스' },
+        { channelId: 'UC308vwx', name: '이슈 토크' }
       ],
       keywords: [
         'K-POP',
@@ -100,7 +97,11 @@ const ChannelGroupCardTestPage: React.FC = () => {
       name: '게임 실황 모음',
       description: '다양한 게임의 실황과 공략을 제공하는 채널들',
       color: '#F59E0B',
-      channels: ['UC401abc', 'UC402def', 'UC403ghi'],
+      channels: [
+        { channelId: 'UC401abc', name: '헬스 가이드' },
+        { channelId: 'UC402def', name: '피트니스 코치' },
+        { channelId: 'UC403ghi', name: '요가 마스터' }
+      ],
       keywords: ['게임', '실황', '공략', '리뷰'],
       isActive: false,
       lastCollectedAt: '2024-09-10T16:45:00.000Z',
@@ -112,7 +113,9 @@ const ChannelGroupCardTestPage: React.FC = () => {
       name: '신규 그룹 (수집 이력 없음)',
       description: '새로 생성된 그룹으로 아직 트렌딩 수집이 진행되지 않음',
       color: '#6B7280',
-      channels: ['UC501abc'],
+      channels: [
+        { channelId: 'UC501abc', name: '학습 채널' }
+      ],
       keywords: ['신규', '테스트'],
       isActive: true,
       createdAt: '2024-09-15T08:00:00.000Z',
@@ -123,7 +126,10 @@ const ChannelGroupCardTestPage: React.FC = () => {
       name: '대규모 채널 그룹',
       description: '15개 이상의 채널을 포함한 대규모 그룹으로 성능 테스트용',
       color: '#EC4899',
-      channels: Array.from({ length: 18 }, (_, i) => `UC${600 + i}abc`),
+      channels: Array.from({ length: 18 }, (_, i) => ({
+        channelId: `UC${600 + i}abc`,
+        name: `대규모 채널 ${i + 1}`
+      })),
       keywords: [
         '대규모',
         '성능',

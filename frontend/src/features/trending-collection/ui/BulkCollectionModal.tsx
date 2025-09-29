@@ -188,20 +188,35 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
 
     // 배치 생성 및 콜백 호출
     const batch: CollectionBatch = {
-      id: Date.now().toString(),
+      _id: Date.now().toString(),
       name: batchInfo.name || `${new Date().toLocaleDateString()} 수집`,
-      keywords: filters.keywords,
-      color: batchInfo.color,
-      collectedAt: new Date().toISOString(),
-      videoCount: totalCollected,
-      channels: channelsToProcess,
+      description: `${channelsToProcess.length}개 채널에서 ${totalCollected}개 영상 수집`,
+      collectionType: 'channels',
+      targetChannels: channelsToProcess,
+      criteria: {
+        daysBack: filters.daysBack,
+        minViews: filters.minViews,
+        maxViews: undefined,
+        includeShorts: filters.includeShorts,
+        includeMidform: true, // Default to true since not in CollectionFilters
+        includeLongForm: filters.includeLongForm,
+        keywords: filters.keywords,
+        excludeKeywords: []
+      },
+      status: 'completed',
+      completedAt: new Date().toISOString(),
+      totalVideosFound: totalCollected,
+      totalVideosSaved: totalCollected,
+      quotaUsed: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     // 수집된 영상들 생성 (mock)
     const collectedVideos = results.flatMap((result, batchIndex) => {
       return Array.from({ length: result.collectedVideos }, (_, videoIndex) => {
         const videoData: Video = {
-          id: String(Date.now() + batchIndex * 1000 + videoIndex),
+          _id: String(Date.now() + batchIndex * 1000 + videoIndex),
           title: `${result.channelName}의 수집된 영상 ${videoIndex + 1}`,
           url: `https://example.com/video/${Date.now() + batchIndex * 1000 + videoIndex}`,
           uploadDate: new Date(
@@ -226,7 +241,7 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
           aspectRatio: '16:9',
           channelAvatarUrl: `https://placehold.co/100x100/3B82F6/FFFFFF?text=${result.channelName.charAt(0)}`,
           isTrending: Math.random() > 0.7,
-          batchIds: [batch.id],
+          batchIds: [batch._id],
         };
 
         return videoData;
@@ -329,7 +344,10 @@ const BulkCollectionModal: React.FC<BulkCollectionModalProps> = ({
       >
         <form
           id="bulk-collection-form"
-          onSubmit={handleSubmit(startCollection)}
+          onSubmit={(e) => {
+            e.preventDefault();
+            startCollection();
+          }}
         >
           {!isCollecting && collectionResults.length === 0 && (
             <div className="space-y-6">

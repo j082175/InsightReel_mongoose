@@ -1,5 +1,5 @@
 const { ServerLogger } = require('./logger');
-const UsageTracker = require('./usage-tracker');
+const UsageTracker = require('./usage-tracker.ts');
 
 /**
  * 다중 API 키 관리자

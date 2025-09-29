@@ -5,7 +5,7 @@ import { GRID_CONFIG } from '../../../shared/config/gridConfig';
 
 interface VirtualizedGridProps<T extends GridItem> {
   data: T[];
-  renderCard: (item: T, cardProps: CardRenderProps) => React.ReactNode;
+  renderCard: (item: T, cardProps: CardRenderProps<T>) => React.ReactNode;
   selectedItems: Set<string>;
   isSelectMode: boolean;
   onSelect: (itemId: string) => void;

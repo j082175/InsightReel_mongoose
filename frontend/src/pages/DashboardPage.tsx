@@ -6,7 +6,7 @@ import {
   useServerStatus,
 } from '../shared/hooks';
 import toast from 'react-hot-toast';
-import { Video } from '../shared/types';
+import { Video, Channel } from '../shared/types';
 import { useAppContext } from '../app/providers';
 import { ChannelAnalysisModal } from '../features/channel-management';
 import { SearchBar, VideoCard, CookieStatusWidget } from '../shared/components';
@@ -21,7 +21,7 @@ import { formatViews } from '../shared/utils/formatters';
 const DashboardPage: React.FC = () => {
   const [selectedBatchId, setSelectedBatchId] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [channelToAnalyze, setChannelToAnalyze] = useState<string | null>(null);
+  const [channelToAnalyze, setChannelToAnalyze] = useState<Channel | null>(null);
 
 
   // VideoStore 사용 - 간소화 (선택 상태는 UniversalGrid에서 관리)
@@ -222,7 +222,12 @@ const DashboardPage: React.FC = () => {
               onSelect={props.onSelect}
               onDelete={() => props.onDelete?.(video)}
               isSelectMode={props.isSelectMode}
-              onChannelClick={() => setChannelToAnalyze(video.channelName)}
+              onChannelClick={() => setChannelToAnalyze({
+                _id: video.channelName || '',
+                channelId: video.channelName || '',
+                name: video.channelName || 'Unknown Channel',
+                platform: video.platform
+              })}
               cardWidth={props.cardWidth}
             />
           )}
@@ -242,7 +247,12 @@ const DashboardPage: React.FC = () => {
               toast.error(`일괄 삭제 실패: ${error}`);
             }
           }}
-          onCardClick={(video) => setChannelToAnalyze(video.channelName)}
+          onCardClick={(video) => setChannelToAnalyze({
+            _id: video.channelName || '',
+            channelId: video.channelName || '',
+            name: video.channelName || 'Unknown Channel',
+            platform: video.platform
+          })}
           initialItemsPerPage={20}
           showVirtualScrolling={true}
           useWindowScroll={true}
@@ -257,7 +267,7 @@ const DashboardPage: React.FC = () => {
 
       {/* 모달들 */}
       <ChannelAnalysisModal
-        channelName={channelToAnalyze}
+        channel={channelToAnalyze}
         onClose={() => setChannelToAnalyze(null)}
       />
     </div>
