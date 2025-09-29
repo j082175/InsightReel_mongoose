@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 350px;
+      padding: 20px;
+      font-family: 'Segoe UI', Arial, sans-serif;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      color: #1976d2;
+      margin-bottom: 5px;
+    }
+    .subtitle {
+      font-size: 12px;
+      color: #666;
+    }
+    .status {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 5px;
+      margin: 10px 0;
+    }
+    .status.connected {
+      background: #e8f5e8;
+      color: #2e7d32;
+    }
+    .status.error {
+      background: #ffeaea;
+      color: #d32f2f;
+    }
+    .button {
+      width: 100%;
+      padding: 12px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.3s;
+    }
+    .button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .button.primary {
+      background: #1976d2;
+      color: white;
+    }
+    .button.primary:hover:not(:disabled) {
+      background: #1565c0;
+    }
+    .button.secondary {
+      background: #f5f5f5;
+      color: #333;
+    }
+    .button.secondary:hover:not(:disabled) {
+      background: #eeeeee;
+    }
+    .notification {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      background: #333;
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      z-index: 1000;
+      font-size: 12px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">🎬 InsightReel</div>
+    <div class="subtitle">Content Analytics Platform</div>
+  </div>
+
+  <div id="status" class="status">연결 확인 중...</div>
+
+  <button id="testBtn" class="button secondary" style="background: #4caf50; color: white;">
+    🧪 버튼 테스트 (Simple)
+  </button>
+
+  <button id="openSpreadsheet" class="button primary">
+    📊 스프레드시트 열기
+  </button>
+
+  <button id="testConnection" class="button secondary">
+    🔧 연결 테스트
+  </button>
+
+  <button id="collectChannel" class="button primary" style="background: linear-gradient(45deg, #ff6b6b, #ee5a24);">
+    📊 채널 수집
+  </button>
+
+  <button id="syncCookies" class="button primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    🍪 Instagram 쿠키 동기화
+  </button>
+
+  <div id="notification" class="notification"></div>
+
+  <script>
+    console.log('🚀 Simple popup loaded');
+
+    const serverUrl = 'http://localhost:3000';
+
+    // Simple notification function
+    function showNotification(message) {
+      console.log('📢 Notification:', message);
+      const notification = document.getElementById('notification');
+      notification.textContent = message;
+      notification.style.display = 'block';
+      setTimeout(() => {
+        notification.style.display = 'none';
+      }, 3000);
+    }
+
+    // Test button
+    document.getElementById('testBtn').addEventListener('click', function() {
+      console.log('🧪 Test button clicked!');
+      showNotification('✅ 버튼이 정상적으로 작동합니다!');
+    });
+
+    // Open spreadsheet
+    document.getElementById('openSpreadsheet').addEventListener('click', async function() {
+      console.log('📊 Spreadsheet button clicked');
+
+      try {
+        const response = await fetch(`${serverUrl}/api/test-sheets`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.result && data.result.spreadsheetUrl) {
+            chrome.tabs.create({ url: data.result.spreadsheetUrl });
+            return;
+          }
+        }
+      } catch (error) {
+        console.log('Server request failed:', error);
+      }
+
+      // Fallback URL
+      const fallbackUrl = 'https://docs.google.com/spreadsheets/d/1UkGu6HObPNo6cPojBzhYeFxNVMkTksrsANTuSGKloJA';
+      chrome.tabs.create({ url: fallbackUrl });
+    });
+
+    // Test connection
+    document.getElementById('testConnection').addEventListener('click', async function() {
+      console.log('🔧 Test connection clicked');
+      const btn = this;
+      const originalText = btn.textContent;
+
+      btn.textContent = '테스트 중...';
+      btn.disabled = true;
+
+      try {
+        const serverResponse = await fetch(`${serverUrl}/health`);
+        const sheetsResponse = await fetch(`${serverUrl}/api/test-sheets`);
+
+        let message = '연결 테스트 결과:\n';
+        message += `서버: ${serverResponse.ok ? '✅' : '❌'}\n`;
+        message += `구글 시트: ${sheetsResponse.ok ? '✅' : '❌'}`;
+
+        showNotification(message);
+      } catch (error) {
+        showNotification('연결 테스트 실패: ' + error.message);
+      } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
+    });
+
+    // Collect channel
+    document.getElementById('collectChannel').addEventListener('click', async function() {
+      console.log('📊 Channel collection clicked');
+      showNotification('❌ YouTube 채널 페이지에서만 사용할 수 있습니다.');
+    });
+
+    // Sync cookies
+    document.getElementById('syncCookies').addEventListener('click', function() {
+      console.log('🍪 Cookie sync clicked');
+      showNotification('🚧 Instagram 쿠키 동기화 기능 준비 중');
+    });
+
+    // Check server status
+    async function checkServerStatus() {
+      const statusEl = document.getElementById('status');
+
+      try {
+        const response = await fetch(`${serverUrl}/health`);
+        if (response.ok) {
+          statusEl.className = 'status connected';
+          statusEl.textContent = '✅ 서버 연결됨';
+        } else {
+          throw new Error('Server error');
+        }
+      } catch (error) {
+        statusEl.className = 'status error';
+        statusEl.textContent = '❌ 서버 연결 안됨 (로컬 서버를 시작해주세요)';
+      }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('📋 Simple popup initialized');
+      checkServerStatus();
+    });
+  </script>
+</body>
+</html>

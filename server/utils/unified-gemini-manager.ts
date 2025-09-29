@@ -1,8 +1,9 @@
 import { GoogleGenerativeAI, GenerativeModel, GenerateContentResult } from '@google/generative-ai';
 import { ServerLogger } from './logger';
 import { AI } from '../config/constants';
+import { getInstance as getApiKeyManager, ApiKey } from '../services/ApiKeyManager';
 
-const UsageTracker = require('./usage-tracker');
+import UsageTracker from './usage-tracker';
 
 // Type definitions for the unified Gemini manager
 export type FallbackMode = 'multi-key' | 'model-priority' | 'single-model';
@@ -217,9 +218,10 @@ class UnifiedGeminiManager {
      */
     private async initModelPriorityMode(options: GeminiManagerOptions): Promise<void> {
         // ApiKeyManager에서 API 키 로드
-        const apiKeyManager = require('../services/ApiKeyManager');
+        const apiKeyManager = getApiKeyManager();
         await apiKeyManager.initialize();
-        const activeKeys: string[] = await apiKeyManager.getActiveApiKeys();
+        const activeApiKeys: ApiKey[] = await apiKeyManager.getActiveApiKeys();
+        const activeKeys: string[] = activeApiKeys.map(key => key.apiKey);
 
         if (activeKeys.length === 0) {
             throw new Error('활성화된 API 키가 없습니다. ApiKeyManager에 키를 추가해주세요.');
@@ -280,9 +282,10 @@ class UnifiedGeminiManager {
      */
     private async initSingleModelMode(options: GeminiManagerOptions): Promise<void> {
         // ApiKeyManager에서 API 키 로드
-        const apiKeyManager = require('../services/ApiKeyManager');
+        const apiKeyManager = getApiKeyManager();
         await apiKeyManager.initialize();
-        const activeKeys: string[] = await apiKeyManager.getActiveApiKeys();
+        const activeApiKeys: ApiKey[] = await apiKeyManager.getActiveApiKeys();
+        const activeKeys: string[] = activeApiKeys.map(key => key.apiKey);
 
         if (activeKeys.length === 0) {
             throw new Error('활성화된 API 키가 없습니다. ApiKeyManager에 키를 추가해주세요.');
@@ -309,9 +312,10 @@ class UnifiedGeminiManager {
      */
     private async loadAllApiKeys(): Promise<ApiKeyInfo[]> {
         // ApiKeyManager에서 모든 API 키 로드
-        const apiKeyManager = require('../services/ApiKeyManager');
+        const apiKeyManager = getApiKeyManager();
         await apiKeyManager.initialize();
-        const activeKeys: string[] = await apiKeyManager.getActiveApiKeys();
+        const activeApiKeys: ApiKey[] = await apiKeyManager.getActiveApiKeys();
+        const activeKeys: string[] = activeApiKeys.map(key => key.apiKey);
 
         const keys: ApiKeyInfo[] = activeKeys.map((key, index) => ({
             key: key,
@@ -1002,6 +1006,41 @@ class UnifiedGeminiManager {
 
     private sleep(ms: number): Promise<void> {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * 다중 이미지와 함께 Gemini 쿼리 실행 (GeminiAnalyzer 호환성을 위한 메서드)
+     */
+    public async queryGeminiWithMultipleImages(prompt: string, imageBase64Array: string[], options: GeminiManagerOptions = {}): Promise<ContentGenerationResult> {
+        ServerLogger.info(`🔍 queryGeminiWithMultipleImages 호출됨: ${imageBase64Array.length}개 이미지`, null, 'UNIFIED');
+
+        // 단일 이미지인 경우 기존 메서드 사용
+        if (imageBase64Array.length === 1) {
+            return await this.generateContent(prompt, imageBase64Array[0], options);
+        }
+
+        // single-model 모드가 아닌 경우 첫 번째 이미지만 사용
+        if (this.fallbackMode !== 'single-model') {
+            ServerLogger.warn(`다중 이미지는 single-model 모드에서만 지원됩니다. 현재 모드: ${this.fallbackMode}`, null, 'UNIFIED');
+            return await this.generateContent(prompt, imageBase64Array[0], options);
+        }
+
+        // Base64 문자열 배열을 ImageContent 배열로 변환
+        const imageContents: ImageContent[] = imageBase64Array.map(base64 => ({
+            inlineData: {
+                mimeType: 'image/jpeg', // 기본값으로 jpeg 사용
+                data: base64
+            }
+        }));
+
+        // 기존 다중 이미지 메서드 호출
+        const result = await this.generateContentWithImagesSingleModel(prompt, imageContents, options);
+
+        return {
+            success: true,
+            response: result.text || result,
+            model: this.singleModel || 'unknown'
+        };
     }
 }
 

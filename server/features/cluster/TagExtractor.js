@@ -16,9 +16,11 @@ class TagExtractor {
 
     async getApiKey() {
         if (!this.geminiApiKey) {
-            const apiKeyManager = require('../../services/ApiKeyManager');
+            const { getInstance: getApiKeyManager } = require('../../services/ApiKeyManager.ts');
+            const apiKeyManager = getApiKeyManager();
             await apiKeyManager.initialize();
-            const activeKeys = await apiKeyManager.getActiveApiKeys();
+            const activeApiKeys = await apiKeyManager.getActiveApiKeys();
+            const activeKeys = activeApiKeys.map(key => key.apiKey);
             if (activeKeys.length === 0) {
                 throw new Error('활성화된 API 키가 없습니다. ApiKeyManager에 키를 추가해주세요.');
             }

@@ -69,20 +69,20 @@ const startServer = async () => {
  * yt-dlp 자동 업데이트 시스템 설정
  */
 const setupYtDlpAutoUpdater = () => {
-    const ytdlpExe = path.join(__dirname, '../yt-dlp.exe');
+    const ytdlpNightlyExe = path.join(__dirname, '../yt-dlp-nightly.exe');
 
     const updateYtDlp = async () => {
         try {
-            ServerLogger.info('🔄 yt-dlp.exe 자동 업데이트 확인 중...');
-            const { stdout } = await execAsync(`"${ytdlpExe}" --update-to nightly`, { timeout: 30000 });
+            ServerLogger.info('🔄 yt-dlp-nightly.exe 자동 업데이트 확인 중...');
+            const { stdout } = await execAsync(`"${ytdlpNightlyExe}" --update-to nightly`, { timeout: 30000 });
 
             if (stdout.includes('Updated yt-dlp to')) {
-                ServerLogger.info('✅ yt-dlp.exe 새 버전으로 업데이트 완료');
+                ServerLogger.info('✅ yt-dlp-nightly.exe 새 버전으로 업데이트 완료');
             } else {
-                ServerLogger.info('ℹ️ yt-dlp.exe 이미 최신 버전');
+                ServerLogger.info('ℹ️ yt-dlp-nightly.exe 이미 최신 버전');
             }
         } catch (error: any) {
-            ServerLogger.warn('⚠️ yt-dlp.exe 자동 업데이트 실패:', error.message);
+            ServerLogger.warn('⚠️ yt-dlp-nightly.exe 자동 업데이트 실패:', error.message);
         }
     };
 
@@ -92,7 +92,7 @@ const setupYtDlpAutoUpdater = () => {
     // 이후 1시간마다 주기적 업데이트 체크
     setInterval(updateYtDlp, 60 * 60 * 1000);
 
-    ServerLogger.info('⚡ yt-dlp.exe 주기적 자동 업데이트 시스템 시작 (1시간 간격)');
+    ServerLogger.info('⚡ yt-dlp-nightly.exe 주기적 자동 업데이트 시스템 시작 (1시간 간격)');
 };
 
 /**
@@ -123,11 +123,21 @@ const setupGracefulShutdown = (server: any) => {
             }
 
             // 3. UsageTracker 정리
-            const UsageTracker = require('./utils/usage-tracker');
-            UsageTracker.destroyAll();
-
-            // 4. API 키 파일 감시 중지
-            UsageTracker.stopFileWatcher();
+            try {
+                const UsageTrackerModule = require('./utils/usage-tracker');
+                const UsageTracker = UsageTrackerModule.UsageTracker || UsageTrackerModule.default;
+                if (UsageTracker) {
+                    if (typeof UsageTracker.destroyAll === 'function') {
+                        UsageTracker.destroyAll();
+                    }
+                    // 4. API 키 파일 감시 중지
+                    if (typeof UsageTracker.stopFileWatcher === 'function') {
+                        UsageTracker.stopFileWatcher();
+                    }
+                }
+            } catch (usageTrackerError: any) {
+                ServerLogger.warn('⚠️ UsageTracker 정리 실패 (무시하고 계속)', usageTrackerError.message, 'SHUTDOWN');
+            }
 
             // 5. 가비지 컬렉션 강제 실행
             if (global.gc) {

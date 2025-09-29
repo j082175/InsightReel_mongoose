@@ -106,15 +106,16 @@ router.get('/logs', async (req: Request, res: Response) => {
 // API 할당량 상태 조회
 router.get('/quota-status', async (req: Request, res: Response) => {
     try {
-        const ApiKeyManager = require('../services/ApiKeyManager');
+        const { getInstance } = require('../services/ApiKeyManager');
+        const apiKeyManager = getInstance();
         const UsageTracker = require('../utils/usage-tracker');
         const UnifiedGeminiManagerModule = await import('../utils/unified-gemini-manager');
         const UnifiedGeminiManager = UnifiedGeminiManagerModule.default || UnifiedGeminiManagerModule.UnifiedGeminiManager;
 
         // API 키 목록 조회
-        await ApiKeyManager.initialize();
-        const allKeys = await ApiKeyManager.getAllApiKeys();
-        const activeKeys = await ApiKeyManager.getActiveApiKeys();
+        await apiKeyManager.initialize();
+        const allKeys = await apiKeyManager.getAllApiKeys();
+        const activeKeys = await apiKeyManager.getActiveApiKeys();
 
         if (activeKeys.length === 0) {
             return ResponseHandler.success(res, {

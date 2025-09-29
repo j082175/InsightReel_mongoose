@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 350px;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+    .button {
+      width: 100%;
+      padding: 12px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      background: #1976d2;
+      color: white;
+    }
+    .button:hover {
+      background: #1565c0;
+    }
+    #log {
+      background: #f0f0f0;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <h3>🎬 InsightReel Debug</h3>
+
+  <div id="log">
+    Loading...
+  </div>
+
+  <button onclick="testClick(1)">🧪 Test Button 1</button>
+  <button onclick="testClick(2)">📊 Test Button 2</button>
+  <button onclick="testClick(3)">🔧 Test Button 3</button>
+
+  <script>
+    // Immediate logging
+    console.log('🚀 DEBUG: Script loaded immediately');
+
+    const logDiv = document.getElementById('log');
+
+    function addLog(message) {
+      const timestamp = new Date().toLocaleTimeString();
+      const logMessage = `[${timestamp}] ${message}`;
+      console.log(logMessage);
+      logDiv.innerHTML += logMessage + '<br>';
+      logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function testClick(buttonNumber) {
+      addLog(`✅ Button ${buttonNumber} clicked!`);
+
+      if (buttonNumber === 2) {
+        addLog('📊 Opening Google Sheets...');
+        chrome.tabs.create({
+          url: 'https://docs.google.com/spreadsheets/d/1UkGu6HObPNo6cPojBzhYeFxNVMkTksrsANTuSGKloJA'
+        });
+      }
+
+      if (buttonNumber === 3) {
+        addLog('🔧 Testing server connection...');
+        fetch('http://localhost:3000/health')
+          .then(response => {
+            addLog(`Server response: ${response.status}`);
+          })
+          .catch(error => {
+            addLog(`Server error: ${error.message}`);
+          });
+      }
+    }
+
+    // Document ready
+    document.addEventListener('DOMContentLoaded', function() {
+      addLog('📋 DOM loaded');
+    });
+
+    // Window loaded
+    window.addEventListener('load', function() {
+      addLog('🎯 Window loaded');
+    });
+
+    // Initial setup
+    addLog('🚀 Script execution started');
+
+    // Test chrome API availability
+    if (typeof chrome !== 'undefined') {
+      addLog('✅ Chrome APIs available');
+      if (chrome.tabs) {
+        addLog('✅ chrome.tabs available');
+      } else {
+        addLog('❌ chrome.tabs NOT available');
+      }
+    } else {
+      addLog('❌ Chrome APIs NOT available');
+    }
+  </script>
+</body>
+</html>

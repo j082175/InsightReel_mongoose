@@ -81,7 +81,7 @@ export interface VideoMetadata {
 }
 
 // 분석 타입
-export type AnalysisType = 'none' | 'quick' | 'single' | 'multi-frame' | 'full';
+export type AnalysisType = 'none' | 'quick' | 'single' | 'multi-frame' | 'full' | 'video_only' | 'channel_only' | 'both';
 
 // 파이프라인 결과 타입
 export interface PipelineResult {

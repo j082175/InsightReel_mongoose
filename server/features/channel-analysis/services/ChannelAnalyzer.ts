@@ -10,15 +10,15 @@ import {
 } from '../../../types/channel.types';
 import { ServerLogger } from '../../../utils/logger';
 
-const YouTubeChannelService = require('../../../services/youtube/services/ChannelDataCollector');
-const YouTubeChannelAnalyzer = require('../../../services/youtube/YouTubeChannelAnalyzer');
+import { ChannelDataCollector } from '../../../services/youtube/services/ChannelDataCollector';
+const YouTubeChannelAnalyzer = require('../../../services/_legacy_backup/YouTubeChannelAnalyzer');
 
 export class ChannelAnalyzer {
-    private youtubeService: any;
+    private youtubeService: ChannelDataCollector;
     private youtubeAnalyzer: any;
 
     constructor() {
-        this.youtubeService = new YouTubeChannelService();
+        this.youtubeService = new ChannelDataCollector();
         this.youtubeAnalyzer = new YouTubeChannelAnalyzer();
     }
 
@@ -57,7 +57,7 @@ export class ChannelAnalyzer {
                 );
             } else {
                 // 채널 식별자로 직접 검색
-                youtubeData = await this.youtubeService.getChannelInfo(
+                youtubeData = await this.youtubeService.getChannelData(
                     decodedChannelIdentifier,
                 );
             }
@@ -388,7 +388,7 @@ export class ChannelAnalyzer {
             );
 
             // YouTube API에서 채널 정보 가져오기
-            const youtubeData = await this.youtubeService.getChannelInfo(
+            const youtubeData = await this.youtubeService.getChannelData(
                 decodedChannelIdentifier,
             );
 

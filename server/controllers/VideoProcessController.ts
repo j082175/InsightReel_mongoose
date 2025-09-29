@@ -37,6 +37,12 @@ export class VideoProcessController extends BaseController {
             useAI = true,
         } = req.body;
 
+        // Map Android analysis types to internal types
+        let internalAnalysisType = analysisType;
+        if (analysisType === 'video_only' || analysisType === 'both') {
+            internalAnalysisType = 'multi-frame';
+        }
+
         // URL 우선순위 처리: videoUrl > postUrl > url
         const finalUrl = videoUrl || postUrl || url;
 
@@ -46,7 +52,7 @@ export class VideoProcessController extends BaseController {
             'VIDEO',
         );
         ServerLogger.info(
-            `Analysis type: ${analysisType}, AI 분석: ${useAI ? '활성화' : '비활성화'}`,
+            `Analysis type: ${analysisType} (mapped to: ${internalAnalysisType}), AI 분석: ${useAI ? '활성화' : '비활성화'}`,
             null,
             'VIDEO',
         );
@@ -68,7 +74,7 @@ export class VideoProcessController extends BaseController {
                     videoUrl: finalUrl || '',
                     postUrl: finalUrl || '',
                     metadata,
-                    analysisType,
+                    analysisType: internalAnalysisType,
                     useAI,
                     isBlob: false,
                 });
@@ -106,6 +112,12 @@ export class VideoProcessController extends BaseController {
         const metadata = req.body.metadata || {};
         const file = req.file;
 
+        // Map Android analysis types to internal types
+        let internalAnalysisType = analysisType;
+        if (analysisType === 'video_only' || analysisType === 'both') {
+            internalAnalysisType = 'multi-frame';
+        }
+
         if (!file) {
             throw ErrorHandler.createError(
                 '비디오 파일이 업로드되지 않았습니다.',
@@ -117,7 +129,7 @@ export class VideoProcessController extends BaseController {
         ServerLogger.info(`🎬 Processing ${platform} blob video:`, postUrl);
         ServerLogger.info(`📁 File info: ${file.filename} (${file.size} bytes)`);
         ServerLogger.info(
-            `🔍 Analysis type: ${analysisType}, AI 분석: ${useAI ? '활성화' : '비활성화'}`,
+            `🔍 Analysis type: ${analysisType} (mapped to: ${internalAnalysisType}), AI 분석: ${useAI ? '활성화' : '비활성화'}`,
         );
 
         try {
@@ -126,7 +138,7 @@ export class VideoProcessController extends BaseController {
                 videoPath: file.path,
                 postUrl: postUrl || '',
                 metadata,
-                analysisType,
+                analysisType: internalAnalysisType,
                 useAI,
                 isBlob: true,
             });

@@ -28,10 +28,91 @@ export class TikTokProcessor {
 
     async downloadVideo(videoUrl: string, filePath: string, startTime?: Date): Promise<boolean> {
         try {
-            ServerLogger.info(`📥 TikTok 비디오 yt-dlp 다운로드 시작: ${videoUrl}`);
+            // Try API method first (more reliable than yt-dlp for TikTok)
+            ServerLogger.info(`📥 TikTok 비디오 API 다운로드 시작: ${videoUrl}`);
+            const apiResult = await this.downloadWithAPI(videoUrl, filePath);
+            if (apiResult) {
+                return true;
+            }
+
+            // Fallback to yt-dlp if API fails
+            ServerLogger.info(`📥 API 실패, yt-dlp 대체 방법 시도: ${videoUrl}`);
             return await this.downloadWithYtDlp(videoUrl, filePath);
         } catch (error) {
             ServerLogger.error('TikTok 비디오 다운로드 실패:', error);
+            return false;
+        }
+    }
+
+    private async downloadWithAPI(videoUrl: string, filePath: string): Promise<boolean> {
+        try {
+            if (!this.tikTokAPI) {
+                ServerLogger.info('TikTok API 없음, yt-dlp 방법으로 이동');
+                return false;
+            }
+
+            ServerLogger.info('📱 TikTok API v1으로 비디오 URL 추출 중...');
+            const result = await this.tikTokAPI.Downloader(videoUrl, { version: "v1" });
+
+            if (result.status !== "success" || !result.result?.video?.playAddr) {
+                ServerLogger.warn('TikTok API에서 비디오 URL 추출 실패');
+                return false;
+            }
+
+            const videoUrls = result.result.video.playAddr;
+            if (!Array.isArray(videoUrls) || videoUrls.length === 0) {
+                ServerLogger.warn('TikTok API에서 유효한 비디오 URL 없음');
+                return false;
+            }
+
+            // Try downloading from the first video URL
+            const downloadUrl = videoUrls[0];
+            ServerLogger.info(`📥 TikTok API URL에서 다운로드 중: ${downloadUrl.substring(0, 60)}...`);
+
+            const axios = require('axios');
+            const fs = require('fs');
+            const path = require('path');
+
+            // Create output directory if it doesn't exist
+            const outputDir = path.dirname(filePath);
+            if (!fs.existsSync(outputDir)) {
+                fs.mkdirSync(outputDir, { recursive: true });
+            }
+
+            const response = await axios({
+                method: 'GET',
+                url: downloadUrl,
+                responseType: 'stream',
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                    'Referer': 'https://www.tiktok.com/'
+                },
+                timeout: 60000
+            });
+
+            const writer = fs.createWriteStream(filePath);
+            response.data.pipe(writer);
+
+            return new Promise((resolve, reject) => {
+                writer.on('finish', () => {
+                    const stats = fs.statSync(filePath);
+                    if (stats.size > 1024) {
+                        ServerLogger.success(`✅ TikTok API 다운로드 성공: ${filePath} (${stats.size} bytes)`);
+                        resolve(true);
+                    } else {
+                        ServerLogger.warn(`❌ 다운로드된 파일이 너무 작습니다: ${stats.size} bytes`);
+                        resolve(false);
+                    }
+                });
+
+                writer.on('error', (error: Error) => {
+                    ServerLogger.error('TikTok API 다운로드 스트림 오류:', error);
+                    reject(false);
+                });
+            });
+
+        } catch (error: any) {
+            ServerLogger.error('TikTok API 다운로드 실패:', error.message);
             return false;
         }
     }
@@ -50,8 +131,10 @@ export class TikTokProcessor {
                 fs.mkdirSync(outputDir, { recursive: true });
             }
 
-            const command = `yt-dlp -o "${filePath}" "${videoUrl}"`;
-            ServerLogger.info(`🔧 yt-dlp 다운로드 명령어: ${command}`);
+            // Use yt-dlp-nightly.exe from project root
+            const ytdlpNightlyPath = path.join(__dirname, '../../../../yt-dlp-nightly.exe');
+            const command = `"${ytdlpNightlyPath}" -o "${filePath}" "${videoUrl}"`;
+            ServerLogger.info(`🔧 yt-dlp-nightly 다운로드 명령어: ${command}`);
 
             const { stdout, stderr } = await execAsync(command, { timeout: 60000 });
 
@@ -63,19 +146,19 @@ export class TikTokProcessor {
             if (fs.existsSync(filePath)) {
                 const stats = fs.statSync(filePath);
                 if (stats.size > 1024) {
-                    ServerLogger.info(`✅ TikTok 비디오 yt-dlp 다운로드 완료: ${filePath} (${stats.size} bytes)`);
+                    ServerLogger.info(`✅ TikTok 비디오 yt-dlp-nightly 다운로드 완료: ${filePath} (${stats.size} bytes)`);
                     return true;
                 } else {
                     ServerLogger.warn(`❌ 다운로드된 파일이 너무 작습니다: ${stats.size} bytes`);
                     return false;
                 }
             } else {
-                ServerLogger.error('❌ yt-dlp 다운로드 완료했지만 파일이 존재하지 않음');
+                ServerLogger.error('❌ yt-dlp-nightly 다운로드 완료했지만 파일이 존재하지 않음');
                 return false;
             }
 
         } catch (error: any) {
-            ServerLogger.error('yt-dlp TikTok 다운로드 실패:', error.message);
+            ServerLogger.error('yt-dlp-nightly TikTok 다운로드 실패:', error.message);
             return false;
         }
     }
@@ -237,13 +320,16 @@ export class TikTokProcessor {
 
     private async getVideoInfoFallback(videoUrl: string): Promise<TikTokVideoInfo | null> {
         try {
-            ServerLogger.info('🔄 yt-dlp 대체 방법으로 TikTok 메타데이터 추출 시도...');
+            ServerLogger.info('🔄 yt-dlp-nightly 대체 방법으로 TikTok 메타데이터 추출 시도...');
             const { exec } = require('child_process');
             const { promisify } = require('util');
+            const path = require('path');
             const execAsync = promisify(exec);
 
-            const command = `yt-dlp --dump-json --write-info-json "${videoUrl}"`;
-            ServerLogger.info(`🔧 yt-dlp 명령어: ${command}`);
+            // Use yt-dlp-nightly.exe from project root
+            const ytdlpNightlyPath = path.join(__dirname, '../../../../yt-dlp-nightly.exe');
+            const command = `"${ytdlpNightlyPath}" --dump-json --write-info-json "${videoUrl}"`;
+            ServerLogger.info(`🔧 yt-dlp-nightly 명령어: ${command}`);
 
             const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
 
@@ -256,13 +342,13 @@ export class TikTokProcessor {
 
             const result = this.parseYtDlpTikTokData(data);
 
-            ServerLogger.info('✅ yt-dlp로 TikTok 메타데이터 추출 성공');
+            ServerLogger.info('✅ yt-dlp-nightly로 TikTok 메타데이터 추출 성공');
             ServerLogger.info(`📊 추출된 데이터: 조회수=${result.views}, 좋아요=${result.likes}, 댓글=${result.comments}, 지속시간=${result.duration}`);
 
             return result;
 
         } catch (error) {
-            ServerLogger.error('TikTok yt-dlp 대체 방법 실패:', error);
+            ServerLogger.error('TikTok yt-dlp-nightly 대체 방법 실패:', error);
             return null;
         }
     }

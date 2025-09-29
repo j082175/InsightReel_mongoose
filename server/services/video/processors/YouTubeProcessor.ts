@@ -40,7 +40,7 @@ export class YouTubeProcessor {
 
     private async initializeExtractor() {
         try {
-            const HybridYouTubeExtractor = require('../../youtube/HybridYouTubeExtractor');
+            const HybridYouTubeExtractor = require('../../youtube/HybridYouTubeExtractor').default || require('../../youtube/HybridYouTubeExtractor');
             this.hybridExtractor = new HybridYouTubeExtractor();
             await this.hybridExtractor.initialize();
         } catch (error) {
@@ -57,13 +57,17 @@ export class YouTubeProcessor {
 
             ServerLogger.info(`YouTube 비디오 다운로드 시작: ${videoId}`);
 
-            // yt-dlp를 사용한 다운로드
+            // yt-dlp-nightly를 사용한 다운로드
             const { exec } = require('child_process');
             const { promisify } = require('util');
+            const path = require('path');
             const execAsync = promisify(exec);
 
+            // Use yt-dlp-nightly.exe from project root
+            const ytdlpNightlyPath = path.join(__dirname, '../../../../yt-dlp-nightly.exe');
+
             // 비디오 다운로드 명령어 (YouTube Shorts 호환)
-            const command = `yt-dlp -f "best[ext=mp4]" -o "${filePath}" "${videoUrl}"`;
+            const command = `"${ytdlpNightlyPath}" -f "best[ext=mp4]" -o "${filePath}" "${videoUrl}"`;
 
             ServerLogger.info(`실행 명령어: ${command}`);
 
@@ -322,9 +326,11 @@ export class YouTubeProcessor {
     private async getApiKey(): Promise<string | null> {
         if (!this.youtubeApiKey) {
             try {
-                const apiKeyManager = require('../../ApiKeyManager');
+                const { getInstance: getApiKeyManager } = require('../../ApiKeyManager.ts');
+                const apiKeyManager = getApiKeyManager();
                 await apiKeyManager.initialize();
-                const activeKeys = await apiKeyManager.getActiveApiKeys();
+                const activeApiKeys = await apiKeyManager.getActiveApiKeys();
+                const activeKeys = activeApiKeys.map((key: any) => key.apiKey);
 
                 ServerLogger.info(`🔍 YouTube API 키 디버그 - 로드된 키 개수: ${activeKeys.length}`);
                 if (activeKeys.length > 0) {

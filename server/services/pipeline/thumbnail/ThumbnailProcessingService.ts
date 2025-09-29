@@ -15,7 +15,8 @@ export class ThumbnailProcessingService {
     }
 
     /**
-     * 썸네일 처리 (YouTube API 썸네일 URL 우선 사용)
+     * 썸네일 처리 (비디오 다운로드 실패 시 폴백용)
+     * 이 메서드는 비디오 다운로드가 실패했을 때만 호출됩니다.
      */
     async processThumbnails(options: {
         videoPath: string | null;
@@ -26,7 +27,7 @@ export class ThumbnailProcessingService {
     }): Promise<string | string[] | null> {
         const { videoPath, videoId, analysisType, metadata, platform } = options;
 
-        ServerLogger.info('2️⃣ 썸네일 처리 시작...');
+        ServerLogger.info('2️⃣ 썸네일 처리 시작 (비디오 다운로드 실패 폴백)...');
         const startTime = Date.now();
 
         try {

@@ -236,9 +236,13 @@ class UsageTracker {
      */
     private hashApiKey(apiKey: string): string | null {
         if (!apiKey) return null;
+
+        // Convert to string if it's an object (defensive programming)
+        const keyString = typeof apiKey === 'string' ? apiKey : String(apiKey);
+
         return crypto
             .createHash('sha256')
-            .update(apiKey)
+            .update(keyString)
             .digest('hex')
             .substring(0, 16);
     }
@@ -1316,3 +1320,8 @@ class UsageTracker {
 
 export { UsageTracker };
 export default UsageTracker;
+
+// CommonJS 호환성을 위한 module.exports
+module.exports = UsageTracker;
+module.exports.default = UsageTracker;
+module.exports.UsageTracker = UsageTracker;

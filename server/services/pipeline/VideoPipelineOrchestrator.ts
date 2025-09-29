@@ -95,14 +95,24 @@ export class VideoPipelineOrchestrator {
             pipeline.videoPath = stage1Result.videoPath;
             enrichedMetadata = stage1Result.metadata;
 
-            // 2단계: 썸네일 처리
-            const stage2Result = await this.executeStage2_ThumbnailProcessing({
-                videoPath: pipeline.videoPath,
-                videoId: stage1Result.videoId,
-                analysisType,
-                metadata: enrichedMetadata,
-                platform
-            });
+            // 2단계: 썸네일 처리 (비디오 다운로드 실패 시에만)
+            let stage2Result: { thumbnailPaths: string | string[] | null };
+
+            if (pipeline.videoPath) {
+                // 비디오 다운로드 성공: 썸네일 처리 건너뛰기 (AI 분석에서 직접 비디오 사용)
+                ServerLogger.info('✅ 비디오 다운로드 성공 - 썸네일 처리 건너뛰기 (비디오에서 직접 분석)');
+                stage2Result = { thumbnailPaths: null };
+            } else {
+                // 비디오 다운로드 실패: 썸네일 처리로 폴백
+                ServerLogger.info('❌ 비디오 다운로드 실패 - 썸네일 처리로 폴백');
+                stage2Result = await this.executeStage2_ThumbnailProcessing({
+                    videoPath: pipeline.videoPath,
+                    videoId: stage1Result.videoId,
+                    analysisType,
+                    metadata: enrichedMetadata,
+                    platform
+                });
+            }
 
             pipeline.thumbnailPaths = stage2Result.thumbnailPaths;
 
@@ -111,6 +121,7 @@ export class VideoPipelineOrchestrator {
                 useAI,
                 analysisType,
                 thumbnailPaths: pipeline.thumbnailPaths,
+                videoPath: pipeline.videoPath,
                 metadata: enrichedMetadata
             });
 
@@ -230,6 +241,7 @@ export class VideoPipelineOrchestrator {
         useAI: boolean;
         analysisType: string;
         thumbnailPaths: string | string[] | null;
+        videoPath: string | null;
         metadata: VideoMetadata;
     }): Promise<{ analysis: AnalysisResult | null }> {
         const stage3StartTime = Date.now();
@@ -248,15 +260,33 @@ export class VideoPipelineOrchestrator {
             return { analysis: defaultAnalysis };
         }
 
-        if (!options.thumbnailPaths) {
-            throw new Error('AI 분석을 위한 썸네일이 없습니다');
+        // 비디오 파일 또는 썸네일 중 하나는 있어야 함
+        if (!options.thumbnailPaths && !options.videoPath) {
+            throw new Error('AI 분석을 위한 썸네일 또는 비디오 파일이 없습니다');
         }
 
         ServerLogger.info('3️⃣ AI 분석 시작...');
 
         try {
+            let analysisInput: string | string[];
+
+            if (options.videoPath && !options.thumbnailPaths) {
+                // 비디오 파일이 있고 썸네일이 없는 경우: 비디오에서 직접 프레임 추출
+                ServerLogger.info('🎬 비디오 파일에서 직접 프레임 추출하여 AI 분석');
+
+                // VideoProcessor를 통해 프레임 추출 (analysis type 전달)
+                const extractedFrames = await this.videoProcessor.generateThumbnail(options.videoPath, options.analysisType);
+                if (!extractedFrames) {
+                    throw new Error('비디오 파일에서 프레임 추출 실패');
+                }
+                analysisInput = extractedFrames;
+            } else {
+                // 썸네일이 있는 경우 (기존 로직)
+                analysisInput = options.thumbnailPaths!;
+            }
+
             const analysis = await this.aiAnalyzer.analyzeVideo(
-                options.thumbnailPaths,
+                analysisInput,
                 options.metadata,
                 options.analysisType as any
             );

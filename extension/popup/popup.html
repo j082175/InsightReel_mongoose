@@ -7,6 +7,7 @@
       width: 350px;
       padding: 20px;
       font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
     }
     .header {
       text-align: center;
@@ -27,6 +28,7 @@
       padding: 10px;
       border-radius: 5px;
       margin: 10px 0;
+      font-size: 13px;
     }
     .status.connected {
       background: #e8f5e8;
@@ -45,6 +47,7 @@
       cursor: pointer;
       font-size: 14px;
       transition: background-color 0.3s;
+      font-weight: 500;
     }
     .button:disabled {
       opacity: 0.6;
@@ -60,212 +63,128 @@
     .button.secondary {
       background: #f5f5f5;
       color: #333;
+      border: 1px solid #ddd;
     }
     .button.secondary:hover:not(:disabled) {
       background: #eeeeee;
     }
-    .stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin: 15px 0;
+    .button.success {
+      background: linear-gradient(45deg, #4caf50, #45a049);
+      color: white;
     }
-    .stat-item {
-      text-align: center;
+    .button.warning {
+      background: linear-gradient(45deg, #ff9800, #e68900);
+      color: white;
+    }
+    .button.info {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .notification {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      background: #333;
+      color: white;
       padding: 10px;
-      background: #f9f9f9;
       border-radius: 5px;
-    }
-    .stat-number {
-      font-size: 20px;
-      font-weight: bold;
-      color: #1976d2;
-    }
-    .stat-label {
+      z-index: 1000;
       font-size: 12px;
-      color: #666;
+      display: none;
+      animation: slideIn 0.3s ease-out;
     }
-    .settings {
-      border-top: 1px solid #eee;
-      padding-top: 15px;
-      margin-top: 15px;
-      transition: opacity 0.3s ease;
+    @keyframes slideIn {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
     }
-    .setting-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 8px 0;
+    .settings-section {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+      border: 1px solid #e9ecef;
+    }
+    .setting-group {
+      margin-bottom: 12px;
+    }
+    .setting-group:last-child {
+      margin-bottom: 0;
+    }
+    .setting-group label {
+      display: block;
       font-size: 13px;
+      font-weight: 500;
+      color: #495057;
+      margin-bottom: 6px;
     }
-    .toggle {
-      position: relative;
-      width: 40px;
-      height: 20px;
-    }
-    .toggle input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-    .slider {
-      position: absolute;
+    .setting-select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 13px;
+      background: white;
+      color: #495057;
       cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #ccc;
-      transition: .4s;
-      border-radius: 20px;
     }
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 16px;
-      width: 16px;
-      left: 2px;
-      bottom: 2px;
-      background-color: white;
-      transition: .4s;
-      border-radius: 50%;
-    }
-    input:checked + .slider {
-      background-color: #1976d2;
-    }
-    input:checked + .slider:before {
-      transform: translateX(20px);
-    }
-
-    /* Alpine.js transition for settings */
-    .settings-enter {
-      opacity: 0;
-    }
-    .settings-enter-to {
-      opacity: 1;
-    }
-
-    /* Loading state styles */
-    .loading {
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    /* Quick feedback animation */
-    .feedback-checkmark {
-      color: #4caf50;
-      font-weight: bold;
-      margin-left: 5px;
-      animation: fadeOut 1s ease-out forwards;
-    }
-
-    @keyframes fadeOut {
-      0% { opacity: 1; }
-      100% { opacity: 0; }
+    .setting-select:focus {
+      outline: none;
+      border-color: #007bff;
+      box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
     }
   </style>
 </head>
-<body x-data="popupController()" x-init="init()">
+<body>
   <div class="header">
     <div class="logo">🎬 InsightReel</div>
     <div class="subtitle">Content Analytics Platform</div>
   </div>
 
-  <div :class="['status', serverStatus.class]">
-    <span x-text="serverStatus.text" :class="{ loading: serverStatus.loading }">연결 확인 중...</span>
+  <div id="status" class="status">연결 확인 중...</div>
+
+  <div class="settings-section">
+    <div class="setting-group">
+      <label>📹 콘텐츠 유형:</label>
+      <select id="contentType" class="setting-select">
+        <option value="auto">🤖 자동 감지</option>
+        <option value="longform">🎬 롱폼 주력</option>
+        <option value="shortform">⚡ 숏폼 주력</option>
+        <option value="mixed">🔀 혼합형</option>
+      </select>
+    </div>
+
+    <div class="setting-group">
+      <label>🤖 AI 분석 옵션:</label>
+      <select id="aiAnalysis" class="setting-select">
+        <option value="full">🧠 완전 분석</option>
+        <option value="skip">⚡ 빠른 수집</option>
+      </select>
+    </div>
   </div>
 
-  <div class="stats">
-    <div class="stat-item">
-      <div x-text="stats.total" class="stat-number">0</div>
-      <div class="stat-label">저장된 영상</div>
-    </div>
-    <div class="stat-item">
-      <div x-text="stats.today" class="stat-number">0</div>
-      <div class="stat-label">오늘 저장</div>
-    </div>
-  </div>
-
-  <button @click="openSpreadsheet()" class="button primary">
+  <button id="openSpreadsheet" class="button primary">
     📊 스프레드시트 열기
   </button>
 
-  <button @click="testConnection()" :disabled="buttons.testConnection.disabled" class="button secondary">
-    <span x-text="buttons.testConnection.text">🔧 연결 테스트</span>
+  <button id="testButton" class="button success">
+    🧪 테스트 버튼
   </button>
 
-  <button @click="collectChannel()" :disabled="buttons.collectChannel.disabled" class="button primary"
-          style="background: linear-gradient(45deg, #ff6b6b, #ee5a24); margin-top: 10px;"
-          :style="buttons.collectChannel.style">
-    <span x-text="buttons.collectChannel.text">📊 채널 수집</span>
+  <button id="testConnection" class="button secondary">
+    🔧 연결 테스트
   </button>
 
-  <button @click="syncInstagramCookies()" :disabled="buttons.syncCookies.disabled" class="button primary"
-          style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin-top: 10px;">
-    <span x-text="buttons.syncCookies.text">🍪 Instagram 쿠키 동기화</span>
+  <button id="collectChannel" class="button warning">
+    📊 채널 수집
   </button>
 
-  <div class="settings" x-show="settingsVisible" x-transition:enter="settings-enter" x-transition:enter-end="settings-enter-to">
-    <h3 style="margin: 0 0 10px 0; font-size: 14px;">설정</h3>
+  <button id="syncCookies" class="button info">
+    🍪 Instagram 쿠키 동기화
+  </button>
 
-    <div class="setting-item">
-      <span>🤖 AI 분석</span>
-      <label class="toggle">
-        <input type="checkbox" x-model="settings.useAI" @change="saveSetting('useAI', $event.target.checked)">
-        <span class="slider"></span>
-      </label>
-      <span x-show="feedback.useAI" x-transition class="feedback-checkmark">✓</span>
-    </div>
+  <div id="notification" class="notification"></div>
 
-    <div class="setting-item">
-      <span>자동 분석</span>
-      <label class="toggle">
-        <input type="checkbox" x-model="settings.autoAnalyze" @change="saveSetting('autoAnalyze', $event.target.checked)">
-        <span class="slider"></span>
-      </label>
-      <span x-show="feedback.autoAnalyze" x-transition class="feedback-checkmark">✓</span>
-    </div>
-
-    <div class="setting-item">
-      <span>즉시 저장</span>
-      <label class="toggle">
-        <input type="checkbox" x-model="settings.autoSave" @change="saveSetting('autoSave', $event.target.checked)">
-        <span class="slider"></span>
-      </label>
-      <span x-show="feedback.autoSave" x-transition class="feedback-checkmark">✓</span>
-    </div>
-
-    <div class="setting-item">
-      <span>⚡ YouTube 배치 처리</span>
-      <label class="toggle">
-        <input type="checkbox" x-model="settings.batchMode" @change="saveSetting('batchMode', $event.target.checked)">
-        <span class="slider"></span>
-      </label>
-      <span x-show="feedback.batchMode" x-transition class="feedback-checkmark">✓</span>
-    </div>
-
-    <div class="setting-item">
-      <span>알림 표시</span>
-      <label class="toggle">
-        <input type="checkbox" x-model="settings.showNotifications" @change="saveSetting('showNotifications', $event.target.checked)">
-        <span class="slider"></span>
-      </label>
-      <span x-show="feedback.showNotifications" x-transition class="feedback-checkmark">✓</span>
-    </div>
-  </div>
-
-  <!-- Notification system -->
-  <div x-show="notification.visible" x-transition
-       style="position: fixed; top: 10px; left: 10px; right: 10px; background: #333; color: white; padding: 10px; border-radius: 5px; z-index: 1000; font-size: 12px; white-space: pre-line;">
-    <span x-text="notification.message"></span>
-  </div>
-
-  <!-- Load Alpine.js bundle -->
-  <script src="alpine.bundle.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

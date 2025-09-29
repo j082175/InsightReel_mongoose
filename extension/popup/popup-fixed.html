@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 350px;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+    .button {
+      width: 100%;
+      padding: 12px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      background: #1976d2;
+      color: white;
+    }
+    .button:hover {
+      background: #1565c0;
+    }
+    #log {
+      background: #f0f0f0;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h3>🎬 InsightReel Fixed</h3>
+
+  <div id="log">
+    Initializing...
+  </div>
+
+  <button onclick="testClick(1)">🧪 Test Button 1</button>
+  <button onclick="testClick(2)">📊 Test Button 2 (Open Sheets)</button>
+  <button onclick="testClick(3)">🔧 Test Button 3 (Server Test)</button>
+
+  <script src="popup-fixed.js"></script>
+</body>
+</html>

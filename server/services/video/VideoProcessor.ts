@@ -220,22 +220,22 @@ export class VideoProcessor {
         analysisType: 'single' | 'multi-frame' | 'full' = 'multi-frame'
     ): Promise<string | string[] | undefined> {
         try {
-            ServerLogger.info(`🔍 썸네일 처리 시작: URL=${thumbnailUrl}, videoPath=${videoPath}, videoId=${videoId}`);
+            ServerLogger.info(`🔍 썸네일 처리 시작 (폴백 모드): URL=${thumbnailUrl}, videoPath=${videoPath}, videoId=${videoId}`);
             ServerLogger.info(`🔍 분석 타입: ${analysisType}, 비디오 파일 존재: ${videoPath ? fs.existsSync(videoPath) : false}`);
 
+            // 폴백 모드: 비디오 다운로드가 실패했지만 파일이 있는 경우 사용
             // 다중 프레임 분석이 필요한 경우, 비디오 파일을 우선적으로 사용
-            // 기본적으로 multi-frame으로 처리 (single이 아닌 경우)
             const shouldUseMultiFrame = analysisType !== 'single' && videoPath && fs.existsSync(videoPath);
-            ServerLogger.info(`🎯 다중 프레임 사용 결정: analysisType="${analysisType}", shouldUse=${shouldUseMultiFrame}`);
+            ServerLogger.info(`🎯 폴백 모드 - 다중 프레임 사용 결정: analysisType="${analysisType}", shouldUse=${shouldUseMultiFrame}`);
 
             if (shouldUseMultiFrame) {
-                ServerLogger.info(`🎬 다중 프레임 분석을 위해 비디오 파일에서 썸네일 생성 중...`);
+                ServerLogger.info(`🎬 폴백: 로컬 비디오 파일에서 다중 프레임 생성 중...`);
                 const result = await this.thumbnailExtractor.generateThumbnail(videoPath, 'multi-frame');
                 if (result.success && result.framePaths && result.framePaths.length > 0) {
-                    ServerLogger.info(`✅ ${result.framePaths.length}개 프레임 추출 완료`);
+                    ServerLogger.info(`✅ 폴백: ${result.framePaths.length}개 프레임 추출 완료`);
                     return result.framePaths; // 다중 프레임 배열 반환
                 }
-                ServerLogger.warn(`❌ 비디오 파일에서 썸네일 생성 실패, 온라인 썸네일로 대체`);
+                ServerLogger.warn(`❌ 로컬 비디오 파일에서 썸네일 생성 실패, 온라인 썸네일로 대체`);
             }
 
             // 온라인 썸네일 다운로드 시도 (단일 프레임이거나 비디오 파일이 없는 경우)
@@ -549,7 +549,14 @@ export class VideoProcessor {
         try {
             const result = await this.thumbnailExtractor.generateThumbnail(videoPath, analysisType as any);
             if (result.success) {
-                return result.thumbnailPath || '';
+                // Return multiple frames for multi-frame analysis, single frame otherwise
+                if (analysisType === 'multi-frame' && result.framePaths && result.framePaths.length > 1) {
+                    ServerLogger.info(`✅ Multi-frame extraction: ${result.framePaths.length} frames generated`);
+                    return result.framePaths;
+                } else {
+                    ServerLogger.info(`✅ Single frame extraction: ${result.thumbnailPath}`);
+                    return result.thumbnailPath || '';
+                }
             }
             throw new Error('썸네일 생성 실패');
         } catch (error) {

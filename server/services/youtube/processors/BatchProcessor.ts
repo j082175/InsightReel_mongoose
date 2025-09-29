@@ -11,7 +11,7 @@ import {
     ChunkResult
 } from '../types/batch-types';
 
-const MultiKeyManager = require('../../../utils/multi-key-manager');
+const MultiKeyManager = require('../../../utils/multi-key-manager').default || require('../../../utils/multi-key-manager');
 
 export class BatchProcessor {
     private multiKeyManager: any;

@@ -1,1 +1,0 @@
-const axios = require('axios'); axios.post('http://localhost:3000/api/process-video', { platform: 'INSTAGRAM', videoUrl: 'https://www.instagram.com/reels/DH-a2Egz3BS/', analysisType: 'multi-frame', useAI: true }, { timeout: 90000 }).then(r => console.log('Success:', JSON.stringify(r.data, null, 2))).catch(e => console.log('Error:', e.response?.data || e.message));

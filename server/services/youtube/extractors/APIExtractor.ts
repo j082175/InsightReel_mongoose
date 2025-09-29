@@ -4,7 +4,7 @@ import { APIVideoData, VideoComment, ChannelData } from '../types/extraction-typ
 import { MetadataProcessor } from '../utils/MetadataProcessor';
 import { API_TIMEOUTS } from '../../../config/api-constants';
 
-const MultiKeyManager = require('../../../utils/multi-key-manager');
+const MultiKeyManager = require('../../../utils/multi-key-manager').default || require('../../../utils/multi-key-manager');
 
 export class APIExtractor {
     private multiKeyManager: any;

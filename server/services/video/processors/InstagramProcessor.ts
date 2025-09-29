@@ -20,7 +20,7 @@ export class InstagramProcessor {
 
     async downloadVideo(videoUrl: string, filePath: string, startTime?: Date): Promise<boolean> {
         try {
-            ServerLogger.info(`📥 Instagram 비디오 yt-dlp 다운로드 시작: ${videoUrl}`);
+            ServerLogger.info(`📥 Instagram 비디오 yt-dlp-nightly 다운로드 시작: ${videoUrl}`);
             return await this.downloadWithYtDlp(videoUrl, filePath);
         } catch (error) {
             ServerLogger.error('Instagram 비디오 다운로드 실패:', error);
@@ -42,32 +42,34 @@ export class InstagramProcessor {
                 fs.mkdirSync(outputDir, { recursive: true });
             }
 
-            const command = `yt-dlp -o "${filePath}" "${videoUrl}"`;
-            ServerLogger.info(`🔧 yt-dlp 다운로드 명령어: ${command}`);
+            // Use yt-dlp-nightly.exe from project root
+            const ytdlpNightlyPath = path.join(__dirname, '../../../../yt-dlp-nightly.exe');
+            const command = `"${ytdlpNightlyPath}" -o "${filePath}" "${videoUrl}"`;
+            ServerLogger.info(`🔧 yt-dlp-nightly 다운로드 명령어: ${command}`);
 
             const { stdout, stderr } = await execAsync(command, { timeout: 60000 });
 
             if (stderr) {
-                ServerLogger.warn(`yt-dlp 경고: ${stderr}`);
+                ServerLogger.warn(`yt-dlp-nightly 경고: ${stderr}`);
             }
 
             // 파일 존재 및 크기 확인
             if (fs.existsSync(filePath)) {
                 const stats = fs.statSync(filePath);
                 if (stats.size > 1024) {
-                    ServerLogger.info(`✅ Instagram 비디오 yt-dlp 다운로드 완료: ${filePath} (${stats.size} bytes)`);
+                    ServerLogger.info(`✅ Instagram 비디오 yt-dlp-nightly 다운로드 완료: ${filePath} (${stats.size} bytes)`);
                     return true;
                 } else {
                     ServerLogger.warn(`❌ 다운로드된 파일이 너무 작습니다: ${stats.size} bytes`);
                     return false;
                 }
             } else {
-                ServerLogger.error('❌ yt-dlp 다운로드 완료했지만 파일이 존재하지 않음');
+                ServerLogger.error('❌ yt-dlp-nightly 다운로드 완료했지만 파일이 존재하지 않음');
                 return false;
             }
 
         } catch (error: any) {
-            ServerLogger.error('yt-dlp Instagram 다운로드 실패:', error.message);
+            ServerLogger.error('yt-dlp-nightly Instagram 다운로드 실패:', error.message);
             return false;
         }
     }
@@ -136,43 +138,45 @@ export class InstagramProcessor {
                 return this.normalizeInstagramData(instagramData.data);
             }
 
-            ServerLogger.warn('Instagram 추출기가 초기화되지 않음, yt-dlp 대체 방법 사용');
+            ServerLogger.warn('Instagram 추출기가 초기화되지 않음, yt-dlp-nightly 대체 방법 사용');
             return await this.getVideoInfoFallback(instagramUrl);
 
         } catch (error) {
             ServerLogger.error('Instagram 비디오 정보 조회 실패:', error);
-            ServerLogger.warn('yt-dlp 대체 방법으로 시도...');
+            ServerLogger.warn('yt-dlp-nightly 대체 방법으로 시도...');
             return await this.getVideoInfoFallback(instagramUrl);
         }
     }
 
     private async getVideoInfoFallback(instagramUrl: string): Promise<InstagramReelInfo | null> {
         try {
-            ServerLogger.info('🔄 yt-dlp 대체 방법으로 Instagram 메타데이터 추출 시도...');
+            ServerLogger.info('🔄 yt-dlp-nightly 대체 방법으로 Instagram 메타데이터 추출 시도...');
             const { exec } = require('child_process');
             const { promisify } = require('util');
             const execAsync = promisify(exec);
 
-            // yt-dlp에서 더 많은 메타데이터 추출
-            const command = `yt-dlp --dump-json --write-info-json "${instagramUrl}"`;
-            ServerLogger.info(`🔧 yt-dlp 명령어: ${command}`);
+            // yt-dlp-nightly에서 더 많은 메타데이터 추출
+            const path = require('path');
+            const ytdlpNightlyPath = path.join(__dirname, '../../../../yt-dlp-nightly.exe');
+            const command = `"${ytdlpNightlyPath}" --dump-json --write-info-json "${instagramUrl}"`;
+            ServerLogger.info(`🔧 yt-dlp-nightly 명령어: ${command}`);
 
             const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
 
             if (stderr) {
-                ServerLogger.warn(`yt-dlp 경고: ${stderr}`);
+                ServerLogger.warn(`yt-dlp-nightly 경고: ${stderr}`);
             }
 
             const data = JSON.parse(stdout);
             const result = this.parseYtDlpData(data);
 
-            ServerLogger.info('✅ yt-dlp로 Instagram 메타데이터 추출 성공');
+            ServerLogger.info('✅ yt-dlp-nightly로 Instagram 메타데이터 추출 성공');
             ServerLogger.info(`📊 추출된 데이터: 조회수=${result.viewCount}, 좋아요=${result.likeCount}, 댓글=${result.commentCount}`);
 
             return result;
 
         } catch (error) {
-            ServerLogger.error('Instagram yt-dlp 대체 방법 실패:', error);
+            ServerLogger.error('Instagram yt-dlp-nightly 대체 방법 실패:', error);
             return null;
         }
     }
@@ -210,7 +214,7 @@ export class InstagramProcessor {
     private parseYtDlpData(data: any): InstagramReelInfo {
         const description = data.description || data.title || '';
 
-        // yt-dlp에서 제공하는 더 풍부한 메타데이터 활용
+        // yt-dlp-nightly에서 제공하는 더 풍부한 메타데이터 활용
         return {
             shortcode: data.id || this.extractInstagramId(data.webpage_url || ''),
             url: data.webpage_url || data.url || '',
@@ -299,11 +303,11 @@ export class InstagramProcessor {
             // 1. yt-dlp를 우선적으로 사용
             const ytDlpUrl = await this.extractVideoUrlWithYtDlp(instagramUrl);
             if (ytDlpUrl) {
-                ServerLogger.info(`✅ yt-dlp로 비디오 URL 추출 성공: ${ytDlpUrl}`);
+                ServerLogger.info(`✅ yt-dlp-nightly로 비디오 URL 추출 성공: ${ytDlpUrl}`);
                 return ytDlpUrl;
             }
 
-            ServerLogger.warn('⚠️ yt-dlp 실패, 직접 HTML 파싱 시도');
+            ServerLogger.warn('⚠️ yt-dlp-nightly 실패, 직접 HTML 파싱 시도');
 
             // 2. HTML 파싱 방법 (대체)
             const axios = require('axios');
@@ -375,14 +379,16 @@ export class InstagramProcessor {
             const { promisify } = require('util');
             const execAsync = promisify(exec);
 
-            // yt-dlp로 직접 비디오 URL 추출
-            const command = `yt-dlp --get-url "${instagramUrl}"`;
-            ServerLogger.info(`🔧 yt-dlp 명령어 실행: ${command}`);
+            // yt-dlp-nightly로 직접 비디오 URL 추출
+            const path = require('path');
+            const ytdlpNightlyPath = path.join(__dirname, '../../../../yt-dlp-nightly.exe');
+            const command = `"${ytdlpNightlyPath}" --get-url "${instagramUrl}"`;
+            ServerLogger.info(`🔧 yt-dlp-nightly 명령어 실행: ${command}`);
 
             const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
 
             if (stderr) {
-                ServerLogger.warn(`yt-dlp 경고: ${stderr}`);
+                ServerLogger.warn(`yt-dlp-nightly 경고: ${stderr}`);
             }
 
             const videoUrl = stdout.trim();
@@ -393,7 +399,7 @@ export class InstagramProcessor {
             return null;
 
         } catch (error: any) {
-            ServerLogger.error('yt-dlp 비디오 URL 추출 실패:', error.message);
+            ServerLogger.error('yt-dlp-nightly 비디오 URL 추출 실패:', error.message);
             return null;
         }
     }

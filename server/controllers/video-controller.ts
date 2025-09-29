@@ -1194,8 +1194,11 @@ export class VideoController {
      */
     private async getChannelInfo(channelId: string): Promise<{subscribers: number, channelVideos: number}> {
         try {
-            const apiKeyManager = require('../services/ApiKeyManager');
-            const activeKeys = await apiKeyManager.getActiveApiKeys();
+            const { getInstance: getApiKeyManager } = require('../services/ApiKeyManager');
+            const apiKeyManager = getApiKeyManager();
+            await apiKeyManager.initialize();
+            const activeApiKeys = await apiKeyManager.getActiveApiKeys();
+            const activeKeys = activeApiKeys.map((key: any) => key.apiKey);
 
             if (!activeKeys || activeKeys.length === 0) {
                 throw new Error('YouTube API 키가 없습니다');

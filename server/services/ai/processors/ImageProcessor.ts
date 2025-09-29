@@ -9,7 +9,7 @@ interface ImageEncodeResult {
 }
 
 export class ImageProcessor {
-    private static readonly SUPPORTED_FORMATS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+    private static readonly SUPPORTED_FORMATS = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.image'];
     private static readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
     /**

@@ -59,13 +59,17 @@ export class ThumbnailExtractor {
 
     async generateThumbnail(
         videoPath: string,
-        analysisType: 'single' | 'multi-frame' | 'full' = 'multi-frame'
+        analysisType: 'single' | 'multi-frame' | 'full' | 'video_only' = 'multi-frame'
     ): Promise<ThumbnailResult> {
         try {
+            ServerLogger.info(`🔍 ThumbnailExtractor.generateThumbnail called with: videoPath="${videoPath}", analysisType="${analysisType}"`);
+
             const fileType = await this.detectFileType(videoPath);
+            ServerLogger.info(`🔍 Detected file type: ${fileType}`);
 
             if (fileType === 'image') {
                 // 이미지 파일인 경우 복사만
+                ServerLogger.info(`📸 Processing as image file`);
                 const thumbnailPath = await this.copyImageAsThumbnail(videoPath);
                 return {
                     success: true,
@@ -75,12 +79,16 @@ export class ThumbnailExtractor {
             }
 
             // 비디오 파일 처리
+            ServerLogger.info(`🎬 Processing as video file with analysisType: ${analysisType}`);
             if (analysisType === 'single') {
+                ServerLogger.info(`➡️ Generating single thumbnail`);
                 return await this.generateSingleThumbnail(videoPath);
-            } else if (analysisType === 'multi-frame' || analysisType === 'full') {
+            } else if (analysisType === 'multi-frame' || analysisType === 'full' || analysisType === 'video_only') {
+                ServerLogger.info(`➡️ Generating multiple frames`);
                 return await this.generateMultipleFrames(videoPath);
             }
 
+            ServerLogger.error(`❌ Unsupported analysis type: ${analysisType}`);
             return { success: false, error: '지원하지 않는 분석 타입입니다' };
 
         } catch (error) {
@@ -350,8 +358,28 @@ export class ThumbnailExtractor {
                 return null;
             }
 
+            // Type check and convert to string if necessary
+            const urlString = typeof thumbnailUrl === 'string' ? thumbnailUrl : String(thumbnailUrl);
+            ServerLogger.info(`🔍 Thumbnail URL type: ${typeof thumbnailUrl}, value: ${urlString}`);
+
+            // 상대 경로인 경우 처리
+            if (urlString.startsWith('media/') || urlString.startsWith('./media/') || !urlString.includes('://')) {
+                ServerLogger.info(`📁 상대 경로 썸네일 감지: ${urlString}`);
+
+                // 상대 경로를 절대 경로로 변환
+                const absolutePath = path.resolve(process.cwd(), urlString);
+
+                if (fs.existsSync(absolutePath)) {
+                    ServerLogger.info(`✅ 로컬 썸네일 파일 발견: ${absolutePath}`);
+                    return absolutePath;
+                } else {
+                    ServerLogger.warn(`❌ 로컬 썸네일 파일 없음: ${absolutePath}`);
+                    return null;
+                }
+            }
+
             const axios = require('axios');
-            const url = new URL(thumbnailUrl);
+            const url = new URL(urlString);
             const pathParts = url.pathname.split('/');
             let originalFileName = pathParts[pathParts.length - 1];
 
