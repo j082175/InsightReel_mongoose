@@ -143,3 +143,37 @@ lint/tmp/
 
 # Java class files
 *.class
+
+# ==============================================================================
+# PROJECT ORGANIZATION - ARCHIVE AND TEMPORARY DIRECTORIES
+# ==============================================================================
+
+# Archive directories (moved files for organization)
+archive/
+
+# Development scripts (moved from root)
+scripts/dev-tools/
+scripts/debugging/
+scripts/data-analysis/
+
+# Test organization (moved from root)
+tests/manual/
+tests/fixtures/
+
+# Temporary player scripts
+*player-script.js
+
+# Python development files
+*.py
+*.pyc
+__pycache__/
+
+# PowerShell scripts
+*.ps1
+
+# Executables
+*.exe
+*.bat
+
+# Extension build files
+extension/popup/alpine.bundle.js

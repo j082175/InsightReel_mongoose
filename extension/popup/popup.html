@@ -46,18 +46,22 @@
       font-size: 14px;
       transition: background-color 0.3s;
     }
+    .button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
     .button.primary {
       background: #1976d2;
       color: white;
     }
-    .button.primary:hover {
+    .button.primary:hover:not(:disabled) {
       background: #1565c0;
     }
     .button.secondary {
       background: #f5f5f5;
       color: #333;
     }
-    .button.secondary:hover {
+    .button.secondary:hover:not(:disabled) {
       background: #eeeeee;
     }
     .stats {
@@ -85,6 +89,7 @@
       border-top: 1px solid #eee;
       padding-top: 15px;
       margin-top: 15px;
+      transition: opacity 0.3s ease;
     }
     .setting-item {
       display: flex;
@@ -131,89 +136,136 @@
     input:checked + .slider:before {
       transform: translateX(20px);
     }
+
+    /* Alpine.js transition for settings */
+    .settings-enter {
+      opacity: 0;
+    }
+    .settings-enter-to {
+      opacity: 1;
+    }
+
+    /* Loading state styles */
+    .loading {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Quick feedback animation */
+    .feedback-checkmark {
+      color: #4caf50;
+      font-weight: bold;
+      margin-left: 5px;
+      animation: fadeOut 1s ease-out forwards;
+    }
+
+    @keyframes fadeOut {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
   </style>
 </head>
-<body>
+<body x-data="popupController()" x-init="init()">
   <div class="header">
     <div class="logo">🎬 InsightReel</div>
     <div class="subtitle">Content Analytics Platform</div>
   </div>
 
-  <div id="status" class="status">
-    <span id="statusText">연결 확인 중...</span>
+  <div :class="['status', serverStatus.class]">
+    <span x-text="serverStatus.text" :class="{ loading: serverStatus.loading }">연결 확인 중...</span>
   </div>
 
   <div class="stats">
     <div class="stat-item">
-      <div id="totalVideos" class="stat-number">0</div>
+      <div x-text="stats.total" class="stat-number">0</div>
       <div class="stat-label">저장된 영상</div>
     </div>
     <div class="stat-item">
-      <div id="todayVideos" class="stat-number">0</div>
+      <div x-text="stats.today" class="stat-number">0</div>
       <div class="stat-label">오늘 저장</div>
     </div>
   </div>
 
-  <button id="openSheets" class="button primary">
+  <button @click="openSpreadsheet()" class="button primary">
     📊 스프레드시트 열기
   </button>
 
-  <button id="testConnection" class="button secondary">
-    🔧 연결 테스트
+  <button @click="testConnection()" :disabled="buttons.testConnection.disabled" class="button secondary">
+    <span x-text="buttons.testConnection.text">🔧 연결 테스트</span>
   </button>
 
-  <button id="collectChannel" class="button primary" style="background: linear-gradient(45deg, #ff6b6b, #ee5a24); margin-top: 10px;">
-    📊 채널 수집
+  <button @click="collectChannel()" :disabled="buttons.collectChannel.disabled" class="button primary"
+          style="background: linear-gradient(45deg, #ff6b6b, #ee5a24); margin-top: 10px;"
+          :style="buttons.collectChannel.style">
+    <span x-text="buttons.collectChannel.text">📊 채널 수집</span>
   </button>
 
-  <button id="syncInstagramCookies" class="button primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin-top: 10px;">
-    🍪 Instagram 쿠키 동기화
+  <button @click="syncInstagramCookies()" :disabled="buttons.syncCookies.disabled" class="button primary"
+          style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin-top: 10px;">
+    <span x-text="buttons.syncCookies.text">🍪 Instagram 쿠키 동기화</span>
   </button>
 
-  <div class="settings" id="settingsContainer" style="opacity: 0; transition: opacity 0.3s ease;">
+  <div class="settings" x-show="settingsVisible" x-transition:enter="settings-enter" x-transition:enter-end="settings-enter-to">
     <h3 style="margin: 0 0 10px 0; font-size: 14px;">설정</h3>
-    
+
     <div class="setting-item">
       <span>🤖 AI 분석</span>
       <label class="toggle">
-        <input type="checkbox" id="useAI" checked>
+        <input type="checkbox" x-model="settings.useAI" @change="saveSetting('useAI', $event.target.checked)">
         <span class="slider"></span>
       </label>
+      <span x-show="feedback.useAI" x-transition class="feedback-checkmark">✓</span>
     </div>
-    
+
     <div class="setting-item">
       <span>자동 분석</span>
       <label class="toggle">
-        <input type="checkbox" id="autoAnalyze">
+        <input type="checkbox" x-model="settings.autoAnalyze" @change="saveSetting('autoAnalyze', $event.target.checked)">
         <span class="slider"></span>
       </label>
+      <span x-show="feedback.autoAnalyze" x-transition class="feedback-checkmark">✓</span>
     </div>
-    
+
     <div class="setting-item">
       <span>즉시 저장</span>
       <label class="toggle">
-        <input type="checkbox" id="autoSave">
+        <input type="checkbox" x-model="settings.autoSave" @change="saveSetting('autoSave', $event.target.checked)">
         <span class="slider"></span>
       </label>
+      <span x-show="feedback.autoSave" x-transition class="feedback-checkmark">✓</span>
     </div>
-    
+
     <div class="setting-item">
       <span>⚡ YouTube 배치 처리</span>
       <label class="toggle">
-        <input type="checkbox" id="batchMode">
+        <input type="checkbox" x-model="settings.batchMode" @change="saveSetting('batchMode', $event.target.checked)">
         <span class="slider"></span>
       </label>
+      <span x-show="feedback.batchMode" x-transition class="feedback-checkmark">✓</span>
     </div>
-    
+
     <div class="setting-item">
       <span>알림 표시</span>
       <label class="toggle">
-        <input type="checkbox" id="showNotifications">
+        <input type="checkbox" x-model="settings.showNotifications" @change="saveSetting('showNotifications', $event.target.checked)">
         <span class="slider"></span>
       </label>
+      <span x-show="feedback.showNotifications" x-transition class="feedback-checkmark">✓</span>
     </div>
   </div>
 
+  <!-- Notification system -->
+  <div x-show="notification.visible" x-transition
+       style="position: fixed; top: 10px; left: 10px; right: 10px; background: #333; color: white; padding: 10px; border-radius: 5px; z-index: 1000; font-size: 12px; white-space: pre-line;">
+    <span x-text="notification.message"></span>
+  </div>
+
+  <!-- Load Alpine.js bundle -->
+  <script src="alpine.bundle.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
