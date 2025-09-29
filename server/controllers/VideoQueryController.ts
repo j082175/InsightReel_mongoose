@@ -4,7 +4,7 @@ import { ServerLogger } from '../utils/logger';
 import ResponseHandler from '../utils/response-handler';
 import VideoModel from '../models/Video';
 import { IVideo } from '../types/models';
-const ErrorHandler = require('../middleware/error-handler');
+import ErrorHandler from '../middleware/error-handler';
 
 /**
  * 비디오 조회 전용 컨트롤러

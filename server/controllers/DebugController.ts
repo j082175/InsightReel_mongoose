@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { BaseController } from './base/BaseController';
-const ErrorHandler = require('../middleware/error-handler');
+import ErrorHandler from '../middleware/error-handler';
 
 import type {
     VideoProcessRequest,

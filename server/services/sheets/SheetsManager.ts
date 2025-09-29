@@ -528,6 +528,43 @@ export class SheetsManager {
     }
 
     /**
+     * 헤더 설정 (레거시 호환성을 위한 래퍼 메서드)
+     * 자동으로 플랫폼에 맞는 헤더를 가져와서 설정
+     */
+    async setHeadersForSheet(sheetName: string): Promise<{ success: boolean; error?: string }> {
+        try {
+            if (!this.sheetManager) {
+                return {
+                    success: false,
+                    error: 'SheetManager가 초기화되지 않았습니다'
+                };
+            }
+
+            // 플랫폼별 헤더 가져오기
+            const platform = sheetName.toUpperCase() as 'YOUTUBE' | 'INSTAGRAM' | 'TIKTOK';
+            const headers = VideoDataProcessor.getHeadersForPlatform(platform);
+
+            // 헤더 설정
+            const result = await this.sheetManager.setHeadersForSheet(sheetName, headers);
+
+            if (result.success) {
+                ServerLogger.info(`✅ ${sheetName} 시트 헤더 업데이트 완료`);
+                return { success: true };
+            } else {
+                ServerLogger.error(`❌ ${sheetName} 시트 헤더 업데이트 실패: ${result.error}`);
+                return { success: false, error: result.error };
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : '헤더 설정 실패';
+            ServerLogger.error(`❌ ${sheetName} 시트 헤더 설정 실패:`, error);
+            return {
+                success: false,
+                error: errorMessage
+            };
+        }
+    }
+
+    /**
      * OAuth 토큰 저장 (OAuth 방식 사용 시)
      */
     async saveOAuthToken(code: string): Promise<any> {

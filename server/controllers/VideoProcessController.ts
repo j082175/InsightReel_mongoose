@@ -3,7 +3,7 @@ import { VideoUtils } from '../services/video/utils/VideoUtils';
 import { ServerLogger } from '../utils/logger';
 import { PLATFORMS } from '../config/api-messages';
 import { VideoPipelineOrchestrator } from '../services/pipeline/VideoPipelineOrchestrator';
-const ErrorHandler = require('../middleware/error-handler');
+import ErrorHandler from '../middleware/error-handler';
 
 import type {
     VideoProcessRequest,

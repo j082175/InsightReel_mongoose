@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { BaseController } from './base/BaseController';
 import { ServerLogger } from '../utils/logger';
-const ErrorHandler = require('../middleware/error-handler');
+import ErrorHandler from '../middleware/error-handler';
+import { AIAnalyzer } from '../services/ai/AIAnalyzer';
 
 import type { HealthCheckResponse } from '../types/controller-types';
 
@@ -91,9 +92,9 @@ export class SystemStatsController extends BaseController {
      */
     getSelfLearningStats = ErrorHandler.asyncHandler(async (req: Request, res: Response): Promise<void> => {
         try {
-            // categoryManager private 접근 문제로 임시 비활성화
-            const stats = {};
-            const systemStats = {};
+            const aiAnalyzer = new AIAnalyzer();
+            const stats = aiAnalyzer.getSelfLearningStats();
+            const systemStats = aiAnalyzer.getSystemStats();
 
             res.json({
                 success: true,

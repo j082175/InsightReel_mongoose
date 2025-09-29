@@ -74,6 +74,70 @@ export class AIAnalyzer {
     }
 
     /**
+     * 자가 학습 통계 조회
+     */
+    getSelfLearningStats(): any {
+        try {
+            if (this.categoryManager && typeof this.categoryManager.getSelfLearningStats === 'function') {
+                return this.categoryManager.getSelfLearningStats();
+            }
+
+            // Fallback: 기본 통계 반환
+            return {
+                totalCategories: 0,
+                learnedPatterns: 0,
+                confidenceLevel: 0,
+                lastUpdate: new Date().toISOString(),
+                analysisCount: 0,
+                successRate: 0
+            };
+        } catch (error) {
+            ServerLogger.error('자가 학습 통계 조회 실패:', error);
+            return {
+                totalCategories: 0,
+                learnedPatterns: 0,
+                confidenceLevel: 0,
+                lastUpdate: new Date().toISOString(),
+                analysisCount: 0,
+                successRate: 0,
+                error: error instanceof Error ? error.message : '통계 조회 실패'
+            };
+        }
+    }
+
+    /**
+     * 시스템 통계 조회
+     */
+    getSystemStats(): any {
+        try {
+            if (this.categoryManager && typeof this.categoryManager.getSystemStats === 'function') {
+                return this.categoryManager.getSystemStats();
+            }
+
+            // Fallback: 기본 시스템 통계 반환
+            return {
+                uptime: process.uptime(),
+                memoryUsage: process.memoryUsage(),
+                categoryMode: this.useDynamicCategories ? 'dynamic' : 'basic',
+                analyzerStatus: this.geminiAnalyzer.isReady() ? 'ready' : 'not_ready',
+                lastAnalysis: new Date().toISOString(),
+                totalAnalyses: 0
+            };
+        } catch (error) {
+            ServerLogger.error('시스템 통계 조회 실패:', error);
+            return {
+                uptime: process.uptime(),
+                memoryUsage: process.memoryUsage(),
+                categoryMode: 'unknown',
+                analyzerStatus: 'error',
+                lastAnalysis: new Date().toISOString(),
+                totalAnalyses: 0,
+                error: error instanceof Error ? error.message : '시스템 통계 조회 실패'
+            };
+        }
+    }
+
+    /**
      * 메인 비디오 분석 함수
      */
     async analyzeVideo(

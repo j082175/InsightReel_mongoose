@@ -1,4 +1,4 @@
-// 새로운 모듈화된 컨트롤러 exports
+// Modular controllers following SRP (Single Responsibility Principle)
 export { BaseController } from './base/BaseController';
 export { VideoProcessController } from './VideoProcessController';
 export { VideoQueryController } from './VideoQueryController';
@@ -6,5 +6,5 @@ export { SystemStatsController } from './SystemStatsController';
 export { AdminController } from './AdminController';
 export { DebugController } from './DebugController';
 
-// 레거시 컨트롤러 (점진적 마이그레이션용)
-export { VideoController } from './video-controller';
+// Legacy VideoController has been split into the above focused controllers
+// for better maintainability and adherence to SRP

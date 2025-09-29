@@ -45,7 +45,11 @@
     "server/models/**/*.ts",
     "server/services/**/*.ts",
     "server/utils/**/*.ts",
-    "server/index.ts"
+    "server/middleware/**/*.ts",
+    "server/controllers/**/*.ts",
+    "server/index.ts",
+    "server/server.ts",
+    "server/app.ts"
   ],
   "exclude": [
     "node_modules",

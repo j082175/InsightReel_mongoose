@@ -238,6 +238,92 @@ router.get('/debug-after-services', (req: Request, res: Response) => {
     });
 });
 
+// System memory status
+router.get('/system/memory', (req: Request, res: Response) => {
+    try {
+        const memoryUsage = process.memoryUsage();
+        const formatBytes = (bytes: number) => Math.round(bytes / 1024 / 1024);
+
+        const report = {
+            current: {
+                rss: formatBytes(memoryUsage.rss), // MB
+                heapTotal: formatBytes(memoryUsage.heapTotal),
+                heapUsed: formatBytes(memoryUsage.heapUsed),
+                external: formatBytes(memoryUsage.external),
+                arrayBuffers: formatBytes(memoryUsage.arrayBuffers)
+            },
+            uptime: Math.floor(process.uptime()),
+            timestamp: new Date().toISOString()
+        };
+
+        ResponseHandler.success(res, report);
+    } catch (error) {
+        ResponseHandler.serverError(res, error, 'Failed to generate memory report');
+    }
+});
+
+// Force garbage collection
+router.post('/system/gc', (req: Request, res: Response) => {
+    try {
+        // Node.js garbage collection is only available with --expose-gc flag
+        if (global.gc) {
+            const beforeMemory = process.memoryUsage();
+            global.gc();
+            const afterMemory = process.memoryUsage();
+
+            const beforeMB = Math.round(beforeMemory.heapUsed / 1024 / 1024);
+            const afterMB = Math.round(afterMemory.heapUsed / 1024 / 1024);
+            const freedMB = beforeMB - afterMB;
+
+            const result = {
+                before: beforeMB,
+                after: afterMB,
+                freed: freedMB,
+                timestamp: new Date().toISOString()
+            };
+
+            ResponseHandler.success(res, result, '가비지 컬렉션이 실행되었습니다');
+        } else {
+            res.status(400).json({
+                success: false,
+                message: '가비지 컬렉션을 사용할 수 없습니다. Node.js를 --expose-gc 플래그로 시작하세요.'
+            });
+        }
+    } catch (error) {
+        ResponseHandler.serverError(res, error, 'Failed to execute garbage collection');
+    }
+});
+
+// Memory cleanup
+router.post('/system/cleanup', (req: Request, res: Response) => {
+    try {
+        const beforeMemory = process.memoryUsage();
+
+        // Force garbage collection if available
+        if (global.gc) {
+            global.gc();
+        }
+
+        // Clear any internal caches we might have
+        // Note: Add specific cleanup logic here if needed
+
+        const afterMemory = process.memoryUsage();
+        const beforeMB = Math.round(beforeMemory.heapUsed / 1024 / 1024);
+        const afterMB = Math.round(afterMemory.heapUsed / 1024 / 1024);
+
+        const result = {
+            before: beforeMB,
+            after: afterMB,
+            freed: beforeMB - afterMB,
+            timestamp: new Date().toISOString()
+        };
+
+        ResponseHandler.success(res, result, '메모리 정리가 완료되었습니다');
+    } catch (error) {
+        ResponseHandler.serverError(res, error, 'Failed to cleanup memory');
+    }
+});
+
 // Instagram 쿠키 상태 조회
 router.get('/system/cookie-status', async (req: Request, res: Response) => {
     try {
