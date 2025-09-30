@@ -47,6 +47,7 @@
     "server/utils/**/*.ts",
     "server/middleware/**/*.ts",
     "server/controllers/**/*.ts",
+    "server/config/**/*.ts",
     "server/index.ts",
     "server/server.ts",
     "server/app.ts"

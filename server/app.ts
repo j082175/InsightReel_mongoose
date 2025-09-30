@@ -60,7 +60,7 @@ const createApp = async (): Promise<express.Application> => {
             ServerLogger.error('❌ 클러스터 시스템 초기화 실패:', error);
         }
 
-        // 3. 라우터 설정
+        // 3. 라우터 설정 (커스텀 Admin Panel 포함)
         app.use(routes);
 
         // 4. 404 핸들러
