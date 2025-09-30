@@ -21,7 +21,7 @@ router.post('/collect-trending', async (req: Request, res: Response) => {
     let batch: any = null;
 
     try {
-        const { channelIds = [], options = {} } = req.body;
+        const { channelIds = [], groupIds = [], options = {} } = req.body;
 
         if (!channelIds || channelIds.length === 0) {
             return ResponseHandler.badRequest(res, '채널 ID가 필요합니다.');
@@ -29,6 +29,9 @@ router.post('/collect-trending', async (req: Request, res: Response) => {
 
         ServerLogger.info(`🚀 트렌딩 수집 시작: ${channelIds.length}개 채널`);
         ServerLogger.info(`📋 수집 옵션:`, options);
+        if (groupIds.length > 0) {
+            ServerLogger.info(`📁 그룹 ID: ${groupIds.join(', ')}`);
+        }
 
         // 1. 채널 이름 조회 (DB에서)
         const channels = await Channel.find({ channelId: { $in: channelIds } }).lean();
@@ -46,8 +49,9 @@ router.post('/collect-trending', async (req: Request, res: Response) => {
         batch = new CollectionBatch({
             name: batchName,
             description: `${channelIds.length}개 채널에서 트렌딩 영상 수집`,
-            collectionType: 'channels',
+            collectionType: groupIds.length > 0 ? 'group' : 'channels',
             targetChannels: channelNames,  // 채널 이름 저장
+            targetGroups: groupIds.length > 0 ? groupIds : undefined,  // 그룹 ID 저장
             criteria: {
                 daysBack: options.daysBack || 7,
                 minViews: options.minViews || 10000,

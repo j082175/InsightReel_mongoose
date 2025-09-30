@@ -7,6 +7,8 @@ import {
   ChannelCard,
   ChannelGroupCard,
 } from '../features/channel-management';
+import { BatchVideoList } from '../features/batch-management';
+import { useBatchStore } from '../features/batch-management/model/batchStore';
 import { UniversalGrid } from '../widgets/UniversalGrid';
 import { getDocumentId } from '../shared/utils';
 import toast from 'react-hot-toast';
@@ -37,6 +39,13 @@ const ChannelManagementPage: React.FC = () => {
   const [channelToAnalyze, setChannelToAnalyze] = useState<Channel | null>(null);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState<any | null>(null);
+
+  // 트렌딩 수집 필터 설정
+  const [collectionDaysBack, setCollectionDaysBack] = useState<number>(7);
+  const [collectionMinViews, setCollectionMinViews] = useState<number>(100000);
+
+  // Batch Store for video list modal
+  const batchStore = useBatchStore();
 
   const error = queryError?.message || null;
 
@@ -126,10 +135,50 @@ const ChannelManagementPage: React.FC = () => {
   );
 
   const handleGroupClick = useCallback(
-    (group: any) => {
+    async (group: any) => {
       console.log('그룹 클릭:', group.name);
+      const groupId = getDocumentId(group);
+      console.log('📋 Group ID:', groupId);
+
+      if (!groupId) {
+        console.error('❌ Group ID가 없습니다!');
+        return;
+      }
+
+      try {
+        console.log('🔍 Fetching recent batch for group:', groupId);
+        // Fetch the most recent batch for this group
+        const response = await fetch(`http://localhost:3000/api/channel-groups/${groupId}/recent-batch`);
+        console.log('📡 Response status:', response.status);
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            console.warn('⚠️ 배치를 찾을 수 없음');
+            toast.error('이 그룹에 대한 수집 배치가 없습니다.');
+          } else {
+            console.error('❌ 배치 조회 실패:', response.status);
+            toast.error('배치를 불러오는데 실패했습니다.');
+          }
+          return;
+        }
+
+        const data = await response.json();
+        console.log('✅ Batch data received:', data);
+        console.log('🔍 data.data structure:', data.data);
+        console.log('🔍 data.data._id:', data.data._id);
+        console.log('🔍 data.data.id:', data.data.id);
+        const batchId = data.data._id || data.data.id;
+        console.log('🎯 Opening batch video list with ID:', batchId);
+
+        // Open the batch video list using the existing batchStore
+        batchStore.openVideoList(batchId);
+
+      } catch (error) {
+        console.error('💥 Error fetching recent batch:', error);
+        toast.error('배치를 불러오는데 실패했습니다.');
+      }
     },
-    []
+    [batchStore]
   );
 
   const handleGroupDeleteBulk = useCallback(
@@ -284,6 +333,41 @@ const ChannelManagementPage: React.FC = () => {
 
         {/* 탭 콘텐츠 */}
         <div className="max-w-7xl mx-auto p-6">
+          {/* 그룹 탭 필터 (그룹 탭일 때만 표시) */}
+          {activeTab === 'groups' && (
+            <div className="bg-white rounded-lg shadow p-4 mb-4">
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-sm text-gray-600 font-medium">트렌딩 수집 조건:</span>
+
+                {/* Recent X Days 필터 */}
+                <select
+                  value={collectionDaysBack}
+                  onChange={(e) => setCollectionDaysBack(Number(e.target.value))}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-indigo-50"
+                  title="최근 며칠 이내의 영상을 수집할지 설정"
+                >
+                  <option value={1}>1일 전</option>
+                  <option value={3}>3일 전</option>
+                  <option value={5}>5일 전</option>
+                  <option value={7}>7일 전</option>
+                </select>
+
+                {/* Minimum X Views 필터 */}
+                <select
+                  value={collectionMinViews}
+                  onChange={(e) => setCollectionMinViews(Number(e.target.value))}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-indigo-50"
+                  title="최소 조회수 설정"
+                >
+                  <option value={50000}>50K 이상</option>
+                  <option value={100000}>100K 이상</option>
+                  <option value={500000}>500K 이상</option>
+                  <option value={1000000}>1M 이상</option>
+                </select>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-lg shadow p-6">
             {activeTab === 'channels' ? (
               <UniversalGrid<Channel>
@@ -322,6 +406,10 @@ const ChannelManagementPage: React.FC = () => {
                     onClick={props.onCardClick}
                     onDelete={() => props.onDelete?.(group)}
                     showSelection={props.isSelectMode}
+                    collectionFilters={{
+                      daysBack: collectionDaysBack,
+                      minViews: collectionMinViews,
+                    }}
                   />
                 )}
                 enableSearch={true}
@@ -354,6 +442,16 @@ const ChannelManagementPage: React.FC = () => {
         onSave={handleSaveGroup}
         editingGroup={editingGroup}
         availableChannels={channels}
+      />
+
+      <BatchVideoList
+        isOpen={batchStore.isVideoListOpen}
+        onClose={batchStore.closeVideoList}
+        batchId={batchStore.selectedBatchId}
+        batchName=""
+        videos={batchStore.batchVideos}
+        loading={batchStore.videoLoading}
+        onVideoDelete={() => {}}
       />
     </div>
   );

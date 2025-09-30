@@ -14,10 +14,14 @@ interface ChannelGroupCardProps {
   onDelete: (group: ChannelGroup) => void; // 필수 Props
   onCollect?: (group: ChannelGroup) => void;
   showSelection?: boolean;
+  collectionFilters?: {
+    daysBack: number;
+    minViews: number;
+  };
 }
 
 const ChannelGroupCard: React.FC<ChannelGroupCardProps> = memo(
-  ({ group, isSelected = false, onSelect, onClick, onEdit, onDelete, onCollect, showSelection = false }) => {
+  ({ group, isSelected = false, onSelect, onClick, onEdit, onDelete, onCollect, showSelection = false, collectionFilters }) => {
     const groupId = getDocumentId(group);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -124,8 +128,8 @@ const ChannelGroupCard: React.FC<ChannelGroupCardProps> = memo(
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                daysBack: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.DAYS_BACK,
-                minViews: FRONTEND_CONSTANTS.DEFAULT_COLLECTION.MIN_VIEWS,
+                daysBack: collectionFilters?.daysBack || FRONTEND_CONSTANTS.DEFAULT_COLLECTION.DAYS_BACK,
+                minViews: collectionFilters?.minViews || FRONTEND_CONSTANTS.DEFAULT_COLLECTION.MIN_VIEWS,
                 includeShorts:
                   FRONTEND_CONSTANTS.DEFAULT_COLLECTION.INCLUDE_SHORTS,
                 includeMidform:
@@ -169,7 +173,7 @@ const ChannelGroupCard: React.FC<ChannelGroupCardProps> = memo(
           setIsCollecting(false);
         }
       },
-      [onCollect, group]
+      [onCollect, group, groupId, collectionFilters]
     );
 
     return (

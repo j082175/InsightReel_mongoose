@@ -63,11 +63,30 @@ router.post('/channel-groups', async (req: Request, res: Response) => {
             });
         }
 
+        // channels 필드 변환: string[] → {channelId, name}[]
+        let channelsArray = [];
+        if (channels && Array.isArray(channels)) {
+            if (channels.length > 0 && typeof channels[0] === 'string') {
+                // 채널 ID 배열인 경우, 채널 정보 조회하여 변환
+                const channelDocs = await Channel.find({
+                    channelId: { $in: channels }
+                });
+
+                channelsArray = channelDocs.map(ch => ({
+                    channelId: ch.channelId || (ch._id as any).toString(),
+                    name: ch.name || 'Unknown Channel'
+                }));
+            } else {
+                // 이미 올바른 형식인 경우
+                channelsArray = channels;
+            }
+        }
+
         const newGroup = new ChannelGroup({
             name: name.trim(),
             description: description?.trim() || '',
             color: color || '#3B82F6',
-            channels: channels || [],
+            channels: channelsArray,
             keywords: keywords || [],
             isActive: isActive !== false
         });
@@ -141,9 +160,30 @@ router.put('/channel-groups/:id', async (req: Request, res: Response) => {
         if (name?.trim()) group.name = name.trim();
         if (description !== undefined) group.description = description?.trim() || '';
         if (color) group.color = color;
-        if (channels !== undefined) group.channels = channels;
         if (keywords !== undefined) group.keywords = keywords;
         if (isActive !== undefined) group.isActive = isActive;
+
+        // channels 필드 변환: string[] → {channelId, name}[]
+        if (channels !== undefined) {
+            let channelsArray = [];
+            if (Array.isArray(channels)) {
+                if (channels.length > 0 && typeof channels[0] === 'string') {
+                    // 채널 ID 배열인 경우, 채널 정보 조회하여 변환
+                    const channelDocs = await Channel.find({
+                        channelId: { $in: channels }
+                    });
+
+                    channelsArray = channelDocs.map(ch => ({
+                        channelId: ch.channelId || (ch._id as any).toString(),
+                        name: ch.name || 'Unknown Channel'
+                    }));
+                } else {
+                    // 이미 올바른 형식인 경우
+                    channelsArray = channels;
+                }
+            }
+            group.channels = channelsArray as any;
+        }
 
         const updatedGroup = await group.save();
 
@@ -155,6 +195,118 @@ router.put('/channel-groups/:id', async (req: Request, res: Response) => {
 
     } catch (error) {
         ResponseHandler.serverError(res, error, 'Failed to update channel group');
+        return;
+    }
+});
+
+// 채널 그룹의 최근 배치 조회
+router.get('/channel-groups/:id/recent-batch', async (req: Request, res: Response) => {
+    try {
+        const groupId = req.params.id;
+
+        // 그룹 존재 확인
+        const group = await ChannelGroup.findById(groupId);
+        if (!group) {
+            return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
+                success: false,
+                error: 'NOT_FOUND',
+                message: '채널 그룹을 찾을 수 없습니다.'
+            });
+        }
+
+        // Import CollectionBatch model
+        const CollectionBatch = (await import('../models/CollectionBatch')).default;
+
+        // 최근 배치 조회 (해당 그룹을 타겟으로 한 배치 중 가장 최근 것)
+        const recentBatch = await CollectionBatch.findOne({
+            targetGroups: groupId,
+            status: 'completed'
+        })
+        .sort({ completedAt: -1 })
+        .limit(1)
+        .lean();
+
+        if (!recentBatch) {
+            return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
+                success: false,
+                error: 'NO_BATCH_FOUND',
+                message: '이 그룹에 대한 수집 배치가 없습니다.'
+            });
+        }
+
+        ResponseHandler.success(res, recentBatch, '최근 배치를 찾았습니다.');
+        return;
+
+    } catch (error) {
+        ResponseHandler.serverError(res, error, 'Failed to get recent batch for group');
+        return;
+    }
+});
+
+// 채널 그룹 트렌딩 수집
+router.post('/channel-groups/:id/collect', async (req: Request, res: Response) => {
+    try {
+        const groupId = req.params.id;
+        const { daysBack, minViews, includeShorts, includeMidform, includeLongForm } = req.body;
+
+        // 그룹 조회
+        const group = await ChannelGroup.findById(groupId);
+        if (!group) {
+            return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
+                success: false,
+                error: 'NOT_FOUND',
+                message: '채널 그룹을 찾을 수 없습니다.'
+            });
+        }
+
+        // 그룹에 속한 채널 ID 추출
+        const channelIds = group.channels.map(ch => ch.channelId);
+
+        if (channelIds.length === 0) {
+            return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+                success: false,
+                error: 'NO_CHANNELS',
+                message: '그룹에 채널이 없습니다.'
+            });
+        }
+
+        // 트렌딩 수집 API 호출
+        const trendingResponse = await fetch('http://localhost:3000/api/trending/collect-trending', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                channelIds,
+                groupIds: [groupId],  // 그룹 ID 전달
+                options: {
+                    daysBack: daysBack || 7,
+                    minViews: minViews || 100000,
+                    includeShorts: includeShorts !== false,
+                    includeMidform: includeMidform !== false,
+                    includeLongForm: includeLongForm !== false,
+                }
+            }),
+        });
+
+        if (!trendingResponse.ok) {
+            const error: any = await trendingResponse.json();
+            throw new Error(error.message || '트렌딩 수집 실패');
+        }
+
+        const result = await trendingResponse.json();
+
+        // 그룹의 lastCollectedAt 업데이트
+        await group.updateLastCollected();
+
+        ResponseHandler.success(res, {
+            data: result,
+            message: `"${group.name}" 그룹의 트렌딩 영상 수집이 완료되었습니다.`
+        });
+        return;
+
+    } catch (error) {
+        ResponseHandler.serverError(res, error, 'Failed to collect trending videos for group');
         return;
     }
 });
