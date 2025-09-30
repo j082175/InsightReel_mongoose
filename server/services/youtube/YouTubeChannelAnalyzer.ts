@@ -753,16 +753,27 @@ export class YouTubeChannelAnalyzer {
     }
 
     /**
-     * 롱폼 채널 메타데이터 기반 분석 (이미지 추출 없음)
+     * 롱폼 채널 메타데이터 + 썸네일 기반 분석
      */
     private async analyzeLongformChannel(videos: YouTubeVideo[], channelInfo: YouTubeChannelInfo): Promise<any> {
         try {
-            ServerLogger.info('📚 롱폼 채널 메타데이터 기반 분석 시작');
+            ServerLogger.info('📚 롱폼 채널 메타데이터 + 썸네일 기반 분석 시작');
 
             // 1. 메타데이터 집계
             const metadata = this.aggregateMetadata(videos, channelInfo);
 
-            // 2. AI 분석 수행 (메타데이터만 사용)
+            // 2. 썸네일 URL 수집 (최신 20개 영상)
+            const thumbnailUrls = videos
+                .slice(0, 20)
+                .map(video => {
+                    const thumbnails = video.thumbnails;
+                    return thumbnails?.high?.url || thumbnails?.medium?.url || thumbnails?.default?.url;
+                })
+                .filter(url => url) as string[];
+
+            ServerLogger.info(`📊 수집된 썸네일: ${thumbnailUrls.length}개`);
+
+            // 3. AI 분석 수행 (메타데이터 + 썸네일)
             const videoTitles = metadata.titles.sample;
             const videoDescriptions = metadata.descriptions.sample;
             const basicStats = {
@@ -776,6 +787,7 @@ export class YouTubeChannelAnalyzer {
                 channelId: channelInfo.id,
                 videoTitles,
                 videoDescriptions: videoDescriptions.slice(0, 5),
+                videoFramePaths: thumbnailUrls, // 썸네일 URL 전달
                 basicStats
             });
 
@@ -795,106 +807,66 @@ export class YouTubeChannelAnalyzer {
     }
 
     /**
-     * 숏폼 채널 콘텐츠 분석 (최신 5개 영상 다운로드 + 분석)
+     * 숏폼 채널 썸네일 기반 분석 (최신 20개 영상의 썸네일 + 메타데이터)
      */
     private async analyzeShortformChannel(channelId: string, recentVideos: YouTubeVideo[], channelInfo: YouTubeChannelInfo): Promise<any> {
         try {
-            ServerLogger.info('🎬 숏폼 채널 콘텐츠 분석 시작 (최신 5개 영상)');
+            ServerLogger.info('🎬 숏폼 채널 썸네일 기반 분석 시작 (최신 20개 영상)');
 
-            // 각 영상의 콘텐츠 분석 (레거시 스타일)
-            const videoAnalyses = [];
-            for (const video of recentVideos) {
-                ServerLogger.info(`🔍 영상 분석 중: ${video.title}`);
+            // 최신 20개 영상으로 확장
+            const videosToAnalyze = recentVideos.slice(0, 20);
 
+            // 1. 썸네일 URL 수집
+            const thumbnailUrls = videosToAnalyze
+                .map(video => {
+                    const thumbnails = video.thumbnails;
+                    return thumbnails?.high?.url || thumbnails?.medium?.url || thumbnails?.default?.url;
+                })
+                .filter(url => url) as string[];
+
+            ServerLogger.info(`📊 수집된 썸네일: ${thumbnailUrls.length}개`);
+
+            // 2. 댓글 수집 (첫 5개 영상에서만)
+            const videoComments = [];
+            for (const video of videosToAnalyze.slice(0, 5)) {
                 try {
-                    // 1. 댓글 수집 (레거시와 동일)
                     const comments = await this.getVideoComments(video.id, 15);
-
-                    // 2. VideoProcessor를 동적으로 import하여 영상 분석
-                    const { VideoProcessor } = await import('../video/VideoProcessor');
-                    const videoProcessor = new VideoProcessor();
-
-                    const videoUrl = `https://www.youtube.com/watch?v=${video.id}`;
-                    const analysis = await videoProcessor.processVideo(videoUrl);
-
-                    // 3. 레거시 스타일 분석 결과 구성
-                    videoAnalyses.push({
-                        videoId: video.id,
-                        title: video.title,
-                        description: video.description,
-                        viewCount: video.statistics.viewCount,
-                        likeCount: video.statistics.likeCount,
-                        commentCount: video.statistics.commentCount,
-                        comments: comments,
-                        analysis: analysis,
-                        metadata: {
-                            duration: video.duration,
-                            publishedAt: video.publishedAt
-                        }
-                    });
-
-                    ServerLogger.info(`✅ 영상 분석 완료: ${video.title} (댓글 ${comments.length}개)`);
-
-                } catch (videoError) {
-                    ServerLogger.warn(`⚠️ 영상 분석 실패: ${video.title}`, videoError);
-                    // 실패한 경우 메타데이터만 포함
-                    videoAnalyses.push({
-                        videoId: video.id,
-                        title: video.title,
-                        description: video.description,
-                        analysis: { error: 'video_analysis_failed' },
-                        comments: []
-                    });
+                    videoComments.push(...comments);
+                    ServerLogger.info(`✅ 댓글 수집 완료: ${video.title} (${comments.length}개)`);
+                } catch (commentError) {
+                    ServerLogger.warn(`⚠️ 댓글 수집 실패: ${video.title}`, commentError);
                 }
-
-                // API 호출 간격 (레거시와 동일)
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                await new Promise(resolve => setTimeout(resolve, 500)); // API rate limit
             }
 
-            // 채널 종합 분석
-            const videoTitles = recentVideos.map(v => v.title);
-            const videoDescriptions = recentVideos.map(v => v.description).filter(d => d && d.length > 50);
-            const videoComments = videoAnalyses.map(v => v.comments || []).flat(); // 모든 영상의 댓글 수집
-
-            // 모든 영상의 프레임 경로 수집 (썸네일 경로에서 추출)
-            const videoFramePaths: string[] = [];
-            for (const analysis of videoAnalyses) {
-                // 성공한 분석이고 thumbnailPath가 있는 경우만 처리
-                if (analysis.analysis && 'success' in analysis.analysis && analysis.analysis.success) {
-                    const result = analysis.analysis;
-                    if (result.thumbnailPath) {
-                        // thumbnailPath가 배열이면 모두 추가, 문자열이면 하나만 추가
-                        if (Array.isArray(result.thumbnailPath)) {
-                            videoFramePaths.push(...result.thumbnailPath);
-                        } else {
-                            videoFramePaths.push(result.thumbnailPath);
-                        }
-                    }
-                }
-            }
+            // 3. 메타데이터 준비
+            const videoTitles = videosToAnalyze.map(v => v.title);
+            const videoDescriptions = videosToAnalyze.map(v => v.description).filter(d => d && d.length > 50);
 
             const basicStats = {
                 subscriberCount: channelInfo.statistics?.subscriberCount || 0,
-                videoCount: recentVideos.length,
+                videoCount: videosToAnalyze.length,
                 shortFormAnalysis: true
             };
 
+            // 4. AI 분석 수행 (썸네일 + 메타데이터 + 댓글)
             const channelIdentity = await this.aiAnalyzer.analyzeChannelIdentity({
                 channelId,
                 videoTitles,
-                videoDescriptions: videoDescriptions.slice(0, 5),
+                videoDescriptions: videoDescriptions.slice(0, 10),
                 videoComments, // 댓글 추가
-                videoFramePaths, // 프레임 경로 추가
+                videoFramePaths: thumbnailUrls, // 썸네일 URL 전달
                 basicStats
             });
 
             ServerLogger.success(`✅ 숏폼 채널 분석 완료: ${channelIdentity.channelTags?.length || 0}개 태그 생성`);
 
             return {
-                videoAnalyses,
                 channelIdentity,
-                analysisMethod: "content_and_analysis",
-                analyzedVideos: recentVideos.length
+                analysisMethod: "thumbnail_and_metadata",
+                analyzedVideos: videosToAnalyze.length,
+                thumbnailsUsed: thumbnailUrls.length,
+                commentsCollected: videoComments.length
             };
 
         } catch (error) {

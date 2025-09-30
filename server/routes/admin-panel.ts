@@ -367,7 +367,8 @@ router.get('/videos/:id/edit', async (req: Request, res: Response) => {
     const video = await VideoModel.findById(req.params.id).lean();
 
     if (!video) {
-      return res.status(404).send('<h1>Video not found</h1>');
+      res.status(404).send('<h1>Video not found</h1>');
+      return;
     }
 
     const html = `
@@ -556,7 +557,8 @@ router.get('/channels/:id/edit', async (req: Request, res: Response) => {
     const channel = await Channel.findById(req.params.id).lean();
 
     if (!channel) {
-      return res.status(404).send('<h1>Channel not found</h1>');
+      res.status(404).send('<h1>Channel not found</h1>');
+      return;
     }
 
     const html = `

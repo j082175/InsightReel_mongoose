@@ -13,12 +13,65 @@ export class ImageProcessor {
     private static readonly MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
     /**
-     * 이미지 파일을 Base64로 인코딩
+     * URL에서 이미지를 다운로드하고 Base64로 인코딩
+     */
+    static async encodeImageFromUrl(imageUrl: string): Promise<ImageEncodeResult> {
+        try {
+            if (!imageUrl || typeof imageUrl !== 'string') {
+                return { success: false, error: '유효하지 않은 이미지 URL입니다' };
+            }
+
+            // URL 유효성 검사
+            if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+                return { success: false, error: 'HTTP(S) URL만 지원됩니다' };
+            }
+
+            ServerLogger.info(`이미지 다운로드 시작: ${imageUrl.substring(0, 80)}...`);
+
+            // 이미지 다운로드
+            const axios = (await import('axios')).default;
+            const response = await axios.get(imageUrl, {
+                responseType: 'arraybuffer',
+                timeout: 10000, // 10초 타임아웃
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                }
+            });
+
+            if (!response.data) {
+                return { success: false, error: '이미지 다운로드 실패' };
+            }
+
+            // Base64 변환
+            const buffer = Buffer.from(response.data);
+            const base64String = buffer.toString('base64');
+
+            if (!base64String || base64String.length === 0) {
+                return { success: false, error: 'Base64 인코딩에 실패했습니다' };
+            }
+
+            ServerLogger.info(`이미지 다운로드 및 인코딩 완료: ${(buffer.length / 1024).toFixed(2)}KB`);
+            return { success: true, base64: base64String };
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+            ServerLogger.error(`이미지 URL 다운로드 실패:`, error);
+            return { success: false, error: errorMessage };
+        }
+    }
+
+    /**
+     * 이미지 파일을 Base64로 인코딩 (로컬 파일 또는 URL)
      */
     static async encodeImageToBase64(imagePath: string): Promise<ImageEncodeResult> {
         try {
             if (!imagePath || typeof imagePath !== 'string') {
                 return { success: false, error: '유효하지 않은 이미지 경로입니다' };
+            }
+
+            // URL인 경우 URL 처리
+            if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+                return await this.encodeImageFromUrl(imagePath);
             }
 
             // 파일 존재 확인
