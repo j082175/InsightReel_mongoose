@@ -557,6 +557,7 @@ export const useCollectTrending = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.videos.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.trending.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.batches.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.health.quota });
       toast.success('트렌딩 영상 수집 완료');
     },

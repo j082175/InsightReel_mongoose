@@ -6,6 +6,8 @@ import { ITrendingVideo } from '../types/models';
 import { Platform } from '../types/video-types';
 import TrendingVideo from '../models/TrendingVideo';
 import GroupTrendingCollector from '../services/trending/GroupTrendingCollector';
+import CollectionBatch from '../models/CollectionBatch';
+import Channel from '../models/Channel';
 
 const router = Router();
 
@@ -16,6 +18,8 @@ const router = Router();
 
 // POST /api/trending/collect-trending - 트렌딩 수집 시작
 router.post('/collect-trending', async (req: Request, res: Response) => {
+    let batch: any = null;
+
     try {
         const { channelIds = [], options = {} } = req.body;
 
@@ -26,23 +30,74 @@ router.post('/collect-trending', async (req: Request, res: Response) => {
         ServerLogger.info(`🚀 트렌딩 수집 시작: ${channelIds.length}개 채널`);
         ServerLogger.info(`📋 수집 옵션:`, options);
 
-        // GroupTrendingCollector 초기화 및 수집 시작
+        // 1. 채널 이름 조회 (DB에서)
+        const channels = await Channel.find({ channelId: { $in: channelIds } }).lean();
+        const channelNames = channels.map(ch => ch.name);
+
+        // DB에 없는 채널은 ID를 이름으로 사용
+        const foundChannelIds = channels.map(ch => ch.channelId);
+        const missingChannelIds = channelIds.filter((id: string) => !foundChannelIds.includes(id));
+        channelNames.push(...missingChannelIds);
+
+        ServerLogger.info(`📋 채널 이름 조회: ${channelNames.length}개 (${channelNames.join(', ')})`);
+
+        // 2. CollectionBatch 생성
+        const batchName = `트렌딩 수집 - ${new Date().toLocaleDateString('ko-KR')} ${new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}`;
+        batch = new CollectionBatch({
+            name: batchName,
+            description: `${channelIds.length}개 채널에서 트렌딩 영상 수집`,
+            collectionType: 'channels',
+            targetChannels: channelNames,  // 채널 이름 저장
+            criteria: {
+                daysBack: options.daysBack || 7,
+                minViews: options.minViews || 10000,
+                maxViews: options.maxViews || null,
+                includeShorts: options.includeShorts !== false,
+                includeMidform: options.includeMidform !== false,
+                includeLongForm: options.includeLongForm !== false,
+            },
+            status: 'running'
+        });
+
+        await batch.save();
+        ServerLogger.info(`📦 배치 생성됨: ${batch._id}`);
+
+        // 2. GroupTrendingCollector 초기화 및 수집 시작
         const collector = new GroupTrendingCollector();
         await collector.initialize();
 
-        // collectFromChannels 메서드는 { channels, ...options } 형식을 기대함
+        // collectFromChannels 메서드는 { channels, ...options, batchId } 형식을 기대함
         const collectionOptions = {
             channels: channelIds,
+            batchId: String(batch._id),
             ...options
         };
 
-        // 개별 채널 수집 실행
+        // 3. 개별 채널 수집 실행
         const result = await collector.collectFromChannels(collectionOptions);
 
+        ServerLogger.info(`📊 수집 결과:`, {
+            totalChannels: result.totalChannels,
+            totalVideosFound: result.totalVideosFound,
+            totalVideosSaved: result.totalVideosSaved,
+            quotaUsed: result.quotaUsed
+        });
+
+        // 4. 배치 완료 처리
+        batch.status = 'completed';
+        batch.completedAt = new Date();
+        batch.totalVideosFound = result.totalVideosFound;
+        batch.totalVideosSaved = result.totalVideosSaved;
+        batch.quotaUsed = result.quotaUsed;
+        batch.stats = result.stats;
+        await batch.save();
+
         ServerLogger.info(`✅ 트렌딩 수집 완료: ${result.totalVideosSaved}개 영상 저장됨`);
+        ServerLogger.info(`📦 배치 업데이트 완료: ${batch._id} - ${result.totalVideosSaved}개 영상`);
 
         ResponseHandler.success(res, {
             message: 'Trending collection completed',
+            batchId: batch._id,
             result: {
                 totalChannels: result.totalChannels,
                 totalVideosFound: result.totalVideosFound,
@@ -53,6 +108,19 @@ router.post('/collect-trending', async (req: Request, res: Response) => {
         });
     } catch (error) {
         ServerLogger.error('❌ 트렌딩 수집 실패:', error);
+
+        // 배치 실패 처리
+        if (batch) {
+            try {
+                batch.status = 'failed';
+                batch.completedAt = new Date();
+                batch.error = error instanceof Error ? error.message : String(error);
+                await batch.save();
+            } catch (batchError) {
+                ServerLogger.error('배치 실패 처리 오류:', batchError);
+            }
+        }
+
         ResponseHandler.serverError(res, error, 'Failed to start trending collection');
     }
 });

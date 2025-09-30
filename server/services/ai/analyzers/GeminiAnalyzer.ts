@@ -95,7 +95,7 @@ export class GeminiAnalyzer {
             }
 
             const startTime = Date.now();
-            ServerLogger.info(`Gemini 쿼리 시작: ${prompt.substring(0, 100)}...`);
+            ServerLogger.info(`Gemini 쿼리 시작: ${prompt.substring(0, 100).replace(/\n/g, ' ')}...`);
 
             const result = await this.geminiManager.generateContent(prompt, null, { modelType: options.model || 'flash' });
 
@@ -157,7 +157,7 @@ export class GeminiAnalyzer {
             }
 
             const startTime = Date.now();
-            ServerLogger.info(`Gemini 이미지 쿼리 시작: ${prompt.substring(0, 100)}...`);
+            ServerLogger.info(`Gemini 이미지 쿼리 시작: ${prompt.substring(0, 100).replace(/\n/g, ' ')}...`);
 
             const result = await this.geminiManager.generateContent(prompt, imageBase64);
 

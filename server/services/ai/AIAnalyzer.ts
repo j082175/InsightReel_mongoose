@@ -3,6 +3,7 @@ import { UnifiedCategoryManager } from "../UnifiedCategoryManager";
 import { FrameAnalyzer } from "./analyzers/FrameAnalyzer";
 import { GeminiAnalyzer } from "./analyzers/GeminiAnalyzer";
 import { ResponseParser } from "./managers/ResponseParser";
+import axios from 'axios';
 
 interface AnalysisOptions {
     analysisType?: "single" | "multi-frame" | "dynamic";
@@ -663,7 +664,13 @@ ${commentSection}
 
                 for (const framePath of params.videoFramePaths) {
                     try {
-                        if (fs.existsSync(framePath)) {
+                        if (framePath.startsWith('http://') || framePath.startsWith('https://')) {
+                            // Download image from URL
+                            const response = await axios.get(framePath, { responseType: 'arraybuffer' });
+                            const base64 = Buffer.from(response.data).toString('base64');
+                            imageBase64Array.push(base64);
+                        } else if (fs.existsSync(framePath)) {
+                            // Local file path
                             const imageBuffer = fs.readFileSync(framePath);
                             const base64 = imageBuffer.toString('base64');
                             imageBase64Array.push(base64);

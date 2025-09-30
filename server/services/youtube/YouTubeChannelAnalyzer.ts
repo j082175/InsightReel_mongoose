@@ -813,8 +813,15 @@ export class YouTubeChannelAnalyzer {
         try {
             ServerLogger.info('🎬 숏폼 채널 썸네일 기반 분석 시작 (최신 20개 영상)');
 
-            // 최신 20개 영상으로 확장
-            const videosToAnalyze = recentVideos.slice(0, 20);
+            // 최신 20개 영상으로 확장 (중복 제거)
+            const uniqueVideos = Array.from(
+                new Map(recentVideos.map(v => [v.id, v])).values()
+            );
+            const videosToAnalyze = uniqueVideos.slice(0, 20);
+
+            if (uniqueVideos.length < recentVideos.length) {
+                ServerLogger.info(`🔍 중복 영상 제거: ${recentVideos.length}개 → ${uniqueVideos.length}개`);
+            }
 
             // 1. 썸네일 URL 수집
             const thumbnailUrls = videosToAnalyze
@@ -828,8 +835,13 @@ export class YouTubeChannelAnalyzer {
 
             // 2. 댓글 수집 (첫 5개 영상에서만)
             const videoComments = [];
-            for (const video of videosToAnalyze.slice(0, 5)) {
+            const videosForComments = videosToAnalyze.slice(0, 5);
+            ServerLogger.info(`🔍 댓글 수집 시작: ${videosForComments.length}개 영상`);
+
+            for (let i = 0; i < videosForComments.length; i++) {
+                const video = videosForComments[i];
                 try {
+                    ServerLogger.info(`📝 [${i + 1}/${videosForComments.length}] 댓글 수집 중: ${video.title.substring(0, 30)}... (ID: ${video.id})`);
                     const comments = await this.getVideoComments(video.id, 15);
                     videoComments.push(...comments);
                     ServerLogger.info(`✅ 댓글 수집 완료: ${video.title} (${comments.length}개)`);
