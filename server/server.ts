@@ -99,7 +99,7 @@ const setupYtDlpAutoUpdater = () => {
  * Graceful shutdown 설정
  */
 const setupGracefulShutdown = (server: any) => {
-    const gracefulShutdown = (signal: string) => {
+    const gracefulShutdown = async (signal: string) => {
         ServerLogger.info(`📡 ${signal} 신호를 받았습니다. 서버를 안전하게 종료합니다...`, 'SHUTDOWN');
 
         // 메모리 정리
@@ -107,25 +107,29 @@ const setupGracefulShutdown = (server: any) => {
             ServerLogger.info('🧹 메모리 정리 시작...', 'SHUTDOWN');
 
             // 1. 비디오 큐 정리
-            const videoQueue = require('./utils/VideoQueue');
-            if (videoQueue && typeof videoQueue.clear === 'function') {
-                videoQueue.clear();
+            const videoQueueModule = await import('./utils/VideoQueue');
+            const videoQueue = videoQueueModule.default || videoQueueModule;
+            if (videoQueue && typeof videoQueue.clearQueue === 'function') {
+                videoQueue.clearQueue();
                 ServerLogger.info('✅ 비디오 큐 정리 완료', 'SHUTDOWN');
             }
 
             // 2. 서비스 정리
             try {
-                const ServiceRegistry = require('./utils/service-registry');
-                ServiceRegistry.clearAllServiceCaches();
-                ServerLogger.info('✅ 서비스 레지스트리 정리 완료', 'SHUTDOWN');
+                const serviceRegistryModule = await import('./utils/service-registry');
+                const ServiceRegistry = serviceRegistryModule.default || serviceRegistryModule;
+                if (ServiceRegistry && typeof ServiceRegistry.clearAllServiceCaches === 'function') {
+                    ServiceRegistry.clearAllServiceCaches();
+                    ServerLogger.info('✅ 서비스 레지스트리 정리 완료', 'SHUTDOWN');
+                }
             } catch (serviceError: any) {
                 ServerLogger.warn('⚠️ 서비스 정리 실패 (무시하고 계속)', serviceError.message, 'SHUTDOWN');
             }
 
             // 3. UsageTracker 정리
             try {
-                const UsageTrackerModule = require('./utils/usage-tracker');
-                const UsageTracker = UsageTrackerModule.UsageTracker || UsageTrackerModule.default;
+                const UsageTrackerModule = await import('./utils/usage-tracker');
+                const UsageTracker = UsageTrackerModule.UsageTracker || UsageTrackerModule.default || UsageTrackerModule;
                 if (UsageTracker) {
                     if (typeof UsageTracker.destroyAll === 'function') {
                         UsageTracker.destroyAll();

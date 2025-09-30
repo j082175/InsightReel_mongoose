@@ -2,9 +2,10 @@ import axios from 'axios';
 import { ServerLogger } from '../../utils/logger';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-
-const UsageTracker = require('../../utils/usage-tracker').default || require('../../utils/usage-tracker');
-const MultiKeyManager = require('../../utils/multi-key-manager').default || require('../../utils/multi-key-manager');
+import MultiKeyManager from '../../utils/multi-key-manager';
+import UsageTracker from '../../utils/usage-tracker';
+import * as serviceRegistry from '../../utils/service-registry';
+import { getInstance as getApiKeyManager } from '../../services/ApiKeyManager';
 
 // Type definitions
 interface CollectionConfig {
@@ -118,8 +119,9 @@ class HighViewCollector {
         };
 
         // 서비스 레지스트리에 등록
-        const serviceRegistry = require('../../utils/service-registry');
-        serviceRegistry.register(this);
+        if (serviceRegistry && typeof (serviceRegistry as any).register === 'function') {
+            (serviceRegistry as any).register(this);
+        }
     }
 
     /**
@@ -559,7 +561,6 @@ class HighViewCollector {
             const allStatus = this.multiKeyManager.getAllUsageStatus();
 
             // ApiKeyManager에서 실제 키 정보 가져오기 (안전한 호출)
-            const { getInstance: getApiKeyManager } = require('../../services/ApiKeyManager');
             const ApiKeyManager = getApiKeyManager();
             let allApiKeys: any[] = [];
             try {

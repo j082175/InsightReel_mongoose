@@ -3,8 +3,8 @@ import { google } from 'googleapis';
 import { ServerLogger } from '../../../utils/logger';
 import { ChannelInfo } from '../types/channel-types';
 
-const MultiKeyManager = require('../../../utils/multi-key-manager').default || require('../../../utils/multi-key-manager');
-const UsageTracker = require('../../../utils/usage-tracker');
+import MultiKeyManager from '../../../utils/multi-key-manager';
+import UsageTracker from '../../../utils/usage-tracker';
 
 export class ChannelService {
     private multiKeyManager: any;

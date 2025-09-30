@@ -97,7 +97,7 @@ export class GeminiAnalyzer {
             const startTime = Date.now();
             ServerLogger.info(`Gemini 쿼리 시작: ${prompt.substring(0, 100)}...`);
 
-            const result = await this.geminiManager.queryGemini(prompt);
+            const result = await this.geminiManager.generateContent(prompt, null, { modelType: options.model || 'flash' });
 
             const duration = Date.now() - startTime;
 

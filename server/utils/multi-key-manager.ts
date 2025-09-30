@@ -6,6 +6,7 @@ import * as path from 'path';
 import * as dotenv from 'dotenv';
 
 import UsageTracker from './usage-tracker';
+import * as serviceRegistry from './service-registry';
 
 // .env 파일 로드
 dotenv.config();
@@ -63,8 +64,9 @@ class MultiKeyManager {
         this._initialized = false;
 
         // 서비스 레지스트리에 등록
-        const serviceRegistry = require('./service-registry');
-        serviceRegistry.register(this);
+        if (serviceRegistry && typeof (serviceRegistry as any).register === 'function') {
+            (serviceRegistry as any).register(this);
+        }
 
         ServerLogger.info('🔑 MultiKeyManager 생성됨 (초기화 필요)', null, 'MULTI-KEY');
 
@@ -84,26 +86,25 @@ class MultiKeyManager {
     }
 
     /**
-     * 키 목록 로드 (ApiKeyManager + 폴백)
+     * 키 목록 로드 (ApiKeyManager 우선 + 파일 폴백)
      */
     async loadKeys(): Promise<KeyInfo[]> {
         const keys: KeyInfo[] = [];
         const keySet = new Set<string>(); // 중복 제거용
-
-        // 1. ApiKeyManager에서 활성 키 로드
         const safetyMargin = YOUTUBE_API_LIMITS.SAFETY_MARGIN;
 
+        // 1. ApiKeyManager에서 활성 키 로드 (video analysis와 동일한 방식)
         try {
             const apiKeyManager = getApiKeyManager();
             await apiKeyManager.initialize();
             const activeApiKeys: ApiKey[] = await apiKeyManager.getActiveApiKeys();
 
             const managerKeys = activeApiKeys
-                .filter(apiKeyObj => !keySet.has(apiKeyObj.apiKey)) // 중복 제거
+                .filter(apiKeyObj => apiKeyObj && apiKeyObj.apiKey && !keySet.has(apiKeyObj.apiKey)) // 중복 제거 + null 체크
                 .map((apiKeyObj, index) => {
                     keySet.add(apiKeyObj.apiKey);
                     return {
-                        name: `API Key ${index + 1} (Manager)`,
+                        name: `${apiKeyObj.name || `API Key ${index + 1}`} (Manager)`,
                         key: apiKeyObj.apiKey,
                         quota: safetyMargin
                     };
@@ -111,35 +112,58 @@ class MultiKeyManager {
 
             keys.push(...managerKeys);
             ServerLogger.info(`🔑 ApiKeyManager에서 ${managerKeys.length}개 키 로드 완료`, null, 'MULTI-KEY');
+
+            // ApiKeyManager에서 키를 성공적으로 로드했으면 파일 체크는 스킵
+            if (managerKeys.length > 0) {
+                ServerLogger.info(`✅ ApiKeyManager에서 충분한 키를 로드했으므로 파일 체크 생략`, null, 'MULTI-KEY');
+                return keys;
+            }
         } catch (error: any) {
-            ServerLogger.warn('ApiKeyManager 로드 실패, 파일 기반 키만 사용합니다.', error.message, 'MULTI-KEY');
-            // ❌ throw 제거: ApiKeyManager 실패해도 파일 기반 키는 로드 시도
+            ServerLogger.warn('⚠️ ApiKeyManager 로드 실패, 파일 직접 로드 시도:', error.message, 'MULTI-KEY');
         }
 
-        // 2. API 키 파일에서 추가 로드 (active 상태만)
+        // 2. ApiKeyManager 실패 시에만 파일에서 직접 로드
         try {
             const apiKeysPath = path.join(__dirname, '../data/api-keys.json');
             if (fs.existsSync(apiKeysPath)) {
-                const apiKeys = JSON.parse(fs.readFileSync(apiKeysPath, 'utf8'));
+                const rawData = fs.readFileSync(apiKeysPath, 'utf8');
+                const apiKeys = JSON.parse(rawData);
+
+                ServerLogger.info(`🔍 파일에서 직접 로드: ${apiKeys.length}개 키 발견`, null, 'MULTI-KEY');
+
                 const activeApiKeys = apiKeys
-                    .filter((k: any) => k.status === 'active')
-                    .filter((k: any) => k.apiKey && !keySet.has(k.apiKey)) // 중복 제거
+                    .filter((k: any) => {
+                        const isValid = k && k.apiKey && k.status === 'active';
+                        if (!isValid) {
+                            ServerLogger.warn(`❌ 유효하지 않은 키 건너뛰기:`, {
+                                hasKey: !!k,
+                                hasApiKey: !!(k && k.apiKey),
+                                status: k && k.status,
+                                name: k && k.name
+                            }, 'MULTI-KEY');
+                        }
+                        return isValid;
+                    })
+                    .filter((k: any) => !keySet.has(k.apiKey)) // 중복 제거
                     .map((k: any) => {
                         keySet.add(k.apiKey);
                         return {
-                            name: k.name,
+                            name: k.name || 'Unknown Key',
                             key: k.apiKey,
                             quota: safetyMargin
                         };
                     });
+
                 keys.push(...activeApiKeys);
                 ServerLogger.info(`📁 API 키 파일에서 ${activeApiKeys.length}개 활성화 키 로드됨`, null, 'MULTI-KEY');
+            } else {
+                ServerLogger.warn('📁 API 키 파일이 존재하지 않음', null, 'MULTI-KEY');
             }
         } catch (error: any) {
-            ServerLogger.warn('API 키 파일 로드 실패', error.message, 'MULTI-KEY');
+            ServerLogger.error('❌ API 키 파일 로드 실패:', error, 'MULTI-KEY');
         }
 
-        // 최소 1개 키는 보장 (환경변수 fallback)
+        // 3. 최소 1개 키는 보장 (환경변수 fallback)
         if (keys.length === 0) {
             const envKey = process.env.YOUTUBE_API_KEY;
             if (envKey) {
@@ -150,7 +174,7 @@ class MultiKeyManager {
                 });
                 ServerLogger.info('🔑 환경변수 키 fallback 사용', null, 'MULTI-KEY');
             } else {
-                ServerLogger.error('⚠️ 사용 가능한 API 키가 없습니다!', null, 'MULTI-KEY');
+                ServerLogger.error('⚠️ 모든 키 로드 방법 실패! 사용 가능한 API 키가 없습니다!', null, 'MULTI-KEY');
             }
         }
 
@@ -177,21 +201,32 @@ class MultiKeyManager {
     getAvailableKey(): AvailableKeyResult {
         ServerLogger.info(`🔍 [DEBUG] getAvailableKey 호출됨, 안전마진: ${this.safetyMargin}, 키 개수: ${this.keys.length}`, null, 'MULTI-KEY');
 
+        // 방어적 프로그래밍: 키가 없는 경우 조기 반환
+        if (this.keys.length === 0) {
+            ServerLogger.error(`🚨 로드된 API 키가 없습니다. MultiKeyManager 초기화 문제일 수 있습니다.`, null, 'MULTI-KEY');
+            throw new Error('🚨 사용 가능한 API 키가 없습니다. MultiKeyManager 초기화를 확인하세요.');
+        }
+
         for (const [index, keyInfo] of this.keys.entries()) {
             const keyData = this.trackers.get(keyInfo.key);
-            if (!keyData) continue;
+
+            // 방어적 프로그래밍: tracker가 없는 경우 스킵
+            if (!keyData) {
+                ServerLogger.warn(`⚠️ 키 ${index} (${keyInfo.name}) tracker 없음 - 다음 키로 전환`, null, 'MULTI-KEY');
+                continue;
+            }
 
             const usage = keyData.tracker.getYouTubeUsage();
 
             ServerLogger.info(`🔍 [DEBUG] 키 ${index} (${keyInfo.name}) 검사 중: usage.total=${usage.total}, usage.quota=${usage.quota}, safetyMargin=${this.safetyMargin}`, null, 'MULTI-KEY');
 
-            // 안전 마진 체크 (API 호출 전 사전 차단) - 수정된 로직
+            // 안전 마진 체크 (API 호출 전 사전 차단)
             if (usage.total >= this.safetyMargin) {
                 ServerLogger.warn(`⚠️ 키 ${keyInfo.name} 안전 마진 초과: ${usage.total}/${this.safetyMargin} - 다음 키로 전환`, null, 'MULTI-KEY');
                 continue; // 다음 키 확인
             }
 
-            // 추가 안전장치: isYouTubeQuotaExceeded 체크 (선택적)
+            // 추가 안전장치: isYouTubeQuotaExceeded 체크
             const isExceeded = keyData.tracker.isYouTubeQuotaExceeded();
             ServerLogger.info(`🔍 [DEBUG] 키 ${keyInfo.name} isYouTubeQuotaExceeded: ${isExceeded}`, null, 'MULTI-KEY');
 
@@ -207,7 +242,14 @@ class MultiKeyManager {
             }
         }
 
-        ServerLogger.error(`🚨 모든 YouTube API 키의 할당량이 소진됨 (안전마진: ${this.safetyMargin})`, null, 'MULTI-KEY');
+        // 디버깅을 위한 상세 로그
+        ServerLogger.error(`🚨 모든 YouTube API 키의 할당량이 소진됨`, {
+            totalKeys: this.keys.length,
+            safetyMargin: this.safetyMargin,
+            keyNames: this.keys.map(k => k.name),
+            trackerCount: this.trackers.size
+        }, 'MULTI-KEY');
+
         throw new Error(`🚨 모든 YouTube API 키의 할당량이 소진되었습니다 (${this.safetyMargin} 안전 마진 적용)`);
     }
 

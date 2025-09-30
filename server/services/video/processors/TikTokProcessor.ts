@@ -1,20 +1,27 @@
 import { ServerLogger } from '../../../utils/logger';
 import { Platform } from '../../../types/video-types';
 import { TikTokVideoInfo } from '../../tiktok/types/tiktok-types';
+import axios from 'axios';
+import * as fs from 'fs';
+import * as path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 
 export class TikTokProcessor {
     private tikTokAPI: any;
 
     constructor() {
-        this.initializeAPI();
+        this.initializeAPI().catch(error => {
+            ServerLogger.error('TikTok API 비동기 초기화 실패:', error);
+        });
     }
 
-    private initializeAPI() {
+    private async initializeAPI() {
         try {
             // 여러 TikTok API 패키지 시도
             try {
-                const TikTokScraper = require('@tobyg74/tiktok-api-dl');
-                this.tikTokAPI = TikTokScraper;
+                const TikTokScraper = await import('@tobyg74/tiktok-api-dl');
+                this.tikTokAPI = TikTokScraper.default || TikTokScraper;
                 ServerLogger.info('📱 TikTok API 초기화 성공: @tobyg74/tiktok-api-dl');
             } catch (err) {
                 ServerLogger.warn('TikTok API 패키지 없음, yt-dlp 대체 방법 사용');
@@ -69,9 +76,10 @@ export class TikTokProcessor {
             const downloadUrl = videoUrls[0];
             ServerLogger.info(`📥 TikTok API URL에서 다운로드 중: ${downloadUrl.substring(0, 60)}...`);
 
-            const axios = require('axios');
-            const fs = require('fs');
-            const path = require('path');
+            const axiosModule = await import('axios');
+            const axios = axiosModule.default;
+            const fs = await import('fs');
+            const path = await import('path');
 
             // Create output directory if it doesn't exist
             const outputDir = path.dirname(filePath);
@@ -119,11 +127,11 @@ export class TikTokProcessor {
 
     private async downloadWithYtDlp(videoUrl: string, filePath: string): Promise<boolean> {
         try {
-            const { exec } = require('child_process');
-            const { promisify } = require('util');
+            const { exec } = await import('child_process');
+            const { promisify } = await import('util');
             const execAsync = promisify(exec);
-            const path = require('path');
-            const fs = require('fs');
+            const path = await import('path');
+            const fs = await import('fs');
 
             // 출력 디렉토리 확인
             const outputDir = path.dirname(filePath);
@@ -165,8 +173,9 @@ export class TikTokProcessor {
 
     private async downloadFromDirectUrl(directUrl: string, filePath: string): Promise<boolean> {
         try {
-            const axios = require('axios');
-            const fs = require('fs');
+            const axiosModule = await import('axios');
+            const axios = axiosModule.default;
+            const fs = await import('fs');
 
             const response = await axios({
                 method: 'GET',
@@ -321,9 +330,9 @@ export class TikTokProcessor {
     private async getVideoInfoFallback(videoUrl: string): Promise<TikTokVideoInfo | null> {
         try {
             ServerLogger.info('🔄 yt-dlp-nightly 대체 방법으로 TikTok 메타데이터 추출 시도...');
-            const { exec } = require('child_process');
-            const { promisify } = require('util');
-            const path = require('path');
+            const { exec } = await import('child_process');
+            const { promisify } = await import('util');
+            const path = await import('path');
             const execAsync = promisify(exec);
 
             // Use yt-dlp-nightly.exe from project root

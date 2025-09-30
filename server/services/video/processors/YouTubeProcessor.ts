@@ -1,6 +1,12 @@
 import * as ytdl from '@distube/ytdl-core';
 import { ServerLogger } from '../../../utils/logger';
 import { Platform, YouTubeRawData } from '../../../types/video-types';
+import { HybridYouTubeExtractor } from '../../youtube/HybridYouTubeExtractor';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import * as path from 'path';
+import * as fs from 'fs';
+import axios from 'axios';
 
 // YouTubeRawData를 평면화한 처리 전용 인터페이스
 interface YouTubeVideoInfo {
@@ -40,7 +46,7 @@ export class YouTubeProcessor {
 
     private async initializeExtractor() {
         try {
-            const HybridYouTubeExtractor = require('../../youtube/HybridYouTubeExtractor').default || require('../../youtube/HybridYouTubeExtractor');
+            // HybridYouTubeExtractor는 이미 import되어 있음
             this.hybridExtractor = new HybridYouTubeExtractor();
             await this.hybridExtractor.initialize();
         } catch (error) {
@@ -58,9 +64,6 @@ export class YouTubeProcessor {
             ServerLogger.info(`YouTube 비디오 다운로드 시작: ${videoId}`);
 
             // yt-dlp-nightly를 사용한 다운로드
-            const { exec } = require('child_process');
-            const { promisify } = require('util');
-            const path = require('path');
             const execAsync = promisify(exec);
 
             // Use yt-dlp-nightly.exe from project root
@@ -80,7 +83,6 @@ export class YouTubeProcessor {
             }
 
             // 파일이 성공적으로 생성되었는지 확인
-            const fs = require('fs');
             if (fs.existsSync(filePath)) {
                 const stats = fs.statSync(filePath);
                 if (stats.size > 1024) { // 1KB 이상
@@ -150,7 +152,6 @@ export class YouTubeProcessor {
                 throw new Error('YouTube API 키가 없습니다');
             }
 
-            const axios = require('axios');
             const response = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
                 params: {
                     part: 'snippet,statistics,contentDetails,status',  // status 추가
@@ -326,8 +327,8 @@ export class YouTubeProcessor {
     private async getApiKey(): Promise<string | null> {
         if (!this.youtubeApiKey) {
             try {
-                const { getInstance: getApiKeyManager } = require('../../ApiKeyManager.ts');
-                const apiKeyManager = getApiKeyManager();
+                const { default: ApiKeyManager } = await import('../../ApiKeyManager');
+                const apiKeyManager = new ApiKeyManager();
                 await apiKeyManager.initialize();
                 const activeApiKeys = await apiKeyManager.getActiveApiKeys();
                 const activeKeys = activeApiKeys.map((key: any) => key.apiKey);
@@ -356,7 +357,6 @@ export class YouTubeProcessor {
             const apiKey = await this.getApiKey();
             if (!apiKey) return [];
 
-            const axios = require('axios');
             const response = await axios.get('https://www.googleapis.com/youtube/v3/commentThreads', {
                 params: {
                     part: 'snippet',

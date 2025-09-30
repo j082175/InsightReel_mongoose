@@ -26,17 +26,15 @@ interface ProcessingResult {
 }
 
 export class VideoProcessor {
-    private youtubeProcessor: YouTubeProcessor;
-    private instagramProcessor: InstagramProcessor;
-    private tikTokProcessor: TikTokProcessor;
+    private youtubeProcessor?: YouTubeProcessor;
+    private instagramProcessor?: InstagramProcessor;
+    private tikTokProcessor?: TikTokProcessor;
     private thumbnailExtractor: ThumbnailExtractor;
     private downloadDir: string;
     private _initialized: boolean = false;
 
     constructor() {
-        this.youtubeProcessor = new YouTubeProcessor();
-        this.instagramProcessor = new InstagramProcessor();
-        this.tikTokProcessor = new TikTokProcessor();
+        // Only initialize thumbnail extractor (needed for all platforms)
         this.thumbnailExtractor = new ThumbnailExtractor();
 
         this.downloadDir = path.join(__dirname, '../../../downloads');
@@ -103,7 +101,7 @@ export class VideoProcessor {
             // 비디오 다운로드
             if (options.downloadVideo !== false) {
                 // Controller에서 전달받은 videoId를 사용
-                const videoId = 'unknown'; // processVideo에서는 직접 호출하므로 기본값 사용
+                const videoId = videoInfo.id || videoInfo.videoId || 'unknown'; // 각 영상마다 고유한 파일명 생성
                 videoPath = await this.downloadVideo(videoUrl, platform, videoId);
             }
 
@@ -140,19 +138,54 @@ export class VideoProcessor {
     private async getVideoInfo(videoUrl: string, platform: Platform): Promise<any> {
         switch (platform) {
             case 'YOUTUBE':
-                return await this.youtubeProcessor.getVideoInfo(videoUrl);
+                return await this.getYouTubeProcessor().getVideoInfo(videoUrl);
             case 'INSTAGRAM':
-                return await this.instagramProcessor.getVideoInfo(videoUrl);
+                return await this.getInstagramProcessor().getVideoInfo(videoUrl);
             case 'TIKTOK':
-                return await this.tikTokProcessor.getVideoInfo(videoUrl);
+                return await this.getTikTokProcessor().getVideoInfo(videoUrl);
             default:
                 throw new Error(`지원하지 않는 플랫폼: ${platform}`);
         }
     }
 
+    /**
+     * Lazy initialization of platform-specific processors
+     */
+    private getYouTubeProcessor(): YouTubeProcessor {
+        if (!this.youtubeProcessor) {
+            ServerLogger.info('🔄 Initializing YouTube processor for video processing');
+            this.youtubeProcessor = new YouTubeProcessor();
+        }
+        return this.youtubeProcessor;
+    }
+
+    private getInstagramProcessor(): InstagramProcessor {
+        if (!this.instagramProcessor) {
+            ServerLogger.info('🔄 Initializing Instagram processor for video processing');
+            this.instagramProcessor = new InstagramProcessor();
+        }
+        return this.instagramProcessor;
+    }
+
+    private getTikTokProcessor(): TikTokProcessor {
+        if (!this.tikTokProcessor) {
+            ServerLogger.info('🔄 Initializing TikTok processor for video processing');
+            this.tikTokProcessor = new TikTokProcessor();
+        }
+        return this.tikTokProcessor;
+    }
+
     async downloadVideo(videoUrl: string, platform: Platform, videoId: string): Promise<string | undefined> {
         try {
-            const sanitizedId = VideoUtils.sanitizeFileName(videoId);
+            let sanitizedId = VideoUtils.sanitizeFileName(videoId);
+
+            // If videoId is missing/invalid and results in fallback name, add timestamp for uniqueness
+            if (sanitizedId === 'unknown_file' || sanitizedId === 'unnamed_file') {
+                const timestamp = Date.now();
+                sanitizedId = `unknown_${timestamp}`;
+                ServerLogger.warn(`Using fallback filename with timestamp: ${sanitizedId} for URL: ${videoUrl.substring(0, 50)}...`);
+            }
+
             const filePath = path.join(this.downloadDir, 'videos', `${platform}_${sanitizedId}.mp4`);
 
             // 이미 존재하는지 확인
@@ -169,13 +202,13 @@ export class VideoProcessor {
 
             switch (platform) {
                 case 'YOUTUBE':
-                    success = await this.youtubeProcessor.downloadVideo(videoUrl, filePath, startTime);
+                    success = await this.getYouTubeProcessor().downloadVideo(videoUrl, filePath, startTime);
                     break;
                 case 'INSTAGRAM':
-                    success = await this.instagramProcessor.downloadVideo(videoUrl, filePath, startTime);
+                    success = await this.getInstagramProcessor().downloadVideo(videoUrl, filePath, startTime);
                     break;
                 case 'TIKTOK':
-                    success = await this.tikTokProcessor.downloadVideo(videoUrl, filePath, startTime);
+                    success = await this.getTikTokProcessor().downloadVideo(videoUrl, filePath, startTime);
                     break;
             }
 
@@ -416,7 +449,7 @@ export class VideoProcessor {
 
         switch (platform) {
             case 'YOUTUBE':
-                return this.youtubeProcessor.parseYouTubeDuration(duration);
+                return this.getYouTubeProcessor().parseYouTubeDuration(duration);
             default:
                 return typeof duration === 'number' ? duration : parseInt(duration?.toString() || '0');
         }
@@ -448,9 +481,9 @@ export class VideoProcessor {
     private extractHashtags(text: string, platform: Platform): string[] {
         switch (platform) {
             case 'INSTAGRAM':
-                return this.instagramProcessor.extractHashtags(text);
+                return this.getInstagramProcessor().extractHashtags(text);
             case 'TIKTOK':
-                return this.tikTokProcessor.extractHashtags(text);
+                return this.getTikTokProcessor().extractHashtags(text);
             default:
                 return VideoUtils.extractHashtags(text);
         }
@@ -459,9 +492,9 @@ export class VideoProcessor {
     private extractMentions(text: string, platform: Platform): string[] {
         switch (platform) {
             case 'INSTAGRAM':
-                return this.instagramProcessor.extractMentions(text);
+                return this.getInstagramProcessor().extractMentions(text);
             case 'TIKTOK':
-                return this.tikTokProcessor.extractMentions(text);
+                return this.getTikTokProcessor().extractMentions(text);
             default:
                 return VideoUtils.extractMentions(text);
         }
@@ -509,15 +542,15 @@ export class VideoProcessor {
 
     // VideoId 추출 메서드들 (Controller에서 사용)
     extractYouTubeId(url: string): string | null {
-        return this.youtubeProcessor.extractYouTubeId(url);
+        return this.getYouTubeProcessor().extractYouTubeId(url);
     }
 
     extractInstagramId(url: string): string | null {
-        return this.instagramProcessor.extractInstagramId?.(url) || null;
+        return this.getInstagramProcessor().extractInstagramId?.(url) || null;
     }
 
     extractTikTokId(url: string): string | null {
-        return this.tikTokProcessor.extractTikTokId?.(url) || null;
+        return this.getTikTokProcessor().extractTikTokId?.(url) || null;
     }
 
     // 플랫폼별 URL 검증
@@ -528,13 +561,13 @@ export class VideoProcessor {
         if (platform) {
             switch (platform) {
                 case 'YOUTUBE':
-                    isValid = this.youtubeProcessor.isYouTubeUrl(url);
+                    isValid = this.getYouTubeProcessor().isYouTubeUrl(url);
                     break;
                 case 'INSTAGRAM':
-                    isValid = this.instagramProcessor.isInstagramUrl(url);
+                    isValid = this.getInstagramProcessor().isInstagramUrl(url);
                     break;
                 case 'TIKTOK':
-                    isValid = this.tikTokProcessor.isTikTokUrl(url);
+                    isValid = this.getTikTokProcessor().isTikTokUrl(url);
                     break;
             }
         }
@@ -570,7 +603,7 @@ export class VideoProcessor {
      */
     async getYouTubeVideoInfo(videoUrl: string): Promise<any> {
         try {
-            return await this.youtubeProcessor.getVideoInfo(videoUrl);
+            return await this.getYouTubeProcessor().getVideoInfo(videoUrl);
         } catch (error) {
             ServerLogger.error('YouTube 비디오 정보 수집 실패:', error);
             throw error;
@@ -582,7 +615,7 @@ export class VideoProcessor {
      */
     async getInstagramVideoInfo(videoUrl: string): Promise<InstagramReelInfo | null> {
         try {
-            return await this.instagramProcessor.getVideoInfo(videoUrl);
+            return await this.getInstagramProcessor().getVideoInfo(videoUrl);
         } catch (error) {
             ServerLogger.error('Instagram 비디오 정보 수집 실패:', error);
             return null;
@@ -594,7 +627,7 @@ export class VideoProcessor {
      */
     async getTikTokVideoInfo(videoUrl: string): Promise<TikTokVideoInfo | null> {
         try {
-            return await this.tikTokProcessor.getVideoInfo(videoUrl);
+            return await this.getTikTokProcessor().getVideoInfo(videoUrl);
         } catch (error) {
             ServerLogger.error('TikTok 비디오 정보 수집 실패:', error);
             return null;

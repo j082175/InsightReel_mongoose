@@ -1,12 +1,11 @@
 import { ServerLogger } from '../../utils/logger';
 import { PLATFORMS } from '../../config/api-messages';
 import { CONTENT_LIMITS } from '../../config/constants';
-
-const HighViewCollector = require('./HighViewCollector').default || require('./HighViewCollector');
-const ChannelGroup = require('../../models/ChannelGroup');
-const TrendingVideo = require('../../models/TrendingVideo');
-const DurationClassifier = require('../../utils/duration-classifier').default;
-const { YouTubeApiTypeUtils } = require('../../types/youtube-api-types');
+import HighViewCollector from './HighViewCollector';
+import DurationClassifier from '../../utils/duration-classifier';
+import ChannelGroup from '../../models/ChannelGroup';
+import TrendingVideo from '../../models/TrendingVideo';
+import { YouTubeApiTypeUtils } from '../../types/youtube-api-types';
 
 // Type definitions
 interface GroupTrendingOptions {
@@ -244,9 +243,9 @@ class GroupTrendingCollector {
 
             for (const group of activeGroups) {
                 try {
-                    const result = await this.collectGroupTrending(group._id, options);
+                    const result = await this.collectGroupTrending(String(group._id), options);
                     results.push({
-                        groupId: group._id,
+                        groupId: String(group._id),
                         groupName: group.name,
                         status: 'success' as const,
                         savedVideos: result.savedVideos,
@@ -257,7 +256,7 @@ class GroupTrendingCollector {
                 } catch (error: any) {
                     ServerLogger.error(`그룹 수집 실패 (${group.name}):`, error.message);
                     results.push({
-                        groupId: group._id,
+                        groupId: String(group._id),
                         groupName: group.name,
                         status: 'failed' as const,
                         error: error.message,
@@ -313,7 +312,7 @@ class GroupTrendingCollector {
         const durationCategory = DurationClassifier.categorizeByDuration(durationSeconds);
 
         return {
-            videoId: videoId,
+            videoId: videoId || "",
             title: videoData.snippet?.title || '',
             url: `https://www.youtube.com/watch?v=${videoId}`,
             platform: PLATFORMS.YOUTUBE,
@@ -324,9 +323,9 @@ class GroupTrendingCollector {
             channelUrl: `https://www.youtube.com/channel/${videoData.snippet?.channelId || ''}`,
 
             // 그룹 정보
-            groupId: groupId,
+            groupId: groupId || "",
             groupName: groupName,
-            batchId: batchId,
+            batchId: batchId || "",
             collectionDate: new Date(),
             collectedFrom: collectedFrom,
 
@@ -377,7 +376,7 @@ class GroupTrendingCollector {
 
             // 팩토리 메서드를 사용하여 TrendingVideo 데이터 생성
             const trendingVideoData = this.createTrendingVideoData(videoData, {
-                groupId: group._id,
+                groupId: String(group._id),
                 groupName: group.name,
                 collectedFrom: 'trending',
                 keywords: group.keywords || [],
@@ -477,7 +476,7 @@ class GroupTrendingCollector {
 
                                 // 같은 배치 내에서만 중복 검사 (배치별 중복 방지)
                                 const existingVideo = await TrendingVideo.findOne({
-                                    videoId: videoId,
+                                    videoId: videoId || "",
                                     batchId: batchId  // 같은 배치 내에서만 중복 체크
                                 });
 

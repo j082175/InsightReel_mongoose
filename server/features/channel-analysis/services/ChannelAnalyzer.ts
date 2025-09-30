@@ -11,11 +11,11 @@ import {
 import { ServerLogger } from '../../../utils/logger';
 
 import { ChannelDataCollector } from '../../../services/youtube/services/ChannelDataCollector';
-const YouTubeChannelAnalyzer = require('../../../services/_legacy_backup/YouTubeChannelAnalyzer');
+import { YouTubeChannelAnalyzer } from '../../../services/youtube/YouTubeChannelAnalyzer';
 
 export class ChannelAnalyzer {
     private youtubeService: ChannelDataCollector;
-    private youtubeAnalyzer: any;
+    private youtubeAnalyzer: YouTubeChannelAnalyzer;
 
     constructor() {
         this.youtubeService = new ChannelDataCollector();
@@ -56,8 +56,8 @@ export class ChannelAnalyzer {
                     decodedChannelIdentifier,
                 );
             } else {
-                // 채널 식별자로 직접 검색
-                youtubeData = await this.youtubeService.getChannelData(
+                // 채널 식별자로 직접 검색 (스마트 식별자 처리)
+                youtubeData = await this.getChannelDataWithSmartResolution(
                     decodedChannelIdentifier,
                 );
             }
@@ -128,7 +128,7 @@ export class ChannelAnalyzer {
     ): Promise<YouTubeChannelData | null> {
         try {
             ServerLogger.info(`🎥 영상 URL에서 채널 정보 추출: ${videoUrl}`);
-            const VideoProcessor = require('../../../../dist/server/services/video/VideoProcessor');
+            const { VideoProcessor } = await import('../../../services/video/VideoProcessor');
             const videoProcessor = new VideoProcessor();
 
             const videoInfo = await videoProcessor.getYouTubeVideoInfo(
@@ -150,6 +150,48 @@ export class ChannelAnalyzer {
     }
 
     /**
+     * 🎯 직접 채널 식별자 처리 (단순화됨)
+     * 익스텐션에서 정확한 @핸들 또는 UC 채널 ID를 보내므로 직접 처리
+     */
+    private async getChannelDataWithSmartResolution(
+        identifier: string
+    ): Promise<YouTubeChannelData | null> {
+        const trimmedIdentifier = identifier.trim();
+
+        ServerLogger.info(`🎯 채널 식별자 처리: "${trimmedIdentifier}"`);
+
+        try {
+            // 익스텐션에서 @핸들 또는 UC 채널 ID를 정확히 보내므로 직접 사용
+            const result = await this.youtubeService.getChannelData(trimmedIdentifier);
+            if (result) {
+                ServerLogger.info(`✅ 채널 발견: ${result.snippet.title}`);
+
+                // YouTube API 응답을 YouTubeChannelData 형식으로 변환
+                return {
+                    id: result.id,
+                    channelName: result.snippet.title,
+                    channelUrl: `https://www.youtube.com/channel/${result.id}`,
+                    subscriberCount: parseInt(result.statistics?.subscriberCount || '0'),
+                    subscribers: parseInt(result.statistics?.subscriberCount || '0'),
+                    description: result.snippet?.description || '',
+                    thumbnailUrl: result.snippet?.thumbnails?.high?.url ||
+                                  result.snippet?.thumbnails?.medium?.url ||
+                                  result.snippet?.thumbnails?.default?.url || '',
+                    customUrl: result.snippet?.customUrl || '',
+                    publishedAt: result.snippet?.publishedAt || '',
+                    defaultLanguage: result.snippet?.defaultLanguage || '',
+                    country: result.snippet?.country || ''
+                };
+            }
+        } catch (error) {
+            ServerLogger.error(`❌ 채널 검색 실패: ${error}`);
+        }
+
+        ServerLogger.error(`❌ 채널을 찾을 수 없음: "${trimmedIdentifier}"`);
+        return null;
+    }
+
+    /**
      * 🔬 상세 AI 분석 수행
      */
     private async performDetailedAnalysis(
@@ -165,11 +207,13 @@ export class ChannelAnalyzer {
             // 향상된 분석 수행
             const maxVideos = skipAIAnalysis ? 50 : 100;
             const analysisResult =
-                await this.youtubeAnalyzer.analyzeChannelEnhanced(
+                await this.youtubeAnalyzer.analyzeChannel(
                     youtubeData.id,
-                    maxVideos,
-                    true, // 항상 콘텐츠 분석 활성화 (channelIdentity를 위해)
-                    youtubeData, // YouTube API 채널 통계 전달
+                    {
+                        maxVideos,
+                        enableContentAnalysis: true, // 항상 콘텐츠 분석 활성화 (channelIdentity를 위해)
+                        youtubeChannelData: youtubeData, // YouTube API 채널 통계 전달
+                    }
                 );
 
             ServerLogger.info(`🔍 분석 결과 구조:`, {
@@ -257,13 +301,7 @@ export class ChannelAnalyzer {
                 : (analysisData?.enhancedAnalysis?.channelIdentity?.channelTags ||
                    analysisData?.analysis?.enhancedAnalysis?.channelIdentity?.channelTags || []),
             deepInsightTags: [], // 재해석으로 채움
-            allTags: skipAIAnalysis
-                ? [...(userKeywords || [])]
-                : [
-                      ...(userKeywords || []),
-                      ...(analysisData?.enhancedAnalysis?.channelIdentity?.channelTags ||
-                         analysisData?.analysis?.enhancedAnalysis?.channelIdentity?.channelTags || []),
-                  ].filter((tag, index, arr) => arr.indexOf(tag) === index),
+            allTags: [], // 재해석 후에 업데이트
 
             // channelIdentity 필드들 (AI 분석 결과에서 추출 - 두 구조 모두 지원)
             targetAudience: skipAIAnalysis
@@ -355,17 +393,17 @@ export class ChannelAnalyzer {
             if (deepInsightTags && deepInsightTags.length > 0) {
                 channelData.deepInsightTags = deepInsightTags;
 
-                // allTags 업데이트
-                channelData.allTags = [
-                    ...(userKeywords || []),
-                    ...deepInsightTags,
-                    ...channelData.aiTags,
-                ].filter((tag, index, arr) => arr.indexOf(tag) === index);
-
                 ServerLogger.success(
                     `✅ AI 재해석 완료: ${deepInsightTags.length}개 태그 생성`,
                 );
             }
+
+            // 🎯 allTags 업데이트 (deepInsightTags 포함!) - 재해석 성공 여부와 관계없이 실행
+            channelData.allTags = [
+                ...(userKeywords || []),
+                ...(channelData.deepInsightTags || []), // 🔥 핵심 수정!
+                ...channelData.aiTags,
+            ].filter((tag, index, arr) => arr.indexOf(tag) === index);
         } catch (reinterpretError) {
             ServerLogger.warn(`⚠️ AI 재해석 실패: ${reinterpretError}`);
             // 실패해도 기본 분석은 계속 진행
@@ -422,7 +460,11 @@ export class ChannelAnalyzer {
                 // 기본값들
                 aiTags: [],
                 deepInsightTags: [],  // 필수 필드 추가
-                allTags: userKeywords || [],
+                allTags: [
+                    ...(userKeywords || []),
+                    // deepInsightTags는 빈 배열이므로 포함하지 않음
+                    // AI 분석이 없는 경우이므로 aiTags도 빈 배열
+                ].filter((tag, index, arr) => arr.indexOf(tag) === index),
                 clusterIds: [],
                 suggestedClusters: [],
                 contentType: 'mixed',

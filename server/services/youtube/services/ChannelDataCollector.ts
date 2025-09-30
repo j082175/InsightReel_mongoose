@@ -2,8 +2,8 @@ import { google } from 'googleapis';
 import { ServerLogger } from '../../../utils/logger';
 import { ChannelInfo, VideoDetailedInfo } from '../types/channel-types';
 
-const MultiKeyManager = require('../../../utils/multi-key-manager').default || require('../../../utils/multi-key-manager');
-const UsageTracker = require('../../../utils/usage-tracker');
+import MultiKeyManager from '../../../utils/multi-key-manager';
+import UsageTracker from '../../../utils/usage-tracker';
 
 export interface ChannelAnalysisData {
     channelInfo: ChannelInfo;
@@ -50,13 +50,17 @@ export class ChannelDataCollector {
 
     async initialize(): Promise<void> {
         if (!this.multiKeyManager) {
-            this.multiKeyManager = await MultiKeyManager.getInstance();
-            const availableKey = this.multiKeyManager.getAvailableKey();
-            if (availableKey) {
+            try {
+                this.multiKeyManager = await MultiKeyManager.getInstance();
+                const availableKey = this.multiKeyManager.getAvailableKey();
                 this.youtube = google.youtube({
                     version: 'v3',
                     auth: availableKey.key
                 });
+                ServerLogger.info('✅ ChannelDataCollector YouTube client 초기화 완료');
+            } catch (error: any) {
+                ServerLogger.error('❌ ChannelDataCollector YouTube client 초기화 실패:', error);
+                throw new Error(`YouTube 서비스 초기화 실패: ${error.message}`);
             }
         }
     }
@@ -402,25 +406,34 @@ export class ChannelDataCollector {
         try {
             await this.initialize();
 
+            if (!this.youtube) {
+                ServerLogger.error('❌ YouTube client가 초기화되지 않음');
+                return null;
+            }
+
             const params: any = {
                 part: 'snippet,statistics'
             };
 
             if (channelIdOrHandle.startsWith('@')) {
                 params.forHandle = channelIdOrHandle.replace('@', '');
+                ServerLogger.info(`🔍 @handle로 채널 검색: ${channelIdOrHandle}`);
             } else {
                 params.id = channelIdOrHandle;
+                ServerLogger.info(`🔍 채널 ID로 검색: ${channelIdOrHandle}`);
             }
 
             const response = await this.youtube.channels.list(params);
 
             if (response.data.items && response.data.items.length > 0) {
+                ServerLogger.info(`✅ 채널 찾음: ${response.data.items[0].snippet.title}`);
                 return response.data.items[0];
             }
 
+            ServerLogger.warn(`⚠️ 채널을 찾을 수 없음: ${channelIdOrHandle}`);
             return null;
         } catch (error: any) {
-            ServerLogger.error(`YouTube 채널 정보 조회 실패: ${error.message}`);
+            ServerLogger.error(`❌ YouTube 채널 정보 조회 실패: ${error.message}`, error);
             return null;
         }
     }

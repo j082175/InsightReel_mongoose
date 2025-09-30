@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { ServerLogger } from '../utils/logger';
 import ResponseHandler from '../utils/response-handler';
 import { HTTP_STATUS_CODES } from '../config/api-messages';
+import TrendingVideo from '../models/TrendingVideo';
 
 const router = Router();
 
@@ -106,9 +107,9 @@ router.get('/logs', async (req: Request, res: Response) => {
 // API 할당량 상태 조회
 router.get('/quota-status', async (req: Request, res: Response) => {
     try {
-        const { getInstance } = require('../services/ApiKeyManager');
+        const { getInstance } = await import('../services/ApiKeyManager');
         const apiKeyManager = getInstance();
-        const UsageTracker = require('../utils/usage-tracker');
+        const UsageTracker = (await import('../utils/usage-tracker')).default;
         const UnifiedGeminiManagerModule = await import('../utils/unified-gemini-manager');
         const UnifiedGeminiManager = UnifiedGeminiManagerModule.default || UnifiedGeminiManagerModule.UnifiedGeminiManager;
 
@@ -139,7 +140,7 @@ router.get('/quota-status', async (req: Request, res: Response) => {
         }
 
         // 첫 번째 활성 키로 사용량 추적기 생성
-        const usageTracker = UsageTracker.getInstance(activeKeys[0]);
+        const usageTracker = UsageTracker.getInstance(activeKeys[0].apiKey);
         const usageStats = usageTracker.getUsageStats();
 
         // Unified Gemini Manager에서 상세 사용량 정보 조회
@@ -346,7 +347,6 @@ router.get('/system/cookie-status', async (req: Request, res: Response) => {
 // 트렌딩 통계 조회
 router.get('/trending-stats', async (req: Request, res: Response) => {
     try {
-        const TrendingVideo = require('../models/TrendingVideo').default || require('../models/TrendingVideo');
 
         // 전체 트렌딩 비디오 수 조회
         const count = await TrendingVideo.countDocuments({});
@@ -359,7 +359,7 @@ router.get('/trending-stats', async (req: Request, res: Response) => {
 
         const trendingStats = {
             count,
-            lastUpdate: latestVideo?.createdAt?.toISOString() || new Date().toISOString()
+            lastUpdate: latestVideo?.createdAt ? (new Date(latestVideo.createdAt)).toISOString() : new Date().toISOString()
         };
 
         ResponseHandler.success(res, trendingStats);

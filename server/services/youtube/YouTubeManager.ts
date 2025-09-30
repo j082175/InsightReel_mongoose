@@ -38,8 +38,10 @@ export class YouTubeManager {
         this.channelDataCollector = new ChannelDataCollector();
         this.channelInfoCollector = new ChannelInfoCollector();
 
-        // 서비스 레지스트리에 등록
-        this.registerToServiceRegistry();
+        // 서비스 레지스트리에 등록 (비동기로 처리)
+        this.registerToServiceRegistry().catch(error => {
+            ServerLogger.warn('서비스 레지스트리 비동기 등록 실패:', error);
+        });
 
         ServerLogger.success('🎯 YouTube 통합 매니저 초기화 완료');
     }
@@ -201,9 +203,9 @@ export class YouTubeManager {
 
     // ===== 유틸리티 메서드 =====
 
-    private registerToServiceRegistry(): void {
+    private async registerToServiceRegistry(): Promise<void> {
         try {
-            const serviceRegistry = require('../../utils/service-registry');
+            const { default: serviceRegistry } = await import('../../utils/service-registry');
             serviceRegistry.register(this);
         } catch (error) {
             ServerLogger.warn('서비스 레지스트리 등록 실패:', error);

@@ -138,9 +138,13 @@ class UnifiedGeminiManager {
         // 비동기 초기화를 위해 init 메서드 호출 필요
         this.initPromise = this.init(options);
 
-        // 서비스 레지스트리에 등록
-        const serviceRegistry = require('./service-registry');
-        serviceRegistry.register(this);
+        // 서비스 레지스트리에 등록 - 동적으로 로드하여 순환 참조 방지
+        import('./service-registry').then(module => {
+            const serviceRegistry = module.default;
+            serviceRegistry.register(this);
+        }).catch(error => {
+            ServerLogger.warn('서비스 레지스트리 등록 실패:', error);
+        });
 
         ServerLogger.success(`🤖 통합 Gemini 관리자 초기화 완료 (모드: ${this.fallbackMode})`, null, 'UNIFIED');
 
@@ -558,13 +562,14 @@ class UnifiedGeminiManager {
     /**
      * 사용량 통계 조회
      */
-    public getUsageStats(): UsageStats {
+    public async getUsageStats(): Promise<UsageStats> {
         // API 키가 초기화되지 않은 경우 기본값 반환
         if (!this.apiKeys || this.apiKeys.length === 0) {
+            const { GEMINI_API_LIMITS } = await import('../config/api-constants');
             return {
-                pro: { used: 0, limit: 50 },
-                flash: { used: 0, limit: 250 },
-                flashLite: { used: 0, limit: 1000 }
+                pro: { used: 0, limit: GEMINI_API_LIMITS.PRO.rpd },
+                flash: { used: 0, limit: GEMINI_API_LIMITS.FLASH.rpd },
+                flashLite: { used: 0, limit: GEMINI_API_LIMITS.FLASH_LITE.rpd }
             };
         }
 

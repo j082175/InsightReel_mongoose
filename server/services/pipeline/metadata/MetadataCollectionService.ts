@@ -3,6 +3,7 @@ import { VideoProcessor } from '../../video/VideoProcessor';
 import { PLATFORMS } from '../../../config/api-messages';
 import type { VideoMetadata } from '../../../types/controller-types';
 import type { Platform } from '../../../types/video-types';
+import YouTubeDataProcessor from '../../../utils/youtube-data-processor';
 
 /**
  * 플랫폼별 메타데이터 수집 서비스
@@ -302,13 +303,12 @@ export class MetadataCollectionService {
     }
 
     private getYouTubeCategoryName(categoryId: string | number): string {
-        const YouTubeDataProcessor = require('../../../utils/youtube-data-processor').default;
         return YouTubeDataProcessor.getCategoryName(categoryId);
     }
 
     private async getChannelInfo(channelId: string): Promise<{subscribers: number, channelVideos: number}> {
         try {
-            const { getInstance: getApiKeyManager } = require('../../../services/ApiKeyManager');
+            const { getInstance: getApiKeyManager } = await import('../../../services/ApiKeyManager');
             const apiKeyManager = getApiKeyManager();
             await apiKeyManager.initialize();
             const activeApiKeys = await apiKeyManager.getActiveApiKeys();
@@ -321,7 +321,7 @@ export class MetadataCollectionService {
             const apiKey = activeKeys[0];
             const url = `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}&key=${apiKey}`;
 
-            const axios = require('axios');
+            const axios = (await import('axios')).default;
             const response = await axios.get(url);
 
             if (response.data.items && response.data.items.length > 0) {
@@ -341,7 +341,8 @@ export class MetadataCollectionService {
 
     private async getTopComments(videoId: string): Promise<string> {
         try {
-            const youtubeProcessor = new (require('../../../services/video/processors/YouTubeProcessor')).YouTubeProcessor();
+            const { YouTubeProcessor } = await import('../../../services/video/processors/YouTubeProcessor');
+            const youtubeProcessor = new YouTubeProcessor();
             const comments = await youtubeProcessor.fetchComments(videoId, 5);
             return comments.join(' | ');
         } catch (error) {

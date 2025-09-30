@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import { ServerLogger } from '../../utils/logger';
+import VideoProcessor from '../video/VideoProcessor';
 
 // Type definitions for Channel Analysis Queue
 interface ChannelInfo {
@@ -118,7 +119,7 @@ interface IVideoProcessor {
 
 // Interface for YouTubeChannelService
 interface IYouTubeChannelService {
-    getChannelInfo(identifier: string): Promise<ChannelInfo>;
+    getChannelInfo(identifier: string): Promise<ChannelInfo | null>;
 }
 
 // Interface for Channel model
@@ -151,7 +152,7 @@ class ChannelAnalysisQueue extends EventEmitter {
     }
 
     private async initializeChannelAnalysisService(): Promise<void> {
-        const ChannelAnalysisService = require('../features/cluster/ChannelAnalysisService');
+        const ChannelAnalysisService = require('../../features/channel-analysis/ChannelAnalysisService');
         this.ChannelAnalysisService = ChannelAnalysisService.getInstance();
         // ChannelAnalysisService 초기화 대기
         await new Promise<void>((resolve) => {
@@ -190,7 +191,6 @@ class ChannelAnalysisQueue extends EventEmitter {
             if (decodedChannelIdentifier.includes('/watch') || decodedChannelIdentifier.includes('/shorts/')) {
                 // 영상 URL에서 채널 정보 추출
                 ServerLogger.info(`🎥 영상 URL에서 채널 정보 추출: ${decodedChannelIdentifier}`);
-                const VideoProcessor = require('../../dist/server/services/video/VideoProcessor');
                 const videoProcessor: IVideoProcessor = new VideoProcessor();
 
                 try {
@@ -208,7 +208,7 @@ class ChannelAnalysisQueue extends EventEmitter {
                 }
             } else {
                 // 채널 식별자로 직접 검색
-                const YouTubeChannelService = require('./YouTubeChannelService');
+                const YouTubeChannelService = require('../youtube/services/ChannelService');
                 const youtubeService: IYouTubeChannelService = new YouTubeChannelService();
                 youtubeData = await youtubeService.getChannelInfo(decodedChannelIdentifier);
             }
@@ -218,7 +218,7 @@ class ChannelAnalysisQueue extends EventEmitter {
             }
 
             // 2. 메인 Channel 컬렉션에서 중복 검사
-            const Channel: IChannel = require('../models/Channel');
+            const Channel: IChannel = require('../../models/Channel');
             const existing = await Channel.findOne({
                 channelId: youtubeData.id,
             });

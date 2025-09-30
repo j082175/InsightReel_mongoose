@@ -30,8 +30,10 @@ export class YouTubeBatchProcessor {
         this.queueManager = new BatchQueueManager(this.config);
         this.batchProcessor = new BatchProcessor(this.config);
 
-        // 서비스 레지스트리에 등록
-        this.registerToServiceRegistry();
+        // 서비스 레지스트리에 등록 (비동기로 처리)
+        this.registerToServiceRegistry().catch(error => {
+            ServerLogger.warn('서비스 레지스트리 비동기 등록 실패:', error);
+        });
 
         ServerLogger.success('📦 YouTube 배치 처리기 초기화 완료:', {
             maxBatchSize: this.config.maxBatchSize,
@@ -311,9 +313,9 @@ export class YouTubeBatchProcessor {
     /**
      * 서비스 레지스트리 등록
      */
-    private registerToServiceRegistry(): void {
+    private async registerToServiceRegistry(): Promise<void> {
         try {
-            const serviceRegistry = require('../../utils/service-registry');
+            const { default: serviceRegistry } = await import('../../utils/service-registry');
             serviceRegistry.register(this);
         } catch (error) {
             ServerLogger.warn('서비스 레지스트리 등록 실패:', error);

@@ -211,11 +211,11 @@ export class ThumbnailExtractor {
     }
 
     private calculateOptimalFrameCount(duration: number): number {
-        // Legacy 시스템과 동일한 적극적인 프레임 추출 (더 나은 AI 분석을 위해)
-        if (duration <= 10) return 6;      // 10초 이하: 6개
-        if (duration <= 30) return 10;     // 30초 이하: 10개
-        if (duration <= 60) return 14;     // 60초 이하: 14개
-        return Math.min(20, Math.ceil(duration / 5)); // 5초당 1프레임, 최대 20개
+        // 최대 10개 프레임으로 제한 (API 안정성 향상)
+        if (duration <= 10) return 5;      // 10초 이하: 5개
+        if (duration <= 30) return 7;      // 30초 이하: 7개
+        if (duration <= 60) return 10;     // 60초 이하: 10개
+        return Math.min(10, Math.ceil(duration / 10)); // 10초당 1프레임, 최대 10개
     }
 
     private calculateFrameIntervals(duration: number, frameCount: number): number[] {

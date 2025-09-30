@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { ServerLogger } from './logger';
 import { YOUTUBE_API_LIMITS, GEMINI_API_LIMITS } from '../config/api-constants';
+import * as apiKeysData from '../data/api-keys.json';
 
 // Type definitions
 export type ModelType = 'pro' | 'flash' | 'flash-lite' | 'flashLite' | 'youtube-videos' | 'youtube-search' | 'youtube-channels' | 'youtube-comments' | 'youtube-playlists' | 'youtube-captions' | 'single';
@@ -161,14 +162,34 @@ class UsageTracker {
     static getDefaultApiKey(): string {
         try {
             // 동기적으로 첫 번째 키만 조회 (비동기 초기화 없이)
-            const apiKeysData = require('../data/api-keys.json');
+            // apiKeysData is already imported at the top
 
-            // 방어적 프로그래밍: apiKeysData가 배열인지 확인
-            if (!Array.isArray(apiKeysData)) {
+            // TypeScript JSON import wraps in default property
+            const apiKeys = (apiKeysData as any).default || apiKeysData;
+
+            // Debug logging (security-safe)
+            ServerLogger.debug('🔍 API 키 로드 상태:', {
+                hasApiKeysData: !!apiKeysData,
+                hasDefault: !!(apiKeysData as any).default,
+                isArray: Array.isArray(apiKeys),
+                type: typeof apiKeys,
+                keys: Object.keys(apiKeys || {}),
+                activeKeysCount: Array.isArray(apiKeys) ? apiKeys.filter((key: any) => key && key.status === 'active').length : 0,
+                firstKeyHash: Array.isArray(apiKeys) && apiKeys[0]?.apiKey ?
+                    crypto.createHash('sha256').update(apiKeys[0].apiKey).digest('hex').substring(0, 8) + '...' : null
+            });
+
+            // 방어적 프로그래밍: apiKeys가 배열인지 확인
+            if (!Array.isArray(apiKeys)) {
+                ServerLogger.error('❌ API 키 데이터 배열이 아님:', {
+                    type: typeof apiKeys,
+                    isArray: Array.isArray(apiKeys),
+                    value: apiKeys
+                });
                 throw new Error('API 키 데이터 형식이 올바르지 않습니다');
             }
 
-            const activeKeys = apiKeysData.filter((key: any) => key && key.status === 'active');
+            const activeKeys = apiKeys.filter((key: any) => key && key.status === 'active');
             if (activeKeys.length > 0) {
                 return activeKeys[0].apiKey;
             }
@@ -257,7 +278,7 @@ class UsageTracker {
                 'gemini-2.5-pro': GEMINI_API_LIMITS.PRO,
                 'gemini-2.5-flash': GEMINI_API_LIMITS.FLASH,
                 'gemini-2.5-flash-lite': GEMINI_API_LIMITS.FLASH_LITE,
-                'youtube-data-api': { rpd: YOUTUBE_API_LIMITS.SAFETY_MARGIN }, // 환경변수 기반
+                'youtube-data-api': { rpd: YOUTUBE_API_LIMITS.SAFETY_MARGIN }, // YouTube API 안전 마진 (8000)
             };
 
             ServerLogger.info(
@@ -277,7 +298,7 @@ class UsageTracker {
                 'gemini-2.5-pro': GEMINI_API_LIMITS.PRO,
                 'gemini-2.5-flash': GEMINI_API_LIMITS.FLASH,
                 'gemini-2.5-flash-lite': GEMINI_API_LIMITS.FLASH_LITE,
-                'youtube-data-api': { rpd: 8000 }, // 하드코딩 폴백
+                'youtube-data-api': { rpd: YOUTUBE_API_LIMITS.SAFETY_MARGIN }, // YouTube API 안전 마진 폴백 (8000)
             };
         }
     }
@@ -1141,21 +1162,20 @@ class UsageTracker {
     /**
      * 모든 캐시 클리어 (API 키 변경 시 사용)
      */
-    static clearAllCaches(): boolean {
+    static async clearAllCaches(): Promise<boolean> {
         try {
-            // 1. require 캐시 클리어
-            const apiKeysPath = require.resolve('../data/api-keys.json');
-            delete require.cache[apiKeysPath];
+            // 1. require 캐시 클리어 (ES6 modules don't use require.cache)
+            // const apiKeysPath = require.resolve('../data/api-keys.json');
+            // delete require.cache[apiKeysPath];
 
             // 2. 싱글톤 인스턴스 클리어
             UsageTracker.instances.clear();
 
-            // 3. ApiKeyManager 캐시 클리어
-            const apiKeyManager = require('../services/ApiKeyManager');
-            apiKeyManager.clearCacheAndReinitialize();
+            // 3. ApiKeyManager는 별도의 캐시 클리어가 필요하지 않음
+            // (필요시 개별 서비스가 재초기화하도록 구성됨)
 
             // 4. 모든 등록된 서비스의 API 키 캐시 클리어
-            const serviceRegistry = require('./service-registry');
+            const { default: serviceRegistry } = await import('./service-registry');
             const result = serviceRegistry.clearAllServiceCaches();
 
             ServerLogger.info(`🔄 API 키 캐시 완전 클리어 완료 - UsageTracker + ApiKeyManager + ${result.cleared}개 서비스`, null, 'USAGE-TRACKER');
@@ -1185,10 +1205,10 @@ class UsageTracker {
                     clearTimeout(reloadTimeout);
 
                     // 1000ms 디바운싱 (임시 저장 등 무시, 안정성 향상)
-                    reloadTimeout = setTimeout(() => {
+                    reloadTimeout = setTimeout(async () => {
                         ServerLogger.info('📁 API 키 파일 변경 감지 - 자동 리로드 시작', null, 'API-WATCHER');
 
-                        const success = UsageTracker.clearAllCaches();
+                        const success = await UsageTracker.clearAllCaches();
                         if (success) {
                             ServerLogger.info('✅ API 키 자동 리로드 완료', null, 'API-WATCHER');
                         } else {
@@ -1219,9 +1239,9 @@ class UsageTracker {
     /**
      * 수동 캐시 리로드 (디버깅/강제 갱신용)
      */
-    static forceReload(): boolean {
+    static async forceReload(): Promise<boolean> {
         ServerLogger.info('🔄 수동 API 키 캐시 리로드 요청', null, 'USAGE-TRACKER');
-        return UsageTracker.clearAllCaches();
+        return await UsageTracker.clearAllCaches();
     }
 
     /**

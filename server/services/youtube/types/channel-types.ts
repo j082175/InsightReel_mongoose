@@ -197,14 +197,16 @@ export interface ChannelIdentity {
 }
 
 export interface ChannelAnalysisConfig {
-    maxVideos: number;
-    includeComments: boolean;
-    includeAIAnalysis: boolean;
-    analysisDepth: "basic" | "standard" | "comprehensive";
+    maxVideos?: number;
+    includeComments?: boolean;
+    includeAIAnalysis?: boolean;
+    enableContentAnalysis?: boolean;
+    analysisDepth?: "basic" | "standard" | "comprehensive";
     timeRange?: {
         startDate: string;
         endDate: string;
     };
+    youtubeChannelData?: any; // YouTube API 채널 데이터 전달용
 }
 
 export interface FrameAnalysisResult {

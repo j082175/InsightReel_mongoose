@@ -11,7 +11,7 @@ import {
     ChunkResult
 } from '../types/batch-types';
 
-const MultiKeyManager = require('../../../utils/multi-key-manager').default || require('../../../utils/multi-key-manager');
+import MultiKeyManager from '../../../utils/multi-key-manager';
 
 export class BatchProcessor {
     private multiKeyManager: any;
@@ -410,7 +410,7 @@ export class BatchProcessor {
             ServerLogger.info('📊 배치 시트 저장 시작:', { resultCount: results.length });
 
             const sheetsStartTime = Date.now();
-            const SheetsManager = require('../../sheets/SheetsManager');
+            const { SheetsManager } = await import('../../sheets/SheetsManager');
             const sheetsManager = new SheetsManager();
 
             const sheetResult = await sheetsManager.saveVideoBatch(results, 'YOUTUBE');
@@ -420,7 +420,6 @@ export class BatchProcessor {
             ServerLogger.success('✅ 배치 시트 저장 완료:', {
                 resultCount: results.length,
                 processingTime: `${sheetsProcessingTime}ms`,
-                spreadsheetUrl: sheetResult.spreadsheetUrl,
             });
 
         } catch (error) {

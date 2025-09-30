@@ -1,6 +1,7 @@
 import * as express from 'express';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+import * as fs from 'fs';
 import { setupMiddleware } from './middleware';
 import routes from './routes';
 import { ServerLogger } from './utils/logger';
@@ -16,7 +17,7 @@ const possibleEnvPaths = [
 let envLoaded = false;
 for (const envPath of possibleEnvPaths) {
     try {
-        if (require('fs').existsSync(envPath)) {
+        if (fs.existsSync(envPath)) {
             dotenv.config({ path: envPath });
             envLoaded = true;
             console.log(`✅ Environment loaded from: ${envPath}`);
@@ -47,8 +48,13 @@ const createApp = async (): Promise<express.Application> => {
 
         // 2. 클러스터 시스템 초기화
         try {
-            const { initializeClusterSystem } = require('./features/cluster');
+            const { initializeClusterSystem } = await import('./features/cluster');
             initializeClusterSystem(app);
+
+            // TypeScript Cluster Service 초기화
+            const { clusterManagerService } = await import('./services/cluster/ClusterManagerService');
+            await clusterManagerService.initialize();
+
             ServerLogger.success('✅ 클러스터 시스템 초기화 완료');
         } catch (error) {
             ServerLogger.error('❌ 클러스터 시스템 초기화 실패:', error);

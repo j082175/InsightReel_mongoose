@@ -5,8 +5,7 @@
 
 import { ChannelData } from '../../../types/channel.types';
 import { ServerLogger } from '../../../utils/logger';
-
-const Channel = require('../../../models/Channel');
+import Channel from '../../../models/Channel';
 
 export class ChannelDataService {
     /**
@@ -70,7 +69,7 @@ export class ChannelDataService {
                 hasChannelPersonality: !!result.channelPersonality,
             });
 
-            return result;
+            return result as unknown as ChannelData;
         } catch (error) {
             ServerLogger.error('❌ MongoDB 채널 저장 실패', error);
             throw error;
@@ -129,7 +128,7 @@ export class ChannelDataService {
      */
     async getAll(): Promise<ChannelData[]> {
         try {
-            const channels: ChannelData[] = await Channel.find({}).lean();
+            const channels = await Channel.find({}).lean() as unknown as ChannelData[];
             return channels;
         } catch (error) {
             ServerLogger.warn('⚠️ MongoDB 전체 조회 실패', error);
@@ -142,10 +141,10 @@ export class ChannelDataService {
      */
     async getRecent(limit = 20): Promise<ChannelData[]> {
         try {
-            const channels: ChannelData[] = await Channel.find({})
+            const channels = await Channel.find({})
                 .sort({ collectedAt: -1 })
                 .limit(limit)
-                .lean();
+                .lean() as unknown as ChannelData[];
             return channels;
         } catch (error) {
             ServerLogger.warn('⚠️ MongoDB 최근 채널 조회 실패', error);

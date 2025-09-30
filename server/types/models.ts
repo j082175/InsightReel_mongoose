@@ -1,3 +1,4 @@
+import type { CategoryInfo, UploadFrequency } from "./channel.types";
 import mongoose, { Document } from "mongoose";
 import { FinalVideoData } from "./video-types"; // VideoModel.ts에서 참조하던 타입
 
@@ -15,33 +16,38 @@ export interface IChannel extends Document {
     description?: string;
     country?: string;
     language?: string;
+    customUrl?: string;
+    publishedAt?: Date;
+    defaultLanguage?: string;
+    contentType?: "auto" | "shortform" | "longform" | "mixed";
     // ChannelStats
     subscribers: number;
     totalViews: number;
     totalVideos: number;
     averageViewsPerVideo?: number;
     last7DaysViews?: number;
-    uploadFrequency?: string; // 예: 'daily', 'weekly', 'monthly'
+    uploadFrequency?: UploadFrequency; // 예: 'daily', 'weekly', 'monthly'
     mostViewedVideo?: {
         videoId: string;
         title: string;
         views: number;
     };
     // ChannelAIAnalysis
-    categoryInfo?: {
-        mainCategory?: string;
-        middleCategory?: string;
-        fullCategoryPath?: string;
-        categoryDepth?: number;
-        confidence?: string;
-        consistencyLevel?: string; // 카테고리 일관성
-    };
-    keywords?: string[];
-    aiTags?: string[];
+    categoryInfo?: CategoryInfo;
+    keywords: string[];
+    aiTags: string[];
+    deepInsightTags: string[];
+    targetAudience: string;
+    contentStyle: string;
+    uniqueFeatures: string[];
+    channelPersonality: string;
+    allTags: string[];
     analysisStatus?: "pending" | "processing" | "completed" | "failed";
     lastAnalyzedAt?: Date;
     // ChannelClusterInfo
     clusterId?: string;
+    clusterIds: string[];
+    suggestedClusters: any[];
     clusterScore?: number;
     // ChannelMetadata
     status?: "active" | "inactive" | "suspended";
@@ -69,7 +75,7 @@ export interface IChannelUrl extends Document {
     };
     processedAt?: Date;
     discoveredAt: Date;
-    lastAnalyzedAt?: Date;
+    lastAnalyzedAt?: string;
 }
 
 // IVideoUrl 인터페이스 (VideoUrl.js의 스키마를 기반으로 정의)
@@ -102,8 +108,8 @@ export interface IChannelGroup extends Document {
     keywords: string[];
     isActive: boolean;
     lastCollectedAt?: Date;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt: string;
+    updatedAt: string;
 }
 
 // ICollectionBatch 인터페이스 (CollectionBatch.js의 스키마를 기반으로 정의)
@@ -149,8 +155,8 @@ export interface ICollectionBatch extends Document {
     };
     errorMessage?: string;
     errorDetails?: string;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt: string;
+    updatedAt: string;
     // Virtuals
     durationMinutes?: number;
     successRate?: number;
@@ -181,6 +187,6 @@ export interface ITrendingVideo extends Document {
     description?: string;
     keywords: string[];
     hashtags: string[];
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt: string;
+    updatedAt: string;
 }

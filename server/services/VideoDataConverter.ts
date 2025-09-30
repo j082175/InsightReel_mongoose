@@ -6,6 +6,7 @@
 
 import path from 'path';
 import { ServerLogger } from '../utils/logger';
+import VideoUtils from './video/utils/VideoUtils';
 import type {
     FinalVideoData,
     Platform,
@@ -194,7 +195,6 @@ export class VideoDataConverter {
                 }
                 // 마지막 폴백: description에서 직접 추출
                 if (metadata?.description) {
-                    const VideoUtils = require('./video/utils/VideoUtils').default;
                     return VideoUtils.extractHashtags(metadata.description);
                 }
                 return [];
