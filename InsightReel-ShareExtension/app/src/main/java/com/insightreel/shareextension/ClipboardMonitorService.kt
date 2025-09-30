@@ -126,7 +126,7 @@ class ClipboardMonitorService : Service() {
             }
 
             // 설정에서 자동 전송 모드 확인
-            val autoSendEnabled = preferencesManager.getAutoSend()
+            val autoSendEnabled = !preferencesManager.getShowModal()
 
             // Android 10+에서는 임시 URL일 수 있음
             val isTemporaryUrl = url == "clipboard_changed" || url.contains("temp")

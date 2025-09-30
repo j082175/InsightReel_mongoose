@@ -1,21 +1,19 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
+import toast from 'react-hot-toast';
 import {
-  videosApi,
-  channelsApi,
-  channelGroupsApi,
   batchesApi,
+  channelGroupsApi,
+  channelsApi,
   healthApi,
   trendingApi,
+  videosApi,
 } from '../services/apiClient';
 import {
-  Video,
   Channel,
   ChannelGroup,
-  CollectionBatch,
-  TrendingVideo,
+  Video
 } from '../types';
-import toast from 'react-hot-toast';
-import axios from 'axios';
 
 // API 응답 타입 정의
 interface PlatformStats {
@@ -526,8 +524,9 @@ export const useCollectTrending = () => {
       console.log('🚀 트렌딩 수집 요청 데이터:', requestData);
 
       const response = await axios.post(
-        'http://localhost:3000/api/collect-trending',
-        requestData
+          // 'http://localhost:3000/api/collect-trending',
+          "http://localhost:3000/api/trending/collect-trending",
+          requestData
       );
       return response.data;
     },

@@ -23,7 +23,6 @@ class PreferencesManager(private val context: Context) {
         private const val KEY_AUTO_DETECT_NETWORK = "auto_detect_network"
         private const val KEY_WIFI_SERVER_URL = "wifi_server_url"
         private const val KEY_LTE_SERVER_URL = "lte_server_url"
-        private const val KEY_AUTO_SEND = "auto_send"
 
         // 분석 타입 상수들
         const val ANALYSIS_VIDEO_ONLY = "video_only"
@@ -36,7 +35,6 @@ class PreferencesManager(private val context: Context) {
         private const val DEFAULT_WIFI_SERVER_URL = "http://192.168.0.2:3000"
         private const val DEFAULT_LTE_SERVER_URL = "https://insightreel-mobile-test.loca.lt"
         private const val DEFAULT_AUTO_DETECT_NETWORK = true
-        private const val DEFAULT_AUTO_SEND = true
 
         // 마이그레이션용 상수
         private const val KEY_MIGRATION_VERSION = "migration_version"
@@ -209,19 +207,6 @@ class PreferencesManager(private val context: Context) {
 
     fun getAutoDetectNetwork(): Boolean {
         return sharedPreferences.getBoolean(KEY_AUTO_DETECT_NETWORK, DEFAULT_AUTO_DETECT_NETWORK)
-    }
-
-    /**
-     * 자동 전송 모드 설정/가져오기
-     */
-    fun setAutoSend(autoSend: Boolean) {
-        sharedPreferences.edit()
-            .putBoolean(KEY_AUTO_SEND, autoSend)
-            .apply()
-    }
-
-    fun getAutoSend(): Boolean {
-        return sharedPreferences.getBoolean(KEY_AUTO_SEND, DEFAULT_AUTO_SEND)
     }
 
     /**
