@@ -3,19 +3,18 @@
  * 리팩토링된 채널 분석 서비스 - 역할별로 분리된 서비스들을 조합
  */
 
-const { ServerLogger } = require('../../utils/logger');
+import { ServerLogger } from '../../utils/logger';
 
 // 분리된 서비스들
-const { ChannelAnalyzer } = require('./services/ChannelAnalyzer');
-const { ChannelBackupService } = require('./services/ChannelBackupService');
-const { ChannelDataService } = require('./services/ChannelDataService');
-const { ChannelSearchService } = require('./services/ChannelSearchService');
+import { ChannelAnalyzer } from './services/ChannelAnalyzer';
+// Use dynamic imports for CommonJS modules
+let ChannelBackupService: any, ChannelDataService: any, ChannelSearchService: any;
 
 // ChannelData 타입 import 추가
 import type { ChannelData } from '../../types/channel.types';
 
-const DuplicateCheckManager = require('../../models/DuplicateCheckManager');
-const Channel = require('../../models/Channel');
+import { DuplicateChecker } from '../../shared/utils/DuplicateChecker';
+import Channel from '../../models/Channel';
 
 /**
  * 📊 채널 분석 서비스 (메인 조합기)
@@ -26,15 +25,53 @@ class ChannelAnalysisService {
     private backupService: any;
     private searchService: any;
     private analyzer: any;
+    private initializationWarningCount: number = 0;
 
     constructor() {
-        // 분리된 서비스들 초기화
+        // 분리된 서비스들 초기화 - 동적으로 로드
+        this.analyzer = new ChannelAnalyzer();
+
+        // Initialize services asynchronously - don't call initialize() in constructor
+        this.initializeServices().then(() => {
+            // Services are now loaded, can initialize
+            this.initialize();
+        }).catch(error => {
+            ServerLogger.error('❌ ChannelAnalysisService 서비스 초기화 실패', error);
+        });
+    }
+
+    private async initializeServices() {
+        const [backupModule, dataModule, searchModule] = await Promise.all([
+            import('./services/ChannelBackupService'),
+            import('./services/ChannelDataService'),
+            import('./services/ChannelSearchService')
+        ]);
+
+        ChannelBackupService = (backupModule as any).ChannelBackupService || backupModule;
+        ChannelDataService = (dataModule as any).ChannelDataService || dataModule;
+        ChannelSearchService = (searchModule as any).ChannelSearchService || searchModule;
+
         this.dataService = new ChannelDataService();
         this.backupService = new ChannelBackupService();
         this.searchService = new ChannelSearchService();
-        this.analyzer = new ChannelAnalyzer();
+    }
 
-        this.initialize();
+    private async waitForServices() {
+        // Wait until services are initialized
+        while (!this.dataService || !this.backupService || !this.searchService) {
+            // Log warning only on first few attempts to avoid spam
+            if (this.initializationWarningCount < 3) {
+                this.initializationWarningCount++;
+                ServerLogger.warn(`⏳ ChannelAnalysisService: Waiting for services to initialize (attempt ${this.initializationWarningCount})`);
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
+        // Reset counter once services are ready
+        if (this.initializationWarningCount > 0) {
+            ServerLogger.info('✅ ChannelAnalysisService: All services initialized successfully');
+            this.initializationWarningCount = 0;
+        }
     }
 
     /**
@@ -82,12 +119,11 @@ class ChannelAnalysisService {
                 queueNormalizedChannelId,
             );
 
-            // 중복 검사
-            const existing = await this.dataService.findById(
-                channelData.channelId,
-            );
-            if (existing) {
-                ServerLogger.warn(`⚠️ 중복 분석 차단: ${channelData.name}`);
+            // 🎯 EARLY DUPLICATE CHECK - Save resources by checking before processing
+            const isDuplicate = await DuplicateChecker.checkChannel(channelData.channelId);
+            if (isDuplicate) {
+                const existingChannel = await DuplicateChecker.getExistingChannel(channelData.channelId);
+                ServerLogger.warn(`⚠️ 중복 분석 차단: ${channelData.name} (${channelData.channelId})`);
                 throw new Error(
                     `채널 ${channelData.name}은 이미 분석되었습니다.`,
                 );
@@ -120,12 +156,11 @@ class ChannelAnalysisService {
                 userKeywords,
             );
 
-            // 🚨 중복검사
-            const existing = await this.dataService.findById(
-                channelData.channelId,
-            );
-            if (existing) {
-                ServerLogger.warn(`⚠️ 중복 분석 차단: ${channelData.name}`);
+            // 🎯 EARLY DUPLICATE CHECK - Save resources by checking before processing
+            const isDuplicate = await DuplicateChecker.checkChannel(channelData.channelId);
+            if (isDuplicate) {
+                const existingChannel = await DuplicateChecker.getExistingChannel(channelData.channelId);
+                ServerLogger.warn(`⚠️ 중복 분석 차단: ${channelData.name} (${channelData.channelId})`);
                 throw new Error(
                     `채널 ${channelData.name}은 이미 분석되었습니다.`,
                 );
@@ -165,7 +200,7 @@ class ChannelAnalysisService {
                 description: channelData.description || '',
                 thumbnailUrl: channelData.thumbnailUrl || '',
                 customUrl: channelData.customUrl || '',
-                publishedAt: channelData.publishedAt,
+                publishedAt: channelData.publishedAt ? (typeof channelData.publishedAt === 'object' && channelData.publishedAt && 'toISOString' in channelData.publishedAt ? (channelData.publishedAt as Date).toISOString() : String(channelData.publishedAt)) : undefined,
 
                 // 언어 및 지역 정보
                 defaultLanguage: channelData.defaultLanguage || '',
@@ -190,22 +225,20 @@ class ChannelAnalysisService {
                 clusterIds: channelData.clusterIds || [],
                 suggestedClusters: channelData.suggestedClusters || [],
 
-                // 상세 분석 정보 (있는 경우에만 포함)
-                ...(channelData.dailyUploadRate !== undefined && {
-                    dailyUploadRate: channelData.dailyUploadRate,
-                    last7DaysViews: channelData.last7DaysViews,
-                    avgDurationSeconds: channelData.avgDurationSeconds,
-                    avgDurationFormatted: channelData.avgDurationFormatted,
-                    shortFormRatio: channelData.shortFormRatio,
-                    viewsByPeriod: channelData.viewsByPeriod,
-                    totalVideos: channelData.totalVideos,
-                    totalViews: channelData.totalViews,
-                    averageViewsPerVideo: channelData.averageViewsPerVideo,
-                    uploadFrequency: channelData.uploadFrequency,
-                    mostViewedVideo: channelData.mostViewedVideo,
-                    lastAnalyzedAt: channelData.lastAnalyzedAt,
-                    analysisVersion: channelData.analysisVersion,
-                }),
+                // 상세 분석 정보 (개별 필드별로 undefined 체크)
+                ...(channelData.dailyUploadRate !== undefined && { dailyUploadRate: channelData.dailyUploadRate }),
+                ...(channelData.last7DaysViews !== undefined && { last7DaysViews: channelData.last7DaysViews }),
+                ...(channelData.avgDurationSeconds !== undefined && { avgDurationSeconds: channelData.avgDurationSeconds }),
+                ...(channelData.avgDurationFormatted !== undefined && { avgDurationFormatted: channelData.avgDurationFormatted }),
+                ...(channelData.shortFormRatio !== undefined && { shortFormRatio: channelData.shortFormRatio }),
+                ...(channelData.viewsByPeriod !== undefined && { viewsByPeriod: channelData.viewsByPeriod }),
+                ...(channelData.totalVideos !== undefined && { totalVideos: channelData.totalVideos }),
+                ...(channelData.totalViews !== undefined && { totalViews: channelData.totalViews }),
+                ...(channelData.averageViewsPerVideo !== undefined && { averageViewsPerVideo: channelData.averageViewsPerVideo }),
+                ...(channelData.uploadFrequency !== undefined && { uploadFrequency: channelData.uploadFrequency }),
+                ...(channelData.mostViewedVideo !== undefined && { mostViewedVideo: channelData.mostViewedVideo }),
+                ...(channelData.lastAnalyzedAt !== undefined && { lastAnalyzedAt: channelData.lastAnalyzedAt }),
+                ...(channelData.analysisVersion !== undefined && { analysisVersion: channelData.analysisVersion }),
 
                 // 메타데이터
                 collectedAt: channelData.collectedAt || new Date(),
@@ -224,52 +257,63 @@ class ChannelAnalysisService {
             ServerLogger.info(`🔍 저장 후 DB 확인:`, {
                 targetAudience: savedChannel.targetAudience,
                 contentStyle: savedChannel.contentStyle
-                    ? savedChannel.contentStyle.substring(0, 50) + '...'
+                    ? String(savedChannel.contentStyle).substring(0, 50) + '...'
                     : '',
                 uniqueFeatures: savedChannel.uniqueFeatures,
                 channelPersonality: savedChannel.channelPersonality,
             });
 
-            // ✅ 채널 저장 성공 후에만 중복검사 DB 업데이트
-            try {
-                // Queue에서 생성한 정규화 ID를 우선 사용
-                const normalizedChannelId = (
-                    savedChannel.customUrl?.startsWith('@')
-                        ? savedChannel.customUrl
-                        : `@${savedChannel.name}`
-                ).toLowerCase();
-
-                const updateResult =
-                    await DuplicateCheckManager.updateChannelStatus(
-                        normalizedChannelId,
-                        'completed',
-                        {
-                            name: savedChannel.name,
-                            url: savedChannel.url,
-                            subscribers: savedChannel.subscribers,
-                            channelId: savedChannel.channelId,
-                        },
-                    );
-
-                if (updateResult.success) {
-                    ServerLogger.success(
-                        `✅ 중복검사 DB 상태 업데이트 성공: ${normalizedChannelId}`,
-                    );
-                } else {
-                    ServerLogger.error(
-                        `❌ 중복검사 DB 상태 업데이트 실패: ${updateResult.error}`,
-                    );
-                }
-            } catch (duplicateError) {
-                ServerLogger.warn(
-                    `⚠️ 중복검사 DB 등록 실패 (무시): ${duplicateError}`,
-                );
-            }
+            // ✅ Channel saved successfully - simplified without old duplicate check system
+            ServerLogger.success(`✅ 채널 저장 완료: ${savedChannel.name}`);
 
             // 백업 파일은 비동기로 업데이트 (성능 최적화)
+            if (this.backupService) {
             this.backupService.saveChannelsAsync();
+        }
 
-            return savedChannel;
+            // Convert IChannel to ChannelData by manually mapping each field
+            const result = {
+                channelId: savedChannel.channelId,
+                name: savedChannel.name,
+                url: savedChannel.url,
+                platform: savedChannel.platform,
+                subscribers: savedChannel.subscribers,
+                description: savedChannel.description || '',
+                thumbnailUrl: savedChannel.thumbnailUrl || '',
+                customUrl: savedChannel.customUrl || '',
+                publishedAt: savedChannel.publishedAt ? (savedChannel.publishedAt instanceof Date ? savedChannel.publishedAt.toISOString() : String(savedChannel.publishedAt)) : undefined,
+                defaultLanguage: savedChannel.defaultLanguage || '',
+                country: savedChannel.country || '',
+                contentType: savedChannel.contentType || 'auto',
+                keywords: savedChannel.keywords,
+                aiTags: savedChannel.aiTags,
+                deepInsightTags: savedChannel.deepInsightTags,
+                allTags: savedChannel.allTags,
+                targetAudience: savedChannel.targetAudience,
+                contentStyle: savedChannel.contentStyle,
+                uniqueFeatures: savedChannel.uniqueFeatures,
+                channelPersonality: savedChannel.channelPersonality,
+                clusterIds: savedChannel.clusterIds,
+                suggestedClusters: savedChannel.suggestedClusters,
+                totalViews: savedChannel.totalViews,
+                totalVideos: savedChannel.totalVideos,
+                averageViewsPerVideo: savedChannel.averageViewsPerVideo,
+                last7DaysViews: savedChannel.last7DaysViews,
+                uploadFrequency: savedChannel.uploadFrequency,
+                mostViewedVideo: savedChannel.mostViewedVideo,
+                categoryInfo: savedChannel.categoryInfo,
+                analysisStatus: savedChannel.analysisStatus,
+                lastAnalyzedAt: savedChannel.lastAnalyzedAt ? savedChannel.lastAnalyzedAt.toISOString() : undefined,
+                clusterId: savedChannel.clusterId,
+                clusterScore: savedChannel.clusterScore,
+                status: savedChannel.status,
+                createdAt: savedChannel.createdAt.toISOString(),
+                updatedAt: savedChannel.updatedAt.toISOString(),
+                collectedAt: savedChannel.createdAt.toISOString(),
+                version: (savedChannel as any).version || 1
+            } as any as ChannelData;
+
+            return result;
         } catch (error) {
             ServerLogger.error('❌ 채널 저장 실패', error);
             throw error;
@@ -281,60 +325,101 @@ class ChannelAnalysisService {
     // =================================================================
 
     async findById(channelId: any) {
+        if (!this.dataService) {
+            await this.waitForServices();
+        }
         return await this.dataService.findById(channelId);
     }
 
     async findByName(name: any) {
+        if (!this.dataService) {
+            await this.waitForServices();
+        }
         return await this.dataService.findByName(name);
     }
 
     async findByTag(tag: any) {
+        if (!this.dataService) {
+            await this.waitForServices();
+        }
         return await this.dataService.findByTag(tag);
     }
 
     async getAll() {
+        if (!this.dataService) {
+            await this.waitForServices();
+        }
         return await this.dataService.getAll();
     }
 
     async getRecent(limit: any = 20) {
+        if (!this.dataService) {
+            await this.waitForServices();
+        }
         return await this.dataService.getRecent(limit);
     }
 
     async getUnclustered() {
+        if (!this.dataService) {
+            await this.waitForServices();
+        }
         return await this.dataService.getUnclustered();
     }
 
     async getTotalCount() {
+        if (!this.dataService) {
+            await this.waitForServices();
+        }
         return await this.dataService.getTotalCount();
     }
 
     async getUnclusteredCount() {
+        if (!this.dataService) {
+            await this.waitForServices();
+        }
         return await this.dataService.getUnclusteredCount();
     }
 
     async delete(channelId: any) {
+        if (!this.dataService) {
+            await this.waitForServices();
+        }
         const result = await this.dataService.delete(channelId);
         if (result) {
+            if (this.backupService) {
+                if (this.backupService) {
             this.backupService.saveChannelsAsync();
+        }
+            }
         }
         return result;
     }
 
     async assignToCluster(channelId: any, clusterId: any) {
+        if (!this.dataService) {
+            await this.waitForServices();
+        }
         const result = await this.dataService.assignToCluster(
             channelId,
             clusterId,
         );
-        this.backupService.saveChannelsAsync();
+        if (this.backupService) {
+            this.backupService.saveChannelsAsync();
+        }
         return result;
     }
 
     async removeFromCluster(channelId: any, clusterId: any) {
+        if (!this.dataService) {
+            await this.waitForServices();
+        }
         const result = await this.dataService.removeFromCluster(
             channelId,
             clusterId,
         );
-        this.backupService.saveChannelsAsync();
+        if (this.backupService) {
+            this.backupService.saveChannelsAsync();
+        }
         return result;
     }
 
@@ -343,18 +428,30 @@ class ChannelAnalysisService {
     // =================================================================
 
     async getKeywordStatistics() {
+        if (!this.searchService) {
+            await this.waitForServices();
+        }
         return await this.searchService.getKeywordStatistics();
     }
 
     async getPlatformStatistics() {
+        if (!this.searchService) {
+            await this.waitForServices();
+        }
         return await this.searchService.getPlatformStatistics();
     }
 
     async search(filters: any = {}) {
+        if (!this.searchService) {
+            await this.waitForServices();
+        }
         return await this.searchService.search(filters);
     }
 
     async fillMissingChannelInfo() {
+        if (!this.searchService) {
+            await this.waitForServices();
+        }
         const result = await this.searchService.fillMissingChannelInfo();
 
         // 실제 업데이트 로직은 여기서 처리
@@ -397,6 +494,9 @@ class ChannelAnalysisService {
     }
 
     async getChannelCompletionStats() {
+        if (!this.searchService) {
+            await this.waitForServices();
+        }
         return await this.searchService.getChannelCompletionStats();
     }
 
@@ -405,14 +505,23 @@ class ChannelAnalysisService {
     // =================================================================
 
     async syncBackupFile() {
+        if (!this.backupService) {
+            await this.waitForServices();
+        }
         return await this.backupService.syncBackupFile();
     }
 
     async saveChannels() {
+        if (!this.backupService) {
+            await this.waitForServices();
+        }
         return await this.backupService.saveChannels();
     }
 
     async loadChannels() {
+        if (!this.backupService) {
+            await this.waitForServices();
+        }
         return await this.backupService.loadChannels();
     }
 }
@@ -509,3 +618,4 @@ module.exports = {
         );
     },
 };
+export = module.exports;

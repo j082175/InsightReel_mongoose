@@ -244,8 +244,8 @@ class SimpleYouTubeChannelAnalyzer {
                 metadata.subscribers = '정보 없음';
             }
 
-            // 중복 검사 먼저 수행
-            const isDuplicate = await this.checkChannelDuplicate(metadata.channelName || metadata.author);
+            // 중복 검사 먼저 수행 (channelId 사용)
+            const isDuplicate = await this.checkChannelDuplicate(metadata.channelId, metadata.channelName || metadata.author);
 
             if (isDuplicate) {
                 // 중복 채널인 경우 모달 띄우지 않고 바로 알림
@@ -514,6 +514,11 @@ class SimpleYouTubeChannelAnalyzer {
                 metadata.channelId = this.extractChannelIdFromUrl(metadata.url || currentUrl);
             }
 
+            // channelId에 @가 없으면 추가 (핸들 형태로 통일)
+            if (metadata.channelId && !metadata.channelId.startsWith('@') && !metadata.channelId.startsWith('UC')) {
+                metadata.channelId = `@${metadata.channelId}`;
+            }
+
             console.log(`📍 최종 채널 URL: ${metadata.url}`);
             console.log(`🆔 추출된 채널 ID: ${metadata.channelId}`);
 
@@ -696,6 +701,11 @@ class SimpleYouTubeChannelAnalyzer {
                 url: metadata.url
             };
 
+            // channelInfo.channelId에도 @가 없으면 추가 (핸들 형태로 통일)
+            if (channelInfo.channelId && !channelInfo.channelId.startsWith('@') && !channelInfo.channelId.startsWith('UC')) {
+                channelInfo.channelId = `@${channelInfo.channelId}`;
+            }
+
             // 최근 키워드 가져오기
             const recentKeywords = await this.getRecentKeywords();
 
@@ -861,138 +871,12 @@ class SimpleYouTubeChannelAnalyzer {
                             </div>
                         </div>
 
-                        <div class="section">
-                            <label>📹 콘텐츠 유형 선택:</label>
-                            <p class="section-description">채널의 주요 콘텐츠 형식을 선택하세요. 분석 알고리즘이 최적화됩니다.</p>
-                            <div class="content-type-selector">
-                                <label class="option-card">
-                                    <input type="radio" name="contentType" value="auto" checked>
-                                    <div class="option-content">
-                                        <span class="option-icon">🤖</span>
-                                        <div class="option-text">
-                                            <div class="option-title">스마트 자동 감지</div>
-                                            <div class="option-desc">AI가 채널 데이터를 분석하여 최적의 콘텐츠 유형을 자동 판단</div>
-                                        </div>
-                                    </div>
-                                </label>
-                                <label class="option-card">
-                                    <input type="radio" name="contentType" value="longform">
-                                    <div class="option-content">
-                                        <span class="option-icon">🎬</span>
-                                        <div class="option-text">
-                                            <div class="option-title">롱폼 콘텐츠</div>
-                                            <div class="option-desc">10분 이상의 심화 영상, 교육, 리뷰 등 (YouTube 메인)</div>
-                                        </div>
-                                    </div>
-                                </label>
-                                <label class="option-card">
-                                    <input type="radio" name="contentType" value="shortform">
-                                    <div class="option-content">
-                                        <span class="option-icon">⚡</span>
-                                        <div class="option-text">
-                                            <div class="option-title">숏폼 콘텐츠</div>
-                                            <div class="option-desc">1분 이하의 빠른 영상, 쇼츠, 틱톡 스타일</div>
-                                        </div>
-                                    </div>
-                                </label>
-                                <label class="option-card">
-                                    <input type="radio" name="contentType" value="mixed">
-                                    <div class="option-content">
-                                        <span class="option-icon">🔀</span>
-                                        <div class="option-text">
-                                            <div class="option-title">혼합 콘텐츠</div>
-                                            <div class="option-desc">롱폼과 숏폼을 모두 제작하는 다양한 채널</div>
-                                        </div>
-                                    </div>
-                                </label>
-                                <label class="option-card">
-                                    <input type="radio" name="contentType" value="live">
-                                    <div class="option-content">
-                                        <span class="option-icon">🔴</span>
-                                        <div class="option-text">
-                                            <div class="option-title">라이브 스트리밍</div>
-                                            <div class="option-desc">실시간 방송, 게임 스트리밍, 라이브 토크</div>
-                                        </div>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="section">
-                            <label>🤖 AI 분석 레벨:</label>
-                            <p class="section-description">AI 분석 깊이를 선택하세요. 더 깊은 분석일수록 시간이 오래 걸립니다.</p>
-                            <div class="ai-analysis-selector">
-                                <label class="option-card">
-                                    <input type="radio" name="aiAnalysis" value="deep">
-                                    <div class="option-content">
-                                        <span class="option-icon">🧠</span>
-                                        <div class="option-text">
-                                            <div class="option-title">딥 분석 (권장)</div>
-                                            <div class="option-desc">카테고리 + 태그 + 감정 분석 + 트렌드 예측 (약 45초)</div>
-                                        </div>
-                                    </div>
-                                </label>
-                                <label class="option-card">
-                                    <input type="radio" name="aiAnalysis" value="standard" checked>
-                                    <div class="option-content">
-                                        <span class="option-icon">⚙️</span>
-                                        <div class="option-text">
-                                            <div class="option-title">표준 분석</div>
-                                            <div class="option-desc">카테고리 + 기본 태그 분석 (약 25초)</div>
-                                        </div>
-                                    </div>
-                                </label>
-                                <label class="option-card">
-                                    <input type="radio" name="aiAnalysis" value="basic">
-                                    <div class="option-content">
-                                        <span class="option-icon">🏃</span>
-                                        <div class="option-text">
-                                            <div class="option-title">기본 분석</div>
-                                            <div class="option-desc">기본 카테고리 분류만 (약 10초)</div>
-                                        </div>
-                                    </div>
-                                </label>
-                                <label class="option-card">
-                                    <input type="radio" name="aiAnalysis" value="skip">
-                                    <div class="option-content">
-                                        <span class="option-icon">⚡</span>
-                                        <div class="option-text">
-                                            <div class="option-title">분석 건너뛰기</div>
-                                            <div class="option-desc">채널 정보만 수집 (약 3초)</div>
-                                        </div>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
 
                         <div class="section">
                             <label>선택된 키워드:</label>
                             <div id="selected-keywords" class="selected-keywords"></div>
                         </div>
 
-                        <div class="section">
-                            <div class="collection-preview">
-                                <div class="preview-header">🔍 수집 미리보기</div>
-                                <div id="collection-summary" class="preview-content">
-                                    <div class="summary-item">
-                                        <span class="summary-icon">📊</span>
-                                        <span>콘텐츠 유형: <strong id="content-preview">스마트 자동 감지</strong></span>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span class="summary-icon">🤖</span>
-                                        <span>AI 분석: <strong id="ai-preview">표준 분석</strong></span>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span class="summary-icon">⏱️</span>
-                                        <span>예상 시간: <strong id="time-preview">약 25초</strong></span>
-                                    </div>
-                                    <div class="summary-item">
-                                        <span class="summary-icon">🏷️</span>
-                                        <span>키워드: <strong id="keyword-preview">선택된 키워드가 없습니다</strong></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <div class="modal-footer">
@@ -1167,83 +1051,6 @@ class SimpleYouTubeChannelAnalyzer {
                     margin: 8px 0 12px 0 !important;
                     line-height: 1.4 !important;
                 }
-                .content-type-selector,
-                .ai-analysis-selector {
-                    display: flex !important;
-                    flex-direction: column !important;
-                    gap: 10px !important;
-                    margin-top: 12px !important;
-                }
-                .option-card {
-                    display: flex !important;
-                    align-items: center !important;
-                    gap: 12px !important;
-                    padding: 14px !important;
-                    border: 2px solid #e9ecef !important;
-                    border-radius: 10px !important;
-                    cursor: pointer !important;
-                    transition: all 0.3s ease !important;
-                    background: #fff !important;
-                    position: relative !important;
-                }
-                .option-card:hover {
-                    border-color: #007bff !important;
-                    background: #f8f9ff !important;
-                    transform: translateY(-1px) !important;
-                    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15) !important;
-                }
-                .option-card input[type="radio"] {
-                    margin: 0 !important;
-                    width: 18px !important;
-                    height: 18px !important;
-                    accent-color: #007bff !important;
-                }
-                .option-card input[type="radio"]:checked + .option-content {
-                    color: #007bff !important;
-                }
-                .option-card:has(input[type="radio"]:checked) {
-                    border-color: #007bff !important;
-                    background: linear-gradient(135deg, #f8f9ff 0%, #e3f2fd 100%) !important;
-                    box-shadow: 0 4px 16px rgba(0, 123, 255, 0.25) !important;
-                }
-                .option-content {
-                    display: flex !important;
-                    align-items: center !important;
-                    gap: 12px !important;
-                    flex: 1 !important;
-                }
-                .option-icon {
-                    font-size: 24px !important;
-                    line-height: 1 !important;
-                    filter: grayscale(0.3) !important;
-                    transition: filter 0.3s ease !important;
-                }
-                .option-card:has(input[type="radio"]:checked) .option-icon {
-                    filter: grayscale(0) !important;
-                    transform: scale(1.1) !important;
-                }
-                .option-text {
-                    flex: 1 !important;
-                }
-                .option-title {
-                    font-weight: 600 !important;
-                    font-size: 15px !important;
-                    color: #333 !important;
-                    margin-bottom: 4px !important;
-                    transition: color 0.3s ease !important;
-                }
-                .option-card:has(input[type="radio"]:checked) .option-title {
-                    color: #007bff !important;
-                }
-                .option-desc {
-                    font-size: 13px !important;
-                    color: #666 !important;
-                    line-height: 1.4 !important;
-                    transition: color 0.3s ease !important;
-                }
-                .option-card:has(input[type="radio"]:checked) .option-desc {
-                    color: #0056b3 !important;
-                }
                 .radio-option {
                     display: flex !important;
                     align-items: flex-start !important;
@@ -1329,43 +1136,6 @@ class SimpleYouTubeChannelAnalyzer {
                     background: #ccc !important;
                     cursor: not-allowed !important;
                 }
-                .collection-preview {
-                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
-                    border: 1px solid #dee2e6 !important;
-                    border-radius: 10px !important;
-                    padding: 16px !important;
-                    margin-top: 12px !important;
-                }
-                .preview-header {
-                    font-weight: 600 !important;
-                    font-size: 14px !important;
-                    color: #495057 !important;
-                    margin-bottom: 12px !important;
-                    text-align: center !important;
-                    padding-bottom: 8px !important;
-                    border-bottom: 1px solid #dee2e6 !important;
-                }
-                .preview-content {
-                    display: flex !important;
-                    flex-direction: column !important;
-                    gap: 8px !important;
-                }
-                .summary-item {
-                    display: flex !important;
-                    align-items: center !important;
-                    gap: 8px !important;
-                    font-size: 13px !important;
-                    color: #495057 !important;
-                }
-                .summary-icon {
-                    font-size: 16px !important;
-                    width: 20px !important;
-                    text-align: center !important;
-                }
-                .summary-item strong {
-                    color: #007bff !important;
-                    font-weight: 600 !important;
-                }
             </style>
         `;
 
@@ -1374,13 +1144,14 @@ class SimpleYouTubeChannelAnalyzer {
         // 이벤트 리스너 설정
         this.setupKeywordModalEvents(channelInfo, allKeywords);
 
-        // 프리뷰 업데이트 설정
-        this.setupPreviewUpdates();
     }
 
     // Enhanced keyword modal with popup settings applied
     showKeywordModalWithSettings(channelInfo, recentKeywords, allKeywords = [], popupSettings = {}) {
         console.log('🎯 ENHANCED MODAL: Showing keyword modal with popup settings:', popupSettings);
+
+        // Store popup settings in window for later use
+        window.POPUP_SETTINGS = popupSettings;
 
         // Call the regular showKeywordModal first
         this.showKeywordModal(channelInfo, recentKeywords, allKeywords);
@@ -1391,67 +1162,10 @@ class SimpleYouTubeChannelAnalyzer {
         }, 100); // Small delay to ensure modal is fully rendered
     }
 
-    // Apply popup settings to the modal
+    // Apply popup settings to the modal (no longer needed since settings are in popup)
     applyPopupSettingsToModal(popupSettings) {
-        console.log('⚙️ SETTINGS: Applying popup settings to modal:', popupSettings);
-
-        if (!popupSettings) {
-            console.log('⚠️ SETTINGS: No popup settings provided, using defaults');
-            return;
-        }
-
-        try {
-            // Map popup settings to modal values
-            const settingsMapping = {
-                contentType: {
-                    'auto': 'auto',
-                    'longform': 'longform',
-                    'shortform': 'shortform',
-                    'mixed': 'mixed'
-                },
-                aiAnalysis: {
-                    'full': 'standard',  // Map 'full' from popup to 'standard' in modal
-                    'skip': 'skip'       // Map 'skip' directly
-                }
-            };
-
-            // Apply content type setting
-            if (popupSettings.contentType) {
-                const modalContentType = settingsMapping.contentType[popupSettings.contentType] || 'auto';
-                const contentTypeRadio = document.querySelector(`input[name="contentType"][value="${modalContentType}"]`);
-                if (contentTypeRadio) {
-                    contentTypeRadio.checked = true;
-                    console.log(`✅ SETTINGS: Content type set to ${modalContentType}`);
-                } else {
-                    console.log(`⚠️ SETTINGS: Content type radio not found for value: ${modalContentType}`);
-                }
-            }
-
-            // Apply AI analysis setting
-            if (popupSettings.aiAnalysis) {
-                const modalAiAnalysis = settingsMapping.aiAnalysis[popupSettings.aiAnalysis] || 'standard';
-                const aiAnalysisRadio = document.querySelector(`input[name="aiAnalysis"][value="${modalAiAnalysis}"]`);
-                if (aiAnalysisRadio) {
-                    aiAnalysisRadio.checked = true;
-                    console.log(`✅ SETTINGS: AI analysis set to ${modalAiAnalysis}`);
-                } else {
-                    console.log(`⚠️ SETTINGS: AI analysis radio not found for value: ${modalAiAnalysis}`);
-                }
-            }
-
-            // Trigger preview update if the function exists
-            const updatePreviewEvent = new Event('change');
-            document.querySelectorAll('input[name="contentType"], input[name="aiAnalysis"]').forEach(radio => {
-                if (radio.checked) {
-                    radio.dispatchEvent(updatePreviewEvent);
-                }
-            });
-
-            console.log('✅ SETTINGS: Popup settings applied successfully to modal');
-
-        } catch (error) {
-            console.error('❌ SETTINGS: Error applying popup settings to modal:', error);
-        }
+        console.log('⚙️ SETTINGS: Popup settings stored for channel collection:', popupSettings);
+        // Settings are now stored in window.POPUP_SETTINGS and used directly in startChannelCollection
     }
 
     // 키워드 모달 이벤트 설정
@@ -1606,7 +1320,9 @@ class SimpleYouTubeChannelAnalyzer {
 
         // 수집하기 버튼
         document.getElementById('collect-submit').onclick = () => {
-            this.startChannelCollection(channelInfo, Array.from(selectedKeywords));
+            // Get popup settings from the modal's data attribute or window variable
+            const popupSettings = window.POPUP_SETTINGS || {};
+            this.startChannelCollection(channelInfo, Array.from(selectedKeywords), popupSettings);
         };
 
         // 선택된 키워드 표시 업데이트 함수 (스코프 내에서 정의)
@@ -1673,85 +1389,15 @@ class SimpleYouTubeChannelAnalyzer {
         updateSelectedKeywordsDisplay();
     }
 
-    // 프리뷰 업데이트 기능 설정
-    setupPreviewUpdates() {
-        const contentTypeRadios = document.querySelectorAll('input[name="contentType"]');
-        const aiAnalysisRadios = document.querySelectorAll('input[name="aiAnalysis"]');
-
-        // 콘텐츠 유형 및 AI 분석 옵션 매핑
-        const contentTypeLabels = {
-            'auto': '스마트 자동 감지',
-            'longform': '롱폼 콘텐츠',
-            'shortform': '숏폼 콘텐츠',
-            'mixed': '혼합 콘텐츠',
-            'live': '라이브 스트리밍'
-        };
-
-        const aiAnalysisLabels = {
-            'deep': '딥 분석 (권장)',
-            'standard': '표준 분석',
-            'basic': '기본 분석',
-            'skip': '분석 건너뛰기'
-        };
-
-        const aiAnalysisTimes = {
-            'deep': '약 45초',
-            'standard': '약 25초',
-            'basic': '약 10초',
-            'skip': '약 3초'
-        };
-
-        // 프리뷰 업데이트 함수
-        const updatePreview = () => {
-            const selectedContentType = document.querySelector('input[name="contentType"]:checked')?.value || 'auto';
-            const selectedAiAnalysis = document.querySelector('input[name="aiAnalysis"]:checked')?.value || 'standard';
-
-            // 프리뷰 요소 업데이트
-            const contentPreview = document.getElementById('content-preview');
-            const aiPreview = document.getElementById('ai-preview');
-            const timePreview = document.getElementById('time-preview');
-
-            if (contentPreview) {
-                contentPreview.textContent = contentTypeLabels[selectedContentType] || '스마트 자동 감지';
-            }
-
-            if (aiPreview) {
-                aiPreview.textContent = aiAnalysisLabels[selectedAiAnalysis] || '표준 분석';
-            }
-
-            if (timePreview) {
-                timePreview.textContent = aiAnalysisTimes[selectedAiAnalysis] || '약 25초';
-            }
-
-            console.log('🔍 프리뷰 업데이트:', {
-                contentType: selectedContentType,
-                aiAnalysis: selectedAiAnalysis
-            });
-        };
-
-        // 이벤트 리스너 추가
-        contentTypeRadios.forEach(radio => {
-            radio.addEventListener('change', updatePreview);
-        });
-
-        aiAnalysisRadios.forEach(radio => {
-            radio.addEventListener('change', updatePreview);
-        });
-
-        // 초기 프리뷰 업데이트
-        updatePreview();
-
-        console.log('✅ 프리뷰 업데이트 시스템 설정 완료');
-    }
 
 
     // 채널 수집 시작
-    async startChannelCollection(channelInfo, keywords) {
-        console.log('🚀 채널 수집 시작:', { channelInfo, keywords });
+    async startChannelCollection(channelInfo, keywords, popupSettings = {}) {
+        console.log('🚀 채널 수집 시작:', { channelInfo, keywords, popupSettings });
 
-        // 라디오 버튼 값들 수집
-        const contentType = document.querySelector('input[name="contentType"]:checked')?.value || 'auto';
-        const aiAnalysis = document.querySelector('input[name="aiAnalysis"]:checked')?.value || 'full';
+        // Use popup settings, fallback to defaults
+        const contentType = popupSettings.contentType || 'auto';
+        const aiAnalysis = popupSettings.aiAnalysis || 'full';
 
         console.log('📊 수집 옵션:', { contentType, aiAnalysis });
 
@@ -1777,7 +1423,7 @@ class SimpleYouTubeChannelAnalyzer {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    channelIdentifier: channelInfo.channelName,
+                    channelIdentifier: channelInfo.channelId || channelInfo.channelName,
                     keywords: keywords,
                     options: {
                         ...selectedAnalysis,
@@ -1847,7 +1493,7 @@ class SimpleYouTubeChannelAnalyzer {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    channelIdentifier: metadata.channelName || metadata.author,
+                    channelIdentifier: metadata.channelId || metadata.channelName || metadata.author,
                     keywords: [],
                     options: {
                         includeAnalysis: true,
@@ -1967,9 +1613,14 @@ class SimpleYouTubeChannelAnalyzer {
     }
 
     // 채널 중복 검사 함수
-    async checkChannelDuplicate(channelName) {
+    async checkChannelDuplicate(channelId, channelName) {
         try {
-            console.log(`🔍 중복 검사 시작: ${channelName}`);
+            console.log(`🔍 중복 검사 시작: ${channelName} (ID: ${channelId})`);
+
+            if (!channelId) {
+                console.warn('⚠️ Channel ID가 없습니다. 중복 검사를 건너뜁니다.');
+                return false;
+            }
 
             const response = await fetch('http://localhost:3000/api/channel-queue/check-duplicate', {
                 method: 'POST',
@@ -1977,7 +1628,7 @@ class SimpleYouTubeChannelAnalyzer {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    channelIdentifier: channelName
+                    channelIdentifier: channelId
                 })
             });
 
@@ -1989,7 +1640,7 @@ class SimpleYouTubeChannelAnalyzer {
             const result = await response.json();
             console.log('🔍 중복 검사 결과:', result);
 
-            return result.duplicate && result.duplicate.isDuplicate;
+            return result.isDuplicate === true;
 
         } catch (error) {
             console.warn('중복 검사 중 오류 발생, 새 채널로 처리:', error);

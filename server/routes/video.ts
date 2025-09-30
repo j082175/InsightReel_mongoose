@@ -9,6 +9,8 @@ import { VideoProcessor } from '../services/video/VideoProcessor';
 import { AIAnalyzer } from '../services/ai/AIAnalyzer';
 import { SheetsManager } from '../services/sheets/SheetsManager';
 import UnifiedVideoSaver from '../services/UnifiedVideoSaver';
+import { DuplicateChecker } from '../shared/utils/DuplicateChecker';
+import upload from '../middleware/upload';
 
 // Import new focused controllers
 import { VideoProcessController } from '../controllers/VideoProcessController';
@@ -31,8 +33,7 @@ router.post('/process-video', videoProcessController.processVideo);
 router.get('/videos', videoQueryController.getVideos);
 
 // 업로드 처리 엔드포인트
-const upload = require('../middleware/upload');
-router.post('/upload', upload.default.single('video'), videoProcessController.processVideoBlob);
+router.post('/upload', upload.single('video'), videoProcessController.processVideoBlob);
 
 // 비디오 통계
 router.get('/stats', systemStatsController.getStats);
@@ -77,15 +78,21 @@ router.post('/add-url', async (req: Request, res: Response): Promise<void> => {
 
         ServerLogger.info(`📥 URL로 영상 추가 시작: ${url} (${detectedPlatform})`);
 
-        // 중복 체크
-        const sheetsManager = new SheetsManager();
-        const duplicateCheck = await sheetsManager.checkDuplicateURL(url);
-
-        if (duplicateCheck.isDuplicate && !duplicateCheck.isProcessing) {
+        // 🎯 SIMPLE DUPLICATE CHECK - Use new unified system
+        const isDuplicate = await DuplicateChecker.checkVideo(url);
+        if (isDuplicate) {
+            const existingVideo = await DuplicateChecker.getExistingVideo(url);
             res.status(HTTP_STATUS_CODES.CONFLICT).json({
                 success: false,
                 error: ERROR_CODES.CONFLICT,
-                message: `이미 처리된 URL입니다. (${duplicateCheck.existingPlatform} 시트 ${duplicateCheck.existingRow}행)`
+                message: `이미 처리된 URL입니다.`,
+                existingVideo: {
+                    _id: existingVideo?._id,
+                    title: existingVideo?.title,
+                    channelName: existingVideo?.channelName,
+                    platform: existingVideo?.platform,
+                    createdAt: existingVideo?.createdAt
+                }
             });
             return;
         }
@@ -177,6 +184,120 @@ router.post('/add-url', async (req: Request, res: Response): Promise<void> => {
             message: '영상 추가에 실패했습니다.',
             details: error.message
         });
+    }
+});
+
+// 비디오 업데이트
+router.put('/videos/:id', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const {
+            title,
+            description,
+            keywords,
+            hashtags,
+            platform,
+            channelName,
+            channelId,
+            channelUrl,
+            views,
+            likes,
+            commentsCount,
+            shares,
+            duration,
+            thumbnailUrl,
+            uploadDate
+        } = req.body;
+
+        // ID 유효성 검사
+        if (!id || id === 'undefined' || id === 'null') {
+            res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+                success: false,
+                error: 'INVALID_REQUEST',
+                message: 'Invalid video ID'
+            });
+            return;
+        }
+
+        const video = await VideoModel.findById(id);
+        if (!video) {
+            res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
+                success: false,
+                error: 'NOT_FOUND',
+                message: 'Video not found'
+            });
+            return;
+        }
+
+        // 필드 업데이트 (undefined가 아닌 값만)
+        if (title !== undefined) video.title = title;
+        if (description !== undefined) video.description = description;
+        if (keywords !== undefined) video.keywords = keywords;
+        if (hashtags !== undefined) video.hashtags = hashtags;
+        if (platform !== undefined) video.platform = platform;
+        if (channelName !== undefined) video.channelName = channelName;
+        if (channelId !== undefined) video.channelId = channelId;
+        if (channelUrl !== undefined) video.channelUrl = channelUrl;
+        if (views !== undefined) video.views = parseInt(views.toString()) || 0;
+        if (likes !== undefined) video.likes = parseInt(likes.toString()) || 0;
+        if (commentsCount !== undefined) video.commentsCount = parseInt(commentsCount.toString()) || 0;
+        if (shares !== undefined) video.shares = parseInt(shares.toString()) || 0;
+        if (duration !== undefined) video.duration = duration;
+        if (thumbnailUrl !== undefined) video.thumbnailUrl = thumbnailUrl;
+        if (uploadDate !== undefined) video.uploadDate = uploadDate;
+
+        // Set updatedAt using Mongoose's built-in timestamps
+        video.set('updatedAt', new Date());
+
+        const updatedVideo = await video.save();
+
+        ResponseHandler.success(res, {
+            data: updatedVideo,
+            message: 'Video updated successfully'
+        });
+
+    } catch (error: any) {
+        ServerLogger.error('Failed to update video:', error);
+        ResponseHandler.serverError(res, error, 'Failed to update video');
+    }
+});
+
+// 비디오 삭제
+router.delete('/videos/:id', async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+
+        // ID 유효성 검사
+        if (!id || id === 'undefined' || id === 'null') {
+            res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+                success: false,
+                error: 'INVALID_REQUEST',
+                message: 'Invalid video ID'
+            });
+            return;
+        }
+
+        const video = await VideoModel.findByIdAndDelete(id);
+
+        if (!video) {
+            res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
+                success: false,
+                error: 'NOT_FOUND',
+                message: 'Video not found'
+            });
+            return;
+        }
+
+        ServerLogger.info(`✅ Video deleted: ${video.title} (${id})`, null, 'VIDEO_DELETE');
+
+        ResponseHandler.success(res, {
+            message: 'Video deleted successfully',
+            data: { id, title: video.title }
+        });
+
+    } catch (error: any) {
+        ServerLogger.error('Failed to delete video:', error);
+        ResponseHandler.serverError(res, error, 'Failed to delete video');
     }
 });
 

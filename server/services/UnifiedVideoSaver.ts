@@ -460,39 +460,7 @@ class UnifiedVideoSaver {
             // 통합된 Video 모델 사용
             const Model = Video;
 
-            // URL 중복 체크
-            const existingDoc = await Model.findOne({ url: convertedData.url });
-            if (existingDoc) {
-                ServerLogger.warn(
-                    `⚠️ MongoDB 중복 URL 감지: ${convertedData.url}`,
-                    null,
-                    'UNIFIED_SAVER',
-                );
-
-                // 기존 문서 업데이트 - rowNumber와 collectionTime 제외하고 FinalVideoData만 저장
-                const { rowNumber, collectionTime, ...finalVideoData } = convertedData;
-                const updateData = {
-                    ...finalVideoData,
-                    collectionTime: new Date(collectionTime).toISOString()
-                };
-
-                const updatedDoc = await Model.findOneAndUpdate(
-                    { url: convertedData.url },
-                    updateData,
-                    { new: true, upsert: false },
-                );
-
-                if (!updatedDoc) {
-                    throw new Error('문서 업데이트 실패');
-                }
-
-                ServerLogger.info(
-                    `🔄 MongoDB 기존 문서 업데이트: ${updatedDoc._id}`,
-                    null,
-                    'UNIFIED_SAVER',
-                );
-                return updatedDoc as unknown as VideoDocument;
-            }
+            // 🎯 DUPLICATE CHECK REMOVED - Early checking handled before reaching this service
 
             // 새 문서 생성 - rowNumber와 collectionTime 제외하고 FinalVideoData만 저장
             const { rowNumber, collectionTime, ...finalVideoData } = convertedData;

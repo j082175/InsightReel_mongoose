@@ -4,6 +4,8 @@ import { ServerLogger } from '../utils/logger';
 import { PLATFORMS } from '../config/api-messages';
 import { VideoPipelineOrchestrator } from '../services/pipeline/VideoPipelineOrchestrator';
 import ErrorHandler from '../middleware/error-handler';
+import { DuplicateChecker } from '../shared/utils/DuplicateChecker';
+import * as fs from 'fs';
 
 import type {
     VideoProcessRequest,
@@ -68,6 +70,28 @@ export class VideoProcessController extends BaseController {
                 // 플랫폼 감지 디버깅
                 const detectedPlatform = platform || VideoUtils.detectPlatform(finalUrl || '');
                 ServerLogger.info(`🔍 플랫폼 디버그: 요청 플랫폼="${platform}", URL="${finalUrl}", 감지된 플랫폼="${detectedPlatform}"`);
+
+                // 🎯 EARLY DUPLICATE CHECK - Save resources by checking before processing
+                if (finalUrl) {
+                    const isDuplicate = await DuplicateChecker.checkVideo(finalUrl);
+                    if (isDuplicate) {
+                        const existingVideo = await DuplicateChecker.getExistingVideo(finalUrl);
+                        ServerLogger.info(`⚠️ Video duplicate detected, returning early: ${finalUrl}`, null, 'VIDEO');
+
+                        return {
+                            message: 'Video already exists in database',
+                            isDuplicate: true,
+                            existingVideo: {
+                                _id: existingVideo?._id,
+                                title: existingVideo?.title,
+                                channelName: existingVideo?.channelName,
+                                views: existingVideo?.views,
+                                platform: existingVideo?.platform,
+                                createdAt: existingVideo?.createdAt
+                            }
+                        };
+                    }
+                }
 
                 const result = await this.executeVideoProcessingPipeline({
                     platform: detectedPlatform as Platform,
@@ -180,7 +204,7 @@ export class VideoProcessController extends BaseController {
      */
     async cleanupFailedPipeline(pipeline: PipelineResult): Promise<void> {
         try {
-            const fs = require('fs');
+            // fs is already imported at the top
 
             if (pipeline.videoPath && fs.existsSync(pipeline.videoPath)) {
                 await fs.promises.unlink(pipeline.videoPath);

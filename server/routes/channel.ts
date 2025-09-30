@@ -3,13 +3,14 @@ import { ServerLogger } from '../utils/logger';
 import ResponseHandler from '../utils/response-handler';
 import { HTTP_STATUS_CODES } from '../config/api-messages';
 import { IChannel, IChannelGroup } from '../types/models';
+import ChannelGroup from '../models/ChannelGroup';
+import Channel from '../models/Channel';
 
 const router = Router();
 
 // 채널 그룹 목록 조회
 router.get('/channel-groups', async (req: Request, res: Response) => {
     try {
-        const ChannelGroup = require('../models/ChannelGroup').default || require('../models/ChannelGroup');
 
         const { active, keyword } = req.query;
         let query: any = {};
@@ -41,7 +42,6 @@ router.get('/channel-groups', async (req: Request, res: Response) => {
 // 채널 그룹 생성
 router.post('/channel-groups', async (req: Request, res: Response) => {
     try {
-        const ChannelGroup = require('../models/ChannelGroup').default || require('../models/ChannelGroup');
         const { name, description, color, channels, keywords, isActive } = req.body;
 
         // 필수 필드 검증
@@ -89,7 +89,6 @@ router.post('/channel-groups', async (req: Request, res: Response) => {
 // 채널 그룹 상세 조회
 router.get('/channel-groups/:id', async (req: Request, res: Response) => {
     try {
-        const ChannelGroup = require('../models/ChannelGroup').default || require('../models/ChannelGroup');
         const group = await ChannelGroup.findById(req.params.id);
 
         if (!group) {
@@ -112,7 +111,6 @@ router.get('/channel-groups/:id', async (req: Request, res: Response) => {
 // 채널 그룹 업데이트
 router.put('/channel-groups/:id', async (req: Request, res: Response) => {
     try {
-        const ChannelGroup = require('../models/ChannelGroup').default || require('../models/ChannelGroup');
         const { name, description, color, channels, keywords, isActive } = req.body;
 
         const group = await ChannelGroup.findById(req.params.id);
@@ -164,7 +162,6 @@ router.put('/channel-groups/:id', async (req: Request, res: Response) => {
 // 채널 그룹 삭제
 router.delete('/channel-groups/:id', async (req: Request, res: Response) => {
     try {
-        const ChannelGroup = require('../models/ChannelGroup').default || require('../models/ChannelGroup');
 
         // ID 유효성 검사
         if (!req.params.id || req.params.id === 'undefined' || req.params.id === 'null') {
@@ -198,11 +195,101 @@ router.delete('/channel-groups/:id', async (req: Request, res: Response) => {
     }
 });
 
+// 채널 생성
+router.post('/channels', async (req: Request, res: Response) => {
+    try {
+        const {
+            channelId,
+            name,
+            url,
+            platform = 'YOUTUBE',
+            subscribers = 0,
+            description = '',
+            thumbnailUrl = '',
+            customUrl = '',
+            publishedAt,
+            defaultLanguage = '',
+            country = '',
+            contentType = 'mixed',
+            keywords = [],
+            aiTags = [],
+            deepInsightTags = [],
+            targetAudience = '',
+            contentStyle = '',
+            uniqueFeatures = [],
+            channelPersonality = ''
+        } = req.body;
+
+        // 필수 필드 검증
+        if (!channelId || !channelId.trim()) {
+            return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+                success: false,
+                error: 'INVALID_REQUEST',
+                message: 'Channel ID is required'
+            });
+        }
+
+        if (!name || !name.trim()) {
+            return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+                success: false,
+                error: 'INVALID_REQUEST',
+                message: 'Channel name is required'
+            });
+        }
+
+        // 중복 채널 검사
+        const existingChannel = await Channel.findOne({ channelId: channelId.trim() });
+        if (existingChannel) {
+            return res.status(HTTP_STATUS_CODES.CONFLICT).json({
+                success: false,
+                error: 'DUPLICATE_CHANNEL',
+                message: 'Channel with this ID already exists'
+            });
+        }
+
+        const newChannel = new Channel({
+            channelId: channelId.trim(),
+            name: name.trim(),
+            url: url || `https://youtube.com/channel/${channelId.trim()}`,
+            platform,
+            subscribers,
+            description: description.trim(),
+            thumbnailUrl,
+            customUrl,
+            publishedAt,
+            defaultLanguage,
+            country,
+            contentType,
+            keywords,
+            aiTags,
+            deepInsightTags,
+            allTags: [...keywords, ...aiTags, ...deepInsightTags],
+            targetAudience,
+            contentStyle,
+            uniqueFeatures,
+            channelPersonality,
+            collectedAt: new Date(),
+            updatedAt: new Date(),
+            version: 1
+        });
+
+        const savedChannel = await newChannel.save();
+
+        ResponseHandler.success(res, {
+            data: savedChannel,
+            message: 'Channel created successfully'
+        });
+        return;
+
+    } catch (error) {
+        ResponseHandler.serverError(res, error, 'Failed to create channel');
+        return;
+    }
+});
+
 // 채널 목록 조회
 router.get('/channels', async (req: Request, res: Response) => {
     try {
-        const Channel = require('../models/Channel').default || require('../models/Channel');
-        const ChannelGroup = require('../models/ChannelGroup').default || require('../models/ChannelGroup');
 
         const {
             limit = 20,
@@ -271,6 +358,133 @@ router.get('/channels/:id', async (req: Request, res: Response) => {
         ResponseHandler.success(res, { channel });
     } catch (error) {
         ResponseHandler.serverError(res, error, 'Failed to fetch channel');
+    }
+});
+
+// 채널 업데이트
+router.put('/channels/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const {
+            name,
+            url,
+            platform,
+            subscribers,
+            description,
+            thumbnailUrl,
+            customUrl,
+            publishedAt,
+            defaultLanguage,
+            country,
+            contentType,
+            keywords,
+            aiTags,
+            deepInsightTags,
+            targetAudience,
+            contentStyle,
+            uniqueFeatures,
+            channelPersonality
+        } = req.body;
+
+        // ID 유효성 검사
+        if (!id || id === 'undefined' || id === 'null') {
+            return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+                success: false,
+                error: 'INVALID_REQUEST',
+                message: 'Invalid channel ID'
+            });
+        }
+
+        const channel = await Channel.findById(id);
+        if (!channel) {
+            return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
+                success: false,
+                error: 'NOT_FOUND',
+                message: 'Channel not found'
+            });
+        }
+
+        // 필드 업데이트 (undefined가 아닌 값만)
+        if (name !== undefined) channel.name = name.trim();
+        if (url !== undefined) channel.url = url;
+        if (platform !== undefined) channel.platform = platform;
+        if (subscribers !== undefined) channel.subscribers = subscribers;
+        if (description !== undefined) channel.description = description;
+        if (thumbnailUrl !== undefined) channel.thumbnailUrl = thumbnailUrl;
+        if (customUrl !== undefined) channel.customUrl = customUrl;
+        if (publishedAt !== undefined) channel.publishedAt = publishedAt;
+        if (defaultLanguage !== undefined) channel.defaultLanguage = defaultLanguage;
+        if (country !== undefined) channel.country = country;
+        if (contentType !== undefined) channel.contentType = contentType;
+        if (keywords !== undefined) channel.keywords = keywords;
+        if (aiTags !== undefined) channel.aiTags = aiTags;
+        if (deepInsightTags !== undefined) channel.deepInsightTags = deepInsightTags;
+        if (targetAudience !== undefined) channel.targetAudience = targetAudience;
+        if (contentStyle !== undefined) channel.contentStyle = contentStyle;
+        if (uniqueFeatures !== undefined) channel.uniqueFeatures = uniqueFeatures;
+        if (channelPersonality !== undefined) channel.channelPersonality = channelPersonality;
+
+        // allTags 업데이트
+        if (keywords !== undefined || aiTags !== undefined || deepInsightTags !== undefined) {
+            channel.allTags = [
+                ...(channel.keywords || []),
+                ...(channel.aiTags || []),
+                ...(channel.deepInsightTags || [])
+            ];
+        }
+
+        channel.updatedAt = new Date();
+
+        const updatedChannel = await channel.save();
+
+        ResponseHandler.success(res, {
+            data: updatedChannel,
+            message: 'Channel updated successfully'
+        });
+        return;
+
+    } catch (error) {
+        ResponseHandler.serverError(res, error, 'Failed to update channel');
+        return;
+    }
+});
+
+// 채널 삭제
+router.delete('/channels/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+
+        // ID 유효성 검사
+        if (!id || id === 'undefined' || id === 'null') {
+            return res.status(HTTP_STATUS_CODES.BAD_REQUEST).json({
+                success: false,
+                error: 'INVALID_REQUEST',
+                message: 'Invalid channel ID'
+            });
+        }
+
+        const channel = await Channel.findByIdAndDelete(id);
+
+        if (!channel) {
+            return res.status(HTTP_STATUS_CODES.NOT_FOUND).json({
+                success: false,
+                error: 'NOT_FOUND',
+                message: 'Channel not found'
+            });
+        }
+
+        ServerLogger.info(`✅ Channel deleted: ${channel.name} (${id})`, null, 'CHANNEL_DELETE');
+
+        ResponseHandler.success(res, {
+            message: 'Channel deleted successfully',
+            data: { id, name: channel.name }
+        });
+        return;
+
+    } catch (error) {
+        ServerLogger.error('Failed to delete channel:', error);
+        ResponseHandler.serverError(res, error, 'Failed to delete channel');
+        return;
     }
 });
 

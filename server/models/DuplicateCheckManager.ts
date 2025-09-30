@@ -1,3 +1,18 @@
+/**
+ * 🚫 DEPRECATED: DuplicateCheckManager
+ *
+ * This complex duplicate checking system has been replaced with a simple, unified approach.
+ * Use the new DuplicateChecker utility instead:
+ *
+ * OLD: DuplicateCheckManager.checkVideoDuplicate(url, platform)
+ * NEW: DuplicateChecker.checkVideo(url)
+ *
+ * OLD: DuplicateCheckManager.checkChannelDuplicate(channelName)
+ * NEW: DuplicateChecker.checkChannel(channelName)
+ *
+ * This file is kept for backward compatibility but should not be used in new code.
+ */
+
 import VideoUrl, { VideoUrlModelType } from './VideoUrl';
 import ChannelUrl from './ChannelUrl';
 import { ServerLogger } from '../utils/logger';
