@@ -17,12 +17,15 @@ class ClipboardMonitor(private val context: Context) {
             "tiktok.com", "www.tiktok.com"
         )
         private const val POLLING_INTERVAL = 2000L // 2초마다 폴링
+        private const val HEALTH_CHECK_INTERVAL = 15000L // 15초마다 건강성 체크 (더 빈번하게)
+        private const val LISTENER_TIMEOUT = 30000L // 30초 후 재등록 (더 적극적)
     }
 
     private val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     private val handler = Handler(Looper.getMainLooper())
     private var isMonitoring = false
     private var lastClipText = ""
+    private var lastListenerTriggerTime = 0L
 
     // 콜백 함수들
     private var onValidUrlDetected: ((String) -> Unit)? = null
@@ -30,7 +33,15 @@ class ClipboardMonitor(private val context: Context) {
 
     // 클립보드 변경 리스너
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
-        Log.d(TAG, "🔥 클립보드 리스너 트리거됨!")
+        val currentTime = System.currentTimeMillis()
+        lastListenerTriggerTime = currentTime
+        Log.d(TAG, "🔥 클립보드 리스너 트리거됨! (시간: $currentTime)")
+
+        // 리스너 상태 확인
+        if (!isMonitoring) {
+            Log.w(TAG, "⚠️ 모니터링이 중지된 상태에서 리스너 호출됨")
+            return@OnPrimaryClipChangedListener
+        }
 
         // Android 10+에서는 클립보드 변경 감지는 되지만 내용 읽기가 제한됨
         // 따라서 변경 감지만으로 플로팅 버튼을 표시하고, 실제 URL은 클릭 시점에 읽기
@@ -69,16 +80,76 @@ class ClipboardMonitor(private val context: Context) {
                 // 최초 실행 시 현재 클립보드 내용 확인
                 checkClipboardForUrl()
 
-                // 백업 폴링 시작 (Android 9 이하에서만, Android 10+는 어차피 클립보드 읽기 불가)
-                if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
-                    handler.postDelayed(pollingRunnable, POLLING_INTERVAL)
-                    Log.d(TAG, "📋 Android 9 이하 - 폴링 시작")
-                } else {
-                    Log.d(TAG, "📋 Android 10+ - 폴링 생략 (클립보드 접근 제한)")
-                }
+                // 🔥 CRITICAL FIX: Enable polling for ALL Android versions as backup
+                // The listener is unreliable and gets killed by system
+                handler.postDelayed(pollingRunnable, POLLING_INTERVAL)
+                Log.d(TAG, "📋 백업 폴링 시작 (모든 Android 버전)")
+
+                // 주기적으로 모니터링 상태 확인
+                startHealthCheck()
             } catch (e: Exception) {
                 Log.e(TAG, "❌ 클립보드 모니터링 시작 실패: ${e.message}")
             }
+        }
+    }
+
+    /**
+     * 모니터링 상태 건강성 체크 (리스너 해제 감지 및 복구)
+     */
+    private fun startHealthCheck() {
+        val healthCheckRunnable = object : Runnable {
+            override fun run() {
+                if (isMonitoring) {
+                    val currentTime = System.currentTimeMillis()
+                    val timeSinceLastTrigger = currentTime - lastListenerTriggerTime
+
+                    // 🔥 CRITICAL FIX: Always re-register if timeout exceeded (even if never triggered)
+                    // This fixes the issue where listener stops working silently
+                    if (timeSinceLastTrigger > LISTENER_TIMEOUT) {
+                        Log.w(TAG, "⚠️ 리스너가 ${LISTENER_TIMEOUT / 1000}초 이상 비활성화 상태 - 재등록 시도")
+                        reRegisterListener()
+                    } else {
+                        val timeStr = if (lastListenerTriggerTime == 0L) {
+                            "아직 트리거 안됨"
+                        } else {
+                            "${timeSinceLastTrigger / 1000}초 전"
+                        }
+                        Log.d(TAG, "🏥 모니터링 건강성 체크 - 상태: 정상 (마지막 트리거: $timeStr)")
+                    }
+
+                    // 15초마다 건강성 체크
+                    handler.postDelayed(this, HEALTH_CHECK_INTERVAL)
+                } else {
+                    Log.w(TAG, "⚠️ 모니터링이 비활성화됨 - 건강성 체크 중단")
+                }
+            }
+        }
+        handler.postDelayed(healthCheckRunnable, HEALTH_CHECK_INTERVAL)
+    }
+
+    /**
+     * 리스너 재등록 (시스템에 의해 해제된 경우 복구)
+     */
+    private fun reRegisterListener() {
+        try {
+            Log.d(TAG, "🔄 클립보드 리스너 재등록 시도...")
+
+            // 기존 리스너 제거
+            clipboardManager.removePrimaryClipChangedListener(clipboardListener)
+
+            // 잠시 대기 후 재등록 (메인 스레드 블록 방지)
+            handler.postDelayed({
+                try {
+                    clipboardManager.addPrimaryClipChangedListener(clipboardListener)
+                    lastListenerTriggerTime = System.currentTimeMillis()
+                    Log.d(TAG, "✅ 클립보드 리스너 재등록 완료")
+                } catch (e: Exception) {
+                    Log.e(TAG, "❌ 리스너 재등록 실패: ${e.message}")
+                }
+            }, 100L)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ 리스너 제거 실패: ${e.message}")
         }
     }
 
@@ -139,63 +210,57 @@ class ClipboardMonitor(private val context: Context) {
     }
 
     /**
-     * 클립보드 내용 확인 및 URL 검증
+     * 클립보드 내용 확인 및 URL 검증 (중복 처리 개선)
      */
     private fun checkClipboardForUrl() {
         try {
             val clipText = getCurrentClipboardText()
 
-            // 같은 내용이지만 플로팅 버튼이 숨겨진 상태라면 다시 표시
-            // (사용자가 의도적으로 같은 URL을 다시 복사한 경우를 고려)
-            val isDuplicate = clipText == lastClipText
-            lastClipText = clipText
+            // 🔥 DEBUG: Show actual clipboard content
+            Log.d(TAG, "📋 현재 클립보드: '${clipText.take(50)}...' (길이: ${clipText.length})")
+            Log.d(TAG, "📋 저장된 클립보드: '${lastClipText.take(50)}...' (길이: ${lastClipText.length})")
 
-            println("📋 클립보드 처리: 중복=${isDuplicate}, 텍스트=${clipText.take(30)}...")
+            // 중복 체크 - 완전히 같은 내용이면 무시
+            val isDuplicate = clipText == lastClipText
+            if (isDuplicate) {
+                Log.d(TAG, "🔄 중복된 클립보드 내용 감지 - 무시")
+                return
+            }
+
+            lastClipText = clipText
+            Log.d(TAG, "✨ 새로운 클립보드 내용 감지: ${clipText.take(50)}...")
 
             if (clipText.isNotEmpty()) {
-                println("📋 클립보드 변경 감지: ${clipText.take(50)}...")
-
                 if (isValidVideoUrl(clipText)) {
-                    println("✅ 유효한 비디오 URL 감지: $clipText")
+                    Log.d(TAG, "✅ 유효한 비디오 URL 감지: ${clipText.take(50)}...")
                     onValidUrlDetected?.invoke(clipText)
                 } else {
-                    println("ℹ️ 비디오 URL 아님, 플로팅 버튼 숨김")
+                    Log.d(TAG, "ℹ️ 비디오 URL 아님")
                     onInvalidUrlDetected?.invoke()
                 }
             }
         } catch (e: Exception) {
-            println("❌ 클립보드 확인 실패: ${e.message}")
+            Log.e(TAG, "❌ 클립보드 확인 실패: ${e.message}")
         }
     }
 
     /**
-     * 현재 클립보드 텍스트 가져오기
+     * 현재 클립보드 텍스트 가져오기 (로그 최소화)
      */
     private fun getCurrentClipboardText(): String {
         return try {
-            // Android 10+ (API 29+)에서는 앱이 포커스되지 않으면 클립보드 접근이 제한됨
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                // 앱이 포커스되지 않은 상태에서는 클립보드 접근이 제한될 수 있음
-                println("ℹ️ Android 10+ 클립보드 접근 시도...")
-            }
-
             val clipData = clipboardManager.primaryClip
             if (clipData != null && clipData.itemCount > 0) {
                 val item = clipData.getItemAt(0)
-                val text = item.text?.toString() ?: ""
-                if (text.isNotEmpty()) {
-                    println("📋 클립보드 읽기 성공: ${text.take(30)}...")
-                }
-                text
+                item.text?.toString() ?: ""
             } else {
-                println("📋 클립보드가 비어있음")
                 ""
             }
         } catch (e: SecurityException) {
-            println("❌ 클립보드 보안 접근 제한: ${e.message}")
+            Log.w(TAG, "클립보드 보안 접근 제한: ${e.message}")
             ""
         } catch (e: Exception) {
-            println("❌ 클립보드 텍스트 읽기 실패: ${e.message}")
+            Log.w(TAG, "클립보드 텍스트 읽기 실패: ${e.message}")
             ""
         }
     }
