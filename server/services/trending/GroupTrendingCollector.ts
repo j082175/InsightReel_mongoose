@@ -323,9 +323,9 @@ class GroupTrendingCollector {
             channelUrl: `https://www.youtube.com/channel/${videoData.snippet?.channelId || ''}`,
 
             // 그룹 정보
-            groupId: groupId || "",
+            groupId: groupId || null,
             groupName: groupName,
-            batchId: batchId || "",
+            batchId: batchId || null,
             collectionDate: new Date(),
             collectedFrom: collectedFrom,
 

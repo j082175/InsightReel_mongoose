@@ -5,6 +5,7 @@ import { HTTP_STATUS_CODES, ERROR_CODES, API_MESSAGES } from '../config/api-mess
 import { ITrendingVideo } from '../types/models';
 import { Platform } from '../types/video-types';
 import TrendingVideo from '../models/TrendingVideo';
+import GroupTrendingCollector from '../services/trending/GroupTrendingCollector';
 
 const router = Router();
 
@@ -16,9 +17,42 @@ const router = Router();
 // POST /api/trending/collect-trending - 트렌딩 수집 시작
 router.post('/collect-trending', async (req: Request, res: Response) => {
     try {
-        // TODO: 트렌딩 수집 로직 구현
-        ResponseHandler.success(res, { message: 'Trending collection started' });
+        const { channelIds = [], options = {} } = req.body;
+
+        if (!channelIds || channelIds.length === 0) {
+            return ResponseHandler.badRequest(res, '채널 ID가 필요합니다.');
+        }
+
+        ServerLogger.info(`🚀 트렌딩 수집 시작: ${channelIds.length}개 채널`);
+        ServerLogger.info(`📋 수집 옵션:`, options);
+
+        // GroupTrendingCollector 초기화 및 수집 시작
+        const collector = new GroupTrendingCollector();
+        await collector.initialize();
+
+        // collectFromChannels 메서드는 { channels, ...options } 형식을 기대함
+        const collectionOptions = {
+            channels: channelIds,
+            ...options
+        };
+
+        // 개별 채널 수집 실행
+        const result = await collector.collectFromChannels(collectionOptions);
+
+        ServerLogger.info(`✅ 트렌딩 수집 완료: ${result.totalVideosSaved}개 영상 저장됨`);
+
+        ResponseHandler.success(res, {
+            message: 'Trending collection completed',
+            result: {
+                totalChannels: result.totalChannels,
+                totalVideosFound: result.totalVideosFound,
+                totalVideosSaved: result.totalVideosSaved,
+                quotaUsed: result.quotaUsed,
+                stats: result.stats
+            }
+        });
     } catch (error) {
+        ServerLogger.error('❌ 트렌딩 수집 실패:', error);
         ResponseHandler.serverError(res, error, 'Failed to start trending collection');
     }
 });

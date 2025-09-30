@@ -17,7 +17,7 @@ import { formatViews, getDocumentId } from '../shared/utils';
 
 const TrendingCollectionPage: React.FC = () => {
   // React Query 훅들 사용
-  const { groups = [], isLoading: groupsLoading, error: groupsError } = useChannelGroups();
+  const { data: groups = [], isLoading: groupsLoading, error: groupsError } = useChannelGroups();
   const channelGroups = groups.filter(group => group.isActive);
   const { data: channels = [], isLoading: channelsLoading } = useChannels();
   const { data: trendingVideos = [], isLoading: videosLoading, error } = useTrendingVideos();

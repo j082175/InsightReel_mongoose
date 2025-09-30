@@ -1,11 +1,16 @@
 module.exports = {
+  // ts-jest preset
+  preset: 'ts-jest',
+
   // 테스트 환경 설정
   testEnvironment: 'node',
 
   // 테스트 파일 패턴 (프로젝트 테스트만 포함)
   testMatch: [
     '<rootDir>/tests/**/*.test.js',
-    '<rootDir>/tests/**/*.spec.js'
+    '<rootDir>/tests/**/*.spec.js',
+    '<rootDir>/tests/**/*.test.ts',
+    '<rootDir>/tests/**/*.spec.ts'
   ],
 
   // node_modules 완전 제외

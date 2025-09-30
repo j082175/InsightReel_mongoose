@@ -488,19 +488,38 @@ export const useCollectTrending = () => {
 
               if (response.ok) {
                 const response_data = await response.json();
-                console.log(`📋 그룹 응답 데이터:`, response_data);
+                console.log(`📋 그룹 응답 데이터:`, JSON.stringify(response_data, null, 2));
 
-                // API 응답이 {success: true, data: {...}} 형태인 경우 처리
-                const group = response_data.data || response_data;
-                console.log(`📋 실제 그룹 데이터:`, group);
+                // API 응답이 중첩된 data 구조를 가질 수 있음: { data: { data: {...} } } 또는 { data: {...} }
+                let group = response_data.data || response_data;
 
-                if (group.channels && Array.isArray(group.channels)) {
+                // 만약 group이 또 다른 data 프로퍼티를 가지고 있다면 한번 더 추출
+                if (group.data && !group.channels) {
+                  group = group.data;
+                }
+
+                console.log(`📋 실제 그룹 데이터:`, JSON.stringify(group, null, 2));
+                console.log(`📋 그룹의 channels 필드 타입:`, typeof group.channels, `| 배열인가?:`, Array.isArray(group.channels), `| 길이:`, group.channels?.length);
+
+                if (group.channels && Array.isArray(group.channels) && group.channels.length > 0) {
+                  console.log(`📋 첫 번째 채널 구조:`, JSON.stringify(group.channels[0], null, 2));
+
                   // 채널 배열에서 channelId 추출
-                  const channelIdsFromGroup = group.channels.map((ch: any) => ch.channelId || ch.id).filter(Boolean);
+                  const channelIdsFromGroup = group.channels.map((ch: any) => {
+                    const id = ch.channelId || ch.id;
+                    console.log(`🔍 채널 추출: channelId=${ch.channelId}, id=${ch.id}, 결과=${id}`);
+                    return id;
+                  }).filter(Boolean);
+
                   console.log(`🔗 그룹 ${groupId}에서 추출한 채널 IDs:`, channelIdsFromGroup);
                   groupChannelIds.push(...channelIdsFromGroup);
                 } else {
-                  console.warn(`⚠️ 그룹 ${groupId}에 channels 배열이 없거나 비어있음:`, group);
+                  console.warn(`⚠️ 그룹 ${groupId}에 channels 배열이 없거나 비어있음:`, {
+                    hasChannels: !!group.channels,
+                    isArray: Array.isArray(group.channels),
+                    length: group.channels?.length,
+                    channels: group.channels
+                  });
                 }
               } else {
                 console.error(`❌ 그룹 API 호출 실패: ${response.status} ${response.statusText}`);
@@ -509,9 +528,14 @@ export const useCollectTrending = () => {
 
             // 중복 제거
             channelIds = [...new Set(groupChannelIds)];
+
+            // 채널이 하나도 없는 경우 에러 표시
+            if (channelIds.length === 0) {
+              throw new Error('선택한 채널 그룹에 채널이 없습니다. 먼저 채널 그룹에 채널을 추가해주세요.');
+            }
           } catch (error) {
             console.error('그룹에서 채널 목록 추출 실패:', error);
-            throw new Error('그룹 정보를 가져오는데 실패했습니다.');
+            throw error; // 원본 에러 메시지를 그대로 전달
           }
         }
       }
