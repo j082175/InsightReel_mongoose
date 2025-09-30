@@ -430,9 +430,7 @@ const VideoArchivePage: React.FC = () => {
                 <VideoCard
                   video={video}
                   onVideoPlay={(video) => setSelectedVideoForPlay(video)}
-                  onInfoClick={(video) =>
-                    !cardProps.isSelectMode && setSelectedVideo(video)
-                  }
+                  onInfoClick={(video) => setSelectedVideo(video)}
                   onChannelClick={setChannelToAnalyze}
                   isSelectMode={cardProps.isSelectMode}
                   isSelected={cardProps.isSelected}

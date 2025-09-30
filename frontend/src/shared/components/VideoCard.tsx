@@ -94,6 +94,10 @@ const VideoCard: React.FC<VideoCardProps> = memo(
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    // 호버 프리뷰 상태 제거
+    // const [showHoverPreview, setShowHoverPreview] = useState(false);
+    // const [hoverTimer, setHoverTimer] = useState<NodeJS.Timeout | null>(null);
+
     const videoId = getVideoId(video);
     const documentId = getDocumentId(video);
     const thumbnailUrl = getThumbnailUrl(video);
@@ -152,6 +156,40 @@ const VideoCard: React.FC<VideoCardProps> = memo(
     const badgeScale = Math.max(0.8, Math.min(1.2, cardWidth / 280));
     const badgeFontSize = `${0.75 * badgeScale}rem`;
 
+    // Multi-platform video embed URL generator
+    const getVideoEmbedUrl = useCallback((url: string, platform: string) => {
+      if (!url) return '';
+
+      switch (platform) {
+        case PLATFORMS.YOUTUBE:
+          const videoId = url.match(
+            /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)([^&\n?#]+)/
+          );
+          return videoId ? `https://www.youtube.com/embed/${videoId[1]}?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0` : '';
+
+        case 'INSTAGRAM':
+          // Instagram embed URL format
+          const instaId = url.match(/\/p\/([A-Za-z0-9_-]+)|\/reel\/([A-Za-z0-9_-]+)|\/reels\/([A-Za-z0-9_-]+)/);
+          const shortcode = instaId ? (instaId[1] || instaId[2] || instaId[3]) : null;
+          return shortcode ? `https://www.instagram.com/p/${shortcode}/embed/` : '';
+
+        case 'TIKTOK':
+          // TikTok embed URL format - multiple patterns to handle different URL formats
+          const tikTokId = url.match(/\/video\/(\d+)/) ||
+                          url.match(/\/@[^\/]+\/video\/(\d+)/) ||
+                          url.match(/tiktok\.com\/t\/([^\/\?]+)/);
+          if (tikTokId) {
+            const videoId = tikTokId[1];
+            // Try multiple TikTok embed formats
+            return `https://www.tiktok.com/embed/v2/${videoId}?autoplay=1`;
+          }
+          return '';
+
+        default:
+          return '';
+      }
+    }, []);
+
     // 내장 이벤트 핸들러들
     const handleClick = useCallback(
       (e: React.MouseEvent) => {
@@ -173,18 +211,9 @@ const VideoCard: React.FC<VideoCardProps> = memo(
             console.log('❌ onSelect 함수가 없음');
           }
         } else {
-          console.log('🎬 일반 모드 - 재생 로직');
-          // 재생 로직
-          if (video?.platform === PLATFORMS.YOUTUBE) {
-            if (onVideoPlay) {
-              onVideoPlay(video);
-            } else {
-              // 외부에서 처리하도록 위임
-              window.open(video?.url, '_blank', 'noopener,noreferrer');
-            }
-          } else {
-            window.open(video?.url, '_blank', 'noopener,noreferrer');
-          }
+          console.log('🎬 일반 모드 - 외부 링크로 이동');
+          // 직접 외부 링크로 이동
+          window.open(video?.url, '_blank', 'noopener,noreferrer');
         }
       },
       [isSelectMode, onSelect, onVideoPlay, video]
@@ -261,6 +290,28 @@ const VideoCard: React.FC<VideoCardProps> = memo(
       setShowDeleteModal(false);
     }, []);
 
+    // 호버 프리뷰 핸들러들 제거
+    // const handleMouseEnter = useCallback(() => {
+    //   setShowHoverPreview(true);
+    // }, []);
+
+    // const handleMouseLeave = useCallback(() => {
+    //   if (hoverTimer) {
+    //     clearTimeout(hoverTimer);
+    //     setHoverTimer(null);
+    //   }
+    //   setShowHoverPreview(false);
+    // }, [hoverTimer]);
+
+    // 컴포넌트 언마운트 시 타이머 정리 제거
+    // React.useEffect(() => {
+    //   return () => {
+    //     if (hoverTimer) {
+    //       clearTimeout(hoverTimer);
+    //     }
+    //   };
+    // }, [hoverTimer]);
+
     return (
       <>
       <motion.div
@@ -331,6 +382,8 @@ const VideoCard: React.FC<VideoCardProps> = memo(
               <Play className="w-8 h-8 sm:w-12 sm:h-12 text-white" />
             </motion.div>
           </motion.div>
+
+          {/* 호버 프리뷰 오버레이 제거 */}
 
           {/* 플랫폼 배지 - 상대적 크기 사용 */}
           <motion.div

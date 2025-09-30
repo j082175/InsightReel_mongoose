@@ -1,5 +1,5 @@
 import React from 'react';
-import { Video } from '../../../shared/types';
+import { Video, PLATFORMS } from '../../../shared/types';
 import { Modal } from '../../../shared/components';
 
 interface VideoOnlyModalProps {
@@ -10,9 +10,29 @@ interface VideoOnlyModalProps {
 const VideoOnlyModal: React.FC<VideoOnlyModalProps> = ({ video, onClose }) => {
   if (!video) return null;
 
-  const getYouTubeEmbedUrl = (url: string) => {
-    const videoId = extractYouTubeVideoId(url);
-    return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+  // Multi-platform video embed URL generator
+  const getVideoEmbedUrl = (url: string, platform: string) => {
+    if (!url) return '';
+
+    switch (platform) {
+      case PLATFORMS.YOUTUBE:
+        const videoId = extractYouTubeVideoId(url);
+        return videoId ? `https://www.youtube.com/embed/${videoId}?autoplay=1&modestbranding=1&rel=0` : '';
+
+      case 'INSTAGRAM':
+        // Instagram embed URL format
+        const instaId = url.match(/\/p\/([A-Za-z0-9_-]+)|\/reel\/([A-Za-z0-9_-]+)|\/reels\/([A-Za-z0-9_-]+)/);
+        const shortcode = instaId ? (instaId[1] || instaId[2] || instaId[3]) : null;
+        return shortcode ? `https://www.instagram.com/p/${shortcode}/embed/` : '';
+
+      case 'TIKTOK':
+        // TikTok embed URL format
+        const tikTokId = url.match(/\/video\/(\d+)/);
+        return tikTokId ? `https://www.tiktok.com/embed/v2/${tikTokId[1]}` : '';
+
+      default:
+        return '';
+    }
   };
 
   const extractYouTubeVideoId = (url: string) => {
@@ -52,15 +72,16 @@ const VideoOnlyModal: React.FC<VideoOnlyModalProps> = ({ video, onClose }) => {
           ✕
         </button>
 
-        {/* YouTube 영상 iframe */}
+        {/* Multi-platform 영상 iframe */}
         <div className="w-full h-full rounded-lg overflow-hidden shadow-2xl">
           <iframe
-            src={getYouTubeEmbedUrl(video?.url || '')}
+            src={getVideoEmbedUrl(video?.url || '', video?.platform || '')}
             title={video?.title || ''}
             className="w-full h-full"
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
+            loading="lazy"
           />
         </div>
 
