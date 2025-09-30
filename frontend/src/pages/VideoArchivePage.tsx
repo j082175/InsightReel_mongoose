@@ -7,6 +7,7 @@ import { VideoListItem } from '../features/video-analysis';
 import { ChannelAnalysisModal } from '../features/channel-management';
 import { VideoCard, SearchBar } from '../shared/components';
 import { UniversalGrid } from '../widgets/UniversalGrid';
+import { SortOption } from '../widgets/UniversalGrid/types';
 
 import { PLATFORMS } from '../shared/types/api';
 import { formatViews } from '../shared/utils';
@@ -16,6 +17,24 @@ import { useSearch, useFilter } from '../shared/hooks';
 import { ActionBar } from '../shared/components';
 
 const VideoArchivePage: React.FC = () => {
+  // 정렬 옵션 정의
+  const sortOptions: SortOption<Video>[] = useMemo(() => [
+    {
+      label: '조회수순',
+      value: 'views',
+      compareFn: (a, b) => (b.views || 0) - (a.views || 0)
+    },
+    {
+      label: '업로드 날짜순',
+      value: 'uploadDate',
+      compareFn: (a, b) => {
+        const dateA = new Date(a.uploadDate || 0).getTime();
+        const dateB = new Date(b.uploadDate || 0).getTime();
+        return dateB - dateA;
+      }
+    },
+  ], []);
+
   // VideoStore를 사용한 통합 상태 관리 (무한 스크롤링 지원)
   const videoStore = useVideoStore('all');
   const {
@@ -443,6 +462,10 @@ const VideoArchivePage: React.FC = () => {
               hasMore={hasMore}
               onLoadMore={loadMore}
               isLoading={isLoadingMore}
+              enableSort={true}
+              sortOptions={sortOptions}
+              defaultSortBy="views"
+              defaultSortOrder="desc"
               showVirtualScrolling={true}
               useWindowScroll={true}
               // 🎯 VideoStore의 선택 상태를 UniversalGrid에 전달

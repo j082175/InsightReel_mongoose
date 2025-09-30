@@ -17,6 +17,12 @@ export interface CustomAction<T> {
   disabled?: (selectedItems: T[]) => boolean;
 }
 
+export interface SortOption<T> {
+  label: string;
+  value: keyof T;
+  compareFn?: (a: T, b: T) => number;
+}
+
 export interface UniversalGridProps<T extends GridItem> {
   // 핵심 데이터
   data: T[];
@@ -38,6 +44,12 @@ export interface UniversalGridProps<T extends GridItem> {
   searchPlaceholder?: string;
   searchFields?: (keyof T)[];
   onSearchChange?: (searchTerm: string, filteredData: T[]) => void;
+
+  // 정렬 기능
+  enableSort?: boolean;
+  sortOptions?: SortOption<T>[];
+  defaultSortBy?: keyof T;
+  defaultSortOrder?: 'asc' | 'desc';
 
   // 페이지네이션 설정
   initialItemsPerPage?: number;

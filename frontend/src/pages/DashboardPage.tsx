@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   useTrendingStats,
@@ -11,6 +11,7 @@ import { useAppContext } from '../app/providers';
 import { ChannelAnalysisModal } from '../features/channel-management';
 import { SearchBar, VideoCard, CookieStatusWidget } from '../shared/components';
 import { UniversalGrid } from '../widgets';
+import { SortOption } from '../widgets/UniversalGrid/types';
 import { VideoManagement } from '../features';
 import { FadeIn } from '../shared/components/animations';
 
@@ -23,6 +24,23 @@ const DashboardPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [channelToAnalyze, setChannelToAnalyze] = useState<Channel | null>(null);
 
+  // 정렬 옵션 정의
+  const sortOptions: SortOption<Video>[] = useMemo(() => [
+    {
+      label: '조회수순',
+      value: 'views',
+      compareFn: (a, b) => (b.views || 0) - (a.views || 0)
+    },
+    {
+      label: '업로드 날짜순',
+      value: 'uploadDate',
+      compareFn: (a, b) => {
+        const dateA = new Date(a.uploadDate || 0).getTime();
+        const dateB = new Date(b.uploadDate || 0).getTime();
+        return dateB - dateA;
+      }
+    },
+  ], []);
 
   // VideoStore 사용 - 간소화 (선택 상태는 UniversalGrid에서 관리)
   const videoStore = VideoManagement.useVideoStore(selectedBatchId);
@@ -231,6 +249,10 @@ const DashboardPage: React.FC = () => {
               cardWidth={props.cardWidth}
             />
           )}
+          enableSort={true}
+          sortOptions={sortOptions}
+          defaultSortBy="views"
+          defaultSortOrder="desc"
           onSelectionChange={(selectedIds) => {
             // VideoStore에 동기화 (필요시)
             console.log('Selected items changed:', selectedIds);

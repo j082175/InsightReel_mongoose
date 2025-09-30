@@ -39,6 +39,7 @@ const ChannelManagementPage: React.FC = () => {
   const [channelToAnalyze, setChannelToAnalyze] = useState<Channel | null>(null);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState<any | null>(null);
+  const [preSelectedChannels, setPreSelectedChannels] = useState<Channel[]>([]);
 
   // 트렌딩 수집 필터 설정
   const [collectionDaysBack, setCollectionDaysBack] = useState<number>(7);
@@ -63,16 +64,26 @@ const ChannelManagementPage: React.FC = () => {
     async (groupData: any) => {
       try {
         if (editingGroup) {
+          const groupId = getDocumentId(editingGroup);
+          if (!groupId) {
+            console.error('❌ 그룹 ID가 없습니다:', editingGroup);
+            toast.error('그룹 ID를 찾을 수 없습니다.');
+            return;
+          }
+          console.log('🔧 [handleSaveGroup] 그룹 업데이트:', { groupId, groupData });
           await updateChannelGroupMutation.mutateAsync({
-            ...groupData,
-            _id: editingGroup._id,
+            id: groupId,
+            data: groupData,
           });
         } else {
+          console.log('🔧 [handleSaveGroup] 그룹 생성:', { groupData });
           await createChannelGroupMutation.mutateAsync(groupData);
         }
         setShowGroupModal(false);
         setEditingGroup(null);
+        setPreSelectedChannels([]);
       } catch (error) {
+        console.error('❌ 그룹 저장 실패:', error);
         toast.error(`그룹 ${editingGroup ? '수정' : '생성'} 실패: ${error}`);
       }
     },
@@ -80,6 +91,12 @@ const ChannelManagementPage: React.FC = () => {
   );
 
   const handleGroupEdit = useCallback((group: any) => {
+    console.log('🔧 [handleGroupEdit] 편집할 그룹:', {
+      group,
+      _id: group._id,
+      id: group.id,
+      documentId: getDocumentId(group)
+    });
     setEditingGroup(group);
     setShowGroupModal(true);
   }, []);
@@ -198,45 +215,13 @@ const ChannelManagementPage: React.FC = () => {
     [deleteChannelGroupMutation]
   );
 
-  // 선택된 채널들로 그룹 생성
-  const handleCreateGroupFromSelected = useCallback(async (selectedChannels: Channel[]) => {
-    try {
-      // 선택된 채널들의 공통 키워드 추출
-      const allKeywords = selectedChannels.flatMap(ch => ch.keywords || []);
-      const commonKeywords = [...new Set(allKeywords)].slice(0, 5);
-
-      // 기본 그룹 정보 생성
-      const defaultGroupName = `그룹 ${new Date().toLocaleDateString()}`;
-      const defaultDescription = `${selectedChannels.length}개 채널로 구성된 그룹`;
-
-      // 그룹 생성 API 호출
-      const response = await fetch('/api/channel-groups', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: defaultGroupName,
-          description: defaultDescription,
-          channels: selectedChannels.map(ch => ch.channelId),
-          keywords: commonKeywords,
-          color: '#3B82F6', // 기본 파란색
-          isActive: true
-        })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        toast.success(`"${defaultGroupName}" 그룹이 생성되었습니다!`);
-
-        // 그룹 목록 새로고침
-        refetchChannelGroups();
-
-      } else {
-        throw new Error('그룹 생성 실패');
-      }
-    } catch (error) {
-      toast.error(`그룹 생성 중 오류: ${error}`);
-    }
-  }, [refetchChannelGroups]);
+  // 선택된 채널들로 그룹 생성 - 모달 열기
+  const handleCreateGroupFromSelected = useCallback((selectedChannels: Channel[]) => {
+    console.log('🎯 선택된 채널로 그룹 생성:', selectedChannels);
+    setPreSelectedChannels(selectedChannels);
+    setEditingGroup(null); // 새 그룹 생성 모드
+    setShowGroupModal(true);
+  }, []);
 
   // 채널용 커스텀 액션 정의
   const channelCustomActions = useMemo(() => [
@@ -404,6 +389,7 @@ const ChannelManagementPage: React.FC = () => {
                     isSelected={props.isSelected}
                     onSelect={props.onSelect}
                     onClick={props.onCardClick}
+                    onEdit={handleGroupEdit}
                     onDelete={() => props.onDelete?.(group)}
                     showSelection={props.isSelectMode}
                     collectionFilters={{
@@ -438,10 +424,12 @@ const ChannelManagementPage: React.FC = () => {
         onClose={() => {
           setShowGroupModal(false);
           setEditingGroup(null);
+          setPreSelectedChannels([]);
         }}
         onSave={handleSaveGroup}
         editingGroup={editingGroup}
         availableChannels={channels}
+        preSelectedChannels={preSelectedChannels}
       />
 
       <BatchVideoList

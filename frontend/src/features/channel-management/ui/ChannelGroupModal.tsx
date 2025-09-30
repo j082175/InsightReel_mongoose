@@ -24,6 +24,7 @@ interface ChannelGroupModalProps {
   onSave: (group: ChannelGroup) => Promise<void>;
   editingGroup?: ChannelGroup | null;
   availableChannels?: Channel[];
+  preSelectedChannels?: Channel[];
   isSubmitting?: boolean;
 }
 
@@ -33,6 +34,7 @@ const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
   onSave,
   editingGroup,
   availableChannels = [],
+  preSelectedChannels = [],
   isSubmitting = false,
 }) => {
   const [keywordInput, setKeywordInput] = useState('');
@@ -73,11 +75,29 @@ const ChannelGroupModal: React.FC<ChannelGroupModalProps> = ({
         console.log('🔍 [ChannelGroupModal] formData:', formData);
         reset(formData);
       } else {
-        reset(getDefaultChannelGroupFormData());
+        // 새 그룹 생성 모드 - preSelectedChannels 처리
+        const preSelectedChannelIds = preSelectedChannels.map(ch => ch.channelId);
+        const allKeywords = preSelectedChannels.flatMap(ch => ch.keywords || []);
+        const commonKeywords = [...new Set(allKeywords)].slice(0, 5);
+
+        const defaultFormData: ChannelGroupFormData = {
+          ...getDefaultChannelGroupFormData(),
+          selectedChannels: preSelectedChannelIds,
+          keywords: commonKeywords,
+        };
+
+        console.log('🔍 [ChannelGroupModal] 새 그룹 생성 with preSelected:', {
+          preSelectedChannels,
+          preSelectedChannelIds,
+          commonKeywords,
+          defaultFormData
+        });
+
+        reset(defaultFormData);
       }
       setKeywordInput('');
     }
-  }, [isOpen, editingGroup, reset]);
+  }, [isOpen, editingGroup, preSelectedChannels, reset]);
 
   // 현재 값들 감시
   const keywords = watch('keywords');

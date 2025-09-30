@@ -23,6 +23,10 @@ function UniversalGrid<T extends GridItem>({
   searchPlaceholder = '검색...',
   searchFields,
   onSearchChange,
+  enableSort = false,
+  sortOptions = [],
+  defaultSortBy,
+  defaultSortOrder = 'desc',
   initialItemsPerPage = 20,
   showVirtualScrolling = true,
   useWindowScroll = false,
@@ -56,8 +60,49 @@ function UniversalGrid<T extends GridItem>({
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredDataFromSearch, setFilteredDataFromSearch] = useState(data);
 
-  // 검색으로 필터링된 데이터 사용 (SimpleAutocomplete에서 필터링한 데이터 우선)
-  const filteredData = filteredDataFromSearch;
+  // 정렬 상태 관리
+  const [sortBy, setSortBy] = useState<keyof T | ''>(defaultSortBy || '');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(defaultSortOrder);
+
+  // 정렬 적용
+  const sortedData = useMemo(() => {
+    if (!enableSort || !sortBy) {
+      return filteredDataFromSearch;
+    }
+
+    const sorted = [...filteredDataFromSearch];
+    const sortOption = sortOptions.find(opt => opt.value === sortBy);
+
+    if (sortOption?.compareFn) {
+      // 커스텀 비교 함수 사용
+      sorted.sort(sortOption.compareFn);
+    } else {
+      // 기본 정렬
+      sorted.sort((a, b) => {
+        const aVal = a[sortBy];
+        const bVal = b[sortBy];
+
+        if (aVal === bVal) return 0;
+        if (aVal == null) return 1;
+        if (bVal == null) return -1;
+
+        if (typeof aVal === 'number' && typeof bVal === 'number') {
+          return aVal - bVal;
+        }
+
+        if (typeof aVal === 'string' && typeof bVal === 'string') {
+          return aVal.localeCompare(bVal);
+        }
+
+        return String(aVal).localeCompare(String(bVal));
+      });
+    }
+
+    return sortOrder === 'desc' ? sorted.reverse() : sorted;
+  }, [filteredDataFromSearch, sortBy, sortOrder, enableSort, sortOptions]);
+
+  // 정렬된 데이터 사용
+  const filteredData = sortedData;
 
   // data가 변경되면 filteredDataFromSearch도 초기화
   useEffect(() => {
@@ -380,6 +425,36 @@ function UniversalGrid<T extends GridItem>({
               <span> • {currentPage}/{totalPages} 페이지</span>
             )}
           </div>
+
+          {/* 정렬 옵션 */}
+          {enableSort && sortOptions.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">
+                정렬:
+              </label>
+              <select
+                value={sortBy as string}
+                onChange={(e) => setSortBy(e.target.value as keyof T)}
+                className="px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">기본</option>
+                {sortOptions.map((option) => (
+                  <option key={String(option.value)} value={String(option.value)}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {sortBy && (
+                <button
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="px-2 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                  title={sortOrder === 'asc' ? '오름차순' : '내림차순'}
+                >
+                  {sortOrder === 'asc' ? '↑' : '↓'}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* 페이지당 아이템 수 설정 (일반 그리드 모드에서만) */}
           {!useVirtualScrolling && (

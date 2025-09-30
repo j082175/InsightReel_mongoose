@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Calendar,
   TrendingUp,
 } from 'lucide-react';
 import { SearchBar, VideoCard } from '../shared/components';
 import { UniversalGrid } from '../widgets';
+import { SortOption } from '../widgets/UniversalGrid/types';
 import { useTrendingVideos, useDeleteTrendingVideo, useDeleteTrendingVideos, useChannelGroups } from '../shared/hooks';
 import { formatViews, formatDate, getDurationLabel, getDocumentId } from '../shared/utils';
 import toast from 'react-hot-toast';
@@ -45,6 +46,33 @@ interface ApiResponse {
 }
 
 const TrendingVideosPage: React.FC = () => {
+  // 정렬 옵션 정의
+  const sortOptions: SortOption<TrendingVideo>[] = useMemo(() => [
+    {
+      label: '조회수순',
+      value: 'views',
+      compareFn: (a, b) => (b.views || 0) - (a.views || 0)
+    },
+    {
+      label: '업로드 날짜순',
+      value: 'uploadDate',
+      compareFn: (a, b) => {
+        const dateA = new Date(a.uploadDate || 0).getTime();
+        const dateB = new Date(b.uploadDate || 0).getTime();
+        return dateB - dateA;
+      }
+    },
+    {
+      label: '수집 날짜순',
+      value: 'collectionDate',
+      compareFn: (a, b) => {
+        const dateA = new Date(a.collectionDate || 0).getTime();
+        const dateB = new Date(b.collectionDate || 0).getTime();
+        return dateB - dateA;
+      }
+    },
+  ], []);
+
   // React Query 훅들 사용
   const [filters, setFilters] = useState({
     keyword: '',
@@ -319,6 +347,10 @@ const TrendingVideosPage: React.FC = () => {
           onSearchChange={(searchTerm, filteredData) => {
             console.log('Search changed:', searchTerm, 'Results:', filteredData.length);
           }}
+          enableSort={true}
+          sortOptions={sortOptions}
+          defaultSortBy="views"
+          defaultSortOrder="desc"
           onSelectionChange={handleSelectionChange}
           onDelete={handleVideoDelete}
           onBulkDelete={handleBulkDelete}

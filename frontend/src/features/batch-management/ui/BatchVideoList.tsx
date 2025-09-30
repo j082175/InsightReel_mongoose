@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { X } from 'lucide-react';
 import { UniversalGrid } from '../../../widgets/UniversalGrid/UniversalGrid';
+import { SortOption } from '../../../widgets/UniversalGrid/types';
 import { VideoCard } from '../../../shared/components';
 import { Video } from '../../../shared/types';
 import { getDocumentId } from '../../../shared/utils';
@@ -24,6 +25,24 @@ const BatchVideoList: React.FC<BatchVideoListProps> = ({
   loading,
   onVideoDelete,
 }) => {
+  // 정렬 옵션 정의
+  const sortOptions: SortOption<Video>[] = useMemo(() => [
+    {
+      label: '조회수순',
+      value: 'views',
+      compareFn: (a, b) => (b.views || 0) - (a.views || 0)
+    },
+    {
+      label: '업로드 날짜순',
+      value: 'uploadDate',
+      compareFn: (a, b) => {
+        const dateA = new Date(a.uploadDate || 0).getTime();
+        const dateB = new Date(b.uploadDate || 0).getTime();
+        return dateB - dateA;
+      }
+    },
+  ], []);
+
   // 디버깅: 받은 비디오 데이터 확인
   React.useEffect(() => {
     if (isOpen && batchId) {
@@ -108,6 +127,10 @@ const BatchVideoList: React.FC<BatchVideoListProps> = ({
               onDelete={onVideoDelete}
               showStats={true}
               enableSearch={false}
+              enableSort={true}
+              sortOptions={sortOptions}
+              defaultSortBy="views"
+              defaultSortOrder="desc"
               showVirtualScrolling={true}
               useWindowScroll={true}
               containerHeight={800}
