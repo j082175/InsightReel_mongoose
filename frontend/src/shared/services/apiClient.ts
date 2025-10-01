@@ -7,8 +7,8 @@ import {
   TrendingVideo,
 } from '../types';
 
-// API Base URL 설정
-const API_BASE_URL = 'http://localhost:3000';
+// API Base URL 설정 (환경변수에서 가져옴)
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Axios 인스턴스 생성
 const axiosInstance: AxiosInstance = axios.create({
