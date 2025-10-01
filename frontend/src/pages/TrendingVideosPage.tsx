@@ -90,8 +90,8 @@ const TrendingVideosPage: React.FC = () => {
 
   // API 데이터 가져오기
   const { data: videos = [], isLoading: loading, error } = useTrendingVideos(filters);
-  const { groups = [] } = useChannelGroups();
-  const channelGroups = groups.filter(group => group.isActive);
+  const { data: channelGroupsData = [] } = useChannelGroups();
+  const channelGroups = Array.isArray(channelGroupsData) ? channelGroupsData.filter(group => group.isActive) : [];
   const deleteVideoMutation = useDeleteTrendingVideo();
   const deleteVideosMutation = useDeleteTrendingVideos();
 
