@@ -33,7 +33,7 @@ class PreferencesManager(private val context: Context) {
         private const val DEFAULT_ANALYSIS_TYPE = ANALYSIS_VIDEO_ONLY
         private const val DEFAULT_SHOW_MODAL = true
         private const val DEFAULT_WIFI_SERVER_URL = "http://192.168.0.2:3000"
-        private const val DEFAULT_LTE_SERVER_URL = "https://insightreel-mobile-test.loca.lt"
+        private const val DEFAULT_LTE_SERVER_URL = "https://api.j082175.com"
         private const val DEFAULT_AUTO_DETECT_NETWORK = true
 
         // 마이그레이션용 상수
