@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { UniversalGrid } from '../../../widgets/UniversalGrid/UniversalGrid';
 import { SortOption } from '../../../widgets/UniversalGrid/types';
 import { VideoCard } from '../../../shared/components';
+import { VideoModal } from '../../video-analysis';
 import { Video } from '../../../shared/types';
 import { getDocumentId } from '../../../shared/utils';
 
@@ -25,6 +26,8 @@ const BatchVideoList: React.FC<BatchVideoListProps> = ({
   loading,
   onVideoDelete,
 }) => {
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+
   // 정렬 옵션 정의
   const sortOptions: SortOption<Video>[] = useMemo(() => [
     {
@@ -118,6 +121,7 @@ const BatchVideoList: React.FC<BatchVideoListProps> = ({
                     isSelected={cardProps.isSelected}
                     isSelectMode={cardProps.isSelectMode}
                     onSelect={cardProps.onSelect}
+                    onInfoClick={(video) => setSelectedVideo(video)}
                     onDelete={(deletedVideo) => {
                       onVideoDelete(deletedVideo);
                     }}
@@ -138,6 +142,12 @@ const BatchVideoList: React.FC<BatchVideoListProps> = ({
           )}
         </div>
       </div>
+
+      {/* Video Details Modal */}
+      <VideoModal
+        video={selectedVideo}
+        onClose={() => setSelectedVideo(null)}
+      />
     </div>
   );
 };

@@ -4,6 +4,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { SearchBar, VideoCard } from '../shared/components';
+import { VideoModal } from '../features/video-analysis';
 import { UniversalGrid } from '../widgets';
 import { SortOption } from '../widgets/UniversalGrid/types';
 import { useTrendingVideos, useDeleteTrendingVideo, useDeleteTrendingVideos, useChannelGroups } from '../shared/hooks';
@@ -100,6 +101,8 @@ const TrendingVideosPage: React.FC = () => {
     offset: 0,
     hasMore: false,
   });
+
+  const [selectedVideo, setSelectedVideo] = useState<TrendingVideo | null>(null);
 
   // 페이지네이션 업데이트
   useEffect(() => {
@@ -338,6 +341,7 @@ const TrendingVideosPage: React.FC = () => {
               onSelect={props.onSelect}
               onDelete={() => props.onDelete?.(video)}
               isSelectMode={props.isSelectMode}
+              onInfoClick={(video) => setSelectedVideo(video as TrendingVideo)}
               cardWidth={props.cardWidth}
             />
           )}
@@ -427,6 +431,12 @@ const TrendingVideosPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Video Details Modal */}
+      <VideoModal
+        video={selectedVideo}
+        onClose={() => setSelectedVideo(null)}
+      />
     </div>
   );
 };

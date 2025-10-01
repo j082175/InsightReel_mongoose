@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import { Video, Channel } from '../shared/types';
 import { useAppContext } from '../app/providers';
 import { ChannelAnalysisModal } from '../features/channel-management';
+import { VideoModal } from '../features/video-analysis';
 import { SearchBar, VideoCard, CookieStatusWidget } from '../shared/components';
 import { UniversalGrid } from '../widgets';
 import { SortOption } from '../widgets/UniversalGrid/types';
@@ -23,6 +24,7 @@ const DashboardPage: React.FC = () => {
   const [selectedBatchId, setSelectedBatchId] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [channelToAnalyze, setChannelToAnalyze] = useState<Channel | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
 
   // 정렬 옵션 정의
   const sortOptions: SortOption<Video>[] = useMemo(() => [
@@ -240,6 +242,7 @@ const DashboardPage: React.FC = () => {
               onSelect={props.onSelect}
               onDelete={() => props.onDelete?.(video)}
               isSelectMode={props.isSelectMode}
+              onInfoClick={(video) => setSelectedVideo(video)}
               onChannelClick={() => setChannelToAnalyze({
                 _id: video.channelName || '',
                 channelId: video.channelName || '',
@@ -291,6 +294,11 @@ const DashboardPage: React.FC = () => {
       <ChannelAnalysisModal
         channel={channelToAnalyze}
         onClose={() => setChannelToAnalyze(null)}
+      />
+
+      <VideoModal
+        video={selectedVideo}
+        onClose={() => setSelectedVideo(null)}
       />
     </div>
   );
